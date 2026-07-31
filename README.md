@@ -24,6 +24,35 @@ local copy as your working tree and rsync in the other direction). `dist/` and
 > bulk underneath it — you can end up looking at a stale bundle and debugging a
 > problem you already fixed.
 
+## Publishing
+
+**Drive is the editing source. This repo is only ever a faithful copy of it** —
+it lives outside Drive so a sync conflict can never corrupt `.git`. Never edit
+here: the next sync overwrites it.
+
+One-time setup:
+
+```bash
+export MASAREEF_DRIVE_APP="/path/to/…/masareef/app"   # add to ~/.zshrc
+```
+
+Every publish, in this order:
+
+```bash
+bash scripts/sync-from-drive.sh && git add -A && git commit && git push
+```
+
+`sync-from-drive.sh` mirrors Drive with `--delete` (preserving `.git`,
+`node_modules`, `dist`) and then runs `check-before-publish.sh`, so a private
+file that appears in Drive cannot pass quietly into a commit.
+
+**Why the source path is an environment variable rather than a constant:** it
+contains a personal email address and a private shared-drive name, and this file
+is published. **And why the script refuses so loudly:** it uses `rsync --delete`,
+so a missing or empty source — an unmounted Drive, a renamed folder — would
+delete this entire repo. It verifies the source really is the app before removing
+anything.
+
 ## Scripts
 
 ```bash
