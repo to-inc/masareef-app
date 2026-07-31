@@ -1,0 +1,80 @@
+name: Deploy to GitHub Pages
+
+# This repository is the PWA only. `docs/` and `backend/` live in Drive and are
+# never published — they carry real financial figures and family context.
+#
+# The privacy/credential scan is a GATING job: nothing is built or deployed until
+# it passes. A credential can be rotated; published personal data cannot be
+# un-published, so the check runs before anything leaves the runner.
+#
+# No repository secrets are required. The /exec URL and the SECRET are entered
+# into the running app via SetupView and live only in the browser's localStorage,
+# so the built bundle contains neither.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    name: Safe to publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-before-publish.sh
+
+  build:
+    name: Build
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        env:
+          # Project Pages serve from /<repo>/, so the base must match or the
+          # service worker scope and every asset URL break.
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - name: Fail if a credential reached the bundle
+        run: |
+          if grep -rqE "script\.google\.com/macros/s/[A-Za-z0-9_-]{20,}" dist/assets/*.js; then
+            echo "::error::A real /exec URL is in the built bundle."
+            exit 1
+          fi
+          echo "bundle clean"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

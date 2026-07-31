@@ -1,0 +1,32 @@
+# ——— build & deps
+node_modules/
+dist/
+dist-ssr/
+.vite/
+
+# ——— macOS / Google Drive noise
+# NOTE: the usual macOS `Icon?` line is deliberately ABSENT. On a
+# case-insensitive filesystem it matches `public/icons/` and silently excludes
+# every app icon — the PWA then installs on his phone with no home-screen icon,
+# and nothing warns you. check-before-publish.sh asserts the icons are tracked.
+.DS_Store
+.Spotlight-V100
+.Trashes
+*.local
+
+# ——— NEVER COMMIT
+# This repository is PUBLIC and contains the app ONLY.
+#
+# `docs/` and `backend/` are deliberately NOT part of it: they carry his real
+# spending figures, his name, and family context. Do not copy them in "for
+# completeness" — scripts/check-before-publish.sh fails the commit if you do.
+#
+# The Apps Script endpoint is `Anyone`-accessible by design, so the SECRET is the
+# only thing between the internet and his finances. It lives in exactly two
+# places, neither of them here:
+#   1. CONFIG.SECRET inside the Apps Script editor (pasted, never committed)
+#   2. the installed app's localStorage (pasted once via SetupView)
+.env.local
+.env.*.local
+*.secret
+secrets.json
