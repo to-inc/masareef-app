@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node scripts/test-format.mjs"
+    "test": "node scripts/test-format.mjs && node scripts/honest-render.mjs",
+    "check:honest": "node scripts/honest-render.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

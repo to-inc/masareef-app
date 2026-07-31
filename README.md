@@ -125,6 +125,39 @@ The confirm card then shows `1176×1568 · 49KB · q0.8 · portrait ✓`, turnin
 with `⚠ LANDSCAPE — EXIF rotation not applied?` if the check trips. Turn it off
 with `localStorage.removeItem('masareef.debug')` before Dad's build.
 
+## Checks
+
+```bash
+npm test            # primitives + the twin-payload render check
+npm run check:honest
+```
+
+Both run inside `scripts/check-before-publish.sh`, so a sync that imports a
+fabrication cannot pass quietly into a commit.
+
+**Why there are two, when one looks like a superset of the other** — proven by
+mutation, not assumed:
+
+| mutation | `test-format.mjs` | `honest-render.mjs` |
+|---|---|---|
+| revert the `format.js` primitive | **fails** | passes — the call-site guards still stand |
+| a view coercing its own value with `\|\| 0` | passes — the primitive is fine | **fails** |
+
+Neither subsumes the other. Deleting either one leaves a live route to the same
+bug.
+
+**How the render check works.** Each view is rendered twice from payloads that
+differ only in slots carrying nullable data: `null` in one, a sentinel number in
+the other. Any text that *changed* is by construction a slot that displays that
+datum — and on the null side it must contain **no digit**. That catches the case
+a primitive test structurally cannot: a view that never calls `money()` at all.
+It carries its own negative control, and it treats two identical renders as a
+**failure**, because a payload that never reaches the view proves nothing.
+
+Only display-only fields are nulled. `sumTo` treats null as `0` by design (a
+partial period is a real sum), so nulling a field that feeds a total would flag
+honest arithmetic as a lie — and a check that cries wolf gets switched off.
+
 ## Review rule: the render layer must not fabricate
 
 **The backend's honesty is only as good as the render layer's.** The server goes
@@ -133,8 +166,14 @@ month with no tab stays `null`, `unpriced` counts rows it cannot price. All of
 that is undone by one `money(null)`, which renders `0`: a number he never wrote,
 presented with the same confidence as one he did.
 
-This has already happened four times, in four different files, every one of them
-passing tests and looking fine:
+**As of 2026-07-31 this rule is executable** (see Checks above) — but the rule
+still matters, because the check can only see slots a payload can reach.
+
+The primitive itself used to fabricate by **two** routes, and both are now
+closed: `Number(null)` is `0` and `isFinite(0)` is true, so `money(null)` never
+reached its own guard; and that guard returned `'0'` anyway. Every one of the
+fixes below was made at a CALL SITE while the primitive stayed loaded, which is
+why the class kept reappearing in new files:
 
 | Where | Bug | Should be |
 |---|---|---|

@@ -97,8 +97,26 @@ if [ -d .git ]; then
   done
 fi
 
+# ——— 6. HONESTY. Not a privacy check — a correctness one, gated here because
+# this is the last thing that runs before code reaches him. Six null-fabrication
+# bugs shipped through this app, every one of them looking fine on screen. Both
+# checks run because NEITHER SUBSUMES THE OTHER, proven by mutation:
+#   - reverting the format.js primitive is invisible to the render check (the
+#     call-site guards still stand) but fails test-format.mjs;
+#   - a view coercing its own value with `|| 0` is invisible to the primitive
+#     test but fails honest-render.mjs.
+# Skipped, loudly, when dependencies are absent — a gate that silently does
+# nothing is worse than one that is not there.
+if [ -d node_modules ]; then
+  if ! npm test --silent >/dev/null 2>&1; then
+    note "the app's own tests FAIL — run 'npm test' and read the output."
+  fi
+else
+  echo "  ℹ️  node_modules absent — honesty tests SKIPPED (run 'npm test' in a local clone)."
+fi
+
 if [ "$fail" -eq 0 ]; then
-  echo "✅ safe to publish — app only, no personal data, no credentials"
+  echo "✅ safe to publish — app only, no personal data, no credentials, tests green"
 else
   echo ""
   echo "Nothing has been committed. Fix the above, then run this again."
