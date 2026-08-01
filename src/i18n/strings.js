@@ -51,6 +51,7 @@ export const S = {
   receiptAmount: 'المبلغ',
   receiptMerchant: 'المحل',
   receiptDate: 'التاريخ',
+  receiptCategory: 'النوع',
   receiptConfirm: '✓ سجّلها',
   receiptUnsure: 'مش متأكدين من اللي عليه علامة — راجعه.',
   receiptNotReceipt: 'الصورة دي مش فاتورة',

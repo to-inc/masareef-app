@@ -317,6 +317,22 @@ export default function ReceiptView({ onSaved, onManual }) {
             )}
           </Field>
 
+          {/*
+            CATEGORY IS A FIELD, not just a chip state (field-found 2026-08-01).
+            This card is "راجع وأكّد" — review and confirm — and review means
+            seeing everything that will be written. Category was the one value
+            heading for his sheet with nowhere on the card that showed it, so a
+            chosen category was invisible and an unchosen one looked the same.
+            It sits beside amount/merchant/date because it is the same kind of
+            thing: a value about to be committed.
+            Absent renders as `—`, never as a blank that could pass for a choice.
+          */}
+          <Field label={S.receiptCategory}>
+            <div style={{ fontSize: 17.5, fontWeight: 600, color: category ? C.ink : C.faint }} dir="auto">
+              {category ? <span style={LATIN} dir="auto">{category}</span> : '—'}
+            </div>
+          </Field>
+
           {/* Cash / Visa. Cash is the default and the steer explains why, so the
               same purchase is not counted twice. */}
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
@@ -342,21 +358,34 @@ export default function ReceiptView({ onSaved, onManual }) {
           </div>
         </div>
 
-        {/* Category: his Memory tab's answer as one tap, or chips. Never the model's. */}
+        {/*
+          Category chips: a SELECTION, not a commit.
+          
+          WHY THIS DIVERGED FROM THE INBOX, which is where the bug came from.
+          The Inbox's chips are commit buttons — `onConfirm(item, c)` writes the
+          row and the card disappears — so filtering the guess out of the list is
+          right there: it already has its own green button, and any tap ends the
+          card. That idiom was copied here, where the chips only set state and
+          the write happens later at أكّد. Two faults compounded:
+          `.filter(c => c !== category)` REMOVED the chip he tapped, and the
+          green ✓ summary was hidden by `showAllCats` — which tapping a chip
+          sets. So a tap made the chip vanish and displayed nothing in its place.
+          
+          Now: every chip stays, the selected one is filled, tapping another
+          moves the selection, and tapping the selected one clears it. The list
+          he can choose from does not change shape when he chooses.
+        */}
         {category && !showAllCats && (
           <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: C.confirm, color: '#fff', fontSize: 18, fontWeight: 700, minHeight: 56 }}>
             ✓ <span style={LATIN} dir="auto">{category}</span>
           </button>
         )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-          {(showAllCats ? CATEGORIES : SHORT_LIST).filter((c) => c !== category).map((c) => (
-            <button
-              key={c} className="catchip" onClick={() => { setCategory(c); setShowAllCats(true); }}
-              style={{ ...chipStyle, background: C.paper, border: `1px solid ${C.line}` }} dir="auto"
-            >
-              {c}
-            </button>
-          ))}
+          <CategoryChips
+            list={showAllCats ? CATEGORIES : SHORT_LIST}
+            selected={category}
+            onPick={(c) => { setCategory(c); setShowAllCats(true); }}
+          />
           {!showAllCats && (
             <button className="catchip" onClick={() => setShowAllCats(true)}
               style={{ ...chipStyle, background: 'transparent', border: `1px dashed ${C.brass}`, color: C.brass, fontWeight: 600 }}>
@@ -423,6 +452,57 @@ function Centered({ children }) {
       {children}
     </div>
   );
+}
+
+/**
+ * The receipt card's category chips — a SELECTION, exported so its behaviour can
+ * be tested without driving the whole OCR flow.
+ *
+ * ⚠️ THE INBOX DELIBERATELY DOES NOT USE THIS, and that is the whole lesson of
+ * the bug it was written to fix. The Inbox's chips are COMMIT buttons: one tap
+ * calls `onConfirm(item, c)`, the row is written and the card disappears. There
+ * is no selected state there because there is no selection — and filtering the
+ * guess out of that list is right, since the guess has its own green button and
+ * any tap ends the card.
+ *
+ * That idiom was copied into this card, where the chips only set state and the
+ * write happens later at أكّد. The copied `.filter(c => c !== category)` then
+ * deleted the chip he had just tapped, while the ✓ summary above was hidden by
+ * `showAllCats` — which tapping a chip sets. A tap made the chip vanish and put
+ * nothing in its place, so a chosen category and an unchosen one looked
+ * identical on a card whose entire job is showing what will be written.
+ *
+ * Sharing one component between the two surfaces would repeat that mistake in a
+ * more durable form. They look alike and mean different things.
+ */
+export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride }) {
+  const base = styleOverride || {
+    padding: '11px 15px', minHeight: TAP, borderRadius: 999, fontSize: 15,
+  };
+  return list.map((c) => {
+    const isSelected = c === selected;
+    return (
+      <button
+        key={c}
+        className="catchip"
+        aria-pressed={isSelected}
+        // Toggle semantics: tapping another moves the selection, tapping the
+        // selected one clears it. Nothing is ever removed from the list.
+        onClick={() => onPick(isSelected ? null : c)}
+        style={{
+          ...base,
+          background: isSelected ? C.confirm : C.paper,
+          border: `1px solid ${isSelected ? C.confirm : C.line}`,
+          color: isSelected ? '#fff' : C.ink,
+          fontWeight: isSelected ? 700 : 500,
+          ...LATIN,
+        }}
+        dir="auto"
+      >
+        {isSelected ? '✓ ' : ''}{c}
+      </button>
+    );
+  });
 }
 
 function Field({ label, editable, children }) {
