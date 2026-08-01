@@ -115,6 +115,39 @@ else
   echo "  ℹ️  node_modules absent — honesty tests SKIPPED (run 'npm test' in a local clone)."
 fi
 
+# ——— 7. THE REPO IS DRIVE PLUS NOTHING.
+#
+# Drive is the editing source; this repo is only ever a faithful COPY of it
+# (README, sync-from-drive.sh). `rsync --delete` guarantees one direction —
+# anything in Drive reaches the repo, and anything deleted from Drive leaves it.
+# It says nothing about the other direction: a file created HERE, after a sync,
+# is invisible to every check above and rides into the commit on `git add -A`.
+#
+# That is not hypothetical. A `.claude/launch.json` containing a personal home
+# directory path was created in this repo to run a preview, passed this gate
+# clean, and would have been published — caught only by reading `git status`
+# before pushing. This check is that reading, automated.
+#
+# It flags repo-not-in-Drive ONLY. The reverse needs no check: rsync handles it,
+# and a file missing from the repo cannot be published.
+if [ -n "${MASAREEF_DRIVE_APP:-}" ] && [ -d "${MASAREEF_DRIVE_APP:-}" ]; then
+  extra=""
+  while IFS= read -r f; do
+    [ -e "$MASAREEF_DRIVE_APP/$f" ] || extra="$extra
+    $f"
+  done < <(git ls-files --cached --others --exclude-standard 2>/dev/null \
+            | grep -v -E '^(node_modules|dist)/' || true)
+  if [ -n "$extra" ]; then
+    note "these files exist in the repo but NOT in Drive:$extra
+   The repo is a copy of Drive plus nothing. Either create them in Drive (if they
+   belong) or delete them here (if they were scratch). Anything left will publish."
+  fi
+else
+  # Skipped LOUDLY. CI has no Drive mount and legitimately cannot run this — a
+  # gate that quietly does nothing is the failure mode this project names most.
+  echo "  ℹ️  MASAREEF_DRIVE_APP unset — repo-equals-Drive check SKIPPED (expected in CI)."
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "✅ safe to publish — app only, no personal data, no credentials, tests green"
 else
