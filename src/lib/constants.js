@@ -1,5 +1,5 @@
 /**
- * His 21 categories, VERBATIM (docs/02-data-context.md).
+ * His categories, VERBATIM (docs/02-data-context.md).
  *
  * Ordered by how often he actually uses them — CLAUDE.md requires most-used
  * first, because ordering is the cheapest way to cut taps.
@@ -15,6 +15,16 @@
  * What DOES have to match is the SET — the backend rejects anything outside it,
  * so a wrong or missing entry here is a dead button, never a corrupted sheet.
  *
+ * PER-INSTALL EXTRAS (2026-07-31). The last three belong to TAREK's book, not
+ * to Dad's: the backend keeps a shared base of 21 and each install declares its
+ * own additions in `CONFIG.EXTRA_CATEGORIES` (empty by default, so a fresh
+ * paste into Dad's sheet cannot acquire them). This client list is a superset,
+ * and that asymmetry is safe by the paragraph above: against Dad's deployment
+ * those three chips are simply dead buttons — the server refuses the value and
+ * the row lands as ❓, one tap from correct. The reverse — a category the server
+ * accepts but the client cannot offer — would be the harmful direction, and is
+ * why this list is updated whenever the backend's is.
+ *
  * Never invent, rename, merge or "clean up" these:
  *   `omara2 al behar` = the building by the sea. `fara7` = wedding-related.
  *   `Water. Recharge` keeps its stray dot.
@@ -25,6 +35,9 @@ export const CATEGORIES = [
   'omara2 al behar', 'Elect. Recharge', 'Water. Recharge',
   'Villa', 'Taxes and fines', 'Gas', 'Madinety club',
   'Shams club', 'Officers club', 'Vacations', 'Utilities', 'fara7',
+  // ——— Tarek's book only (see PER-INSTALL EXTRAS above). Trimmed display
+  // forms, as everything here is; the server owns the stored form.
+  'Transportation', 'InstaPay - Services', 'InstaPay - Purchases',
 ];
 
 // The six that cover most of his spending — shown before "أنواع تانية…".
