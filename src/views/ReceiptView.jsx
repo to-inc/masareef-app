@@ -58,6 +58,7 @@ export default function ReceiptView({ onSaved, onManual }) {
 
   const fileRef = useRef(null);
   const slowTimer = useRef(null);
+  const libraryRef = useRef(null);
 
   const refreshQueueCount = () => queue.count().then(setPendingCount);
   useEffect(() => { refreshQueueCount(); }, []);
@@ -435,9 +436,44 @@ export default function ReceiptView({ onSaved, onManual }) {
         {S.receiptStart}
         {/* `capture="environment"` opens the native camera directly. Deliberately
             NOT getUserMedia, which has a long-standing standalone-mode bug on
-            iOS. UNVERIFIED on a real installed app — WS5 smoke test. */}
+            iOS. VERIFIED working from the installed standalone PWA 2026-08-01. */}
         <input
           ref={fileRef} type="file" accept="image/*" capture="environment"
+          onChange={onFile} style={{ display: 'none' }}
+        />
+      </label>
+
+      {/*
+        FROM THE LIBRARY — the same pipeline, a different door (P3, 2026-08-01).
+
+        The ONLY difference is the missing `capture` attribute: with it, iOS
+        opens the camera; without it, the photo picker. Same `onFile`, same
+        prepareReceipt → extract → confirm. A second code path here would be a
+        second place for EXIF handling to drift, which is the one thing this
+        flow cannot afford — see below.
+
+        Secondary styling on purpose: the camera stays the big primary button
+        because Dad's flow is snap-then-confirm, and CLAUDE.md's senior-friendly
+        rule is one obvious action per screen. This is the deliberate second
+        choice, not a peer.
+
+        ⚠️ EXIF ORIENTATION MATTERS MORE THROUGH THIS DOOR. A camera capture is
+        taken seconds earlier by the device itself; a library image can be an old
+        photo, a screenshot, or a WhatsApp re-compression that stripped or
+        rewrote its orientation tag. `prepareReceipt`'s landscape-output check
+        (app/README) is the signal that catches a missed rotation, and it applies
+        identically here — which is exactly why both doors share one function.
+      */}
+      <label
+        className="catchip"
+        style={{
+          ...ghostBtn, display: 'inline-block', cursor: 'pointer',
+          marginTop: 10, fontSize: 16,
+        }}
+      >
+        {S.receiptFromLibrary}
+        <input
+          ref={libraryRef} type="file" accept="image/*"
           onChange={onFile} style={{ display: 'none' }}
         />
       </label>

@@ -20,6 +20,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
+import { readFile } from 'node:fs/promises';
 
 let pass = 0;
 const failures = [];
@@ -82,6 +83,50 @@ try {
   // ——— aria-pressed must track `selected`, not merely exist.
   eq(find('Car').props['aria-pressed'], true, 'the selected chip is aria-pressed');
   eq(find('Gifts').props['aria-pressed'], false, 'an unselected chip is not');
+
+  /**
+   * ——— TWO DOORS, ONE PIPELINE (P3, 2026-08-01).
+   *
+   * Camera and photo-library differ by exactly ONE attribute: `capture`. With
+   * it iOS opens the camera, without it the picker. That is the entire feature,
+   * and a single attribute is precisely the kind of thing that regresses
+   * silently — copy the input, forget to strip `capture`, and the library
+   * button opens the camera with nobody the wiser.
+   *
+   * Both must also route through the SAME handler: a second path here would be
+   * a second place for EXIF orientation to drift, and library images are the
+   * ones most likely to carry a rewritten or missing orientation tag (old
+   * photos, screenshots, WhatsApp re-compressions).
+   */
+  const ReceiptView = (await vite.ssrLoadModule('/src/views/ReceiptView.jsx')).default;
+  const idle = renderToStaticMarkup(createElement(ReceiptView, { onSaved: () => {}, onManual: () => {} }));
+  const inputs = idle.match(/<input[^>]*type="file"[^>]*>/g) || [];
+  eq(inputs.length, 2, 'the idle screen offers exactly two ways in: camera and library');
+  eq(inputs.filter((i) => i.includes('capture=')).length, 1,
+    'exactly ONE carries capture — the camera');
+  eq(inputs.filter((i) => !i.includes('capture=')).length, 1,
+    'and exactly one does NOT — the library picker');
+  ok(inputs.every((i) => i.includes('accept="image/*"')), 'both accept images');
+
+  /**
+   * BOTH DOORS MUST CALL THE SAME HANDLER — asserted against the SOURCE, not
+   * the render, because React strips event handlers from server markup and the
+   * rendered HTML simply cannot show it.
+   *
+   * Stated as prose in the component and NOT asserted, this was the one
+   * mutation that survived: rewiring the library input to a different handler
+   * passed every other check here. The claim it guards is the important one —
+   * a second path is a second place for EXIF orientation to drift, and library
+   * images are the ones most likely to carry a rewritten or missing orientation
+   * tag. A source-level assertion is cruder than a behavioural one; it is also
+   * the only kind available here, and crude-and-real beats elegant-and-absent.
+   */
+  const src = await readFile(new URL('../src/views/ReceiptView.jsx', import.meta.url), 'utf8');
+  const inputTags = src.match(/<input\b[\s\S]*?\/>/g) || [];
+  const fileTags = inputTags.filter((t) => t.includes('type="file"'));
+  eq(fileTags.length, 2, 'source declares exactly two file inputs');
+  eq(fileTags.filter((t) => t.includes('onChange={onFile}')).length, 2,
+    'BOTH doors are wired to onFile — one pipeline, one EXIF path');
 
   // ——— NEGATIVE CONTROL: the old behaviour must fail these. If a filtered list
   // still passed, the suite would be decoration.

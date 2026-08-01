@@ -52,6 +52,7 @@ export const S = {
   receiptMerchant: 'المحل',
   receiptDate: 'التاريخ',
   receiptCategory: 'النوع',
+  receiptFromLibrary: 'من الصور',
   receiptConfirm: '✓ سجّلها',
   receiptUnsure: 'مش متأكدين من اللي عليه علامة — راجعه.',
   receiptNotReceipt: 'الصورة دي مش فاتورة',
