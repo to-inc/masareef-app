@@ -53,12 +53,44 @@ function tx(db, mode, fn) {
 export async function enqueue(item) {
   try {
     const db = await openDB();
-    await tx(db, 'readwrite', (s) => s.put({ ...item, queuedAt: item.queuedAt ?? Date.now() }));
+    // `stage` defaults to 'queued': a captured photo is always waiting for the
+    // worker, whether it was captured online or off. That single default is what
+    // turns this from an offline-only fallback into the normal path (WS4-Q).
+    await tx(db, 'readwrite', (s) => s.put({
+      stage: 'queued', error: null, extraction: null,
+      ...item,
+      queuedAt: item.queuedAt ?? Date.now(),
+    }));
     db.close();
     return true;
   } catch {
     // Storage unavailable (private mode, quota). Better to tell him the photo
     // did not save than to pretend it did.
+    return false;
+  }
+}
+
+/**
+ * Patch one job in place. Used by the worker for every stage transition.
+ *
+ * Read-modify-write inside ONE transaction: two transitions racing on the same
+ * job would otherwise let the older write win and strand a job in `reading`
+ * forever, which looks exactly like a job that is simply slow.
+ */
+export async function update(id, patch) {
+  try {
+    const db = await openDB();
+    const ok = await tx(db, 'readwrite', (s) => {
+      const get = s.get(id);
+      get.onsuccess = () => {
+        if (!get.result) return;                 // already confirmed and removed
+        s.put({ ...get.result, ...patch });
+      };
+      return get;
+    });
+    db.close();
+    return ok !== undefined;
+  } catch {
     return false;
   }
 }

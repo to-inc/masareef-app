@@ -53,6 +53,16 @@ export const S = {
   receiptDate: 'التاريخ',
   receiptCategory: 'النوع',
   receiptFromLibrary: 'من الصور',
+  // WS4-Q — job stages. Words, never percentages: extraction is one opaque call
+  // and a progress bar would be a number we invented (honest-render law).
+  jobQueued: 'في الدور',
+  jobReading: 'بيتقرا…',
+  jobReady: 'جاهز — راجعه',
+  jobFailed: 'محصلش — جرّب تاني',
+  jobCapped: 'وصلنا حد النهاردة — هيكمل بكرة',
+  jobsTitle: (n) => `${n} ${n === 1 ? 'صورة' : 'صور'} في الدور`,
+  jobRetry: 'جرّب تاني',
+  jobsCapped: (n) => `${n} مستنيين حد بكرة`,
   receiptConfirm: '✓ سجّلها',
   receiptUnsure: 'مش متأكدين من اللي عليه علامة — راجعه.',
   receiptNotReceipt: 'الصورة دي مش فاتورة',

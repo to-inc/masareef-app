@@ -7,6 +7,8 @@ import { newClientId } from '../lib/dates.js';
 import { prepareReceipt, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
 import * as queue from '../state/receiptQueue.js';
+import { createWorker } from '../state/receiptWorker.js';
+import { isActionable, cappedCount } from '../state/receiptStages.js';
 import { SectionLabel, LATIN } from '../components/Primitives.jsx';
 
 /**
@@ -42,6 +44,8 @@ export default function ReceiptView({ onSaved, onManual }) {
   const [slow, setSlow] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingCount, setPendingCount] = useState(0);
+  const [jobs, setJobs] = useState([]);
+  const [reviewingId, setReviewingId] = useState(null);
 
   const [shot, setShot] = useState(null);          // { base64, clientHash, snapDate }
   const [extraction, setExtraction] = useState(null);
@@ -61,7 +65,22 @@ export default function ReceiptView({ onSaved, onManual }) {
   const libraryRef = useRef(null);
 
   const refreshQueueCount = () => queue.count().then(setPendingCount);
-  useEffect(() => { refreshQueueCount(); }, []);
+  const refreshJobs = () => queue.all().then((list) => { setJobs(list); setPendingCount(list.length); });
+
+  /**
+   * ONE worker for the life of the view (WS4-Q). Created in a ref rather than
+   * on every render, because a second worker would be a second thing in flight —
+   * and "one extraction at a time" is a promise about the vision budget and
+   * about a list that stays truthful, not an implementation detail.
+   */
+  const workerRef = useRef(null);
+  if (!workerRef.current) {
+    workerRef.current = createWorker({
+      queue, extract: receiptExtract, onChange: () => { refreshJobs(); },
+    });
+  }
+
+  useEffect(() => { refreshJobs().then(() => workerRef.current.pump()); }, []);
   useEffect(() => () => clearTimeout(slowTimer.current), []);
 
   const reset = () => {
@@ -112,29 +131,47 @@ export default function ReceiptView({ onSaved, onManual }) {
     }
 
     const snapDate = snapDateISO();
-    setShot({ ...prepared, snapDate });
+    clearTimeout(slowTimer.current);
 
-    try {
-      const res = await receiptExtract({
-        image: prepared.base64, clientHash: prepared.clientHash, snapDate,
-      });
-      clearTimeout(slowTimer.current);
-
-      if (res?.ok) { applyExtraction(res, snapDate); return; }
-      setErrorMsg(ERROR_TEXT[res?.error] || S.receiptFailed);
+    /**
+     * ENQUEUE, ALWAYS (WS4-Q). Previously this awaited the extraction inline and
+     * he sat watching a spinner before he could photograph the next receipt.
+     * Now the photo is handed to the queue and he is returned to the camera
+     * immediately; the worker reads them one at a time behind him.
+     *
+     * Queueing was already here — as the OFFLINE fallback in a catch block. All
+     * that changed is that it became the normal path, which is why there is no
+     * second queue: the machinery was already correct, it was just only reachable
+     * by failing.
+     */
+    const ok = await queue.enqueue({
+      id: prepared.clientHash, base64: prepared.base64,
+      clientHash: prepared.clientHash, snapDate,
+    });
+    if (!ok) {
+      // Storage refused it. Say so — a photo he believes is saved and is not is
+      // the one unrecoverable outcome, since the receipt is already in the bin.
+      setErrorMsg(S.receiptFailed);
       setStage('error');
-    } catch {
-      // Offline. Keep the photo — re-taking a receipt he has already thrown away
-      // is impossible, so losing it is the one unrecoverable outcome here.
-      clearTimeout(slowTimer.current);
-      const ok = await queue.enqueue({
-        id: prepared.clientHash, base64: prepared.base64,
-        clientHash: prepared.clientHash, snapDate,
-      });
-      setErrorMsg(ok ? '' : S.receiptFailed);
-      setStage(ok ? 'queued' : 'error');
-      refreshQueueCount();
+      return;
     }
+    await refreshJobs();
+    setStage('idle');
+    workerRef.current.pump();
+  };
+
+  /** Open a finished job's confirm card. Nothing is written until he taps أكّد. */
+  const review = (job) => {
+    if (!job?.extraction) return;
+    setShot({ base64: job.base64, clientHash: job.clientHash, snapDate: job.snapDate });
+    setReviewingId(job.id);
+    applyExtraction(job.extraction, job.snapDate);
+  };
+
+  const retry = async (job) => {
+    await queue.update(job.id, { stage: 'queued', error: null, retryable: false });
+    await refreshJobs();
+    workerRef.current.pump();
   };
 
   const save = async () => {
@@ -156,7 +193,9 @@ export default function ReceiptView({ onSaved, onManual }) {
     try {
       const res = await receiptConfirm(payload);
       if (res?.ok) {
-        if (shot?.clientHash) queue.remove(shot.clientHash).then(refreshQueueCount);
+        const doneId = reviewingId || shot?.clientHash;
+        if (doneId) queue.remove(doneId).then(refreshJobs);
+        setReviewingId(null);
         onSaved?.(S.saved);
         reset();
       } else {
@@ -329,7 +368,20 @@ export default function ReceiptView({ onSaved, onManual }) {
             Absent renders as `—`, never as a blank that could pass for a choice.
           */}
           <Field label={S.receiptCategory}>
-            <div style={{ fontSize: 17.5, fontWeight: 600, color: category ? C.ink : C.faint }} dir="auto">
+            {/*
+              EXPLICIT right alignment (P4b). The card is RTL, so its other
+              values sit right by inheritance — but a Latin category name with
+              `dir="auto"` is resolved LTR and drifts to the left, breaking the
+              column. `textAlign: 'right'` and not `'end'`: inside an RTL
+              container `end` means LEFT, which is the bug, spelled differently.
+            */}
+            <div
+              style={{
+                fontSize: 17.5, fontWeight: 600,
+                color: category ? C.ink : C.faint,
+                textAlign: 'right',
+              }}
+            >
               {category ? <span style={LATIN} dir="auto">{category}</span> : '—'}
             </div>
           </Field>
@@ -427,11 +479,7 @@ export default function ReceiptView({ onSaved, onManual }) {
       <p style={{ color: C.faint, fontSize: 15.5, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
         {S.receiptIntro}
       </p>
-      {pendingCount > 0 && (
-        <div style={{ fontSize: 14, color: C.brass, fontWeight: 700 }}>
-          {S.receiptQueuedCount(pendingCount)}
-        </div>
-      )}
+      <JobsList jobs={jobs} onReview={review} onRetry={retry} />
       <label className="bigbtn" style={{ ...primaryBtn, display: 'inline-block', cursor: 'pointer' }}>
         {S.receiptStart}
         {/* `capture="environment"` opens the native camera directly. Deliberately
@@ -481,6 +529,70 @@ export default function ReceiptView({ onSaved, onManual }) {
   );
 }
 
+/**
+ * The jobs list (WS4-Q).
+ *
+ * STATUS IS A WORD, NOT A BAR. Extraction is a single opaque call — we cannot
+ * know it is "half done", and a progress bar reads as knowledge. The
+ * honest-render law is about what a person READS, and it applies to progress
+ * exactly as it applies to money: never show a number you did not measure.
+ *
+ * The cap gets its own line and its own count. Five identical rows saying
+ * "waiting" would imply five failures; one line saying how many are held until
+ * tomorrow is the truth, and it is a system working rather than breaking.
+ */
+export function JobsList({ jobs, onReview, onRetry }) {
+  if (!jobs.length) return null;
+  const held = cappedCount(jobs);
+  const LABEL = {
+    queued: S.jobQueued, reading: S.jobReading, ready: S.jobReady,
+    failed: S.jobFailed, capped: S.jobCapped,
+  };
+  return (
+    <div style={{ width: '100%', maxWidth: 340, marginTop: 14, textAlign: 'start' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.faint, marginBottom: 6 }}>
+        {S.jobsTitle(jobs.length)}
+        {held > 0 && <span style={{ color: C.brass }}>{' · '}{S.jobsCapped(held)}</span>}
+      </div>
+      {jobs.map((j) => {
+        const actionable = isActionable(j);
+        return (
+          <div
+            key={j.id}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 10, background: C.card, border: `1px solid ${C.line}`,
+              borderRadius: 12, padding: '10px 12px', marginBottom: 6,
+            }}
+          >
+            <span style={{ fontSize: 14.5, fontWeight: j.stage === 'ready' ? 700 : 500,
+              color: j.stage === 'failed' ? C.warn : C.ink }}>
+              {/* An UNKNOWN stage is never silently rendered as "waiting" — an
+                  unnamed state is a state we do not understand, and saying so is
+                  the only honest option. */}
+              {LABEL[j.stage] || `؟ ${j.stage}`}
+            </span>
+            {j.stage === 'ready' && (
+              <button className="catchip" onClick={() => onReview(j)}
+                style={{ padding: '8px 14px', minHeight: TAP, borderRadius: 999,
+                  background: C.confirm, color: '#fff', fontWeight: 700, fontSize: 14 }}>
+                {S.jobReady}
+              </button>
+            )}
+            {j.stage === 'failed' && actionable && (
+              <button className="catchip" onClick={() => onRetry(j)}
+                style={{ padding: '8px 14px', minHeight: TAP, borderRadius: 999,
+                  background: C.paper, border: `1px solid ${C.line}`, fontSize: 14 }}>
+                {S.jobRetry}
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ——————————————————————————————— small pieces
 function Centered({ children }) {
   return (
@@ -515,7 +627,25 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
   const base = styleOverride || {
     padding: '11px 15px', minHeight: TAP, borderRadius: 999, fontSize: 15,
   };
-  return list.map((c) => {
+  /**
+   * SELECTED FIRST (P4a). His chosen category sits at position 1 so the card can
+   * be read top-down without hunting: النوع says what it is, and the chip that
+   * says the same thing is the first one under it.
+   *
+   * Two things this must NOT do, both of which a careless one-liner would:
+   *   - ADD a chip. If `selected` is not in `list` (a category from another
+   *     install profile, say), prepending it blindly would offer him a button
+   *     this deployment will refuse. Guarded by the `indexOf` check.
+   *   - REORDER the rest. The remainder keeps its original order, which is
+   *     most-used-first — the ordering CLAUDE.md calls the cheapest way to cut
+   *     taps. Floating one chip must not reshuffle the other twenty-three.
+   * And it still never REMOVES one; that was the P1 bug.
+   */
+  const ordered = (selected && list.indexOf(selected) !== -1)
+    ? [selected, ...list.filter((c) => c !== selected)]
+    : list;
+
+  return ordered.map((c) => {
     const isSelected = c === selected;
     return (
       <button
