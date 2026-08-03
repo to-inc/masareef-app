@@ -141,12 +141,36 @@ export function mockSummary() {
     }
   }
 
+  /**
+   * ⚠️ MOCK PARITY — the ❓ rows below are in `today` AND in `pending`, because
+   * on the real server they cannot be anywhere else.
+   *
+   * `buildTodayFromBlob_` and `collectPending_` read the SAME month blob, and
+   * the today filter is on the date alone — never on the category. So a
+   * today-dated ❓ row is necessarily in both lists, and it is already counted
+   * in `today.totals`.
+   *
+   * This mock used to keep the two lists disjoint, which the server cannot do,
+   * and that gap hid a real bug for five days: `confirmPending` APPENDED the
+   * confirmed row to `today` and added its amount to the totals, so every
+   * confirmation counted the same purchase twice. Against this fixture the
+   * append looked correct — the row genuinely was not there. Against his sheet
+   * on 2026-08-03 it inflated the day's Visa total by the sum of nine
+   * transfers. A mock that is tidier than the service is not a simplification;
+   * it is a certificate for code that has never met reality.
+   */
+  const pendingToday = [
+    { date: `${today.d}/${today.m}/${today.y}`, description: 'Hyper1', method: 'Visa', category: UNKNOWN_CATEGORY, amount: 860, currency: 'EGP' },
+    { date: `${today.d}/${today.m}/${today.y}`, description: 'Zaytouna Bakery', method: 'Visa', category: UNKNOWN_CATEGORY, amount: 75, currency: 'EGP' },
+  ];
+
   const todayEntries = [
     { date: `${today.d}/${today.m}/${today.y}`, description: 'Coffee', method: 'Cash', category: 'Eating out', amount: 60, currency: 'EGP' },
     { date: `${today.d}/${today.m}/${today.y}`, description: 'Taqa', method: 'Cash', category: 'Elect. Recharge', amount: 200, currency: 'EGP' },
     { date: `${today.d}/${today.m}/${today.y}`, description: 'Uber', method: 'Visa', category: 'Personal expenses', amount: 214.75, currency: 'EGP' },
     // A travel row: excluded from EGP sums, shown verbatim as it sits in the sheet.
     { date: `${today.d}/${today.m}/${today.y}`, description: 'Café de Flore', method: 'Visa', category: 'Eating out', amount: 12.5, currency: 'EUR' },
+    ...pendingToday,
   ];
   const todayTotals = todayEntries.reduce(
     (acc, e) => { if (e.currency === 'EGP') acc[e.method] += e.amount; return acc; },
@@ -182,23 +206,21 @@ export function mockSummary() {
     ],
     today: { entries: todayEntries, totals: todayTotals },
     pending: [
+      // `match` is the SAME row object shape as `today.entries` above — see the
+      // parity note. Spread, not shared by reference, because the server sends
+      // two independently-serialised copies and a client that accidentally
+      // relied on identity would work here and fail there.
       {
         tab: MONTH_ABBR[today.m - 1],
         rowHint: 14,
-        match: {
-          date: `${today.d}/${today.m}/${today.y}`, description: 'Hyper1', method: 'Visa',
-          category: UNKNOWN_CATEGORY, amount: 860, currency: 'EGP',
-        },
+        match: { ...pendingToday[0] },
         guess: 'Groceries',        // → the one-tap green button
         stale: false,
       },
       {
         tab: MONTH_ABBR[today.m - 1],
         rowHint: 15,
-        match: {
-          date: `${today.d}/${today.m}/${today.y}`, description: 'Zaytouna Bakery', method: 'Visa',
-          category: UNKNOWN_CATEGORY, amount: 75, currency: 'EGP',
-        },
+        match: { ...pendingToday[1] },
         guess: null,               // → chips only, never a wrong guess (D5)
         stale: false,
       },

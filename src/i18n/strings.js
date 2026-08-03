@@ -32,6 +32,21 @@ export const S = {
   more: 'أنواع تانية…',
   travel: '✈ سفر',
 
+  // ——— what happened to a card he tapped (WS3-C, 2026-08-03).
+  // Every one of these is the SERVER's answer, never the tap. The category name
+  // is rendered separately, in a Latin-isolated span, so it never joins an
+  // Arabic sentence and comes out reordered.
+  inboxAllDone: 'كله اتسجل ✓',
+  cardSaving: 'بيتسجل…',
+  cardDone: 'اتسجل ✓',
+  cardAlready: 'اتسجّلت خلاص ✓',
+  // He fixed this row in the sheet himself while it sat in the Inbox. We say
+  // what the sheet says now — his edit wins, and he can still change it here.
+  cardConflict: 'النوع اتغير في الشيت',
+  cardConflictIs: 'دلوقتي:',
+  cardFailed: 'مااتسجلش — دوس على النوع تاني',
+  cardQueued: 'هيتسجّل أول ما النت يرجع',
+
   // ——— cash
   cashTitle: 'مصروف كاش — المبلغ الأول، وبعدين النوع',
   cashLog: 'سجّل الكاش',

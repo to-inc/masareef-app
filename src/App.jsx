@@ -5,6 +5,9 @@ import { fetchSummary, fixCategory, postManual, receiptConfirm, USING_MOCK } fro
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
 import { enqueue, flush, partition, remove as dropQueued } from './state/outbox.js';
+import {
+  cardKey, outcomeFor, reconcile, remaining, pruneSettled, applyCategoryToToday,
+} from './state/inboxOutcomes.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
 import { TabButton, Toast, OfflineBanner } from './components/Primitives.jsx';
@@ -23,9 +26,10 @@ import SummaryView from './views/SummaryView.jsx';
  *    only on a true first run.
  *  - Every action writes immediately. There is no "save" step; Today mirrors the
  *    sheet. The prototype's "Write N rows" button is gone on purpose.
- *  - Optimistic, but never a lie. The card leaves the screen at once, and if the
- *    server disagrees we say so plainly and refetch rather than leaving him
- *    looking at something that did not happen.
+ *  - Optimistic, but never a lie. The tap is acknowledged at once; the OUTCOME
+ *    is whatever the server said, and the card says which (WS3-C). The previous
+ *    reading of this rule — remove the card immediately and refetch on failure —
+ *    turned four different outcomes into one indistinguishable non-event.
  */
 export default function App() {
   const [booted, setBooted] = useState(false);
@@ -36,6 +40,9 @@ export default function App() {
   const [offline, setOffline] = useState(false);
   const [toast, setToast] = useState(null);
   const [staleQueue, setStaleQueue] = useState([]);
+  // What became of each card he confirmed, keyed by `cardKey`. This is the
+  // record whose absence let a refetch resurrect a card he had already done.
+  const [settled, setSettled] = useState({});
   const toastTimer = useRef(null);
 
   // cash entry state
@@ -61,6 +68,10 @@ export default function App() {
       if (isSummaryShape(res)) {
         const clean = withDefaults(res);
         setData(clean);
+        // A ✓ outlives every refetch that still lists its row — that is the
+        // point — but not the row itself. Once the server stops sending it, the
+        // card is gone and so is its record.
+        setSettled((s) => pruneSettled(s, clean.pending));
         setSavedAt(Date.now());
         saveSnapshot(clean);
         setOffline(false);
@@ -119,39 +130,48 @@ export default function App() {
   }, [refresh, runOutbox]);
 
   // ——— writes
+  /**
+   * The toast follows the OUTCOME. It used to fire before the request was even
+   * sent — `showToast(S.saved)` on line 1 of this function — so the app said
+   * "اتسجل ✓" for writes that then failed, which is why the toast could never
+   * be used to tell done from not-done.
+   */
+  const CONFIRM_TOAST = {
+    done: S.saved,
+    already: S.alreadyFixed,
+    conflict: S.cardConflict,
+    failed: S.genericError,
+    queued: S.queued,
+  };
+
   const confirmPending = async (item, category) => {
-    // Optimistic: the card goes now. He has done his part.
-    setData((d) => ({
-      ...d,
-      pending: d.pending.filter((p) => !(p.tab === item.tab && p.rowHint === item.rowHint)),
-      today: {
-        ...d.today,
-        entries: [...d.today.entries, { ...item.match, category }],
-        totals: addToTotals(d.today.totals, item.match),
-      },
-    }));
-    showToast(S.saved);
+    const key = cardKey(item);
+    // Acknowledge the tap — and acknowledge ONLY the tap. The card greys and
+    // its buttons die immediately, so he can move to the next one without
+    // waiting for Apps Script, but nothing yet claims the row was written.
+    setSettled((s) => ({ ...s, [key]: { status: 'saving', category } }));
+    // The row is already in `today` — the server builds both lists from the one
+    // month blob. So this changes the category IN PLACE and touches no total;
+    // appending here counted every confirmed purchase twice.
+    setData((d) => (d ? { ...d, today: applyCategoryToToday(d.today, item.match, category) } : d));
 
     const payload = { tab: item.tab, rowHint: item.rowHint, match: item.match, newCategory: category };
+    let outcome;
     try {
-      const res = await fixCategory(payload);
-      if (res?.ok) return;
-      if (res?.error === 'row_not_found') {
-        // He already fixed it in the sheet. That is a success, not a failure.
-        showToast(S.alreadyFixed);
-        refresh();
-      } else if (res?.error === 'row_changed') {
-        refresh();
-      } else {
-        showToast(S.genericError);
-        refresh();
-      }
+      outcome = outcomeFor(await fixCategory(payload), false, category);
     } catch {
       // Offline. Not age-gated: the server's concurrency guard makes a late
       // replay safe at any age (see state/outbox.js).
       enqueue({ id: newClientId(), kind: 'fix_category', ageGated: false, payload });
-      showToast(S.queued);
+      outcome = outcomeFor(null, true, category);
     }
+
+    setSettled((s) => ({ ...s, [key]: outcome }));
+    showToast(CONFIRM_TOAST[outcome.status] || S.genericError);
+    // A success needs no refetch — the card already says what happened, and
+    // nine of them in a row would be nine cold starts. Everything else means
+    // the sheet and the screen disagree, so go and look.
+    if (outcome.status !== 'done') refresh();
   };
 
   const submitCash = async () => {
@@ -224,7 +244,9 @@ export default function App() {
 
   if (!booted) return null;
 
-  const pendingCount = data?.pending?.length || 0;
+  // The badge counts what is still HIS to do — same predicate the buttons and
+  // the section header use, so the three can never disagree.
+  const pendingCount = remaining(reconcile(data?.pending, settled));
 
   return (
     <div
@@ -271,7 +293,9 @@ export default function App() {
               <Skeleton />
             ) : (
               <>
-                {tab === 'inbox' && <InboxView pending={data.pending} onConfirm={confirmPending} />}
+                {tab === 'inbox' && (
+                  <InboxView pending={data.pending} settled={settled} onConfirm={confirmPending} />
+                )}
                 {tab === 'cash' && (
                   <CashView
                     amount={cashAmount} setAmount={setCashAmount}
@@ -371,11 +395,6 @@ function StaleQueueCard({ item, onSend, onDrop }) {
       </div>
     </div>
   );
-}
-
-function addToTotals(totals, match) {
-  if (match.currency !== 'EGP') return totals;   // travel rows are never in EGP sums
-  return { ...totals, [match.method]: totals[match.method] + match.amount };
 }
 
 // True first run only — every later launch paints from the snapshot.
