@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, TAP } from '../theme.js';
+import { C, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { S } from '../i18n/strings.js';
 import { money } from '../lib/format.js';
@@ -26,10 +26,10 @@ export default function InboxView({ pending, settled = {}, onConfirm }) {
     return (
       <div style={{ textAlign: 'center', paddingTop: 110 }}>
         <div style={{ fontSize: 52 }}>🍵</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 23, fontWeight: 650, color: C.nile, marginTop: 10 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 23, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
           {S.inboxEmptyTitle}
         </div>
-        <div style={{ color: C.faint, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
+        <div style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
           {S.inboxEmptyBody}
         </div>
       </div>
@@ -72,12 +72,12 @@ function StaleGroup({ rows, onConfirm }) {
         onClick={() => setOpen(!open)}
         style={{
           width: '100%', minHeight: 56, borderRadius: 14, padding: '12px 16px',
-          background: open ? C.brassSoft : C.card, border: `1px dashed ${C.brass}`,
-          color: C.brass, fontSize: 16, fontWeight: 700, textAlign: 'start',
+          background: open ? C.mist : C.card, border: `1px dashed ${C.harbor}`,
+          color: C.harbor, fontSize: 16, fontWeight: 700, textAlign: 'start',
         }}
       >
         {S.inboxOldTitle(remaining(rows) || rows.length)}
-        <div style={{ fontSize: 13, fontWeight: 500, color: C.faint, marginTop: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: C.muted, marginTop: 2 }}>
           {open ? S.inboxOldHide : S.inboxOldBody}
         </div>
       </button>
@@ -106,13 +106,13 @@ export function OutcomeNote({ outcome }) {
   const s = outcome.status;
 
   const skin = {
-    saving:   { fg: C.faint,   bg: C.paper },
-    done:     { fg: C.confirm, bg: 'rgba(31,122,77,.10)' },
-    already:  { fg: C.confirm, bg: 'rgba(31,122,77,.10)' },
-    queued:   { fg: C.brass,   bg: C.warnBg },
-    conflict: { fg: C.warn,    bg: C.warnBg },
-    failed:   { fg: C.danger,  bg: 'rgba(163,59,46,.08)' },
-  }[s] || { fg: C.faint, bg: C.paper };
+    saving:   { fg: C.ink,          bg: C.shell,      line: C.line },
+    done:     { fg: C.settledInk,   bg: C.settledBg,  line: C.settledLine },
+    already:  { fg: C.settledInk,   bg: C.settledBg,  line: C.settledLine },
+    queued:   { fg: C.ink,          bg: C.sand,       line: C.line },
+    conflict: { fg: C.conflictInk,  bg: C.conflictBg, line: C.conflictLine },
+    failed:   { fg: C.conflictInk,  bg: C.conflictBg, line: C.conflictLine },
+  }[s] || { fg: C.ink, bg: C.shell, line: C.line };
 
   const text = {
     saving: S.cardSaving,
@@ -136,7 +136,8 @@ export function OutcomeNote({ outcome }) {
       aria-live="polite"
       style={{
         marginTop: 12, minHeight: 44, borderRadius: 12, padding: '11px 14px',
-        background: skin.bg, color: skin.fg, fontSize: 15.5, fontWeight: 700,
+        background: skin.bg, color: skin.fg, border: `1px solid ${skin.line}`,
+        fontSize: 15.5, fontWeight: 700,
         display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
       }}
     >
@@ -181,15 +182,15 @@ function PendingCard({ item, outcome, onConfirm }) {
         {/* A row he never priced has NO amount. Rendering money(null) as "0"
             would state a figure he never wrote — the same lie the unpriced
             counter exists to prevent. Show the absence instead. */}
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 650, color: p.amount == null ? C.faint : C.ink, ...LATIN }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
           {p.amount == null ? '—' : money(p.amount)}{' '}
-          {p.amount != null && <span style={{ fontSize: 15, color: C.faint, fontWeight: 500 }}>{p.currency}</span>}
+          {p.amount != null && <span style={{ fontSize: 15, color: C.muted, fontWeight: 500 }}>{p.currency}</span>}
         </div>
         <Chip kind={p.method} label={p.method === 'Visa' ? S.metricVisa : S.metricCash} />
       </div>
 
       <div style={{ fontSize: 17.5, fontWeight: 600, marginTop: 2, ...LATIN }} dir="auto">{p.description}</div>
-      <div style={{ fontSize: 13, color: C.faint, marginTop: 3 }}>
+      <div style={{ fontSize: 13, color: C.muted, marginTop: 3 }}>
         <span style={LATIN}>{p.date}</span>
         {/* Only a REAL foreign currency is travel. An unpriced row has
             currency null, and `null !== 'EGP'` would mislabel it. */}
@@ -205,7 +206,7 @@ function PendingCard({ item, outcome, onConfirm }) {
           disabled={inert}
           style={{
             marginTop: 12, width: '100%', minHeight: 56, padding: '15px 0',
-            borderRadius: 14, background: C.confirm, color: '#fff',
+            borderRadius: 14, background: C.harbor, color: C.onDark,
             fontSize: 18.5, fontWeight: 700,
             opacity: inert ? 0.45 : 1,
           }}
@@ -225,7 +226,7 @@ function PendingCard({ item, outcome, onConfirm }) {
               disabled={inert}
               style={{
                 padding: '11px 15px', minHeight: TAP, borderRadius: 999,
-                background: C.paper, border: `1px solid ${C.line}`,
+                background: C.shell, border: `1px solid ${C.line}`,
                 fontSize: 15, fontWeight: 500, color: C.ink, ...LATIN,
               }}
               dir="auto"
@@ -240,8 +241,8 @@ function PendingCard({ item, outcome, onConfirm }) {
             disabled={inert}
             style={{
               padding: '11px 15px', minHeight: TAP, borderRadius: 999,
-              background: 'transparent', border: `1px dashed ${C.brass}`,
-              fontSize: 15, color: C.brass, fontWeight: 600,
+              background: 'transparent', border: `1px dashed ${C.harbor}`,
+              fontSize: 15, color: C.harbor, fontWeight: 600,
             }}
           >
             {S.more}
@@ -253,10 +254,10 @@ function PendingCard({ item, outcome, onConfirm }) {
           sheet, so the equivalent "show your work" gesture is where it lives —
           he can always go look at exactly that row himself. */}
       <details style={{ marginTop: 10 }}>
-        <summary style={{ fontSize: 12.5, color: C.faint, cursor: 'pointer' }}>{S.inboxOriginal}</summary>
+        <summary style={{ fontSize: 12.5, color: C.muted, cursor: 'pointer' }}>{S.inboxOriginal}</summary>
         <div
           style={{
-            fontSize: 13.5, color: C.faint, background: C.paper, borderRadius: 10,
+            fontSize: 13.5, color: C.muted, background: C.shell, borderRadius: 10,
             padding: 10, marginTop: 6, lineHeight: 1.8,
           }}
         >

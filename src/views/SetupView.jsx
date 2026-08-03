@@ -56,14 +56,14 @@ export default function SetupView({ onDone }) {
 
   return (
     <div style={{ padding: '8px 4px' }}>
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 650, color: C.nile }}>
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 650, color: C.harbor }}>
         {S.setupTitle}
       </div>
-      <p style={{ fontSize: 15, color: C.faint, lineHeight: 1.7, margin: '8px 0 18px' }}>
+      <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, margin: '8px 0 18px' }}>
         {S.setupBody}
       </p>
 
-      <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.faint }}>
+      <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.muted }}>
         {S.setupUrl}
         <input
           type="url"
@@ -77,7 +77,7 @@ export default function SetupView({ onDone }) {
         />
       </label>
 
-      <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.faint, marginTop: 14 }}>
+      <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.muted, marginTop: 14 }}>
         {S.setupSecret}
         <input
           type="password"
@@ -90,7 +90,7 @@ export default function SetupView({ onDone }) {
       </label>
 
       {state === 'error' && (
-        <div style={{ color: C.danger, fontSize: 14.5, marginTop: 10, lineHeight: 1.6 }}>{error}</div>
+        <div style={{ color: C.conflictInk, fontSize: 14.5, marginTop: 10, lineHeight: 1.6 }}>{error}</div>
       )}
 
       <button
@@ -99,8 +99,8 @@ export default function SetupView({ onDone }) {
         disabled={state === 'testing'}
         style={{
           marginTop: 18, width: '100%', minHeight: 56, padding: '16px 0', borderRadius: 14,
-          background: state === 'testing' ? C.line : C.nile,
-          color: state === 'testing' ? C.faint : '#fff',
+          background: state === 'testing' ? C.line : C.harbor,
+          color: state === 'testing' ? C.muted : C.onDark,
           fontSize: 17.5, fontWeight: 700,
         }}
       >

@@ -1,0 +1,41 @@
+<!--
+  "Sextant 4a / Dawn Sight" — the app icon master. Owner's spec, 2026-08-03 (D15).
+
+  THIS FILE IS THE SOURCE OF TRUTH. The four PNGs beside it are generated from
+  it by `npm run icons` and are never hand-edited — see README, "App icon".
+
+  The symbolism is STRUCTURAL and must stay that way: the frame reads as an A
+  and the sun as an O. There are no letterforms on this icon and none may be
+  added — a glyph would turn a mark into a monogram, and it would also be the
+  one element that cannot survive being scaled to 16px.
+
+  Geometry is in a 24-unit viewBox exactly as specified. Stroke width 1.4 is
+  given for the arc; the frame, crossbar and index arm are DERIVED at the same
+  weight so the instrument reads as one object rather than as parts.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1024" height="1024" role="img" aria-label="مصاريف">
+  <defs>
+    <linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#DCE9F0"/>
+      <stop offset="70%" stop-color="#FAF7F1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed ground: iOS applies its own corner mask, and a maskable icon
+       must reach every edge. Never round the corners here. -->
+  <rect width="24" height="24" fill="url(#dawn)"/>
+
+  <g id="mark" fill="none" stroke="#3E7CA6" stroke-width="1.4" stroke-linecap="round">
+    <path d="M5 20 A 9.5 9.5 0 0 1 19 20"/>
+    <path d="M12 8.6 L5 20"/>
+    <path d="M12 8.6 L19 20"/>
+    <path d="M8.6 14.2 L15.4 14.2"/>
+    <!-- The index arm is the first thing to go: at 64px and below it collapses
+         into the sun and reads as a smudge. `scripts/make-icons.mjs` strips this
+         group by id rather than by eye. -->
+    <g id="index-arm">
+      <path d="M12 8.6 L15.6 7"/>
+    </g>
+    <circle cx="17.4" cy="5.6" r="2.5" fill="#D9A441" stroke="none"/>
+  </g>
+</svg>

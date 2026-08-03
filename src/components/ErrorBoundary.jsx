@@ -35,14 +35,14 @@ export default class ErrorBoundary extends Component {
         style={{
           height: '100dvh', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', gap: 14,
-          background: C.paper, fontFamily: FONT_UI, color: C.ink, padding: 28, textAlign: 'center',
+          background: C.shell, fontFamily: FONT_UI, color: C.ink, padding: 28, textAlign: 'center',
         }}
       >
         <div style={{ fontSize: 46 }}>🌿</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 650, color: C.nile }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 650, color: C.harbor }}>
           {S.crashTitle}
         </div>
-        <p style={{ fontSize: 15.5, color: C.faint, lineHeight: 1.7, margin: 0, maxWidth: 300 }}>
+        <p style={{ fontSize: 15.5, color: C.muted, lineHeight: 1.7, margin: 0, maxWidth: 300 }}>
           {S.crashBody}
         </p>
         <button
@@ -50,7 +50,7 @@ export default class ErrorBoundary extends Component {
           onClick={() => window.location.reload()}
           style={{
             marginTop: 6, minHeight: 56, padding: '16px 34px', borderRadius: 14,
-            background: C.nile, color: '#fff', fontSize: 17.5, fontWeight: 700,
+            background: C.harbor, color: C.onDark, fontSize: 17.5, fontWeight: 700,
           }}
         >
           {S.crashRetry}

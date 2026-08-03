@@ -1,4 +1,4 @@
-import { C, FONT_DISPLAY } from '../theme.js';
+import { C, FONT_DISPLAY, NUMERALS, PREV_SERIES_OPACITY } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
@@ -43,11 +43,11 @@ export function CumulativeChart({ cur, prev, color }) {
       {[0.25, 0.5, 0.75, 1].map((f) => (
         <line key={f} x1={P} x2={W - P} y1={y(max * f)} y2={y(max * f)} stroke={C.line} strokeWidth="0.6" strokeDasharray="3 4" />
       ))}
-      <line x1={x(li)} x2={x(li)} y1={y(Math.max(cumC[li] || 0, prevAt))} y2={H - 2} stroke={C.faint} strokeWidth="0.8" />
-      <path d={path(cumP, cumP.length - 1)} stroke="#CFC7B4" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <line x1={x(li)} x2={x(li)} y1={y(Math.max(cumC[li] || 0, prevAt))} y2={H - 2} stroke={C.muted} strokeWidth="0.8" />
+      <path d={path(cumP, cumP.length - 1)} stroke={C.muted} strokeOpacity={PREV_SERIES_OPACITY} strokeWidth="2.5" fill="none" strokeLinecap="round" />
       <path d={path(cumC, li)} stroke={color} strokeWidth="3.2" fill="none" strokeLinecap="round" />
-      {hasPrev && <circle cx={x(li)} cy={y(prevAt)} r="4" fill="#B6AD99" />}
-      <circle cx={x(li)} cy={y(cumC[li] || 0)} r="5.5" fill={C.paper} stroke={color} strokeWidth="3" />
+      {hasPrev && <circle cx={x(li)} cy={y(prevAt)} r="4" fill={C.muted} fillOpacity={PREV_SERIES_OPACITY} />}
+      <circle cx={x(li)} cy={y(cumC[li] || 0)} r="5.5" fill={C.shell} stroke={color} strokeWidth="3" />
     </svg>
   );
 }
@@ -77,9 +77,9 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
             <div key={lb + i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1.5, height: '100%', width: '100%', justifyContent: 'center' }}>
                 <div style={{ width: '38%', height: `${((prev[i] || 0) / max) * 100}%`, background: C.line, borderRadius: '4px 4px 0 0', minHeight: prev[i] ? 2 : 0 }} />
-                <div style={{ width: '38%', height: `${((cur[i] || 0) / max) * 100}%`, background: isLive ? C.brass : color, borderRadius: '4px 4px 0 0', minHeight: cur[i] ? 2 : 0 }} />
+                <div style={{ width: '38%', height: `${((cur[i] || 0) / max) * 100}%`, background: isLive ? C.harbor : color, borderRadius: '4px 4px 0 0', minHeight: cur[i] ? 2 : 0 }} />
               </div>
-              <div style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: isLive ? 800 : 500, color: isLive ? C.brass : C.faint }}>
+              <div style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: isLive ? 800 : 500, color: isLive ? C.harbor : C.muted }}>
                 {isLive ? '•' : lb}
               </div>
             </div>
@@ -105,18 +105,33 @@ export function MetricCards({ metric, setMetric, computed }) {
             aria-pressed={active}
             style={{
               flex: 1, textAlign: 'start', minHeight: 72,
-              background: active ? m.color : C.card,
-              border: `1px solid ${active ? m.color : C.line}`,
+              /**
+               * THE ACTIVE FILL IS ALWAYS `harbor`, not the metric's own colour.
+               *
+               * Measured: white on the Cash metric (`muted`) is 3.51:1, and the
+               * label below is 11.5px — normal text, which wants 4.5:1. Filling
+               * the card with each metric's colour would therefore ship a label
+               * that cannot be read on one of the three cards.
+               *
+               * The recolouring the design is actually about still happens: the
+               * chart stroke and the legend dot take `m.color`, and those are
+               * graphics at a 3:1 floor, which all three clear. If the Owner
+               * accepts `muted → #5C6871` (it fixes three other flags too), the
+               * per-metric fill can come straight back — one token, one line.
+               */
+              background: active ? C.harbor : C.card,
+              border: `1px solid ${active ? C.harbor : C.line}`,
               borderRadius: 16, padding: '10px 11px', minWidth: 0,
             }}
           >
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: active ? 'rgba(255,255,255,.85)' : C.faint, letterSpacing: '.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: active ? C.onDark : C.muted, letterSpacing: '.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: active ? C.onDark : m.color, marginInlineEnd: 5 }} />
               {S[m.labelKey]}
             </div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 19, fontWeight: 650, color: active ? '#fff' : C.ink, marginTop: 2, ...LATIN }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 19, fontWeight: 650, color: active ? C.onDark : C.ink, marginTop: 2, ...LATIN, ...NUMERALS }}>
               {moneyRound(now)}
             </div>
-            <div style={{ fontSize: 12, color: active ? 'rgba(255,255,255,.75)' : C.faint }}>
+            <div style={{ fontSize: 12, color: active ? C.onDark : C.muted }}>
               {/* No comparison data ≠ a comparison of zero */}
               <span style={LATIN}>{prevAt == null ? '—' : moneyRound(prevAt)}</span>
               <Delta now={now} prev={prevAt} />
@@ -132,8 +147,8 @@ export function CategoryCompare({ cats, curName, prevName }) {
   const max = Math.max(...cats.map((c) => Math.max(c.now, c.prev)), 1);
   return (
     <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginTop: 12 }}>
-      <div style={{ display: 'flex', gap: 14, fontSize: 12.5, color: C.faint, marginBottom: 12 }}>
-        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.nileSoft, marginInlineEnd: 5, verticalAlign: '-1px' }} />{curName}</span>
+      <div style={{ display: 'flex', gap: 14, fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
+        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.harbor, marginInlineEnd: 5, verticalAlign: '-1px' }} />{curName}</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.line, marginInlineEnd: 5, verticalAlign: '-1px' }} />{prevName}</span>
       </div>
       {cats.map((c) => (
@@ -146,9 +161,9 @@ export function CategoryCompare({ cats, curName, prevName }) {
               <Delta now={c.now} prev={c.prev} />
             </span>
           </div>
-          <div style={{ height: 9, background: C.paper, borderRadius: 999, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ height: 9, background: C.shell, borderRadius: 999, position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${(c.prev / max) * 100}%`, background: C.line, borderRadius: 999 }} />
-            <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${(c.now / max) * 100}%`, background: C.nileSoft, borderRadius: 999 }} />
+            <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${(c.now / max) * 100}%`, background: C.harbor, borderRadius: 999 }} />
           </div>
         </div>
       ))}
@@ -182,9 +197,9 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
       <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: '14px 12px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px 8px', gap: 8 }}>
           <span style={{ fontSize: 13.5, fontWeight: 700, color }}>
-            {periodNames.cur} <span style={{ color: C.faint, fontWeight: 500 }}>{S.vs} {periodNames.prev}</span>
+            {periodNames.cur} <span style={{ color: C.muted, fontWeight: 500 }}>{S.vs} {periodNames.prev}</span>
           </span>
-          <span style={{ fontSize: 11, color: C.faint, whiteSpace: 'nowrap' }}>{S.cumulativeNote}</span>
+          <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>{S.cumulativeNote}</span>
         </div>
         {/* Time axes stay left→right regardless of the RTL document */}
         <div dir="ltr">
@@ -198,11 +213,11 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
           comparison data neither is drawn, and describing them would send him
           looking for something that isn't on screen. */}
       {hasPrevData ? (
-        <p style={{ fontSize: 12.5, color: C.faint, textAlign: 'center', lineHeight: 1.6, margin: '10px 0 0' }}>
+        <p style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', lineHeight: 1.6, margin: '10px 0 0' }}>
           {S.comparisonHelp(periodNames.prev, periodNames.unit)}
         </p>
       ) : (
-        <p style={{ fontSize: 12.5, color: C.faint, textAlign: 'center', lineHeight: 1.6, margin: '10px 0 0' }}>
+        <p style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', lineHeight: 1.6, margin: '10px 0 0' }}>
           {S.noComparison(periodNames.prev)}
         </p>
       )}

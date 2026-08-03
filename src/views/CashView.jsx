@@ -1,4 +1,4 @@
-import { C, FONT_DISPLAY, TAP } from '../theme.js';
+import { C, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
 import { CATEGORIES, CASH_QUICK } from '../lib/constants.js';
 import { S } from '../i18n/strings.js';
 import { normalizeDigits } from '../lib/format.js';
@@ -25,12 +25,12 @@ export default function CashView({ amount, setAmount, desc, setDesc, cat, setCat
 
       <div
         style={{
-          textAlign: 'center', fontFamily: FONT_DISPLAY, fontSize: 46, fontWeight: 650,
+          textAlign: 'center', fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: 46, fontWeight: 650,
           color: amount ? C.ink : C.line, padding: '6px 0 2px',
         }}
         dir="ltr"
       >
-        {amount || '0'} <span style={{ fontSize: 18, color: C.faint }}>{S.currency}</span>
+        {amount || '0'} <span style={{ fontSize: 18, color: C.muted }}>{S.currency}</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, margin: '8px 0 14px' }} dir="ltr">
@@ -61,9 +61,9 @@ export default function CashView({ amount, setAmount, desc, setDesc, cat, setCat
             }}
             style={{
               padding: '10px 14px', minHeight: TAP, borderRadius: 999, fontSize: 14,
-              background: desc === q.label ? C.brassSoft : 'transparent',
-              border: `1px solid ${desc === q.label ? C.brass : C.line}`,
-              color: desc === q.label ? C.brass : C.faint,
+              background: desc === q.label ? C.line : 'transparent',
+              border: `1px solid ${desc === q.label ? C.harbor : C.line}`,
+              color: desc === q.label ? C.harbor : C.ink,
               fontWeight: 600, ...LATIN,
             }}
             dir="auto"
@@ -82,9 +82,9 @@ export default function CashView({ amount, setAmount, desc, setDesc, cat, setCat
             aria-pressed={cat === c}
             style={{
               padding: '12px 15px', minHeight: TAP, borderRadius: 999, fontSize: 15.5, fontWeight: 600,
-              background: cat === c ? C.nile : C.card,
-              color: cat === c ? '#fff' : C.ink,
-              border: `1px solid ${cat === c ? C.nile : C.line}`,
+              background: cat === c ? C.harbor : C.card,
+              color: cat === c ? C.onDark : C.ink,
+              border: `1px solid ${cat === c ? C.harbor : C.line}`,
               ...LATIN,
             }}
             dir="auto"
@@ -100,8 +100,8 @@ export default function CashView({ amount, setAmount, desc, setDesc, cat, setCat
         onClick={onSubmit}
         style={{
           marginTop: 16, width: '100%', minHeight: 58, padding: '16px 0', borderRadius: 14,
-          background: ready ? C.confirm : C.line,
-          color: ready ? '#fff' : C.faint,
+          background: ready ? C.amber : C.line,
+          color: ready ? C.amberInk : C.ink,
           fontSize: 18.5, fontWeight: 700,
         }}
       >

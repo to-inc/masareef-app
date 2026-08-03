@@ -1,4 +1,4 @@
-import { C, FONT_DISPLAY } from '../theme.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, NUMERALS } from '../theme.js';
 
 /**
  * Category names, merchant names and amounts are Latin text living inside an RTL
@@ -10,14 +10,17 @@ export const LATIN = { unicodeBidi: 'isolate', direction: 'ltr', display: 'inlin
 
 export function SectionLabel({ children }) {
   return (
-    <div style={{ fontSize: 14, fontWeight: 600, color: C.faint, margin: '2px 2px 12px', letterSpacing: '.01em' }}>
+    <div style={{
+      fontSize: 14, fontWeight: 600, color: C.muted, margin: '2px 2px 12px',
+      letterSpacing: '.01em', ...DIVIDER,
+    }}>
       {children}
     </div>
   );
 }
 
 export function Chip({ kind, small, label }) {
-  const isVisa = kind === 'Visa';
+  const skin = METHOD[kind] || METHOD.Cash;
   return (
     <span
       style={{
@@ -26,8 +29,8 @@ export function Chip({ kind, small, label }) {
         borderRadius: 999,
         fontSize: small ? 12 : 13,
         fontWeight: 700,
-        background: isVisa ? C.visaBg : C.cashBg,
-        color: isVisa ? C.visa : C.cash,
+        background: skin.bg,
+        color: skin.fg,
         justifySelf: 'start',
         whiteSpace: 'nowrap',
       }}
@@ -47,8 +50,8 @@ export function Delta({ now, prev }) {
       style={{
         fontSize: 11.5,
         fontWeight: 700,
-        color: up ? C.danger : C.confirm,
-        background: up ? '#F7E6E2' : '#E3F1E9',
+        color: up ? C.conflictInk : C.settledInk,
+        background: up ? C.conflictBg : C.settledBg,
         borderRadius: 999,
         padding: '1px 7px',
         marginInlineStart: 6,
@@ -73,7 +76,7 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
         padding: '10px 0 12px',
         minHeight: 56,
         background: 'transparent',
-        color: active ? C.nile : C.faint,
+        color: active ? C.harbor : C.muted,
         position: 'relative',
       }}
     >
@@ -82,8 +85,8 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
           big
             ? {
                 width: 50, height: 50, margin: '-18px auto 2px', borderRadius: 999,
-                background: C.brass, color: '#fff', fontSize: 32, lineHeight: '48px',
-                fontWeight: 600, boxShadow: '0 6px 16px rgba(184,146,59,.45)',
+                background: C.harbor, color: C.onDark, fontSize: 32, lineHeight: '48px',
+                fontWeight: 600, boxShadow: '0 6px 16px rgba(62,124,166,.42)',
               }
             : { fontSize: 21, marginBottom: 2 }
         }
@@ -95,7 +98,7 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
         <span
           style={{
             position: 'absolute', top: 6, insetInlineEnd: '24%',
-            background: C.danger, color: '#fff', fontSize: 11, fontWeight: 700,
+            background: C.conflictInk, color: C.onDark, fontSize: 11, fontWeight: 700,
             borderRadius: 999, padding: '1px 7px', ...LATIN,
           }}
         >
@@ -117,13 +120,13 @@ export function Toast({ message }) {
         bottom: `calc(96px + env(safe-area-inset-bottom))`,
         left: '50%',
         transform: 'translateX(-50%)',
-        background: C.confirm,
-        color: '#fff',
+        background: C.harbor,
+        color: C.onDark,
         padding: '13px 24px',
         borderRadius: 999,
         fontSize: 16.5,
         fontWeight: 600,
-        boxShadow: '0 8px 24px rgba(31,122,77,.4)',
+        boxShadow: '0 8px 24px rgba(62,124,166,.38)',
         whiteSpace: 'nowrap',
         zIndex: 40,
       }}
@@ -139,9 +142,9 @@ export function OfflineBanner({ text }) {
   return (
     <div
       style={{
-        background: C.warnBg,
-        color: '#7A5B12',
-        border: `1px solid ${C.brassSoft}`,
+        background: C.sand,
+        color: C.ink,
+        border: `1px solid ${C.line}`,
         borderRadius: 12,
         padding: '10px 14px',
         fontSize: 14.5,
@@ -157,9 +160,9 @@ export function OfflineBanner({ text }) {
 
 export function BigAmount({ amount, currency, size = 30 }) {
   return (
-    <div style={{ fontFamily: FONT_DISPLAY, fontSize: size, fontWeight: 650, color: C.ink, ...LATIN }}>
+    <div style={{ fontFamily: FONT_DISPLAY, fontSize: size, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
       {amount}
-      {currency ? <span style={{ fontSize: size * 0.5, color: C.faint, fontWeight: 500 }}> {currency}</span> : null}
+      {currency ? <span style={{ fontSize: size * 0.5, color: C.muted, fontWeight: 500 }}> {currency}</span> : null}
     </div>
   );
 }

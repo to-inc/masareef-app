@@ -1,8 +1,9 @@
 /**
  * Number and digit handling.
  *
- * Everything RENDERS in Western digits — that is what his sheet holds and what
- * Fraunces' numerals are cut for. Anything he TYPES may arrive in Arabic-Indic
+ * Everything RENDERS in Western digits — that is what his sheet holds, and the
+ * display serif sets them as tabular figures so a column of amounts lines up.
+ * Anything he TYPES may arrive in Arabic-Indic
  * (٠١٢٣٤٥٦٧٨٩) or Persian digits, so normalize on the way in. Mirrors
  * `normalizeDigits_` in backend/Code.gs.
  */

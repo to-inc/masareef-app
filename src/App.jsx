@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { C, FONT_DISPLAY, FONT_UI } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN } from './theme.js';
 import { S } from './i18n/strings.js';
 import { fetchSummary, fixCategory, postManual, receiptConfirm, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
@@ -258,7 +258,16 @@ export default function App() {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        background: C.paper,
+        /**
+         * THE MORNING CROWN — the Today screen only.
+         *
+         * It lives on this OUTER, non-scrolling box rather than on <main>. On
+         * <main> the gradient would scroll away with the content, and pinning it
+         * with `background-attachment: fixed` is unreliable inside an iOS scroll
+         * container — a well-known WebKit failure, and this app has exactly one
+         * device to be wrong on. Here it simply sits still behind the content.
+         */
+        background: tab === 'summary' && !needsSetup ? MORNING_CROWN : C.shell,
         fontFamily: FONT_UI,
         color: C.ink,
         fontSize: 17,
@@ -266,7 +275,7 @@ export default function App() {
     >
       <header
         style={{
-          background: C.nile, color: '#EDE6D4',
+          background: C.harbor, color: C.onDark,
           padding: `calc(12px + env(safe-area-inset-top)) 20px 12px`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
         }}
@@ -325,7 +334,7 @@ export default function App() {
                 )}
                 {tab === 'summary' && <SummaryView data={data} />}
                 {savedAt && offline && (
-                  <p style={{ fontSize: 12.5, color: C.faint, textAlign: 'center', marginTop: 14 }}>
+                  <p style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', marginTop: 14 }}>
                     {S.lastUpdated} <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{cairoClock(savedAt)}</span>
                   </p>
                 )}
@@ -352,7 +361,7 @@ export default function App() {
       )}
 
       {USING_MOCK && (
-        <div style={{ position: 'fixed', top: 0, insetInlineStart: 0, background: C.brass, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderEndEndRadius: 6, zIndex: 50 }}>
+        <div style={{ position: 'fixed', top: 0, insetInlineStart: 0, background: C.conflictInk, color: C.onDark, fontSize: 10, fontWeight: 700, padding: '2px 6px', borderEndEndRadius: 6, zIndex: 50 }}>
           MOCK
         </div>
       )}
@@ -368,12 +377,12 @@ function StaleQueueCard({ item, onSend, onDrop }) {
   return (
     <div
       style={{
-        background: C.warnBg, border: `1px solid ${C.brassSoft}`, borderRadius: 14,
+        background: C.sand, border: `1px solid ${C.line}`, borderRadius: 14,
         padding: 14, marginBottom: 12,
       }}
     >
-      <div style={{ fontWeight: 700, color: '#7A5B12', fontSize: 15.5 }}>{S.outboxStaleTitle}</div>
-      <div style={{ fontSize: 14, color: '#7A5B12', opacity: 0.85, marginTop: 4, lineHeight: 1.6 }}>
+      <div style={{ fontWeight: 700, color: C.ink, fontSize: 15.5 }}>{S.outboxStaleTitle}</div>
+      <div style={{ fontSize: 14, color: C.ink, opacity: 0.85, marginTop: 4, lineHeight: 1.6 }}>
         {S.outboxStaleNote}
       </div>
       <div style={{ fontSize: 14.5, marginTop: 8, direction: 'ltr', unicodeBidi: 'isolate', textAlign: 'end' }}>
@@ -382,13 +391,13 @@ function StaleQueueCard({ item, onSend, onDrop }) {
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <button
           className="bigbtn" onClick={onSend}
-          style={{ flex: 1, minHeight: 48, borderRadius: 12, background: C.confirm, color: '#fff', fontSize: 16, fontWeight: 700 }}
+          style={{ flex: 1, minHeight: 48, borderRadius: 12, background: C.harbor, color: C.onDark, fontSize: 16, fontWeight: 700 }}
         >
           {S.outboxSend}
         </button>
         <button
           className="catchip" onClick={onDrop}
-          style={{ minHeight: 48, padding: '0 16px', borderRadius: 12, background: 'transparent', border: `1px solid ${C.brassSoft}`, color: '#7A5B12', fontSize: 15, fontWeight: 600 }}
+          style={{ minHeight: 48, padding: '0 16px', borderRadius: 12, background: 'transparent', border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 600 }}
         >
           {S.outboxDrop}
         </button>

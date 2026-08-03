@@ -59,7 +59,48 @@ anything.
 npm run dev       # Vite dev server
 npm run build     # production build → dist/
 npm run preview   # serve dist/ locally
+npm run icons     # regenerate public/icons/*.png from the SVG masters
 ```
+
+## App icon
+
+**"Sextant 4a / Dawn Sight"** (2026-08-03). The frame reads as an **A** and the
+sun as an **O** — the symbolism is structural, and there are no letterforms on
+the icon. The section divider says the same two letters in Morse (`·— ———`), as
+a CSS background rather than as text so a screen reader skips it.
+
+`public/icons/sextant.svg` is the **source of truth**; `sextant-maskable.svg` is
+the same drawing plus one transform that scales the mark into Android's 80% safe
+zone. The four PNGs are generated, never hand-edited:
+
+```bash
+npm run icons && npm run check:icons
+```
+
+Rasterising uses `rsvg-convert` or ImageMagick when present, and otherwise
+macOS's own `qlmanage`, which ships with the OS — this repo deliberately has no
+image dependency. `npm run check:icons` decodes the generated PNGs and checks
+the pixels, not the file sizes: it verifies the mark is actually painted, that
+the icon is fully opaque to every edge, that the maskable stays inside the safe
+zone (computed from the SVG's own geometry), and that **`maskable-512.png` is
+not a copy of `icon-512.png`** — which is what it had silently been until this
+rev, byte for byte.
+
+### ⚠️ An installed iOS web clip keeps its old icon — forever
+
+iOS caches the home-screen icon at install time and never refreshes it. The only
+way to get the new one is to remove the web clip and add it again — and **that
+creates fresh storage**: the saved `/exec` URL and secret are wiped and the app
+opens on SetupView.
+
+So the rollout is deliberately uneven, and that is fine:
+
+- **Existing installs** keep the old icon until their owner chooses to
+  reinstall. Nothing is broken; the app is entirely current apart from the icon.
+- **Whoever does reinstall** must re-paste the URL and the secret once. Have them
+  to hand *before* deleting the web clip.
+- **New installs** — Dad's, when WS6 cuts over — get the sextant from day one and
+  never see any of this.
 
 ## Environment
 

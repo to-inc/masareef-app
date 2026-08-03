@@ -1,0 +1,42 @@
+<!--
+  "Sextant 4a / Dawn Sight" — the MASKABLE master.
+
+  Identical to sextant.svg but for ONE attribute: the `transform` on #mark.
+
+  Android composites a maskable icon behind a shape it chooses — circle,
+  squircle, teardrop — and only the central 80% is guaranteed to survive. The
+  standard mark reaches a radius of ~11.9 of 12 from centre, so under a circular
+  mask the sun would be sliced off. Scaling the whole mark to 0.78 brings its
+  farthest point to ~9.3, inside the 9.6 safe radius, without cropping anything.
+
+  WHAT THIS REPLACES: until today `maskable-512.png` was a byte-identical copy of
+  `icon-512.png` (verified by md5). It had never been safe-zoned at all — the
+  "maskable" icon was simply the normal one under a different name, which is
+  invisible until a launcher crops it on a device nobody here owns.
+
+  `scripts/test-icons.mjs` recomputes that radius from this file's own geometry
+  and fails if it leaves the safe zone, and asserts that this file differs from
+  the master by exactly the transform — so the two can never drift apart, and
+  the copy-the-other-one failure cannot come back.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1024" height="1024" role="img" aria-label="مصاريف">
+  <defs>
+    <linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#DCE9F0"/>
+      <stop offset="70%" stop-color="#FAF7F1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="24" height="24" fill="url(#dawn)"/>
+
+  <g id="mark" transform="translate(12,12) scale(0.78) translate(-12,-12)" fill="none" stroke="#3E7CA6" stroke-width="1.4" stroke-linecap="round">
+    <path d="M5 20 A 9.5 9.5 0 0 1 19 20"/>
+    <path d="M12 8.6 L5 20"/>
+    <path d="M12 8.6 L19 20"/>
+    <path d="M8.6 14.2 L15.4 14.2"/>
+    <g id="index-arm">
+      <path d="M12 8.6 L15.6 7"/>
+    </g>
+    <circle cx="17.4" cy="5.6" r="2.5" fill="#D9A441" stroke="none"/>
+  </g>
+</svg>

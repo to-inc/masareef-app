@@ -12,7 +12,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/*.png', 'fonts/*.woff2'],
+      includeAssets: ['icons/*.png'],
       manifest: {
         name: 'مصاريف',
         short_name: 'مصاريف',
@@ -23,8 +23,8 @@ export default defineConfig({
         scope: base,
         display: 'standalone',
         orientation: 'portrait',
-        theme_color: '#0E3B2E',
-        background_color: '#F6F1E6',
+        theme_color: '#3E7CA6',
+        background_color: '#FAF7F1',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },

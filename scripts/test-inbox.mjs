@@ -375,6 +375,22 @@ try {
     'and neither does one waiting for the network — that row is explicitly unwritten');
   ok(text(lastQueued).includes('هيتسجّل أول ما النت يرجع'), 'which is said instead');
 
+  /**
+   * ——— THE SECTION DIVIDER'S MORSE BEADS ARE DECORATION (D15).
+   *
+   * `·— ———` is A O — the same two letters the icon carries structurally. As
+   * TEXT they would be announced by VoiceOver as a run of punctuation before
+   * every section heading, which is noise in front of the one line he needs. As
+   * a CSS background they are skipped entirely. That is the whole reason the
+   * brief specified a background, so it is asserted rather than trusted.
+   */
+  ok(untouched.includes('background-image:url(&quot;data:image/svg+xml,'),
+    'the divider is painted as a background image');
+  ok(!/[·—]{1}\s*—/.test(text(untouched).replace(/—\s*دوس/g, '')),
+    'and never as text a screen reader would read out');
+  ok(untouched.includes('%233E7CA6'),
+    'its beads are drawn in harbor, from the palette rather than a literal');
+
   // ——— both doors, one handler: the green button and every chip confirm the
   // same way. A second path here is a second place for this bug to come back.
   const handed = [];

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { C, FONT_DISPLAY, TAP } from '../theme.js';
+import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, normalizeDigits } from '../lib/format.js';
@@ -217,12 +217,12 @@ export default function ReceiptView({ onSaved, onManual }) {
     return (
       <Centered>
         <div style={{ fontSize: 46 }}>🧾</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.nile, marginTop: 10 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
           {S.receiptReading}
         </div>
         {slow && (
           <>
-            <p style={{ color: C.faint, fontSize: 15, marginTop: 10, lineHeight: 1.6, maxWidth: 290 }}>
+            <p style={{ color: C.muted, fontSize: 15, marginTop: 10, lineHeight: 1.6, maxWidth: 290 }}>
               {S.receiptSlow}
             </p>
             <button className="bigbtn" onClick={() => { reset(); onManual?.(); }} style={ghostBtn}>
@@ -238,10 +238,10 @@ export default function ReceiptView({ onSaved, onManual }) {
     return (
       <Centered>
         <div style={{ fontSize: 46 }}>🤔</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.nile, marginTop: 10 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
           {S.receiptNotReceipt}
         </div>
-        <p style={{ color: C.faint, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
+        <p style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
           {S.receiptNotReceiptBody}
         </p>
         <button className="bigbtn" onClick={reset} style={primaryBtn}>{S.receiptRetake}</button>
@@ -253,10 +253,10 @@ export default function ReceiptView({ onSaved, onManual }) {
     return (
       <Centered>
         <div style={{ fontSize: 46 }}>📥</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.nile, marginTop: 10 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
           {S.receiptQueuedTitle}
         </div>
-        <p style={{ color: C.faint, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
+        <p style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
           {S.receiptQueuedBody}
         </p>
         <button className="bigbtn" onClick={reset} style={primaryBtn}>{S.receiptRetake}</button>
@@ -300,9 +300,9 @@ export default function ReceiptView({ onSaved, onManual }) {
           <div style={{
             fontSize: 12, fontFamily: 'ui-monospace, monospace', direction: 'ltr',
             padding: '6px 10px', borderRadius: 8, marginBottom: 10,
-            background: shot.landscape ? '#F7E6E2' : C.paper,
-            color: shot.landscape ? C.danger : C.faint,
-            border: `1px solid ${shot.landscape ? C.danger : C.line}`,
+            background: shot.landscape ? C.conflictBg : C.shell,
+            color: shot.landscape ? C.conflictInk : C.muted,
+            border: `1px solid ${shot.landscape ? C.conflictInk : C.line}`,
           }}>
             {shot.width}×{shot.height} · {Math.round(shot.bytes / 1024)}KB · q{shot.quality}
             {shot.landscape ? ' · ⚠ LANDSCAPE — EXIF rotation not applied?' : ' · portrait ✓'}
@@ -324,8 +324,8 @@ export default function ReceiptView({ onSaved, onManual }) {
                 style={inputStyle} autoFocus
               />
             ) : (
-              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 650, ...LATIN }}>
-                {money(amount)} <span style={{ fontSize: 16, color: C.faint }}>{extraction.currency}</span>
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 650, ...LATIN, ...NUMERALS }}>
+                {money(amount)} <span style={{ fontSize: 16, color: C.muted }}>{extraction.currency}</span>
               </div>
             )}
           </Field>
@@ -333,9 +333,9 @@ export default function ReceiptView({ onSaved, onManual }) {
           {/* The verbatim line the number came from — he can check our reading
               against the paper in his hand without trusting us. */}
           {extraction.raw_total_line && (
-            <div style={{ fontSize: 13, color: C.faint, marginTop: 2, lineHeight: 1.7 }}>
+            <div style={{ fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.7 }}>
               {S.receiptSaw}{' '}
-              <span style={{ background: C.paper, borderRadius: 6, padding: '2px 6px' }} dir="auto">
+              <span style={{ background: C.shell, borderRadius: 6, padding: '2px 6px' }} dir="auto">
                 {extraction.raw_total_line}
               </span>
             </div>
@@ -378,7 +378,7 @@ export default function ReceiptView({ onSaved, onManual }) {
             <div
               style={{
                 fontSize: 17.5, fontWeight: 600,
-                color: category ? C.ink : C.faint,
+                color: category ? C.ink : C.muted,
                 textAlign: 'right',
               }}
             >
@@ -397,16 +397,16 @@ export default function ReceiptView({ onSaved, onManual }) {
                 aria-pressed={method === m}
                 style={{
                   flex: 1, minHeight: TAP, borderRadius: 12, fontSize: 16, fontWeight: 700,
-                  background: method === m ? (m === 'Visa' ? C.visaBg : C.cashBg) : C.paper,
-                  color: method === m ? (m === 'Visa' ? C.visa : C.cash) : C.faint,
-                  border: `1px solid ${method === m ? (m === 'Visa' ? C.visa : C.cash) : C.line}`,
+                  background: method === m ? METHOD[m].bg : C.shell,
+                  color: method === m ? METHOD[m].fg : C.ink,
+                  border: `1px solid ${method === m ? C.harbor : C.line}`,
                 }}
               >
                 {m === 'Visa' ? S.metricVisa : S.metricCash}
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 12.5, color: C.faint, marginTop: 6, textAlign: 'center' }}>
+          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 6, textAlign: 'center' }}>
             {S.receiptCashSteer}
           </div>
         </div>
@@ -429,7 +429,7 @@ export default function ReceiptView({ onSaved, onManual }) {
           he can choose from does not change shape when he chooses.
         */}
         {category && !showAllCats && (
-          <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: C.confirm, color: '#fff', fontSize: 18, fontWeight: 700, minHeight: 56 }}>
+          <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: C.harbor, color: C.onDark, fontSize: 18, fontWeight: 700, minHeight: 56 }}>
             ✓ <span style={LATIN} dir="auto">{category}</span>
           </button>
         )}
@@ -441,7 +441,7 @@ export default function ReceiptView({ onSaved, onManual }) {
           />
           {!showAllCats && (
             <button className="catchip" onClick={() => setShowAllCats(true)}
-              style={{ ...chipStyle, background: 'transparent', border: `1px dashed ${C.brass}`, color: C.brass, fontWeight: 600 }}>
+              style={{ ...chipStyle, background: 'transparent', border: `1px dashed ${C.harbor}`, color: C.harbor, fontWeight: 600 }}>
               {S.more}
             </button>
           )}
@@ -449,7 +449,7 @@ export default function ReceiptView({ onSaved, onManual }) {
 
         {blockedByDup ? (
           <button className="bigbtn" onClick={() => setOverrideDup(true)}
-            style={{ ...primaryBtn, marginTop: 16, width: '100%', background: C.brass }}>
+            style={{ ...primaryBtn, marginTop: 16, width: '100%', background: C.harbor }}>
             {S.receiptSaveAnyway}
           </button>
         ) : (
@@ -457,7 +457,7 @@ export default function ReceiptView({ onSaved, onManual }) {
             className="bigbtn" disabled={!ready} onClick={save}
             style={{
               marginTop: 16, width: '100%', minHeight: 58, padding: '16px 0', borderRadius: 14,
-              background: ready ? C.confirm : C.line, color: ready ? '#fff' : C.faint,
+              background: ready ? C.harbor : C.line, color: ready ? C.onDark : C.ink,
               fontSize: 18.5, fontWeight: 700,
             }}
           >
@@ -476,7 +476,7 @@ export default function ReceiptView({ onSaved, onManual }) {
   return (
     <Centered>
       <div style={{ fontSize: 52 }}>🧾</div>
-      <p style={{ color: C.faint, fontSize: 15.5, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
+      <p style={{ color: C.muted, fontSize: 15.5, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
         {S.receiptIntro}
       </p>
       <JobsList jobs={jobs} onReview={review} onRetry={retry} />
@@ -550,9 +550,9 @@ export function JobsList({ jobs, onReview, onRetry }) {
   };
   return (
     <div style={{ width: '100%', maxWidth: 340, marginTop: 14, textAlign: 'start' }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.faint, marginBottom: 6 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, marginBottom: 6 }}>
         {S.jobsTitle(jobs.length)}
-        {held > 0 && <span style={{ color: C.brass }}>{' · '}{S.jobsCapped(held)}</span>}
+        {held > 0 && <span style={{ color: C.ink }}>{' · '}{S.jobsCapped(held)}</span>}
       </div>
       {jobs.map((j) => {
         const actionable = isActionable(j);
@@ -566,7 +566,7 @@ export function JobsList({ jobs, onReview, onRetry }) {
             }}
           >
             <span style={{ fontSize: 14.5, fontWeight: j.stage === 'ready' ? 700 : 500,
-              color: j.stage === 'failed' ? C.warn : C.ink }}>
+              color: j.stage === 'failed' ? C.conflictInk : C.ink }}>
               {/* An UNKNOWN stage is never silently rendered as "waiting" — an
                   unnamed state is a state we do not understand, and saying so is
                   the only honest option. */}
@@ -575,14 +575,14 @@ export function JobsList({ jobs, onReview, onRetry }) {
             {j.stage === 'ready' && (
               <button className="catchip" onClick={() => onReview(j)}
                 style={{ padding: '8px 14px', minHeight: TAP, borderRadius: 999,
-                  background: C.confirm, color: '#fff', fontWeight: 700, fontSize: 14 }}>
+                  background: C.harbor, color: C.onDark, fontWeight: 700, fontSize: 14 }}>
                 {S.jobReady}
               </button>
             )}
             {j.stage === 'failed' && actionable && (
               <button className="catchip" onClick={() => onRetry(j)}
                 style={{ padding: '8px 14px', minHeight: TAP, borderRadius: 999,
-                  background: C.paper, border: `1px solid ${C.line}`, fontSize: 14 }}>
+                  background: C.shell, border: `1px solid ${C.line}`, fontSize: 14 }}>
                 {S.jobRetry}
               </button>
             )}
@@ -657,9 +657,9 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
         onClick={() => onPick(isSelected ? null : c)}
         style={{
           ...base,
-          background: isSelected ? C.confirm : C.paper,
-          border: `1px solid ${isSelected ? C.confirm : C.line}`,
-          color: isSelected ? '#fff' : C.ink,
+          background: isSelected ? C.harbor : C.shell,
+          border: `1px solid ${isSelected ? C.harbor : C.line}`,
+          color: isSelected ? C.onDark : C.ink,
           fontWeight: isSelected ? 700 : 500,
           ...LATIN,
         }}
@@ -674,7 +674,7 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
 function Field({ label, editable, children }) {
   return (
     <div style={{ marginTop: 12 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 700, color: editable ? C.warn : C.faint, letterSpacing: '.02em' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: editable ? C.harbor : C.ink, letterSpacing: '.02em' }}>
         {label}{editable ? ' •' : ''}
       </div>
       {children}
@@ -685,7 +685,7 @@ function Field({ label, editable, children }) {
 function Banner({ children }) {
   return (
     <div style={{
-      background: C.warnBg, border: `1px solid ${C.brassSoft}`, color: '#7A5B12',
+      background: C.sand, border: `1px solid ${C.line}`, color: C.ink,
       borderRadius: 12, padding: '10px 14px', fontSize: 14.5, fontWeight: 600,
       marginBottom: 10, lineHeight: 1.6,
     }}>
@@ -696,11 +696,11 @@ function Banner({ children }) {
 
 const primaryBtn = {
   marginTop: 14, minHeight: 58, padding: '16px 30px', borderRadius: 14,
-  background: C.nile, color: '#fff', fontSize: 18, fontWeight: 700,
+  background: C.harbor, color: C.onDark, fontSize: 18, fontWeight: 700,
 };
 const ghostBtn = {
   marginTop: 10, minHeight: TAP, padding: '12px 20px', borderRadius: 12,
-  background: 'transparent', border: `1px solid ${C.line}`, color: C.faint,
+  background: 'transparent', border: `1px solid ${C.line}`, color: C.muted,
   fontSize: 15.5, fontWeight: 600,
 };
 const chipStyle = {
@@ -709,6 +709,6 @@ const chipStyle = {
 };
 const inputStyle = {
   width: '100%', padding: '12px 14px', borderRadius: 12, marginTop: 4,
-  border: `1.5px solid ${C.brass}`, background: C.paper, color: C.ink,
+  border: `1.5px solid ${C.harbor}`, background: C.shell, color: C.ink,
   fontSize: 20, fontWeight: 600, outline: 'none',
 };

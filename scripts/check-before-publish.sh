@@ -131,12 +131,24 @@ fi
 # It flags repo-not-in-Drive ONLY. The reverse needs no check: rsync handles it,
 # and a file missing from the repo cannot be published.
 if [ -n "${MASAREEF_DRIVE_APP:-}" ] && [ -d "${MASAREEF_DRIVE_APP:-}" ]; then
-  extra=""
+  # A file RETIRED in Drive is deleted from this working tree by the rsync, but
+  # `git ls-files --cached` still lists it until the deletion is STAGED — and it
+  # is still in the repo in every sense that matters, because a commit made now
+  # would keep it. So it is reported, with the right instruction: the fix is
+  # `git add -A`, not another `rm` of a file that is already gone. (Found when
+  # the Fraunces subset was retired with the Nile palette, 2026-08-03.)
+  extra=""; unstaged=""
   while IFS= read -r f; do
-    [ -e "$MASAREEF_DRIVE_APP/$f" ] || extra="$extra
-    $f"
+    [ -e "$MASAREEF_DRIVE_APP/$f" ] && continue
+    if [ -e "$f" ]; then extra="$extra
+    $f"; else unstaged="$unstaged
+    $f  (already deleted here — the DELETION is unstaged)"; fi
   done < <(git ls-files --cached --others --exclude-standard 2>/dev/null \
             | grep -v -E '^(node_modules|dist)/' || true)
+  if [ -n "$unstaged" ]; then
+    note "these files are gone from Drive and from this tree, but a commit would still carry them:$unstaged
+   Stage the removal:  git add -A"
+  fi
   if [ -n "$extra" ]; then
     note "these files exist in the repo but NOT in Drive:$extra
    The repo is a copy of Drive plus nothing. Either create them in Drive (if they

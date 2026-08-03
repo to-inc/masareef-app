@@ -82,8 +82,14 @@ export const CASH_QUICK = [
 
 export const UNKNOWN_CATEGORY = '❓';
 
+/**
+ * The three metric cards. Colours are DERIVED from the canonical palette rather
+ * than named by it — see theme.js. Notably Cash is `muted`, NOT amber: amber
+ * means "the cash keypad's button" exactly once in this app, and a second use
+ * would empty the first of meaning.
+ */
 export const METRICS = [
-  { key: 'all', labelKey: 'metricAll', color: '#1B5742' },
-  { key: 'Visa', labelKey: 'metricVisa', color: '#1D4ED8' },
-  { key: 'Cash', labelKey: 'metricCash', color: '#B45309' },
+  { key: 'all', labelKey: 'metricAll', color: '#2C4356' },
+  { key: 'Visa', labelKey: 'metricVisa', color: '#3E7CA6' },
+  { key: 'Cash', labelKey: 'metricCash', color: '#7B8B96' },
 ];
