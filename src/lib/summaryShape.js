@@ -45,13 +45,18 @@ export function isSummaryShape(d) {
  */
 export function withDefaults(d) {
   if (!d.month) return d;
-  if (d.month.undated && d.month.unpriced) return d;
+  // `month.prevLog` arrived with W-6 and is normalised for the same reason:
+  // ABSENT and null must not be two different things downstream. JSON.stringify
+  // drops an undefined key, so a payload round-tripped through the snapshot
+  // would otherwise differ from the one that came off the wire.
+  if (d.month.undated && d.month.unpriced && d.month.prevLog !== undefined) return d;
   return {
     ...d,
     month: {
       ...d.month,
       undated: d.month.undated || { count: 0, Visa: 0, Cash: 0 },
       unpriced: d.month.unpriced || { count: 0 },
+      prevLog: d.month.prevLog === undefined ? null : d.month.prevLog,
     },
   };
 }

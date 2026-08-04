@@ -102,6 +102,15 @@ const sum = (a) => a.reduce((s, v) => s + (v || 0), 0);
  */
 const MOCK_HAS_PREV_YEAR = false;
 
+/**
+ * The other real state of `month.prevLog`: `null`, which the server returns for
+ * a first month or one holding no readable entries. Populated is the DEFAULT
+ * because that is what his book actually returns — he has months of history —
+ * and a mock must default to the state the service is really in. Flip this to
+ * review the card-less screen.
+ */
+const MOCK_PREVLOG_NULL = false;
+
 export function mockSummary() {
   const today = cairoToday();
   const prev = prevMonthOf(today.y, today.m);
@@ -192,6 +201,38 @@ export function mockSummary() {
       // Rows he wrote down but never priced (the travel legs). The month total
       // is knowably short, and the UI must say so rather than look confident.
       unpriced: { count: 3 },
+      /**
+       * W-6 «سجل القبطان» — the closed month (06 §2.2).
+       *
+       * MOCK PARITY, which takes a moment's care here: this is what a real
+       * server would return FOR THIS MOCK'S OWN DATA, not a nicer version of it.
+       *
+       *  · `total` is the previous month's series summed exactly as the server
+       *    sums it — both methods, the whole month.
+       *  · `top` is the previous month's category figures, which this file
+       *    already carries as `monthCats[].prev`, sorted and cut to three by the
+       *    same rule the server applies.
+       *  · `total` is therefore LARGER than the sum of `top`, exactly as it is
+       *    in reality: money in ❓ rows is in the month and in no category. A
+       *    mock where those two agreed would let a client ship that quietly
+       *    assumed they always do.
+       *  · `unpriced`/`undated` are the PREVIOUS month's — deliberately NOT the
+       *    two numbers directly above, which are the current month's and the
+       *    easiest pair in this file to wire up by mistake. One is nonzero and
+       *    one is zero so a single fixture exercises both the shown and the
+       *    hidden line.
+       */
+      prevLog: MOCK_PREVLOG_NULL ? null : {
+        name: MONTH_ABBR[prev.m - 1],
+        total: sum(prevMonth.Visa) + sum(prevMonth.Cash),
+        top: [
+          { name: 'Eating out', amount: 9120 },
+          { name: 'Groceries', amount: 6480 },
+          { name: 'Donations', amount: 4500 },
+        ],
+        unpriced: 1,
+        undated: 0,
+      },
     },
     year: {
       cur: { Visa: yearVisa, Cash: yearCash },

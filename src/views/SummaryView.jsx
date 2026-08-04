@@ -4,6 +4,7 @@ import { S, monthAr, WEEK_DAYS_AR, MONTH_LABELS_AR } from '../i18n/strings.js';
 import { money, amountWithCurrency } from '../lib/format.js';
 import { PeriodSummary, CategoryCompare } from '../components/Charts.jsx';
 import { SectionLabel, Chip, LATIN } from '../components/Primitives.jsx';
+import LogCard from '../components/LogCard.jsx';
 
 /**
  * Today / Week / Month / Year, all driven by the single `summary` payload.
@@ -53,6 +54,16 @@ export default function SummaryView({ data }) {
 
   return (
     <div>
+      {/**
+        * W-6, TOP OF THE TODAY VIEW. First thing on the screen on the first of
+        * the month, above his own numbers — a closed book is handed over before
+        * the new one is opened. It renders nothing at all on the other 24 days,
+        * after he has read it, or when the server sends no log.
+        *
+        * `today.d` here is `data.today_cairo` — the SERVER's Cairo date. The
+        * device clock is never consulted for this decision.
+        */}
+      <LogCard prevLog={data.month && data.month.prevLog} todayCairo={today} />
       <div style={{ display: 'flex', background: C.card, border: `1px solid ${C.line}`, borderRadius: 999, padding: 4, marginBottom: 14, gap: 2 }}>
         {seg('today', S.periodToday)}
         {seg('week', S.periodWeek)}

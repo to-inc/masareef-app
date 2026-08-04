@@ -102,6 +102,31 @@ export const S = {
   receiptReadNow: 'اقراها',
   receiptDiscard: 'امسحها',
 
+  /**
+   * ——— the captain's log (W-6). The ONE place this app speaks a full sentence.
+   *
+   * Everywhere else the voice is a label on a button. Here it is a first officer
+   * closing a month's book and handing it up: it states what happened, admits
+   * what it could not account for, and signs off. It gives no advice, makes no
+   * comparison, and asks for nothing — a report, not a nudge.
+   */
+  logTitle: (month) => `دفتر ${month} — مقفول`,
+  logCurrency: 'جنيه',
+  // Shown ONLY when nonzero. A month with nothing missing says nothing about
+  // missing things — the silence is the good news.
+  /**
+   * DEVIATION from the commissioned string, raised in the report: the brief gave
+   * «<n> مصاريف من غير تمن», which reads "1 expenses" at n=1. Every sibling here
+   * — unpricedNote, undatedNote, inboxWaiting, jobsTitle — already carries the
+   * same singular/plural switch, and this is the one card he reads slowly.
+   */
+  logUnpriced: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير تمن`,
+  logUndated: (n) => `${n} من غير يوم محدد`,
+  logTo: (initials) => `إلى القبطان ${initials}`,
+  logSignoff: 'كل قرش له سطر. تمام يا فندم.',
+  // Quiet, and final for this month. Not "close", not "×" — an acknowledgement.
+  logDismiss: 'تمام',
+
   // ——— summary
   periodToday: 'النهاردة',
   periodWeek: 'الأسبوع',
