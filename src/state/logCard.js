@@ -78,21 +78,3 @@ export function dismiss(todayCairo, storage) {
 export function shouldShowLog(prevLog, todayCairo, dismissed) {
   return hasLog(prevLog) && isLogWindow(todayCairo) && !dismissed;
 }
-
-/**
- * `prevLog.name` is his TAB name — opaque, echoed from the sheet, and the
- * contract is explicit that the client must not parse it. So it is LOOKED UP,
- * and anything unrecognised falls through unchanged rather than becoming a
- * blank or a guess: a tab he renamed should read as its own name, not as
- * nothing.
- */
-const MONTH_AR_BY_TAB = {
-  Jan: 'يناير', Feb: 'فبراير', Mar: 'مارس', Apr: 'أبريل',
-  May: 'مايو', Jun: 'يونيو', Jul: 'يوليو', Aug: 'أغسطس',
-  Sep: 'سبتمبر', Oct: 'أكتوبر', Nov: 'نوفمبر', Dec: 'ديسمبر',
-};
-
-export function monthArFromTab(name) {
-  if (typeof name !== 'string') return '';
-  return MONTH_AR_BY_TAB[name.trim()] || name;
-}

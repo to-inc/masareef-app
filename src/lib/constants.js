@@ -82,22 +82,7 @@ export const CASH_QUICK = [
 
 export const UNKNOWN_CATEGORY = '❓';
 
-/**
- * Who the captain's log is addressed to (W-6).
- *
- * A CLIENT constant, not a server field, because it is a property of the person
- * holding the phone rather than of the book: the same deployment could serve two
- * installs, and the log should greet whoever is reading it. Set per-install at
- * cutover (docs/07) — when this app is built for a different sheet, this is the
- * one line that changes with it.
- *
- * INITIALS ONLY, and that is a publishing rule as much as a stylistic one: this
- * directory is the only part of the project that goes to a public repo, and a
- * full name here would put a private individual into it. The first draft of this
- * comment named him outright and was caught by check-before-publish.sh — which
- * is the second time that scan has earned its place.
- */
-export const CAPTAIN_INITIALS = 'أ.ع.';
+// (CAPTAIN_INITIALS moved to i18n/ with D16b — it renders per language.)
 
 /**
  * The three metric cards. Colours are DERIVED from the canonical palette rather

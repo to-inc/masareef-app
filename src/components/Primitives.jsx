@@ -1,4 +1,6 @@
 import { C, METHOD, DIVIDER, FONT_DISPLAY, NUMERALS } from '../theme.js';
+import { SWITCH_TO } from '../i18n/strings.js';
+import { getLang, setLang, otherLang } from '../state/lang.js';
 
 /**
  * Category names, merchant names and amounts are Latin text living inside an RTL
@@ -7,6 +9,39 @@ import { C, METHOD, DIVIDER, FONT_DISPLAY, NUMERALS } from '../theme.js';
  * "12.5 EUR" can flip. `unicode-bidi: isolate` + dir="auto" pins each run.
  */
 export const LATIN = { unicodeBidi: 'isolate', direction: 'ltr', display: 'inline-block' };
+
+/**
+ * The language switch (D16b) — one tap, and it is ALWAYS labelled in the
+ * language it switches TO. He never has to read the language he is stuck in to
+ * find his way out of it, which is the whole failure mode of a toggle labelled
+ * "Language".
+ *
+ * It reloads. `S` is resolved once at module load (see i18n/strings.js), so a
+ * reload is what re-imports the other locale — and it cannot leave half the
+ * screen in the old language, which a partial re-render can. One second, from
+ * the service worker's cache, for a setting he changes about once.
+ */
+export function LangToggle({ subtle }) {
+  const flip = () => {
+    setLang(otherLang(getLang()));
+    if (typeof location !== 'undefined') location.reload();
+  };
+  return (
+    <button
+      onClick={flip}
+      lang={otherLang(getLang())}
+      style={{
+        minHeight: 32, padding: '4px 12px', borderRadius: 999,
+        background: 'transparent',
+        border: `1px solid ${subtle ? C.line : 'rgba(255,255,255,.45)'}`,
+        color: subtle ? C.ink : '#fff',
+        fontSize: 13, fontWeight: 700, opacity: subtle ? 1 : 0.9,
+      }}
+    >
+      {SWITCH_TO}
+    </button>
+  );
+}
 
 export function SectionLabel({ children }) {
   return (

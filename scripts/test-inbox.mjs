@@ -286,7 +286,7 @@ try {
    * the subject is now rendered alone, and a separate assertion proves the card
    * actually mounts it.
    */
-  const { OutcomeNote } = mod;
+  const { OutcomeNote } = await vite.ssrLoadModule('/src/components/CategoryPicker.jsx');
   const strip = (o) => text(renderToStaticMarkup(createElement(OutcomeNote, { outcome: o })));
 
   eq(strip(null), '', 'an untouched card has no strip at all');
@@ -399,12 +399,28 @@ try {
     pending: guessed, settled: {}, onConfirm: (item, c) => handed.push(c),
   }));
   const src = await readFile(new URL('../src/views/InboxView.jsx', import.meta.url), 'utf8');
-  eq((src.match(/onClick=\{\(\) => onConfirm\(/g) || []).length, 2,
+  const picker = await readFile(new URL('../src/components/CategoryPicker.jsx', import.meta.url), 'utf8');
+  eq((picker.match(/onClick=\{\(\) => onPick\(/g) || []).length, 2,
     'exactly two confirm doors exist — the green guess and the chip grid');
   ok(src.includes("from '../state/inboxOutcomes.js'"),
     'the view imports the shared key rule');
   ok(!/(const|function)\s+cardKey\s*[=(]/.test(src),
     'and does NOT define its own — two key rules would drift and settle silently under the wrong key');
+
+  /**
+   * ——— ONE CHIP SHEET, NOT TWO (D16).
+   *
+   * The Recent list edits the same sheet cells the Inbox does, so it uses the
+   * SAME component. If either view grows its own grid again there are two places
+   * for the chip order, the inert rule and the outcome states to drift — and the
+   * drift is invisible until the two screens disagree in his hand. Asserted by
+   * source, because the failure is structural rather than behavioural: two
+   * correct-today copies pass every render assertion in this file.
+   */
+  ok(src.includes("from '../components/CategoryPicker.jsx'"),
+    'the Inbox card gets its buttons from the shared picker');
+  ok(!/\bCATEGORIES\b|\bSHORT_LIST\b/.test(src),
+    'and does not reach for the category list itself — that belongs to the picker alone');
 } finally {
   await vite.close();
 }

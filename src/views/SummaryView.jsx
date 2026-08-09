@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
-import { S, monthAr, WEEK_DAYS_AR, MONTH_LABELS_AR } from '../i18n/strings.js';
+import { S, monthName, WEEK_DAYS, MONTH_LABELS } from '../i18n/strings.js';
 import { money, amountWithCurrency } from '../lib/format.js';
 import { PeriodSummary, CategoryCompare } from '../components/Charts.jsx';
 import { SectionLabel, Chip, LATIN } from '../components/Primitives.jsx';
@@ -74,7 +74,7 @@ export default function SummaryView({ data }) {
       {period === 'week' && (
         <PeriodSummary
           data={data.week}
-          labels={WEEK_DAYS_AR}
+          labels={WEEK_DAYS}
           liveIndex={liveWeekIndex}
           metric={metric}
           setMetric={setMetric}
@@ -91,14 +91,14 @@ export default function SummaryView({ data }) {
             liveIndex={-1}
             metric={metric}
             setMetric={setMetric}
-            periodNames={{ cur: monthAr(data.month.names.cur), prev: monthAr(data.month.names.prev), unit: S.unitMonth }}
+            periodNames={{ cur: monthName(data.month.names.cur), prev: monthName(data.month.names.prev), unit: S.unitMonth }}
             showBars={false}
             footnote={undatedFootnote}
           />
           <CategoryCompare
             cats={data.monthCats}
-            curName={monthAr(data.month.names.cur)}
-            prevName={monthAr(data.month.names.prev)}
+            curName={monthName(data.month.names.cur)}
+            prevName={monthName(data.month.names.prev)}
           />
         </>
       )}
@@ -106,7 +106,7 @@ export default function SummaryView({ data }) {
       {period === 'year' && (
         <PeriodSummary
           data={data.year}
-          labels={MONTH_LABELS_AR}
+          labels={MONTH_LABELS}
           liveIndex={today.m - 1}
           metric={metric}
           setMetric={setMetric}

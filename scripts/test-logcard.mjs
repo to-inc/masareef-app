@@ -23,8 +23,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { readFile } from 'node:fs/promises';
 import {
-  isLogWindow, hasLog, shouldShowLog, isDismissed, dismiss, monthArFromTab, LOG_WINDOW_DAYS,
+  isLogWindow, hasLog, shouldShowLog, isDismissed, dismiss, LOG_WINDOW_DAYS,
 } from '../src/state/logCard.js';
+import { monthByTab } from '../src/i18n/strings.js';
 
 let pass = 0;
 const failures = [];
@@ -116,11 +117,11 @@ ok(shouldShowLog(HOLLOW, DAY1, false), 'and the hollow month is shown like any o
 }
 
 // ——————————————————————— the month name is looked up, never parsed
-eq(monthArFromTab('Jul'), 'يوليو', 'the tab name maps to its Arabic month');
-eq(monthArFromTab('Aug'), 'أغسطس', 'and so does August');
-eq(monthArFromTab('Dec'), 'ديسمبر', 'and December');
-eq(monthArFromTab('Q1'), 'Q1', 'a tab we do not recognise renders as ITSELF, never as blank');
-eq(monthArFromTab(null), '', 'and a missing name does not become "null"');
+eq(monthByTab('Jul'), 'يوليو', 'the tab name maps to its Arabic month');
+eq(monthByTab('Aug'), 'أغسطس', 'and so does August');
+eq(monthByTab('Dec'), 'ديسمبر', 'and December');
+eq(monthByTab('Q1'), 'Q1', 'a tab we do not recognise renders as ITSELF, never as blank');
+eq(monthByTab(null), '', 'and a missing name does not become "null"');
 
 // ——————————————————————— rendered
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });

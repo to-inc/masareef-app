@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN } from './theme.js';
-import { S } from './i18n/strings.js';
+import { S, LOCALE } from './i18n/strings.js';
+import { applyDocumentLang } from './state/lang.js';
 import { fetchSummary, fixCategory, postManual, receiptConfirm, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
@@ -10,7 +11,7 @@ import {
 } from './state/inboxOutcomes.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, LangToggle } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import CashView from './views/CashView.jsx';
@@ -99,6 +100,9 @@ export default function App() {
 
   // ——— boot
   useEffect(() => {
+    // Direction first: index.html ships the Arabic default, and this only has to
+    // change anything for an install that chose English.
+    applyDocumentLang(LOCALE);
     consumeHashCredentials();
     if (!USING_MOCK && !getCreds()) {
       setNeedsSetup(true);
@@ -281,11 +285,22 @@ export default function App() {
         }}
       >
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650 }}>{S.appName}</span>
-        {data && (
-          <span style={{ fontSize: 12.5, opacity: 0.75, direction: 'ltr' }}>
-            {`${data.today_cairo.d}/${data.today_cairo.m}/${data.today_cairo.y}`}
-          </span>
-        )}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {data && (
+            <span style={{ fontSize: 12.5, opacity: 0.75, direction: 'ltr' }}>
+              {`${data.today_cairo.d}/${data.today_cairo.m}/${data.today_cairo.y}`}
+            </span>
+          )}
+          {/**
+            * THE LANGUAGE SWITCH LIVES HERE, not only in SetupView.
+            *
+            * SetupView is shown ONLY when there are no stored credentials, so a
+            * toggle that lived there alone would be unreachable the moment the
+            * app is set up — which is every moment that matters. The header is on
+            * every screen and costs one tap from anywhere.
+            */}
+          <LangToggle />
+        </span>
       </header>
 
       {/* minHeight:0 lets a flex child actually shrink so overflow-y works */}

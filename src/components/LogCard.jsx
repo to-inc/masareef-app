@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
-import { S } from '../i18n/strings.js';
+import { S, monthByTab, CAPTAIN_INITIALS } from '../i18n/strings.js';
 import { money } from '../lib/format.js';
-import { CAPTAIN_INITIALS } from '../lib/constants.js';
 import { LATIN } from './Primitives.jsx';
-import { shouldShowLog, isDismissed, dismiss, monthArFromTab } from '../state/logCard.js';
+import { shouldShowLog, isDismissed, dismiss } from '../state/logCard.js';
 
 /**
  * «سجل القبطان» — the closed month, handed up (W-6, contract 06 §2.2).
@@ -39,7 +38,7 @@ export default function LogCard({ prevLog, todayCairo }) {
   return (
     <section
       className="card-in"
-      aria-label={S.logTitle(monthArFromTab(prevLog.name))}
+      aria-label={S.logTitle(monthByTab(prevLog.name))}
       style={{
         background: C.card, border: `1px solid ${C.line}`, borderRadius: 18,
         padding: '18px 18px 14px', marginBottom: 16,
@@ -47,7 +46,7 @@ export default function LogCard({ prevLog, todayCairo }) {
       }}
     >
       <div style={{ fontSize: 15, fontWeight: 700, color: C.harbor }}>
-        {S.logTitle(monthArFromTab(prevLog.name))}
+        {S.logTitle(monthByTab(prevLog.name))}
       </div>
 
       {/* The figure the whole card exists to deliver. Serif, tabular, and the

@@ -1,0 +1,257 @@
+/**
+ * Egyptian Arabic UI strings — the dialect he actually speaks, not MSA.
+ *
+ * THE DEFAULT, and that is CLAUDE.md #6 rather than a preference: this app is
+ * for one man in Cairo who reads Arabic. `strings.en.js` is the same key set for
+ * Tarek's own install; `strings.js` picks between them. A key that exists here
+ * and not there renders `undefined` at whoever is reading — which is why
+ * scripts/test-i18n.mjs compares the two key sets rather than trusting anyone to
+ * remember.
+ *
+ * Rules that shaped this file:
+ *  - One sentence, one action. No jargon, no error codes, never a red modal.
+ *  - Nothing scolds him and nothing nags. There are no streaks here.
+ *  - Category names are NEVER translated — they are the frozen sheet schema and
+ *    must round-trip byte-identical. They render as Latin inside RTL text via
+ *    `unicode-bidi: isolate` (see Chip / category buttons).
+ *  - Numbers are always Western digits (see lib/format.js).
+ */
+export const AR = {
+  appName: 'مصاريف',
+
+  // ——— tabs
+  tabInbox: 'الوارد',
+  tabCash: 'كاش',
+  tabReceipt: 'فاتورة',
+  tabSummary: 'اليوم',
+
+  // ——— inbox
+  inboxEmptyTitle: 'كله متسجّل',
+  inboxEmptyBody: 'أي شراء بالفيزا هيظهر هنا أول ما البنك يبعت الرسالة.',
+  inboxWaiting: (n) => `${n} ${n === 1 ? 'عملية مستنية' : 'عمليات مستنية'} — دوس على النوع عشان يتسجل`,
+  inboxOriginal: 'الرسالة الأصلية',
+  // Months-old rows live behind one card so today's two purchases aren't buried
+  // under forty of them. Nothing is hidden — it opens on a tap.
+  inboxOldTitle: (n) => `مصاريف قديمة (${n})`,
+  inboxOldBody: 'من شهور فاتت — لسه من غير نوع.',
+  inboxOldOpen: 'افتحها',
+  inboxOldHide: 'اقفلها',
+  more: 'أنواع تانية…',
+  travel: '✈ سفر',
+
+  // ——— what happened to a card he tapped (WS3-C, 2026-08-03).
+  // Every one of these is the SERVER's answer, never the tap. The category name
+  // is rendered separately, in a Latin-isolated span, so it never joins an
+  // Arabic sentence and comes out reordered.
+  inboxAllDone: 'كله اتسجل ✓',
+  cardSaving: 'بيتسجل…',
+  cardDone: 'اتسجل ✓',
+  cardAlready: 'اتسجّلت خلاص ✓',
+  // He fixed this row in the sheet himself while it sat in the Inbox. We say
+  // what the sheet says now — his edit wins, and he can still change it here.
+  cardConflict: 'النوع اتغير في الشيت',
+  cardConflictIs: 'دلوقتي:',
+  cardFailed: 'مااتسجلش — دوس على النوع تاني',
+  cardQueued: 'هيتسجّل أول ما النت يرجع',
+
+  // ——— cash
+  cashTitle: 'مصروف كاش — المبلغ الأول، وبعدين النوع',
+  cashLog: 'سجّل الكاش',
+  currency: 'جنيه',
+
+  // ——— receipt
+  receiptStart: '📷 صوّر الفاتورة',
+  receiptIntro: 'صوّر الفاتورة وهنقرا المبلغ لوحدنا. مش هيتسجل حاجة غير لما توافق.',
+  receiptReading: 'بنقرا الفاتورة…',
+  receiptSlow: 'الشبكة بطيئة شوية. تقدر تستنى أو تسجّلها بنفسك.',
+  receiptEnterManually: 'أسجّلها بنفسي',
+  receiptRetake: 'صوّر تاني',
+  receiptCancel: 'إلغاء',
+
+  receiptCheck: 'راجع وأكّد',
+  receiptSaw: 'شفنا:',           // precedes raw_total_line, verbatim from the receipt
+  receiptAmount: 'المبلغ',
+  receiptMerchant: 'المحل',
+  receiptDate: 'التاريخ',
+  receiptCategory: 'النوع',
+  receiptFromLibrary: 'من الصور',
+  // WS4-Q — job stages. Words, never percentages: extraction is one opaque call
+  // and a progress bar would be a number we invented (honest-render law).
+  jobQueued: 'في الدور',
+  jobReading: 'بيتقرا…',
+  jobReady: 'جاهز — راجعه',
+  jobFailed: 'محصلش — جرّب تاني',
+  jobCapped: 'وصلنا حد النهاردة — هيكمل بكرة',
+  jobsTitle: (n) => `${n} ${n === 1 ? 'صورة' : 'صور'} في الدور`,
+  jobRetry: 'جرّب تاني',
+  jobsCapped: (n) => `${n} مستنيين حد بكرة`,
+  receiptConfirm: '✓ سجّلها',
+  receiptUnsure: 'مش متأكدين من اللي عليه علامة — راجعه.',
+  receiptNotReceipt: 'الصورة دي مش فاتورة',
+  receiptNotReceiptBody: 'جرّب تصوّرها تاني في نور أحسن، أو سجّلها بنفسك.',
+  receiptFailed: 'مش قادرين نقرا الفاتورة. سجّلها بنفسك.',
+  receiptTooLarge: 'الصورة كبيرة أوي. صوّر تاني.',
+  receiptNoQuota: 'خلصت محاولات النهاردة. سجّلها بنفسك.',
+  receiptNotConfigured: 'قراءة الفواتير مش مفعّلة.',
+
+  // Receipts default to Cash because the SMS automation already logs every card
+  // purchase — this steer is what stops the same expense being counted twice.
+  receiptCashSteer: 'الفيزا بتتسجل لوحدها من رسالة البنك',
+  receiptDupSms: 'الشراء ده يمكن اتسجل خلاص من رسالة البنك.',
+  receiptDupPhoto: 'يظهر إنك صوّرت الفاتورة دي قبل كده.',
+  receiptSaveAnyway: 'سجّلها برضه',
+
+  receiptQueuedTitle: 'الصورة اتحفظت',
+  receiptQueuedBody: 'مفيش نت دلوقتي. هنقراها أول ما النت يرجع.',
+  receiptQueuedCount: (n) => `${n} ${n === 1 ? 'فاتورة محفوظة' : 'فواتير محفوظة'}`,
+  receiptStaleTitle: 'فاتورة من فترة',
+  receiptStaleBody: 'دي اتصورت من زمان. تحب نقراها دلوقتي؟',
+  receiptReadNow: 'اقراها',
+  receiptDiscard: 'امسحها',
+
+  /**
+   * ——— the captain's log (W-6). The ONE place this app speaks a full sentence.
+   *
+   * Everywhere else the voice is a label on a button. Here it is a first officer
+   * closing a month's book and handing it up: it states what happened, admits
+   * what it could not account for, and signs off. It gives no advice, makes no
+   * comparison, and asks for nothing — a report, not a nudge.
+   */
+  logTitle: (month) => `دفتر ${month} — مقفول`,
+  logCurrency: 'جنيه',
+  // Shown ONLY when nonzero. A month with nothing missing says nothing about
+  // missing things — the silence is the good news.
+  /**
+   * DEVIATION from the commissioned string, raised in the report: the brief gave
+   * «<n> مصاريف من غير تمن», which reads "1 expenses" at n=1. Every sibling here
+   * — unpricedNote, undatedNote, inboxWaiting, jobsTitle — already carries the
+   * same singular/plural switch, and this is the one card he reads slowly.
+   */
+  logUnpriced: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير تمن`,
+  logUndated: (n) => `${n} من غير يوم محدد`,
+  logTo: (initials) => `إلى القبطان ${initials}`,
+  logSignoff: 'كل قرش له سطر. تمام يا فندم.',
+  // Quiet, and final for this month. Not "close", not "×" — an acknowledgement.
+  logDismiss: 'تمام',
+
+  // ——— summary
+  periodToday: 'النهاردة',
+  periodWeek: 'الأسبوع',
+  periodMonth: 'الشهر',
+  periodYear: 'السنة',
+  todayTitle: 'مصاريف النهاردة — زي ما هي في الشيت بالظبط',
+  todayEmptyTitle: 'لسه مفيش حاجة اتسجلت النهاردة',
+  todayEmptyBody: 'أكّد العمليات من الوارد، أو سجّل كاش.',
+  colDate: 'التاريخ',
+  colDesc: 'البيان',
+  colMethod: 'كاش/فيزا',
+  colCategory: 'النوع',
+  colAmount: 'المبلغ',
+
+  thisWeek: 'الأسبوع ده',
+  lastWeek: 'الأسبوع اللي فات',
+  unitWeek: 'الأسبوع',
+  unitMonth: 'الشهر',
+  unitYear: 'السنة',
+
+  metricAll: 'كل المصاريف',
+  metricVisa: 'فيزا',
+  metricCash: 'كاش',
+
+  vs: 'مقابل',
+  cumulativeNote: 'تراكمي · ● = نفس النقطة',
+  avg: 'متوسط',
+  // Shown when there is nothing to compare against — better than describing a
+  // grey line he cannot see.
+  noComparison: (prev) => `مفيش بيانات لـ${prev} للمقارنة.`,
+
+  comparisonHelp: (prev, unit) =>
+    `الرمادي هو ${prev}، والنقطة الرمادية مكانه في نفس التوقيت — مقارنة عادلة حتى في نص ${unit}. دوس على أي كارت عشان تبدّل الرسم.`,
+
+  // Rows whose date cell in his sheet is unreadable (10/210/2, 221, 31/0).
+  // They count in the month total but belong to no day, so the chart cannot show
+  // them. Said plainly rather than hidden.
+  undatedNote: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير يوم واضح — داخلة في إجمالي الشهر بس مش في الرسم`,
+
+  // Rows he wrote down but never priced. The month total is knowably short, so
+  // it must not be presented as if it were complete.
+  unpricedNote: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير مبلغ — الإجمالي ده أقل من الحقيقة`,
+
+  // ——— connection / write states
+  offline: 'مفيش نت — دي آخر بيانات محفوظة',
+  lastUpdated: 'آخر تحديث',
+  saving: 'جارٍ الحفظ…',
+  saved: 'اتسجل ✓',
+  alreadyFixed: 'اتسجّلت خلاص ✓',
+  queued: 'هيتسجّل أول ما النت يرجع',
+  genericError: 'حصلت مشكلة. جرّب تاني',
+  crashTitle: 'في حاجة وقفت',
+  crashBody: 'مفيش أي حاجة ضاعت — كل المصاريف في الشيت زي ما هي. افتح تاني.',
+  crashRetry: 'افتح تاني',
+
+  // ——— outbox
+  // Anything older than 6 h has outlived the server's dedupe window, so sending
+  // it again could double-write. He decides, we never decide for him.
+  outboxStaleTitle: 'لسه محفوظة — تسجلها؟',
+  outboxStaleNote: 'دي اتسجلت عندنا من فترة ومش متأكدين وصلت ولا لأ. لو مش لاقيها في الشيت، دوس تسجيل.',
+  outboxSend: 'سجّلها',
+  outboxDrop: 'امسحها',
+  outboxPending: (n) => `${n} ${n === 1 ? 'عملية' : 'عمليات'} مستنية النت`,
+
+  // ——— setup (Tarek-facing, appears only when there are no credentials)
+  setupTitle: 'إعداد مصاريف',
+  setupBody: 'الصق رابط النشر (/exec) والكلمة السرية. بيتخزنوا على الجهاز ده بس، ومش بيتبعتوا في أي رابط.',
+  setupUrl: 'رابط /exec',
+  setupSecret: 'الكلمة السرية',
+  setupTest: 'اختبار الاتصال',
+  setupTesting: 'بنجرّب…',
+  setupNeedBoth: 'محتاج الرابط والكلمة السرية',
+  setupBadSecret: 'الكلمة السرية غلط',
+  setupUnreachable: 'مش قادر يوصل. اتأكد إن الرابط بينتهي بـ /exec وإن النشر Anyone.',
+};
+
+// The server returns English month names (they mirror his tab names). Shown in
+// Arabic; anything unmapped falls through unchanged rather than blanking.
+const MONTHS_AR = {
+  January: 'يناير', February: 'فبراير', March: 'مارس', April: 'أبريل',
+  May: 'مايو', June: 'يونيو', July: 'يوليو', August: 'أغسطس',
+  September: 'سبتمبر', October: 'أكتوبر', November: 'نوفمبر', December: 'ديسمبر',
+};
+
+const monthName = (name) => MONTHS_AR[name] || name || '';
+
+// Sun-first, matching the server's week windows and Egyptian convention.
+const WEEK_DAYS = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+
+const MONTH_LABELS = ['ي', 'ف', 'م', 'أ', 'م', 'ي', 'ي', 'أ', 'س', 'أ', 'ن', 'د'];
+
+/**
+ * `prevLog.name` is his TAB name — opaque, echoed from the sheet, never parsed.
+ * Anything unrecognised falls through UNCHANGED rather than becoming a blank: a
+ * tab he renamed should read as its own name, not as nothing.
+ */
+const MONTH_BY_TAB = {
+  Jan: 'يناير', Feb: 'فبراير', Mar: 'مارس', Apr: 'أبريل',
+  May: 'مايو', Jun: 'يونيو', Jul: 'يوليو', Aug: 'أغسطس',
+  Sep: 'سبتمبر', Oct: 'أكتوبر', Nov: 'نوفمبر', Dec: 'ديسمبر',
+};
+
+/**
+ * Who the captain's log is addressed to. Initials, not a full name — it is a log
+ * entry, not a letter — and a client constant rather than a server field,
+ * because it belongs to the person holding the phone.
+ */
+const CAPTAIN_INITIALS = 'أ.ع.';
+
+export const AR_LOCALE = {
+  dir: 'rtl',
+  lang: 'ar',
+  S: AR,
+  monthName,
+  monthByTab: (t) => (typeof t === 'string' ? (MONTH_BY_TAB[t.trim()] || t) : ''),
+  WEEK_DAYS,
+  MONTH_LABELS,
+  CAPTAIN_INITIALS,
+  // The toggle's own label, always shown in the language it switches TO.
+  switchTo: 'English',
+};

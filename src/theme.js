@@ -1,3 +1,5 @@
+import { DIR } from './i18n/strings.js';
+
 /**
  * PALETTE — "Morning Harbor" (مينا الصبح). Owner's direction, 2026-08-03.
  *
@@ -136,9 +138,16 @@ const MORSE_BEADS = (colour) => {
 export const DIVIDER = {
   backgroundImage: MORSE_BEADS(C.harbor),
   backgroundRepeat: 'no-repeat',
-  // The app is RTL throughout, so the inline start is the right edge. Stated as
-  // a physical keyword because `background-position` has no logical equivalent.
-  backgroundPosition: 'bottom right',
+  /**
+   * The beads sit at the INLINE START — the right edge in Arabic, the left in
+   * English. `background-position` has no logical keyword, so the physical one
+   * is chosen from the active locale.
+   *
+   * The first version hardcoded `bottom right`, which is correct in RTL and
+   * hangs the divider off the end of the line in LTR. Caught by looking at the
+   * English screen, which is the argument for having looked.
+   */
+  backgroundPosition: DIR === 'rtl' ? 'bottom right' : 'bottom left',
   backgroundSize: '56px 4px',
   paddingBottom: 12,
   opacity: 0.9,

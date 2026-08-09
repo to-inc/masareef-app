@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { C, FONT_DISPLAY } from '../theme.js';
 import { S } from '../i18n/strings.js';
+import { LangToggle } from '../components/Primitives.jsx';
 import { probe } from '../api/client.js';
 import { setCreds } from '../state/secret.js';
 
@@ -56,6 +57,10 @@ export default function SetupView({ onDone }) {
 
   return (
     <div style={{ padding: '8px 4px' }}>
+      {/* First run: the same one-tap switch, before he has typed anything. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <LangToggle subtle />
+      </div>
       <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 650, color: C.harbor }}>
         {S.setupTitle}
       </div>
