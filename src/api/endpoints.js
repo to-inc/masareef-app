@@ -13,6 +13,13 @@ export const ping = () => call({ action: 'ping' }, 'read');
 
 export const summary = () => call({ action: 'summary' }, 'read');
 
+/**
+ * One month's rows (06 §2.4). The month is named by NUMBERS — the client never
+ * constructs a tab name, and `tabNameFor_` stays server-side where the naming
+ * rule belongs. The response echoes the resolved tab for display.
+ */
+export const entries = ({ y, m }) => call({ action: 'entries', y, m }, 'read');
+
 export const fixCategory = ({ tab, rowHint, match, newCategory }) =>
   call({ action: 'fix_category', tab, rowHint, match, newCategory }, 'write');
 

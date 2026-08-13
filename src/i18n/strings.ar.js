@@ -24,6 +24,7 @@ export const AR = {
   tabCash: 'كاش',
   tabReceipt: 'فاتورة',
   tabSummary: 'اليوم',
+  tabRecent: 'الأخير',
 
   // ——— inbox
   inboxEmptyTitle: 'كله متسجّل',
@@ -178,6 +179,22 @@ export const AR = {
   unpricedNote: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير مبلغ — الإجمالي ده أقل من الحقيقة`,
 
   // ——— connection / write states
+  // ——— the Recent tab (D16). His own rows, and one tap to fix any of them.
+  recentMonths: 'شهور',
+  recentEmpty: 'مفيش مصاريف في الفترة دي',
+  recentUndatedNote: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير يوم واضح — بيظهروا في الشهر بس`,
+  recentEdit: 'غيّر النوع',
+
+  // ——— month accountability (D16d). Every gap on the screen has a name.
+  uncategorizedLine: 'غير مصنّف ؟',
+  uncategorizedHint: 'دوس عشان تصنّفها',
+  monthTotalLine: 'إجمالي الشهر',
+
+  // ——— the manual refresh (D16c). A BUTTON, never a gesture.
+  refresh: 'حدّث',
+  refreshing: 'بيحدّث…',
+  refreshFailed: 'مانفعش يحدّث — جرّب تاني',
+
   offline: 'مفيش نت — دي آخر بيانات محفوظة',
   lastUpdated: 'آخر تحديث',
   saving: 'جارٍ الحفظ…',

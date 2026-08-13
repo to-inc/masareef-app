@@ -5,7 +5,7 @@
  * Script redirect/CORS quirk outside our control — is one contained module if it
  * ever has to change.
  */
-import { mockFetchSummary, mockReceiptExtract } from './mock.js';
+import { mockFetchSummary, mockReceiptExtract, mockEntries } from './mock.js';
 import * as live from './endpoints.js';
 
 // Vite statically replaces this. Anything other than an explicit 'false' keeps
@@ -13,6 +13,8 @@ import * as live from './endpoints.js';
 export const USING_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 
 export const fetchSummary = () => (USING_MOCK ? mockFetchSummary() : live.summary());
+
+export const fetchEntries = (ref) => (USING_MOCK ? mockEntries(ref) : live.entries(ref));
 
 export const fixCategory = (args) =>
   USING_MOCK ? Promise.resolve({ ok: true, v: 1, learned: false }) : live.fixCategory(args);

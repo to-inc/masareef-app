@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
+import { createRefresher, resultState } from './state/refresh.js';
 import { fetchSummary, fixCategory, postManual, receiptConfirm, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
@@ -9,14 +10,16 @@ import { enqueue, flush, partition, remove as dropQueued } from './state/outbox.
 import {
   cardKey, outcomeFor, reconcile, remaining, pruneSettled, applyCategoryToToday,
 } from './state/inboxOutcomes.js';
+import { confirmPayload, editPayload } from './state/fixPayload.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner, LangToggle } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, LangToggle, RefreshButton } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import CashView from './views/CashView.jsx';
 import ReceiptView from './views/ReceiptView.jsx';
 import SummaryView from './views/SummaryView.jsx';
+import RecentView from './views/RecentView.jsx';
 
 /**
  * The app shell.
@@ -76,13 +79,55 @@ export default function App() {
         setSavedAt(Date.now());
         saveSnapshot(clean);
         setOffline(false);
-      } else {
-        setOffline(true);
+        return true;
       }
+      setOffline(true);
+      return false;
     } catch {
       // Keep whatever is on screen. Losing signal in Cairo is normal, not an error.
       setOffline(true);
+      return false;
     }
+  }, []);
+
+  /**
+   * THE MANUAL REFRESH (D16c). A button, at the tap floor, on every data screen.
+   *
+   * `savedAt` is set in exactly ONE place — the success branch above — which is
+   * what makes «آخر تحديث» honest by construction: there is no path through a
+   * failed refresh that touches it. `state/refresh.js` states the same rule as a
+   * function so it can be mutated and caught; this is that rule expressed as
+   * control flow.
+   *
+   * The refresher owns the in-flight guard, so a second press while a fetch is
+   * out is a no-op rather than a queued second cold start.
+   */
+  const [refreshState, setRefreshState] = useState('idle');
+  /**
+   * The refresh reloads the CURRENT view's data, not a blind everything. Recent
+   * registers its own loader while it is on screen; every other tab rides the
+   * summary they all read from.
+   */
+  const recentLoader = useRef(null);
+  const refresher = useRef(null);
+  if (!refresher.current) {
+    refresher.current = createRefresher(
+      () => (tabRef.current === 'recent' && recentLoader.current
+        ? recentLoader.current()
+        : refresh()),
+    );
+  }
+  // `tab` read through a ref so the refresher, created once, always sees the
+  // tab he is actually looking at rather than the one he opened the app on.
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+
+  const onRefresh = useCallback(async () => {
+    setRefreshState('busy');
+    const res = await refresher.current.press();
+    // A skipped press changes nothing — it never ran, so it has nothing to say.
+    if (res.skipped) return;
+    setRefreshState(resultState(res.ok));
   }, []);
 
   const sendQueued = useCallback((item) => {
@@ -159,7 +204,7 @@ export default function App() {
     // appending here counted every confirmed purchase twice.
     setData((d) => (d ? { ...d, today: applyCategoryToToday(d.today, item.match, category) } : d));
 
-    const payload = { tab: item.tab, rowHint: item.rowHint, match: item.match, newCategory: category };
+    const payload = confirmPayload(item, category);
     let outcome;
     try {
       outcome = outcomeFor(await fixCategory(payload), false, category);
@@ -175,6 +220,32 @@ export default function App() {
     // A success needs no refetch — the card already says what happened, and
     // nine of them in a row would be nine cold starts. Everything else means
     // the sheet and the screen disagree, so go and look.
+    if (outcome.status !== 'done') refresh();
+  };
+
+  /**
+   * A Recent edit — the same outcome machine as the Inbox, one difference.
+   *
+   * NO `rowHint`. A Recent row is identified by what it SAYS, not by where it
+   * sat when it was fetched, so the payload takes the server's content-scan path
+   * by contract (06 §2.4). The item's `rowHint` is a local settle KEY built from
+   * the row's own date and amount; sending it would be a stale position from a
+   * list that may be minutes old. Both shapes live in `state/fixPayload.js`,
+   * next to each other, with the reason they differ written between them.
+   */
+  const editRecent = async (item, category) => {
+    const key = cardKey(item);
+    setSettled((s) => ({ ...s, [key]: { status: 'saving', category } }));
+    const payload = editPayload(item, category);
+    let outcome;
+    try {
+      outcome = outcomeFor(await fixCategory(payload), false, category);
+    } catch {
+      enqueue({ id: newClientId(), kind: 'fix_category', ageGated: false, payload });
+      outcome = outcomeFor(null, true, category);
+    }
+    setSettled((s) => ({ ...s, [key]: outcome }));
+    showToast(CONFIRM_TOAST[outcome.status] || S.genericError);
     if (outcome.status !== 'done') refresh();
   };
 
@@ -291,6 +362,7 @@ export default function App() {
               {`${data.today_cairo.d}/${data.today_cairo.m}/${data.today_cairo.y}`}
             </span>
           )}
+          {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} />}
           {/**
             * THE LANGUAGE SWITCH LIVES HERE, not only in SetupView.
             *
@@ -347,9 +419,31 @@ export default function App() {
                     onManual={() => setTab('cash')}
                   />
                 )}
-                {tab === 'summary' && <SummaryView data={data} />}
-                {savedAt && offline && (
+                {tab === 'recent' && (
+                  <RecentView
+                    todayCairo={data.today_cairo}
+                    settled={settled}
+                    onEdit={editRecent}
+                    onBusyChange={(fn) => { recentLoader.current = fn; }}
+                  />
+                )}
+                {tab === 'summary' && <SummaryView data={data} onGoToInbox={() => setTab('inbox')} />}
+                {/**
+                  * THE STAMP IS VISIBLE WHENEVER WE HAVE ONE — not only offline.
+                  *
+                  * It used to render only under the offline banner. With a manual
+                  * refresh that makes the feature unobservable: he presses, it
+                  * succeeds, and nothing on screen confirms anything. The stamp is
+                  * what a successful refresh MOVES, so it has to be there to move.
+                  *
+                  * It is also the only honest answer to "is this current?" — the
+                  * screen is a mirror of his sheet as of a moment, and naming the
+                  * moment costs one quiet line. A failed refresh leaves it
+                  * untouched, which is the whole rule (state/refresh.js).
+                  */}
+                {savedAt && (
                   <p style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', marginTop: 14 }}>
+                    {refreshState === 'failed' ? `${S.refreshFailed} · ` : ''}
                     {S.lastUpdated} <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{cairoClock(savedAt)}</span>
                   </p>
                 )}
@@ -371,6 +465,7 @@ export default function App() {
           <TabButton active={tab === 'inbox'} onClick={() => setTab('inbox')} label={S.tabInbox} badge={pendingCount || null} icon="✉" />
           <TabButton active={tab === 'cash'} onClick={() => setTab('cash')} label={S.tabCash} icon="﹢" big />
           <TabButton active={tab === 'receipt'} onClick={() => setTab('receipt')} label={S.tabReceipt} icon="🧾" />
+          <TabButton active={tab === 'recent'} onClick={() => setTab('recent')} label={S.tabRecent} icon="⟲" />
           <TabButton active={tab === 'summary'} onClick={() => setTab('summary')} label={S.tabSummary} icon="☰" />
         </nav>
       )}

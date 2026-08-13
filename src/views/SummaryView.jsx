@@ -14,7 +14,7 @@ import LogCard from '../components/LogCard.jsx';
  * Today is a read-back mirror of the sheet rather than a staging area. That is
  * the whole trust story — what he sees here is what is in his file.
  */
-export default function SummaryView({ data }) {
+export default function SummaryView({ data, onGoToInbox }) {
   const [period, setPeriod] = useState('today');
   const [metric, setMetric] = useState('all');
 
@@ -36,21 +36,6 @@ export default function SummaryView({ data }) {
       {label}
     </button>
   );
-
-  // Honest incompleteness (06 §2.2): a month we cannot fully account for must
-  // never render as a confident number. `undated` rows are in the total but not
-  // the chart; `unpriced` rows are in neither, so the total is knowably short.
-  const undated = data.month?.undated;
-  const unpriced = data.month?.unpriced;
-  const note = (text, key) => (
-    <p key={key} style={{ fontSize: 12.5, color: C.ink, background: C.sand, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 12px', margin: '10px 0 0', lineHeight: 1.6, textAlign: 'center' }}>
-      {text}
-    </p>
-  );
-  const notes = [];
-  if (unpriced && unpriced.count > 0) notes.push(note(S.unpricedNote(unpriced.count), 'unpriced'));
-  if (undated && undated.count > 0) notes.push(note(S.undatedNote(undated.count), 'undated'));
-  const undatedFootnote = notes.length ? <>{notes}</> : null;
 
   return (
     <div>
@@ -84,23 +69,7 @@ export default function SummaryView({ data }) {
       )}
 
       {period === 'month' && (
-        <>
-          <PeriodSummary
-            data={data.month}
-            labels={[]}
-            liveIndex={-1}
-            metric={metric}
-            setMetric={setMetric}
-            periodNames={{ cur: monthName(data.month.names.cur), prev: monthName(data.month.names.prev), unit: S.unitMonth }}
-            showBars={false}
-            footnote={undatedFootnote}
-          />
-          <CategoryCompare
-            cats={data.monthCats}
-            curName={monthName(data.month.names.cur)}
-            prevName={monthName(data.month.names.prev)}
-          />
-        </>
+        <MonthScreen data={data} metric={metric} setMetric={setMetric} onGoToInbox={onGoToInbox} />
       )}
 
       {period === 'year' && (
@@ -128,6 +97,111 @@ export default function SummaryView({ data }) {
           <TodayEntries entries={data.today.entries} totals={data.today.totals} />
         ))}
     </div>
+  );
+}
+
+/**
+ * THE MONTH SCREEN — the card, and under it the accountability list (D16d).
+ *
+ * Its own EXPORTED component, and that is a testing decision as much as a
+ * structural one: the Month sits behind a tab press no server render can make,
+ * so while this lived inline the only thing a suite could check about it was
+ * the shape of its source text. Three of this project's bugs were correct
+ * components mounted with the wrong props — the class a source regex cannot
+ * see. As a component, `test-accountability.mjs` renders exactly what he sees.
+ */
+export function MonthScreen({ data, metric, setMetric, onGoToInbox }) {
+  // Honest incompleteness (06 §2.2): a month we cannot fully account for must
+  // never render as a confident number. `undated` rows are in the total but not
+  // the chart; `unpriced` rows are in neither, so the total is knowably short.
+  const undated = data.month?.undated;
+  const unpriced = data.month?.unpriced;
+
+  /**
+   * The month's ONE figure — the same arithmetic the card is handed. Derived
+   * here rather than read from a field because the payload carries no month
+   * total: `totals = sum(byDay) + undated` by construction, which is exactly
+   * these two terms.
+   */
+  const monthTrueTotal = data.month
+    ? (data.month.cur.Visa || []).reduce((a, v) => a + (v || 0), 0)
+      + (data.month.cur.Cash || []).reduce((a, v) => a + (v || 0), 0)
+      + (undated?.Visa || 0) + (undated?.Cash || 0)
+    : null;
+
+  /**
+   * WHETHER THE LIST CAN BACK A TOTAL — the V17/V18 gate, and the signal is the
+   * FIELD'S PRESENCE, never its value.
+   *
+   * The «إجمالي الشهر» line at the foot of the list is not decoration, it is a
+   * CLAIM: "the rows above, plus the ❓ money, are the whole month" (06 §2.2).
+   * Only a V18 payload can back it — it sends EVERY category and a
+   * `month.uncategorized` figure, so what is on screen accounts for the total
+   * exactly. A V17 payload sends a TOP-5 cut and no `uncategorized` key at all;
+   * printing the month's total under that list prints a number the same screen
+   * contradicts, which is precisely the arithmetic he caught by hand once
+   * already. On V17 we therefore print no claim — the pre-rev presentation, and
+   * the honest degradation. The card above is V17-safe either way: its total is
+   * derived from the series it plots plus the undated rows, not from this list.
+   *
+   * PRESENCE, NOT VALUE — the part that must survive the next reader. A clean
+   * V18 month sends `uncategorized: {count: 0, total: 0}`, and its list DOES add
+   * up to the total exactly, so it MUST still show the line. A value test
+   * (`uncategorized.total > 0`) reads as though it asked the same question; it
+   * does not, and it would hide the total on exactly the months where the claim
+   * is most defensible. Do not "simplify" this into one. `withDefaults` in
+   * lib/summaryShape.js leaves `uncategorized` alone for the same reason —
+   * absence is information here, and a JSON round-trip preserves absence.
+   */
+  const listAccountsForTheMonth = data.month?.uncategorized !== undefined;
+
+  const note = (text, key) => (
+    <p key={key} style={{ fontSize: 12.5, color: C.ink, background: C.sand, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 12px', margin: '10px 0 0', lineHeight: 1.6, textAlign: 'center' }}>
+      {text}
+    </p>
+  );
+  const notes = [];
+  if (unpriced && unpriced.count > 0) notes.push(note(S.unpricedNote(unpriced.count), 'unpriced'));
+  if (undated && undated.count > 0) notes.push(note(S.undatedNote(undated.count), 'undated'));
+  const undatedFootnote = notes.length ? <>{notes}</> : null;
+
+  return (
+    <>
+      <PeriodSummary
+        data={data.month}
+        labels={[]}
+        liveIndex={-1}
+        metric={metric}
+        setMetric={setMetric}
+        periodNames={{ cur: monthName(data.month.names.cur), prev: monthName(data.month.names.prev), unit: S.unitMonth }}
+        showBars={false}
+        footnote={undatedFootnote}
+        /**
+         * The undated rows ARE the month; they are simply not on the curve.
+         * Handing them here makes the card show the true month total, which
+         * is what the accountability list reconciles against — one number,
+         * one screen. The footnote above already says how many are missing
+         * from the chart, and with this it is finally literally true.
+         */
+        offPlot={{ Visa: undated?.Visa || 0, Cash: undated?.Cash || 0 }}
+      />
+      {/**
+        * The accountability list (D16d). Categories + ❓ = the month, and the
+        * total printed here is the SAME figure the card above shows — one
+        * number, one screen. Tapping the ❓ line goes where the work is.
+        *
+        * `total={null}` is the V17 case saying so out loud: no total line,
+        * because this list cannot account for one. See the gate above.
+        */}
+      <CategoryCompare
+        cats={data.monthCats}
+        curName={monthName(data.month.names.cur)}
+        prevName={monthName(data.month.names.prev)}
+        uncategorized={data.month?.uncategorized}
+        total={listAccountsForTheMonth ? monthTrueTotal : null}
+        onUncategorized={onGoToInbox}
+      />
+    </>
   );
 }
 

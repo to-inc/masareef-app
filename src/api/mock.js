@@ -238,6 +238,24 @@ export function mockSummary() {
       cur: { Visa: yearVisa, Cash: yearCash },
       prev: { Visa: prevYearVisa, Cash: prevYearCash },
     },
+    /**
+     * V17 SHAPE, DELIBERATELY — a TOP-5 cut, and `month` above carries NO
+     * `uncategorized` key. That is what the serving backend returns today, and
+     * the parity law says the mock's default state is the real service's default
+     * state, never a nicer one. So this list does NOT add up to the month, and
+     * the Month screen correctly prints no «إجمالي الشهر» line under it: a total
+     * a visible list cannot account for is the exact reconciliation failure this
+     * app was built around (06 §2.2).
+     *
+     * WHEN V18 CYCLES TO PRODUCTION (every category here, plus
+     * `month.uncategorized: {count, total}` in the block above), this mock flips
+     * to that shape in the same rev — again by the parity law — and the total
+     * line starts rendering on its own, because the client gates on that field's
+     * PRESENCE. Whoever flips it: make the numbers reconcile, i.e. sum of these
+     * `now` figures + `uncategorized.total` = the month's true total (the series
+     * above plus `undated`), or the mock will be asserting a lie in the one
+     * place the screen shows its arithmetic.
+     */
     monthCats: [
       { name: 'Eating out', now: 6840, prev: 9120 },
       { name: 'Groceries', now: 5210, prev: 6480 },
@@ -367,4 +385,62 @@ export function mockReceiptExtract() {
   // Vision calls are genuinely slow — long enough that the 20 s escape hatch is
   // a real design concern, not a hypothetical one.
   return new Promise((resolve) => setTimeout(() => resolve({ v: 1, ...fixture }), 900));
+}
+
+/**
+ * `entries` for one month (06 §2.4) — the Recent tab's data.
+ *
+ * MOCK PARITY, and it takes the same care the pending/today overlap did: the
+ * CURRENT month's rows must INCLUDE today's, because on the real server both
+ * come from the one month blob and a row cannot be in one and not the other.
+ * A mock that kept them separate would certify a Recent tab that disagrees with
+ * the Today screen about what he spent this morning.
+ *
+ * The invented rows below deliberately carry the three states the filters have
+ * to handle honestly:
+ *   · an UNDATED row (`221` — one of his real unreadable date cells), which
+ *     belongs to the month and to no day, so Today and Week must leave it out;
+ *   · an UNPRICED row, which renders `—` and never `0`;
+ *   · a FOREIGN row, excluded from EGP sums and shown verbatim.
+ *
+ * A month with no tab answers an empty LIST, never an error — browsing backwards
+ * through the year is not a failure mode (§2.4).
+ */
+const MOCK_MONTH_ROWS = (y, m, today, pendingToday, todayEntries) => {
+  if (y !== today.y) return [];
+  if (m === today.m) {
+    return [
+      { date: `2/${m}/${y}`, description: 'Hyper1', method: 'Visa', category: 'Groceries', amount: 612, currency: 'EGP' },
+      { date: `4/${m}/${y}`, description: 'Zaytouna Bakery', method: 'Cash', category: 'Eating out', amount: 48, currency: 'EGP' },
+      { date: '221', description: 'Guards', method: 'Cash', category: 'Gifts', amount: 100, currency: 'EGP' },
+      { date: `5/${m}/${y}`, description: 'Northgate Hotel', method: 'Visa', category: 'Vacations', amount: null, currency: null },
+      { date: `6/${m}/${y}`, description: 'Bergen Market', method: 'Visa', category: 'Groceries', amount: 41.9, currency: 'EUR' },
+      ...todayEntries,
+    ];
+  }
+  const prev = prevMonthOf(today.y, today.m);
+  if (m === prev.m && y === prev.y) {
+    return [
+      { date: `12/${m}/${y}`, description: 'Carrefour', method: 'Visa', category: 'Groceries', amount: 903, currency: 'EGP' },
+      { date: `22/${m}/${y}`, description: 'Seif', method: 'Cash', category: 'Medical', amount: 137.5, currency: 'EGP' },
+    ];
+  }
+  return [];
+};
+
+export function mockEntries({ y, m }) {
+  const today = cairoToday();
+  const base = mockSummary();
+  const rows = MOCK_MONTH_ROWS(Number(y), Number(m), today, null, base.today.entries);
+  const MONTH_ABBR_ = MONTH_ABBR[Number(m) - 1] || String(m);
+  return new Promise((resolve) => setTimeout(() => resolve({
+    ok: true,
+    v: 1,
+    tab: MONTH_ABBR_,
+    entries: rows,
+    // Counts the client renders as the honest footer. Derived from the rows
+    // themselves so the mock cannot disagree with its own list.
+    unpriced: rows.filter((r) => r.amount == null).length,
+    undated: rows.filter((r) => !/^\s*\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}\s*$/.test(String(r.date))).length,
+  }), 380));
 }

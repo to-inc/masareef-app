@@ -64,12 +64,18 @@ textarea {
   100% { transform: scale(1); opacity: 1; }
 }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
+
 .card-in { animation: slideup 0.28s ease both; }
 .toast-in { animation: pop 0.18s ease both; }
 
 @media (prefers-reduced-motion: reduce) {
   .card-in,
-  .toast-in {
+  .toast-in,
+  /* The spinner stops too — but the button stays disabled and aria-busy, so the
+     in-flight state is still announced and still visible without motion. */
+  .spin {
     animation: none;
   }
   .catchip,

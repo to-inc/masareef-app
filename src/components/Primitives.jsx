@@ -1,5 +1,5 @@
-import { C, METHOD, DIVIDER, FONT_DISPLAY, NUMERALS } from '../theme.js';
-import { SWITCH_TO } from '../i18n/strings.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
+import { S, SWITCH_TO } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
 /**
@@ -39,6 +39,44 @@ export function LangToggle({ subtle }) {
       }}
     >
       {SWITCH_TO}
+    </button>
+  );
+}
+
+/**
+ * The manual refresh (D16c).
+ *
+ * A BUTTON, at the senior tap floor, on every data screen — never a pull
+ * gesture. Nothing in this app may be reachable only by a movement he has to
+ * already know about.
+ *
+ * The spinner is the REAL fetch: `busy` comes from the promise, not a timer, so
+ * it says "working" for exactly as long as the work takes. A `failed` press
+ * turns the button, and — the part that matters — leaves «آخر تحديث» exactly
+ * where it was. See state/refresh.js: a refresh that failed must never look like
+ * one that succeeded.
+ */
+export function RefreshButton({ state, onPress }) {
+  const busy = state === 'busy';
+  const failed = state === 'failed';
+  return (
+    <button
+      onClick={onPress}
+      disabled={busy}
+      aria-label={busy ? S.refreshing : S.refresh}
+      aria-busy={busy ? 'true' : undefined}
+      style={{
+        minHeight: TAP, minWidth: TAP, borderRadius: 999,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        background: 'transparent',
+        border: `1px solid ${failed ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.45)'}`,
+        color: '#fff', fontSize: 17, fontWeight: 700,
+        opacity: busy ? 0.6 : 1,
+      }}
+    >
+      <span className={busy ? 'spin' : undefined} style={{ display: 'inline-block', lineHeight: 1 }}>
+        {failed ? '↻!' : '↻'}
+      </span>
     </button>
   );
 }

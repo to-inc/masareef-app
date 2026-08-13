@@ -1,4 +1,4 @@
-import { C, FONT_DISPLAY, NUMERALS, PREV_SERIES_OPACITY } from '../theme.js';
+import { C, FONT_DISPLAY, NUMERALS, PREV_SERIES_OPACITY, TAP } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
@@ -143,7 +143,30 @@ export function MetricCards({ metric, setMetric, computed }) {
   );
 }
 
-export function CategoryCompare({ cats, curName, prevName }) {
+/**
+ * WHERE THE MONTH WENT — every category, the ❓ money, and the total (D16d).
+ *
+ * FIELD FINDING: he reconciled this screen against its own total and found
+ * 18,703 EGP he could not see — a top-5 cutoff plus one ❓ row of 15,000. The
+ * list is now complete and it ADDS UP, in terms he can read.
+ *
+ * THE ARITHMETIC, and why «من غير تاريخ» is not a third term:
+ *
+ *     every category  +  uncategorized  =  the month
+ *
+ * exactly, because the server derives both sides from the same rows under the
+ * same filter. An UNDATED row is not a fourth bucket — it is a flag on a row
+ * that already sits in one of these two (a dated-unreadable Gifts row is in
+ * Gifts), so adding it again would overstate his month by exactly that amount.
+ * It is named under the chart instead, where the gap it describes is real: the
+ * curve cannot plot it. Measured on the July fixture: 715.96 + 1130.50 = 1846.46
+ * = the month; adding the 100 EGP undated row gives 1946.46, which is not.
+ *
+ * The ❓ line is a LABELLED STATE, never a category row — which is what keeps it
+ * inside D5 rather than against it: he is shown a gap he can tap, not a category
+ * he never chose.
+ */
+export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized }) {
   const max = Math.max(...cats.map((c) => Math.max(c.now, c.prev)), 1);
   return (
     <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginTop: 12 }}>
@@ -167,15 +190,77 @@ export function CategoryCompare({ cats, curName, prevName }) {
           </div>
         </div>
       ))}
+
+      {/**
+        * The ❓ money, labelled — never a category row. Rendered ONLY when there
+        * is some: a month with nothing uncategorised says nothing about
+        * uncategorised money, and «0 غير مصنّف» would be a line of noise he has
+        * to read past on a clean month.
+        */}
+      {uncategorized && uncategorized.total > 0 && (
+        <button
+          onClick={onUncategorized}
+          style={{
+            width: '100%', minHeight: TAP, marginBottom: 12, borderRadius: 12,
+            padding: '10px 12px', textAlign: 'start',
+            background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, gap: 8 }}>
+            <span style={{ fontWeight: 700, color: C.conflictInk }}>{S.uncategorizedLine}</span>
+            <span style={{ fontWeight: 700, color: C.conflictInk, ...LATIN, ...NUMERALS }}>
+              {moneyRound(uncategorized.total)}
+            </span>
+          </div>
+          <div style={{ fontSize: 12.5, color: C.ink, marginTop: 2 }}>{S.uncategorizedHint}</div>
+        </button>
+      )}
+
+      {/**
+        * The figure the list adds up to — the SAME number the card above shows.
+        *
+        * A null `total` is the CALLER saying its payload cannot back that claim
+        * (a V17 backend sends a top-5 list and no `uncategorized` figure, so the
+        * rows on screen do not account for the month). The decision is made
+        * where the payload is known — see the gate in views/SummaryView.jsx —
+        * and this component simply prints a total when it is handed one. It must
+        * NOT start second-guessing that from `uncategorized`, which carries a
+        * different question.
+        */}
+      {total != null && (
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', gap: 8,
+          borderTop: `1px solid ${C.line}`, paddingTop: 10, marginTop: 2, fontSize: 15,
+        }}>
+          <span style={{ fontWeight: 700, color: C.ink }}>{S.monthTotalLine}</span>
+          <span style={{ fontWeight: 700, color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN, ...NUMERALS }}>
+            {moneyRound(total)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote }) {
+export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {} }) {
   const color = METRICS.find((m) => m.key === metric).color;
   const cur = seriesFor(data.cur, metric);
   const prev = seriesFor(data.prev, metric);
 
+  /**
+   * THE FIGURE IS THE WHOLE PERIOD, not the part that fits on the chart (D16d).
+   *
+   * `offPlot` carries money that belongs to the period and to no plottable slot
+   * — for a month, the rows whose date cell cannot be read. The curve legitimately
+   * omits them (a shape cannot chart a day nobody knows) but the TOTAL must not:
+   * a card that quietly sums only the chart understates exactly the months that
+   * are hardest to read, which is the honest-incompleteness law arriving from the
+   * other side. He reconciled his own screen and found 18,703 missing; this is
+   * the last place that arithmetic could still disagree with itself.
+   *
+   * Weeks and years pass nothing: a week window cannot contain an undated row,
+   * and the year series is built from month totals that already include them.
+   */
   const computed = {};
   for (const m of METRICS) {
     const c = seriesFor(data.cur, m.key);
@@ -185,7 +270,10 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
     // "0" — telling him he spent nothing in 2025 when the truth is that the 2025
     // file isn't connected. Null is carried through and rendered as an absence.
     const at = cumsum(p)[Math.min(idx, p.length - 1)];
-    computed[m.key] = { now: sumTo(c), prevAt: at == null ? null : at };
+    const extra = m.key === 'all'
+      ? (offPlot.Visa || 0) + (offPlot.Cash || 0)
+      : (offPlot[m.key] || 0);
+    computed[m.key] = { now: sumTo(c) + extra, prevAt: at == null ? null : at };
   }
 
   // No comparison data at all — e.g. the previous-year spreadsheet isn't

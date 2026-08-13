@@ -24,6 +24,7 @@ export const EN = {
   tabCash: 'Cash',
   tabReceipt: 'Receipt',
   tabSummary: 'Today',
+  tabRecent: 'Recent',
 
   // ——— inbox
   inboxEmptyTitle: 'All logged',
@@ -150,6 +151,22 @@ export const EN = {
   unpricedNote: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'} with no amount — this total is lower than the truth`,
 
   // ——— connection / write states
+  // ——— the Recent tab (D16). His own rows, and one tap to fix any of them.
+  recentMonths: 'Months',
+  recentEmpty: 'No expenses in this period',
+  recentUndatedNote: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'} with no clear day — they show under Month only`,
+  recentEdit: 'Change category',
+
+  // ——— month accountability (D16d). Every gap on the screen has a name.
+  uncategorizedLine: 'Uncategorised ?',
+  uncategorizedHint: 'tap to categorise',
+  monthTotalLine: 'Month total',
+
+  // ——— the manual refresh (D16c). A BUTTON, never a gesture.
+  refresh: 'Refresh',
+  refreshing: 'Refreshing…',
+  refreshFailed: 'Could not refresh — try again',
+
   offline: 'No network — this is the last saved data',
   lastUpdated: 'Last updated',
   saving: 'Saving…',

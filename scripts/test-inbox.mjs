@@ -28,6 +28,7 @@ import {
   OUTCOMES, isOutcome, cardKey, outcomeFor, needsHim,
   reconcile, remaining, headlineFor, pruneSettled, applyCategoryToToday,
 } from '../src/state/inboxOutcomes.js';
+import { confirmPayload, editPayload } from '../src/state/fixPayload.js';
 
 let pass = 0;
 const failures = [];
@@ -421,6 +422,131 @@ try {
     'the Inbox card gets its buttons from the shared picker');
   ok(!/\bCATEGORIES\b|\bSHORT_LIST\b/.test(src),
     'and does not reach for the category list itself — that belongs to the picker alone');
+
+  /**
+   * ——— THE CONFIRM SENDS THE ROW'S SHEET POSITION (2026-08-13).
+   *
+   * This file had 107 assertions and not one of them touched `rowHint` — the
+   * fixtures BUILT one on every row and nothing downstream ever checked it
+   * reached the wire. Deleting it from the confirm payload left the suite fully
+   * green. Found by mutation while pinning the opposite claim for Recent, which
+   * is the only reason it surfaced at all: the two payloads are near-identical,
+   * and a check on one is not a check on the other.
+   *
+   * WHAT THE MISSING FIELD ACTUALLY COSTS. Without the hint the server collects
+   * every row matching on content and, absent a strict match, takes the FIRST
+   * (`locateRow_`). A confirm matches on category `❓` — so two identical
+   * unpriced ❓ rows in one month and the write lands on the row he did not tap.
+   * No error, no toast, nothing on screen. That is a wrong-row write, not a slow
+   * one, which is why this is asserted rather than left to the comment.
+   */
+  eq(typeof confirmPayload, 'function', 'the confirm payload is built in ONE named place…');
+  {
+    const item = row('Aug', 14);
+    const sent = confirmPayload(item, 'Groceries');
+
+    eq(sent.rowHint, 14, 'and it carries the row\'s sheet position');
+    /**
+     * ECHOED, NOT INVENTED — and provable only by VARYING it. The first draft of
+     * this block asserted `sent.rowHint === item.rowHint` against a single
+     * fixture built with 14, and a `rowHint: 14` hardcoded into the builder
+     * passed it: the check and the mutation agreed because both said 14. Written
+     * ten minutes after this file gained a blind spot, in the assertion closing
+     * that blind spot. One value can never prove a pass-through.
+     */
+    for (const n of [2, 14, 837]) {
+      eq(confirmPayload(row('Aug', n), 'Gifts').rowHint, n,
+        `position ${n} is the server's own number, echoed — never recomputed here`);
+    }
+    eq(sent.tab, 'Aug', 'with the tab it came from');
+    eq(sent.newCategory, 'Groceries', 'and the category he tapped');
+    eq(sent.match, item.match, 'the match is the row as the server described it');
+    eq(Object.keys(sent).sort().join(','), 'match,newCategory,rowHint,tab',
+      'four fields exactly — an extra one is a contract change, not a convenience');
+
+    /**
+     * A hint of 0 is what a row with no position would produce, and `locateRow_`
+     * rejects anything below 2 (row 1 is the header). Passing it through rather
+     * than defaulting is correct — inventing a 1 here would aim a write at his
+     * column headings — but it must pass through as ITSELF, not vanish.
+     */
+    ok('rowHint' in confirmPayload(row('Aug', 0), 'Gifts'),
+      'a zero position is still SENT, not dropped as falsy — the server judges it, not us');
+    eq(confirmPayload(row('Aug', 0), 'Gifts').rowHint, 0, 'and it is still a zero when it arrives');
+
+    // And the contrast, in the file that owns the other side of it.
+    ok(!('rowHint' in editPayload(item, 'Groceries')),
+      'while a Recent edit has no rowHint KEY at all — absence, not undefined');
+    ok(confirmPayload !== editPayload,
+      'the two writes are two functions — unifying them is the mutation this catches');
+  }
+
+  /**
+   * ——— AND THE SAME CLAIM AT THE WIRE, WHICH IS WHERE IT ACTUALLY LIVES.
+   *
+   * The blind spot above had a floor below it. `endpoints.js` does not forward
+   * the payload — it DESTRUCTURES four named fields and reassembles the body. So
+   * deleting `rowHint` from that whitelist strips it from every Inbox confirm on
+   * the wire, and the builder assertions above stay green, because they never
+   * reach that line. Mutated and confirmed: all thirteen suites, 1,574
+   * assertions, fully green with the position gone from the request.
+   *
+   * Asserting the builder was asserting the layer I had just written rather than
+   * the layer that decides. This block calls the real `fixCategory` with the
+   * transport stubbed and reads what would have been POSTed.
+   *
+   * The credentials are obviously fake and local. This never speaks to a
+   * deployment, and by law it never speaks to his book.
+   */
+  {
+    const sent = [];
+    globalThis.localStorage = {
+      getItem: (k) => (k === 'masareef.secret' ? 'not-a-real-secret' : 'http://127.0.0.1:0/exec'),
+    };
+    globalThis.fetch = async (url, init) => {
+      sent.push(JSON.parse(init.body));
+      return { ok: true, status: 200, text: async () => '{"ok":true,"v":1}' };
+    };
+    const { fixCategory } = await import('../src/api/endpoints.js');
+
+    await fixCategory(confirmPayload(row('Aug', 14), 'Groceries'));
+    eq(sent.length, 1, 'one confirm is one request — the retry does not double-write');
+    eq(sent[0].action, 'fix_category', 'and it is a fix_category');
+    eq(sent[0].rowHint, 14, 'THE POSITION IS ON THE WIRE — not merely in the object we built');
+    eq(sent[0].newCategory, 'Groceries', 'with the category he tapped');
+    eq(sent[0].tab, 'Aug', 'and the tab it belongs to');
+
+    // Pass-through again, at this layer, for the same reason as above: a
+    // hardcoded 14 in the whitelist would satisfy a single-value check.
+    sent.length = 0;
+    await fixCategory(confirmPayload(row('Sep', 837), 'Gifts'));
+    eq(sent[0].rowHint, 837, 'any position, echoed through the transport unchanged');
+
+    // The Recent shape, through the SAME transport: the key must not appear.
+    sent.length = 0;
+    await fixCategory(editPayload({ tab: 'Aug', rowHint: '9/8/2026|60', match: row('Aug', 3).match }, 'Car'));
+    ok(!('rowHint' in sent[0]),
+      'while a Recent edit reaches the wire with no rowHint at all — the settle key stays home');
+    ok(!JSON.stringify(sent[0]).includes('9/8/2026|60'),
+      'and the key itself appears nowhere in the request');
+
+    delete globalThis.fetch;
+    delete globalThis.localStorage;
+  }
+
+  /**
+   * And the builders are what the app ACTUALLY calls. Proving a pure function
+   * correct while the screen keeps its own inline literal is the exact trap this
+   * suite has fallen into three times: a component asserted in isolation and
+   * never asserted to be wired.
+   */
+  const appSrc = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  ok(/confirmPayload\(item, category\)/.test(appSrc),
+    'the Inbox confirm calls the builder…');
+  ok(/editPayload\(item, category\)/.test(appSrc),
+    '…and the Recent edit calls the other one');
+  ok(!/newCategory: category \}/.test(appSrc),
+    'and neither one still assembles a fix_category payload inline');
 } finally {
   await vite.close();
 }
