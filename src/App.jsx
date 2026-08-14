@@ -11,12 +11,13 @@ import {
   cardKey, outcomeFor, reconcile, remaining, pruneSettled, applyCategoryToToday,
 } from './state/inboxOutcomes.js';
 import { confirmPayload, editPayload } from './state/fixPayload.js';
+import { DEFAULT_METHOD, manualPayload, applyEntryToToday } from './state/entryPayload.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
 import { TabButton, Toast, OfflineBanner, LangToggle, RefreshButton } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
-import CashView from './views/CashView.jsx';
+import EntryView from './views/EntryView.jsx';
 import ReceiptView from './views/ReceiptView.jsx';
 import SummaryView from './views/SummaryView.jsx';
 import RecentView from './views/RecentView.jsx';
@@ -49,11 +50,12 @@ export default function App() {
   const [settled, setSettled] = useState({});
   const toastTimer = useRef(null);
 
-  // cash entry state
-  const [cashAmount, setCashAmount] = useState('');
-  const [cashDesc, setCashDesc] = useState('');
-  const [cashCat, setCashCat] = useState(null);
-  const [cashBusy, setCashBusy] = useState(false);
+  // manual entry state (cash OR card — R-receipts 1)
+  const [entryAmount, setEntryAmount] = useState('');
+  const [entryDesc, setEntryDesc] = useState('');
+  const [entryCat, setEntryCat] = useState(null);
+  const [entryMethod, setEntryMethod] = useState(DEFAULT_METHOD);
+  const [entryBusy, setEntryBusy] = useState(false);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -249,34 +251,37 @@ export default function App() {
     if (outcome.status !== 'done') refresh();
   };
 
-  const submitCash = async () => {
-    const amount = parseFloat(cashAmount);
-    if (!amount || !cashCat || cashBusy) return;
+  /**
+   * The manual write. The METHOD is his now (R-receipts 1) — it used to be the
+   * literal `'Cash'`, here and again in the optimistic line below.
+   *
+   * Both the payload and that line are built in `state/entryPayload.js`: the
+   * wire value can never be the button's label, and Today credits the column he
+   * chose rather than always crediting Cash.
+   */
+  const submitEntry = async () => {
+    const amount = parseFloat(entryAmount);
+    if (!amount || !entryCat || entryBusy) return;
 
     const clientId = newClientId();
-    const payload = {
+    const payload = manualPayload({
       amount,
-      method: 'Cash',
-      category: cashCat,
-      description: cashDesc || cashCat,
+      method: entryMethod,
+      category: entryCat,
+      description: entryDesc,
       clientId,
-      // Stamped at TAP time, not send time — an entry flushed after midnight
-      // must keep the day he actually spent the money.
       entryDate: cairoDateStr(),
-    };
+    });
 
-    setCashBusy(true);
-    setData((d) => ({
+    setEntryBusy(true);
+    setData((d) => (d ? {
       ...d,
-      today: {
-        ...d.today,
-        entries: [...d.today.entries, {
-          date: payload.entryDate, description: payload.description,
-          method: 'Cash', category: cashCat, amount, currency: 'EGP',
-        }],
-        totals: { ...d.today.totals, Cash: d.today.totals.Cash + amount },
-      },
-    }));
+      today: applyEntryToToday(d.today, {
+        date: payload.entryDate, description: payload.description,
+        method: payload.method, category: payload.category,
+        amount, currency: 'EGP',
+      }),
+    } : d));
 
     try {
       const res = await postManual(payload);
@@ -292,10 +297,13 @@ export default function App() {
       enqueue({ id: clientId, kind: 'manual', ageGated: true, payload });
       showToast(S.queued);
     } finally {
-      setCashBusy(false);
-      setCashAmount('');
-      setCashDesc('');
-      setCashCat(null);
+      setEntryBusy(false);
+      setEntryAmount('');
+      setEntryDesc('');
+      setEntryCat(null);
+      // Back to Cash, deliberately. A sticky Card would file his next cash
+      // expense into the card column on a screen he has stopped reading.
+      setEntryMethod(DEFAULT_METHOD);
       setTab('summary');
     }
   };
@@ -392,12 +400,13 @@ export default function App() {
                 {tab === 'inbox' && (
                   <InboxView pending={data.pending} settled={settled} onConfirm={confirmPending} />
                 )}
-                {tab === 'cash' && (
-                  <CashView
-                    amount={cashAmount} setAmount={setCashAmount}
-                    desc={cashDesc} setDesc={setCashDesc}
-                    cat={cashCat} setCat={setCashCat}
-                    onSubmit={submitCash} busy={cashBusy}
+                {tab === 'entry' && (
+                  <EntryView
+                    amount={entryAmount} setAmount={setEntryAmount}
+                    desc={entryDesc} setDesc={setEntryDesc}
+                    cat={entryCat} setCat={setEntryCat}
+                    method={entryMethod} setMethod={setEntryMethod}
+                    onSubmit={submitEntry} busy={entryBusy}
                   />
                 )}
                 {tab === 'receipt' && (
@@ -416,7 +425,7 @@ export default function App() {
                       }
                       showToast(msg);
                     }}
-                    onManual={() => setTab('cash')}
+                    onManual={() => setTab('entry')}
                   />
                 )}
                 {tab === 'recent' && (
@@ -463,7 +472,7 @@ export default function App() {
           }}
         >
           <TabButton active={tab === 'inbox'} onClick={() => setTab('inbox')} label={S.tabInbox} badge={pendingCount || null} icon="✉" />
-          <TabButton active={tab === 'cash'} onClick={() => setTab('cash')} label={S.tabCash} icon="﹢" big />
+          <TabButton active={tab === 'entry'} onClick={() => setTab('entry')} label={S.tabEntry} icon="﹢" big />
           <TabButton active={tab === 'receipt'} onClick={() => setTab('receipt')} label={S.tabReceipt} icon="🧾" />
           <TabButton active={tab === 'recent'} onClick={() => setTab('recent')} label={S.tabRecent} icon="⟲" />
           <TabButton active={tab === 'summary'} onClick={() => setTab('summary')} label={S.tabSummary} icon="☰" />

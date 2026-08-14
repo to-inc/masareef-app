@@ -21,7 +21,8 @@ export const EN = {
 
   // ——— tabs
   tabInbox: 'Inbox',
-  tabCash: 'Cash',
+  // Not "Cash" any more — the screen behind it takes either method (R-receipts 1).
+  tabEntry: 'New',
   tabReceipt: 'Receipt',
   tabSummary: 'Today',
   tabRecent: 'Recent',
@@ -48,9 +49,14 @@ export const EN = {
   cardFailed: 'Not logged — tap a category again',
   cardQueued: 'Will log when the network is back',
 
-  // ——— cash
-  cashTitle: 'Cash expense — amount first, then the category',
-  cashLog: 'Log the cash',
+  // ——— manual entry (cash OR card — see state/entryPayload.js)
+  entryTitle: 'New expense — amount, then the category',
+  entryLog: 'Log the expense',
+  // The chooser's accessible name. The two labels below are what he READS; the
+  // values behind them are 'Cash' and 'Visa' and never meet each other.
+  entryMethod: 'How you paid',
+  methodCash: 'Cash',
+  methodCard: 'Card',
   currency: 'EGP',
 
   // ——— receipt
@@ -118,7 +124,7 @@ export const EN = {
   periodYear: 'Year',
   todayTitle: "Today's expenses — exactly as they sit in the sheet",
   todayEmptyTitle: 'Nothing logged today yet',
-  todayEmptyBody: 'Confirm from the Inbox, or log some cash.',
+  todayEmptyBody: 'Confirm from the Inbox, or add a new expense.',
   colDate: 'Date',
   colDesc: 'Description',
   colMethod: 'Cash/Card',

@@ -1,15 +1,30 @@
 import { C, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
 import { CATEGORIES, CASH_QUICK } from '../lib/constants.js';
+import { METHODS } from '../state/entryPayload.js';
 import { S } from '../i18n/strings.js';
 import { normalizeDigits } from '../lib/format.js';
 import { SectionLabel, LATIN } from '../components/Primitives.jsx';
 
 /**
+ * The manual entry screen (was CashView).
+ *
  * Cash is ~20% of his spending and completely invisible to the bank SMS, so this
  * keypad is the only way those entries ever exist. Amount first, then category:
  * two decisions, nothing else on screen.
+ *
+ * IT IS NO LONGER CASH-ONLY (R-receipts finding 1, from his 2026-08-12
+ * walkthrough): "it's not always cash". Since D18c he is abroad, where a card
+ * purchase sends no Arabic SMS and therefore never logs itself — so the method
+ * became a THIRD decision, and it sits above the amount because it changes what
+ * the number means before he types it.
+ *
+ * The chooser renders from `METHODS`, the wire vocabulary, and looks its label
+ * up per option. The label is never the value — see state/entryPayload.js for
+ * the column-swap that arrangement exists to make impossible.
  */
-export default function CashView({ amount, setAmount, desc, setDesc, cat, setCat, onSubmit, busy }) {
+export default function EntryView({
+  amount, setAmount, desc, setDesc, cat, setCat, method, setMethod, onSubmit, busy,
+}) {
   const press = (k) => {
     if (k === '⌫') return setAmount(amount.slice(0, -1));
     if (k === '.' && amount.includes('.')) return;
@@ -18,10 +33,31 @@ export default function CashView({ amount, setAmount, desc, setDesc, cat, setCat
     setAmount(amount + normalizeDigits(k));
   };
   const ready = amount && parseFloat(amount) > 0 && cat && !busy;
+  const methodLabel = (m) => (m === 'Visa' ? S.methodCard : S.methodCash);
 
   return (
     <div>
-      <SectionLabel>{S.cashTitle}</SectionLabel>
+      <SectionLabel>{S.entryTitle}</SectionLabel>
+
+      <div style={{ display: 'flex', gap: 8, margin: '2px 0 12px' }} role="group" aria-label={S.entryMethod}>
+        {METHODS.map((m) => (
+          <button
+            key={m}
+            className="catchip"
+            onClick={() => setMethod(m)}
+            aria-pressed={method === m}
+            style={{
+              flex: 1, minHeight: TAP, padding: '13px 0', borderRadius: 12,
+              fontSize: 16.5, fontWeight: 700,
+              background: method === m ? C.harbor : C.card,
+              color: method === m ? C.onDark : C.ink,
+              border: `1px solid ${method === m ? C.harbor : C.line}`,
+            }}
+          >
+            {methodLabel(m)}
+          </button>
+        ))}
+      </div>
 
       <div
         style={{
@@ -105,7 +141,7 @@ export default function CashView({ amount, setAmount, desc, setDesc, cat, setCat
           fontSize: 18.5, fontWeight: 700,
         }}
       >
-        {busy ? S.saving : <>✓ {S.cashLog}{amount ? <> · <span style={LATIN}>{amount}</span> {S.currency}</> : null}</>}
+        {busy ? S.saving : <>✓ {S.entryLog}{amount ? <> · <span style={LATIN}>{amount}</span> {S.currency}</> : null}</>}
       </button>
     </div>
   );

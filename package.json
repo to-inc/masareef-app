@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node scripts/test-format.mjs && node scripts/test-i18n.mjs && node scripts/test-refresh.mjs && node scripts/test-recent.mjs && node scripts/test-accountability.mjs && node scripts/honest-render.mjs && node scripts/test-chips.mjs && node scripts/test-queue.mjs && node scripts/test-inbox.mjs && node scripts/test-categories.mjs && node scripts/test-contrast.mjs && node scripts/test-logcard.mjs && node scripts/test-icons.mjs",
+    "test": "node scripts/test-format.mjs && node scripts/test-i18n.mjs && node scripts/test-refresh.mjs && node scripts/test-recent.mjs && node scripts/test-entry.mjs && node scripts/test-accountability.mjs && node scripts/honest-render.mjs && node scripts/test-chips.mjs && node scripts/test-queue.mjs && node scripts/test-inbox.mjs && node scripts/test-categories.mjs && node scripts/test-contrast.mjs && node scripts/test-logcard.mjs && node scripts/test-icons.mjs",
     "check:honest": "node scripts/honest-render.mjs",
     "check:chips": "node scripts/test-chips.mjs",
     "check:queue": "node scripts/test-queue.mjs",
@@ -20,7 +20,8 @@
     "check:i18n": "node scripts/test-i18n.mjs",
     "check:refresh": "node scripts/test-refresh.mjs",
     "check:recent": "node scripts/test-recent.mjs",
-    "check:accountability": "node scripts/test-accountability.mjs"
+    "check:accountability": "node scripts/test-accountability.mjs",
+    "check:entry": "node scripts/test-entry.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

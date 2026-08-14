@@ -21,7 +21,8 @@ export const AR = {
 
   // ——— tabs
   tabInbox: 'الوارد',
-  tabCash: 'كاش',
+  // مش «كاش» تاني — الشاشة اللي وراه بتاخد كاش أو فيزا (R-receipts 1).
+  tabEntry: 'جديد',
   tabReceipt: 'فاتورة',
   tabSummary: 'اليوم',
   tabRecent: 'الأخير',
@@ -55,9 +56,14 @@ export const AR = {
   cardFailed: 'مااتسجلش — دوس على النوع تاني',
   cardQueued: 'هيتسجّل أول ما النت يرجع',
 
-  // ——— cash
-  cashTitle: 'مصروف كاش — المبلغ الأول، وبعدين النوع',
-  cashLog: 'سجّل الكاش',
+  // ——— المصروف اليدوي (كاش أو فيزا — شوف state/entryPayload.js)
+  entryTitle: 'مصروف جديد — المبلغ، وبعدين النوع',
+  entryLog: 'سجّل المصروف',
+  // اسم المجموعة لقارئ الشاشة. دول اللي بيقراهم؛ القيمة اللي بتتبعت
+  // 'Cash' و 'Visa' ومفيش طريق تخلي الكلمة دي تبقى قيمة.
+  entryMethod: 'الدفع كان إزاي',
+  methodCash: 'كاش',
+  methodCard: 'فيزا',
   currency: 'جنيه',
 
   // ——— receipt
@@ -142,7 +148,7 @@ export const AR = {
   periodYear: 'السنة',
   todayTitle: 'مصاريف النهاردة — زي ما هي في الشيت بالظبط',
   todayEmptyTitle: 'لسه مفيش حاجة اتسجلت النهاردة',
-  todayEmptyBody: 'أكّد العمليات من الوارد، أو سجّل كاش.',
+  todayEmptyBody: 'أكّد العمليات من الوارد، أو سجّل مصروف جديد.',
   colDate: 'التاريخ',
   colDesc: 'البيان',
   colMethod: 'كاش/فيزا',

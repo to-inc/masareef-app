@@ -207,8 +207,10 @@ decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a backg
     .map((p) => [p.pathname.split('/src/')[1], (fs.readFileSync(p, 'utf8').match(/C\.amber\b/g) || []).length])
     .filter(([, n]) => n > 0);
   const total = users.reduce((s, [, n]) => s + n, 0);
-  if (total === 1 && users[0][0] === 'views/CashView.jsx') pass++;
-  else failures.push(`amber must appear exactly once, in views/CashView.jsx — found ${total} use(s) in ${JSON.stringify(users.map(([f]) => f))}`);
+  // views/EntryView.jsx — renamed from CashView with R-receipts 1; the rule is
+  // unchanged, and the amber is still the one on its submit button.
+  if (total === 1 && users[0][0] === 'views/EntryView.jsx') pass++;
+  else failures.push(`amber must appear exactly once, in views/EntryView.jsx — found ${total} use(s) in ${JSON.stringify(users.map(([f]) => f))}`);
 }
 
 // ——————————————————————— every token must be measured somewhere.
