@@ -188,8 +188,27 @@ try {
    * this project keeps finding. A machine must be able to tell the difference.
    */
   const { JobsList } = await vite.ssrLoadModule('/src/views/ReceiptView.jsx');
-  const listHtml = (jobs) => renderToStaticMarkup(
-    createElement(JobsList, { jobs, onReview: () => {}, onRetry: () => {} }));
+  /**
+   * A RENDER THAT THROWS IS REPORTED, NOT PROPAGATED.
+   *
+   * `cairoClock(undefined)` throws inside `JobRow`, and an uncaught throw here
+   * kills the process before a single assertion prints — which is how this suite
+   * announced a real crash-on-missing-timestamp as a stack trace with no verdict
+   * attached. The house pattern (WS3-C's third verdict) is that a detector must
+   * fail, not die: the throw becomes a named failure and the run continues, so
+   * the OTHER assertions still get to speak.
+   */
+  const listHtml = (jobs) => {
+    try {
+      return renderToStaticMarkup(createElement(JobsList, {
+        jobs, onReview: () => {}, onRetry: () => {}, onCancel: () => {},
+      }));
+    } catch (err) {
+      failures.push(`the jobs list THREW while rendering ${JSON.stringify(jobs)}`
+        + `\n      ${err?.message || err} — a row that cannot render takes the whole queue view with it`);
+      return '';
+    }
+  };
   /**
    * Assert on rendered TEXT, not raw markup. A first draft matched `/\d+%/`
    * against the HTML and failed on `width: 100%` in a style attribute, and
@@ -200,14 +219,80 @@ try {
   const listText = (jobs) => textRuns(listHtml(jobs)).join(' | ');
   const rowText = (jobs) => textRuns(listHtml(jobs)).slice(1).join(' | ');   // drop the title
 
+  /**
+   * A stored `ready` job ALWAYS carries its extraction — the worker writes the
+   * body and the stage in one patch. The fixture used to say `{stage:'ready'}`
+   * with nothing in it, a shape storage never holds, and it passed only while
+   * the label read the stage alone. Same defect as the bare `{ok:true}` bodies
+   * in the queue suite: a fixture more permissive than reality.
+   */
+  const isReceipt = { ok: true, extraction: { is_receipt: true, merchant_display: 'Hyper1' } };
+  const notReceipt = { ok: true, extraction: { is_receipt: false, merchant_display: null } };
+
   const known = listText([
-    { id: '1', stage: 'queued' }, { id: '2', stage: 'reading' },
-    { id: '3', stage: 'ready' }, { id: '4', stage: 'failed', retryable: true },
-    { id: '5', stage: 'capped' },
+    { id: '1', stage: 'queued', queuedAt: 1 }, { id: '2', stage: 'reading', queuedAt: 2 },
+    { id: '3', stage: 'ready', queuedAt: 3, extraction: isReceipt },
+    { id: '4', stage: 'failed', retryable: true, queuedAt: 4 },
+    { id: '5', stage: 'capped', queuedAt: 5 },
   ]);
   ok(!/\d+%/.test(known), 'NO percentage anywhere — extraction is one opaque call');
   ok(!known.includes('؟'), 'no unknown-stage marker when every stage is known');
   ok(known.includes('جاهز'), 'a ready job invites review');
+
+  /**
+   * ——— THE ZOMBIE, ON SCREEN (R-receipts 4 + 5).
+   *
+   * A photo the server judged not to be a receipt was STORED as `ready` and so
+   * read «جاهز — راجعه» forever, offering a review card with nothing to review.
+   * He had two of them on film. The row must now name the verdict instead —
+   * and the fixture is stored `ready`, deliberately, because that is the shape
+   * already sitting in his IndexedDB.
+   */
+  const zombie = rowText([{ id: 'z', stage: 'ready', queuedAt: 9, extraction: notReceipt }]);
+  ok(zombie.includes('مش فاتورة'), 'A LEGACY not-a-receipt reads as a VERDICT…');
+  ok(!zombie.includes('جاهز'), '…and never again as "ready — check it"');
+  const settled = rowText([{ id: 'd', stage: 'dismissed', queuedAt: 9, extraction: notReceipt }]);
+  ok(settled.includes('اتقفلت'), 'and once he has read it, the row says so');
+  ok(!settled.includes('مش فاتورة'), 'without still presenting the verdict as news');
+
+  /**
+   * ——— EVERY ROW CAN BE REMOVED (R-receipts 3), including the one being read:
+   * a photo mid-extraction is exactly the one he has decided was wrong.
+   */
+  for (const stage of ['queued', 'reading', 'ready', 'failed', 'capped', 'dismissed']) {
+    const html = listHtml([{ id: 'r', stage, queuedAt: 1, retryable: true, extraction: isReceipt }]);
+    ok(html.includes('✕'), `a ${stage} job offers a remove button`);
+    /**
+     * PRESENT IS NOT USABLE, and a mutation proved the difference: adding
+     * `hidden` to that button left the glyph in the markup, so a check for `✕`
+     * passed while the control was invisible on screen. Asserting on the
+     * BUTTON's own markup — it is the last one opened before the glyph — is the
+     * claim; asserting that the character exists somewhere is its neighbour.
+     */
+    const btn = html.slice(html.lastIndexOf('<button', html.indexOf('✕')));
+    ok(btn.includes('aria-label'), `a ${stage} job's remove button is named for a screen reader`);
+    ok(!btn.includes('hidden'), `a ${stage} job's remove button is actually VISIBLE, not merely rendered`);
+    ok(btn.includes('min-width:48px'), `and it is at the tap floor on a ${stage} job`);
+  }
+
+  /**
+   * ——— THE NAME ON THE CARD (R-receipts 2). "No name… that's terrible UX."
+   */
+  ok(rowText([{ id: 'n', stage: 'ready', queuedAt: 1, extraction: isReceipt }]).includes('Hyper1'),
+    'a read job is named by its shop');
+  ok(rowText([{ id: 'n', stage: 'queued', queuedAt: Date.UTC(2026, 7, 14, 9, 30) }]).includes('صورة الساعة'),
+    'and an unread one by the time it was taken');
+
+  /**
+   * A JOB WITH NO CAPTURE TIME MUST NOT TAKE THE SCREEN DOWN.
+   * `cairoClock(undefined)` reaches `Intl…format(Invalid Date)`, which THROWS
+   * mid-render — one corrupt row would blank his whole queue. Found by this
+   * suite CRASHING rather than failing, which is the recorded specimen: a check
+   * that dies is not a check. The honest answer is a card with no time on it.
+   */
+  const timeless = rowText([{ id: 't', stage: 'queued' }]);
+  ok(timeless.includes('صورة'), 'a job with no readable capture time still renders…');
+  ok(!timeless.includes('الساعة'), '…naming no hour, rather than inventing or crashing on one');
 
   /**
    * CAPPED AND FAILED MUST READ DIFFERENTLY — asserted on the ROW, not the whole

@@ -78,15 +78,30 @@ export const EN = {
   jobQueued: 'In line',
   jobReading: 'Reading…',
   jobReady: 'Ready — check it',
+  // A verdict, not a card to confirm. It used to say "Ready — check it" and
+  // there was nothing to check (R-receipts 4).
+  jobNotReceipt: 'Not a receipt',
+  jobDismissed: 'Closed',
   jobFailed: 'Did not work — try again',
   jobCapped: "That's today's limit — it continues tomorrow",
   jobsTitle: (n) => `${n} ${n === 1 ? 'photo' : 'photos'} in line`,
   jobRetry: 'Try again',
   jobsCapped: (n) => `${n} waiting for tomorrow`,
+  // Every job card names itself: the shop once we have read one, the time it
+  // was taken until then. "No name… that's terrible UX." — his words.
+  jobPhotoAt: (time) => `Photo at ${time}`,
+  // When the capture time cannot be read. No time beats an invented one.
+  jobPhoto: 'Photo',
+  jobThumbAlt: 'The photo',
+  jobRemove: 'Remove',
+  jobRemoveTitle: 'Remove this photo',
   receiptConfirm: '✓ Log it',
   receiptUnsure: "We're not sure about the marked fields — check them.",
   receiptNotReceipt: 'That photo is not a receipt',
   receiptNotReceiptBody: 'Try again in better light, or enter it yourself.',
+  // The way OUT of the verdict — "I can't even go back" was the finding.
+  // Taking either exit settles the job, so it never asks again.
+  receiptVerdictClose: 'Close',
   receiptFailed: 'We cannot read the receipt. Enter it yourself.',
   receiptTooLarge: 'The photo is too large. Take another.',
   receiptNoQuota: "Today's attempts are used up. Enter it yourself.",
@@ -95,6 +110,13 @@ export const EN = {
   receiptCashSteer: 'Card purchases log themselves from the bank text',
   receiptDupSms: 'This purchase may already be logged from the bank text.',
   receiptDupPhoto: 'It looks like you photographed this receipt before.',
+  // D18a — the strongest of the three: not a guess about a cache, an actual row
+  // in his book, shown to him so he judges it rather than trusting us.
+  receiptDupBook: 'Your book already has this:',
+  receiptDupBookMore: (n) => `and ${n - 1} more like it that day`,
+  // The date cell of some row that month cannot be read, so we cannot tell
+  // whether it is this one. Said plainly; it never blocks anything.
+  receiptDupUndated: 'One expense that month has no readable date — it may be this one.',
   receiptSaveAnyway: 'Log it anyway',
 
   receiptQueuedTitle: 'The photo is saved',

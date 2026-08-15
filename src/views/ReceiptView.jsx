@@ -3,12 +3,15 @@ import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, normalizeDigits } from '../lib/format.js';
-import { newClientId } from '../lib/dates.js';
+import { newClientId, cairoClock } from '../lib/dates.js';
 import { prepareReceipt, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
+import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
 import * as queue from '../state/receiptQueue.js';
 import { createWorker } from '../state/receiptWorker.js';
-import { isActionable, cappedCount } from '../state/receiptStages.js';
+import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
+import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
+import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
 import { SectionLabel, LATIN } from '../components/Primitives.jsx';
 
 /**
@@ -49,7 +52,8 @@ export default function ReceiptView({ onSaved, onManual }) {
 
   const [shot, setShot] = useState(null);          // { base64, clientHash, snapDate }
   const [extraction, setExtraction] = useState(null);
-  const [dup, setDup] = useState({ receipt: false, sms: false });
+  const [dup, setDup] = useState({ sms: false, photo: false, book: null });
+  const [dupUndated, setDupUndated] = useState(false);
   const [overrideDup, setOverrideDup] = useState(false);
 
   const [amount, setAmount] = useState('');
@@ -85,24 +89,39 @@ export default function ReceiptView({ onSaved, onManual }) {
 
   const reset = () => {
     setStage('idle'); setSlow(false); setErrorMsg('');
-    setShot(null); setExtraction(null); setDup({ receipt: false, sms: false });
+    setShot(null); setExtraction(null); setDup({ sms: false, photo: false, book: null });
+    setDupUndated(false);
     setOverrideDup(false); setAmount(''); setMerchant(''); setDateStr('');
-    setMethod('Cash'); setCategory(null); setShowAllCats(false);
+    setMethod(DEFAULT_METHOD); setCategory(null); setShowAllCats(false);
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const applyExtraction = (res, snapDate) => {
     const e = res.extraction;
     setExtraction(e);
-    setDup({ receipt: !!res.dupReceipt, sms: !!res.dupSms });
+    setDup(dupState(res));
+    setDupUndated(undatedHint(res));
     setAmount(e.amount == null ? '' : String(e.amount));
     setMerchant(e.merchant_display || e.merchant_latin || '');
     // Printed date wins when the server judged it plausible; otherwise the day
     // he took the photo. Either way it is on screen before he confirms.
     setDateStr(ISO_TO_DMY(e.date) || ISO_TO_DMY(snapDate));
-    // Receipts default to Cash: the SMS automation already logs every card
-    // purchase, so defaulting to Visa would double-count his spending.
-    setMethod('Cash');
+    /**
+     * THE METHOD DEFAULT COMES FROM THE SERVER (D19).
+     *
+     * A till receipt still defaults to Cash — the SMS automation already logs
+     * every card purchase, so defaulting to Visa would double-count. A PAYMENT
+     * SLIP is bank-account money and defaults to Visa. Which column a document
+     * belongs in is a statement about HIS ledger, so `CONFIG.SLIP_METHOD`
+     * decides it server-side and the client is told, exactly as it is told a tab
+     * name rather than constructing one.
+     *
+     * Validated through the same vocabulary the manual entry uses: an
+     * unrecognised value — a LABEL, a stale server, a missing field — degrades
+     * to Cash rather than being held, so the app can never post a method the
+     * sheet would read as something else.
+     */
+    setMethod(isMethod(res.defaultMethod) ? res.defaultMethod : DEFAULT_METHOD);
     setCategory(res.category || null);
     setShowAllCats(!res.category);
     setStage(e.is_receipt ? 'review' : 'notReceipt');
@@ -174,6 +193,57 @@ export default function ReceiptView({ onSaved, onManual }) {
     workerRef.current.pump();
   };
 
+  /**
+   * CANCEL — on every stage, as a BUTTON (R-receipts 3).
+   *
+   * A button and not a swipe: a swipe is an accelerator for people who already
+   * know it is there, and the senior-first rule (CLAUDE.md #5) is that the
+   * action must be visible. Nothing here is a swipe target.
+   *
+   * Order matters. Abort FIRST, delete SECOND: the worker marks the job
+   * cancelled inside `cancel()` before the abort can settle its await, so the
+   * outcome is dropped rather than written back onto a row we are about to
+   * remove. Deleting first would leave a window where the extraction lands, the
+   * update finds nothing, and the job silently reappears or does not — a race
+   * whose two outcomes look identical from the outside.
+   *
+   * CANCEL IS NOT UNDO. If a row was already written it stays written; nothing
+   * here touches his sheet, because extraction never does (§3.3). What cancel
+   * removes is a photo waiting to be read.
+   */
+  const cancelJob = async (job) => {
+    workerRef.current.cancel(job.id);
+    await queue.remove(job.id);
+    // If he cancelled the card he currently has open, close it too — leaving a
+    // confirm card on screen for a job that no longer exists is the same class
+    // of lie as the zombie it replaces.
+    if (reviewingId === job.id) { setReviewingId(null); reset(); }
+    await refreshJobs();
+    workerRef.current.pump();
+  };
+
+  /**
+   * SETTLE A VERDICT (R-receipts 4 + 5).
+   *
+   * He has now READ "this is not a receipt", so it has stopped being something
+   * that needs him — and every exit from that screen settles it, including
+   * "photograph again". An exit that left the job actionable would put the row
+   * straight back in the list saying it wants attention, which is precisely the
+   * immortal card this replaces.
+   *
+   * The photo is KEPT, at stage `dismissed`, rather than deleted: a not-a-receipt
+   * can never become a sheet row, so nothing about keeping it risks a double
+   * write, and the picture is still his to look at or remove deliberately.
+   */
+  const settleVerdict = async () => {
+    const id = reviewingId;
+    if (id) {
+      await queue.update(id, { stage: 'dismissed', error: null, retryable: false });
+      setReviewingId(null);
+      await refreshJobs();
+    }
+  };
+
   const save = async () => {
     const amt = Number(normalizeDigits(amount));
     if (!isFinite(amt) || amt <= 0 || !category || saving) return;
@@ -190,9 +260,33 @@ export default function ReceiptView({ onSaved, onManual }) {
       merchantLatin: extraction?.merchant_latin || '',
       dateStr,
     };
+    // Only ever sent when he has actually acknowledged a flag. Sending it by
+    // default would turn the server's gate into decoration.
+    if (overrideDup) payload.dupAck = true;
     try {
       const res = await receiptConfirm(payload);
-      if (res?.ok) {
+      const outcome = confirmOutcome(res);
+      /**
+       * BLOCKED IS NOT SAVED, and `res.ok` cannot tell them apart.
+       *
+       * The authoritative book check runs at CONFIRM, so the server can refuse a
+       * write the extract-time hint thought was clean — an SMS landing in
+       * between is exactly the race D18a describes. That answer is
+       * `{ok:true, skipped:"book_duplicate"}`: truthy, successful, and NO ROW
+       * WRITTEN. Treated as success it would close the card, delete the job from
+       * the queue, and lose the expense in silence.
+       *
+       * So the card STAYS, now carrying the row his book already holds, and the
+       * override becomes his one deliberate tap.
+       */
+      if (outcome === 'blocked') {
+        setDup((d) => ({ ...d, book: bookFrom(res) }));
+        setDupUndated(undatedHint(res));
+        setOverrideDup(false);
+        setSaving(false);
+        return;
+      }
+      if (outcome === 'written') {
         const doneId = reviewingId || shot?.clientHash;
         if (doneId) queue.remove(doneId).then(refreshJobs);
         setReviewingId(null);
@@ -235,6 +329,18 @@ export default function ReceiptView({ onSaved, onManual }) {
   }
 
   if (stage === 'notReceipt') {
+    /**
+     * THE VERDICT SCREEN — and it now has a way out (R-receipts 4).
+     *
+     * "I can't even go back." It offered exactly one button, «صوّر تاني», which
+     * dropped him back at the camera with the job still sitting in the list
+     * claiming to be «جاهز — راجعه» forever.
+     *
+     * BOTH exits settle it, and that is the whole fix rather than a nicety: a
+     * verdict he has read is not a verdict that is still waiting for him. The
+     * one thing neither exit does is delete his photo — that stays his to
+     * remove, from the list, deliberately.
+     */
     return (
       <Centered>
         <div style={{ fontSize: 46 }}>🤔</div>
@@ -244,7 +350,20 @@ export default function ReceiptView({ onSaved, onManual }) {
         <p style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
           {S.receiptNotReceiptBody}
         </p>
-        <button className="bigbtn" onClick={reset} style={primaryBtn}>{S.receiptRetake}</button>
+        <button
+          className="bigbtn"
+          onClick={() => { settleVerdict().then(reset); }}
+          style={primaryBtn}
+        >
+          {S.receiptVerdictClose}
+        </button>
+        <button
+          className="catchip"
+          onClick={() => { settleVerdict().then(reset); }}
+          style={ghostBtn}
+        >
+          {S.receiptRetake}
+        </button>
       </Centered>
     );
   }
@@ -285,7 +404,7 @@ export default function ReceiptView({ onSaved, onManual }) {
     const lowDate = extraction.date_confidence === 'low';
     const anyLow = lowAmount || lowMerchant || lowDate;
     const ready = Number(normalizeDigits(amount)) > 0 && !!category && !saving;
-    const blockedByDup = (dup.sms || dup.receipt) && !overrideDup;
+    const blockedByDup = isBlocked(dup, overrideDup);
 
     return (
       <div>
@@ -313,7 +432,43 @@ export default function ReceiptView({ onSaved, onManual }) {
           <Banner tone="warn">{S.receiptUnsure}</Banner>
         )}
         {dup.sms && <Banner tone="warn">{S.receiptDupSms}</Banner>}
-        {dup.receipt && <Banner tone="warn">{S.receiptDupPhoto}</Banner>}
+        {dup.photo && <Banner tone="warn">{S.receiptDupPhoto}</Banner>}
+
+        {/*
+          THE BOOK SAYS HE ALREADY HAS THIS (D18a).
+          The other two hints are statements about our caches; this one is a ROW
+          in his sheet, so it is shown rather than described. He judges it — the
+          merchant on a slip and the description on the row rarely match, which
+          is exactly why the duplicate key does not compare them.
+        */}
+        {dup.book && (
+          <Banner tone="warn">
+            <div>{S.receiptDupBook}</div>
+            <div style={{ marginTop: 6, fontWeight: 700, direction: 'ltr', unicodeBidi: 'isolate', textAlign: 'start' }}>
+              <span style={LATIN}>{dup.book.match.date}</span>
+              {' · '}
+              <span dir="auto">{dup.book.match.description || '—'}</span>
+              {' · '}
+              <span style={{ ...LATIN, ...NUMERALS }}>{money(dup.book.match.amount)}</span>
+              {' '}
+              <span style={LATIN}>{dup.book.match.currency}</span>
+              {' · '}
+              <span style={LATIN}>{dup.book.match.method}</span>
+            </div>
+            {dup.book.count > 1 && (
+              <div style={{ marginTop: 4, fontWeight: 500 }}>{S.receiptDupBookMore(dup.book.count)}</div>
+            )}
+          </Banner>
+        )}
+
+        {/* Advisory only, and never a blocker: a row that month has no readable
+            date, so we cannot say whether it is this one. Saying nothing would
+            be the tidier lie. */}
+        {dupUndated && !dup.book && (
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 10, lineHeight: 1.6 }}>
+            {S.receiptDupUndated}
+          </div>
+        )}
 
         <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: 16 }}>
           <Field label={S.receiptAmount} editable={lowAmount}>
@@ -479,7 +634,7 @@ export default function ReceiptView({ onSaved, onManual }) {
       <p style={{ color: C.muted, fontSize: 15.5, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
         {S.receiptIntro}
       </p>
-      <JobsList jobs={jobs} onReview={review} onRetry={retry} />
+      <JobsList jobs={jobs} onReview={review} onRetry={retry} onCancel={cancelJob} />
       <label className="bigbtn" style={{ ...primaryBtn, display: 'inline-block', cursor: 'pointer' }}>
         {S.receiptStart}
         {/* `capture="environment"` opens the native camera directly. Deliberately
@@ -541,54 +696,158 @@ export default function ReceiptView({ onSaved, onManual }) {
  * "waiting" would imply five failures; one line saying how many are held until
  * tomorrow is the truth, and it is a system working rather than breaking.
  */
-export function JobsList({ jobs, onReview, onRetry }) {
+export function JobsList({ jobs, onReview, onRetry, onCancel }) {
   if (!jobs.length) return null;
   const held = cappedCount(jobs);
-  const LABEL = {
-    queued: S.jobQueued, reading: S.jobReading, ready: S.jobReady,
-    failed: S.jobFailed, capped: S.jobCapped,
-  };
   return (
     <div style={{ width: '100%', maxWidth: 340, marginTop: 14, textAlign: 'start' }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, marginBottom: 6 }}>
         {S.jobsTitle(jobs.length)}
         {held > 0 && <span style={{ color: C.ink }}>{' · '}{S.jobsCapped(held)}</span>}
       </div>
-      {jobs.map((j) => {
-        const actionable = isActionable(j);
-        return (
-          <div
-            key={j.id}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              gap: 10, background: C.card, border: `1px solid ${C.line}`,
-              borderRadius: 12, padding: '10px 12px', marginBottom: 6,
-            }}
-          >
-            <span style={{ fontSize: 14.5, fontWeight: j.stage === 'ready' ? 700 : 500,
-              color: j.stage === 'failed' ? C.conflictInk : C.ink }}>
-              {/* An UNKNOWN stage is never silently rendered as "waiting" — an
-                  unnamed state is a state we do not understand, and saying so is
-                  the only honest option. */}
-              {LABEL[j.stage] || `؟ ${j.stage}`}
-            </span>
-            {j.stage === 'ready' && (
-              <button className="catchip" onClick={() => onReview(j)}
-                style={{ padding: '8px 14px', minHeight: TAP, borderRadius: 999,
-                  background: C.harbor, color: C.onDark, fontWeight: 700, fontSize: 14 }}>
-                {S.jobReady}
-              </button>
-            )}
-            {j.stage === 'failed' && actionable && (
-              <button className="catchip" onClick={() => onRetry(j)}
-                style={{ padding: '8px 14px', minHeight: TAP, borderRadius: 999,
-                  background: C.shell, border: `1px solid ${C.line}`, fontSize: 14 }}>
-                {S.jobRetry}
-              </button>
-            )}
-          </div>
-        );
-      })}
+      {jobs.map((j) => (
+        <JobRow key={j.id} job={j} onReview={onReview} onRetry={onRetry} onCancel={onCancel} />
+      ))}
+    </div>
+  );
+}
+
+const JOB_LABEL = () => ({
+  queued: S.jobQueued, reading: S.jobReading, ready: S.jobReady,
+  notReceipt: S.jobNotReceipt, dismissed: S.jobDismissed,
+  failed: S.jobFailed, capped: S.jobCapped,
+});
+
+/**
+ * One job, and it now says WHICH job it is (R-receipts 2).
+ *
+ * It used to render a stage label and nothing else, so a queue of five photos
+ * was five identical rows reading «في الدور» — "no name… that's terrible UX".
+ * Two facts name it, and both are already on the device: the picture itself,
+ * and the shop once an extraction has found one. Until then it is named by the
+ * time it was taken, which is true, rather than by "Receipt 3", which is a
+ * number we made up.
+ *
+ * The STAGE comes from `effectiveStage`, never `job.stage` — that is what stops
+ * a not-a-receipt from announcing itself as «جاهز — راجعه».
+ */
+function JobRow({ job, onReview, onRetry, onCancel }) {
+  const stage = effectiveStage(job);
+  const [thumb, setThumb] = useState(null);
+
+  /**
+   * The object URL is created in an effect and REVOKED when the row goes away.
+   * An unrevoked URL pins its ~500 KB Blob for the life of the document, and he
+   * photographs receipts in batches on a phone that is already holding them all
+   * in IndexedDB. It is also why this runs in an effect rather than during
+   * render: a render can be thrown away or repeated, and every discarded one
+   * would leak a Blob nobody has a handle to.
+   */
+  useEffect(() => {
+    const url = thumbUrl(job.base64);
+    setThumb(url);
+    return () => revokeThumb(url);
+  }, [job.base64]);
+
+  /**
+   * THE NAME, and the guard on it is not defensive decoration.
+   *
+   * `cairoClock(undefined)` reaches `Intl.DateTimeFormat.format(Invalid Date)`,
+   * which THROWS — so one job with a missing or corrupt `queuedAt` did not lose
+   * its timestamp, it took the entire receipt screen down with it, mid-render,
+   * with his whole queue on it. Found by the chips suite crashing rather than
+   * failing, which is the specimen this project has recorded before: a check
+   * that dies is not a check.
+   *
+   * A time we cannot read is therefore no time at all — the card says «صورة»
+   * and stops there. Naming it after a clock we do not have would be the same
+   * lie as a fabricated total, spelled in a different unit.
+   */
+  const merchant = jobMerchant(job);
+  const at = Number.isFinite(job.queuedAt) ? cairoClock(job.queuedAt) : null;
+  const name = merchant || (at ? S.jobPhotoAt(at) : S.jobPhoto);
+  const label = JOB_LABEL()[stage];
+
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: C.card, border: `1px solid ${C.line}`,
+        borderRadius: 12, padding: '10px 12px', marginBottom: 6,
+      }}
+    >
+      {/* No thumbnail is a missing picture, never a broken one — `thumbUrl`
+          answers null where it cannot make one, and this simply renders the
+          placeholder tile instead. */}
+      {thumb ? (
+        <img
+          src={thumb} alt={S.jobThumbAlt}
+          style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, flexShrink: 0,
+            border: `1px solid ${C.line}`, opacity: stage === 'dismissed' ? 0.5 : 1 }}
+        />
+      ) : (
+        <div style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0,
+          background: C.shell, border: `1px solid ${C.line}`, display: 'flex',
+          alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
+      )}
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{ fontSize: 14.5, fontWeight: 600, color: C.ink,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          dir="auto"
+        >
+          {name}
+        </div>
+        <div style={{ fontSize: 12.5, fontWeight: stage === 'ready' ? 700 : 500,
+          color: stage === 'failed' ? C.conflictInk : C.muted }}>
+          {/* An UNKNOWN stage is never silently rendered as "waiting" — an
+              unnamed state is a state we do not understand, and saying so is
+              the only honest option. */}
+          {label || `؟ ${job.stage}`}
+        </div>
+      </div>
+
+      {stage === 'ready' && (
+        <button className="catchip" onClick={() => onReview(job)}
+          style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
+            background: C.harbor, color: C.onDark, fontWeight: 700, fontSize: 13.5 }}>
+          {S.jobReady}
+        </button>
+      )}
+      {stage === 'notReceipt' && (
+        <button className="catchip" onClick={() => onReview(job)}
+          style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
+            background: C.shell, border: `1px solid ${C.line}`, fontSize: 13.5 }}>
+          {S.jobNotReceipt}
+        </button>
+      )}
+      {stage === 'failed' && isActionable(job) && (
+        <button className="catchip" onClick={() => onRetry(job)}
+          style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
+            background: C.shell, border: `1px solid ${C.line}`, fontSize: 13.5 }}>
+          {S.jobRetry}
+        </button>
+      )}
+
+      {/*
+        CANCEL, ON EVERY STAGE (R-receipts 3) — including `reading`, which is the
+        one that needs it most: a photo being read is a photo he cannot get rid
+        of, and that is exactly when he decided it was the wrong photo.
+        A button, at the tap floor, not a swipe: a swipe is an accelerator for
+        people who know it exists, and this list is read by someone who does not.
+      */}
+      <button
+        className="catchip"
+        onClick={() => onCancel(job)}
+        aria-label={S.jobRemoveTitle}
+        title={S.jobRemoveTitle}
+        style={{ minWidth: TAP, minHeight: TAP, borderRadius: 999, flexShrink: 0,
+          background: 'transparent', border: `1px solid ${C.line}`,
+          color: C.muted, fontSize: 16, fontWeight: 700, lineHeight: 1 }}
+      >
+        ✕
+      </button>
     </div>
   );
 }

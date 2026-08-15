@@ -26,9 +26,16 @@ export const fixCategory = ({ tab, rowHint, match, newCategory }) =>
 export const manual = ({ amount, method, category, description, clientId, entryDate }) =>
   call({ action: 'manual', amount, method, category, description, clientId, entryDate }, 'write');
 
-// WS4 fills these in behind ReceiptView.
-export const receiptExtract = ({ image, clientHash, snapDate }) =>
-  call({ action: 'receipt_extract', image, clientHash, snapDate }, 'vision');
+/**
+ * WS4 fills these in behind ReceiptView.
+ *
+ * `signal` is a THIRD argument to `call`, never a body field — the body is
+ * assembled from named fields exactly like every other endpoint here, so an
+ * AbortSignal cannot ride onto the wire as `"signal":{}` no matter how the
+ * caller passes it.
+ */
+export const receiptExtract = ({ image, clientHash, snapDate, signal }) =>
+  call({ action: 'receipt_extract', image, clientHash, snapDate }, 'vision', signal);
 
 export const receiptConfirm = (fields) =>
   call({ action: 'receipt_confirm', ...fields }, 'write');

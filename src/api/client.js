@@ -36,9 +36,20 @@ export class TransportError extends Error {
   }
 }
 
-async function attempt(url, payload, timeoutMs) {
+async function attempt(url, payload, timeoutMs, signal) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  /**
+   * A CALLER's signal (receipt cancel, R-receipts 3) folded into this attempt's
+   * own controller. `aborted` is checked first because a signal that fired
+   * before the call started would otherwise never deliver its event, and the
+   * request would go out for a job he has already cancelled.
+   */
+  const onAbort = () => ctrl.abort();
+  if (signal) {
+    if (signal.aborted) ctrl.abort();
+    else signal.addEventListener('abort', onAbort);
+  }
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -57,9 +68,16 @@ async function attempt(url, payload, timeoutMs) {
     }
   } catch (err) {
     if (err instanceof TransportError) throw err;
-    throw new TransportError(err?.name === 'AbortError' ? 'timeout' : 'network');
+    if (err?.name === 'AbortError') {
+      // CANCELLED and TIMEOUT are both AbortError and must never collapse into
+      // one name: a timeout is worth retrying and a cancellation is the one
+      // thing that must not be (see `call`). Same law as `ignored` vs `error`.
+      throw new TransportError(signal?.aborted ? 'cancelled' : 'timeout');
+    }
+    throw new TransportError('network');
   } finally {
     clearTimeout(timer);
+    if (signal) signal.removeEventListener('abort', onAbort);
   }
 }
 
@@ -72,7 +90,7 @@ async function attempt(url, payload, timeoutMs) {
  * it would not change the outcome. Genuine write retries are the outbox's job,
  * where `clientId` makes them idempotent.
  */
-export async function call(payload, kind = 'read') {
+export async function call(payload, kind = 'read', signal) {
   const creds = getCreds();
   if (!creds) throw new TransportError('no-credentials');
 
@@ -80,9 +98,21 @@ export async function call(payload, kind = 'read') {
   const body = { ...payload, secret: creds.secret };
 
   try {
-    return await attempt(creds.execUrl, body, timeout);
-  } catch {
-    return attempt(creds.execUrl, body, timeout);
+    return await attempt(creds.execUrl, body, timeout, signal);
+  } catch (err) {
+    /**
+     * A CANCELLED CALL IS NEVER RETRIED, and this line is the whole reason the
+     * signal is threaded down here rather than handled in the worker.
+     *
+     * The retry above exists for a blip on mobile data. Replaying a request he
+     * has just cancelled would send the image to the vision endpoint a SECOND
+     * time — and `receipt_extract` consumes the daily budget on ATTEMPTS, not
+     * successes (the WS1 follow-up fix), so cancelling one receipt would cost
+     * two of the forty he gets in a day. The abort would have looked like it
+     * worked; only the bill would have known.
+     */
+    if (signal?.aborted) throw err instanceof TransportError ? err : new TransportError('cancelled');
+    return attempt(creds.execUrl, body, timeout, signal);
   }
 }
 

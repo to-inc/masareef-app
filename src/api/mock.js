@@ -323,8 +323,10 @@ const RECEIPT_FIXTURES = [
   {
     label: 'S2 confident EGP cash',
     ok: true, category: 'Medical', dupReceipt: false, dupSms: false,
+    dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false },
+    defaultMethod: 'Cash',
     extraction: {
-      is_receipt: true, amount: 137.5, currency: 'EGP',
+      doc_type: 'purchase_receipt', is_receipt: true, amount: 137.5, currency: 'EGP',
       merchant_display: 'صيدلية سيف', merchant_latin: 'seif pharmacy',
       date: null, payment_hint: 'cash',
       amount_confidence: 'high', merchant_confidence: 'high', date_confidence: 'high',
@@ -334,8 +336,10 @@ const RECEIPT_FIXTURES = [
   {
     label: 'S3 uncertain — faded total',
     ok: true, category: null, dupReceipt: false, dupSms: false,
+    dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false },
+    defaultMethod: 'Cash',
     extraction: {
-      is_receipt: true, amount: null, currency: 'EGP',
+      doc_type: 'purchase_receipt', is_receipt: true, amount: null, currency: 'EGP',
       merchant_display: 'بقالة ??', merchant_latin: null,
       date: null, payment_hint: 'unknown',
       amount_confidence: 'low', merchant_confidence: 'low', date_confidence: 'low',
@@ -345,8 +349,10 @@ const RECEIPT_FIXTURES = [
   {
     label: 'S2 travel EUR',
     ok: true, category: 'Eating out', dupReceipt: false, dupSms: false,
+    dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false },
+    defaultMethod: 'Cash',
     extraction: {
-      is_receipt: true, amount: 12.5, currency: 'EUR',
+      doc_type: 'purchase_receipt', is_receipt: true, amount: 12.5, currency: 'EUR',
       merchant_display: 'Café de Flore', merchant_latin: 'cafe de flore',
       date: null, payment_hint: 'cash',
       amount_confidence: 'high', merchant_confidence: 'high', date_confidence: 'low',
@@ -356,8 +362,10 @@ const RECEIPT_FIXTURES = [
   {
     label: 'card receipt the SMS already logged',
     ok: true, category: 'Personal expenses', dupReceipt: false, dupSms: true,
+    dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false },
+    defaultMethod: 'Cash',
     extraction: {
-      is_receipt: true, amount: 214.75, currency: 'EGP',
+      doc_type: 'purchase_receipt', is_receipt: true, amount: 214.75, currency: 'EGP',
       merchant_display: 'Uber', merchant_latin: 'uber',
       date: null, payment_hint: 'card',
       amount_confidence: 'high', merchant_confidence: 'high', date_confidence: 'high',
@@ -367,12 +375,58 @@ const RECEIPT_FIXTURES = [
   {
     label: 'S4 not a receipt',
     ok: true, category: null, dupReceipt: false, dupSms: false,
+    dupBook: { checked: false, reason: 'no_amount', match: null, count: 0, undatedAmountMatch: false },
+    defaultMethod: 'Cash',
     extraction: {
-      is_receipt: false, amount: null, currency: 'UNKNOWN',
+      doc_type: 'not_expense', is_receipt: false, amount: null, currency: 'UNKNOWN',
       merchant_display: null, merchant_latin: null, date: null,
       payment_hint: 'unknown', amount_confidence: 'low',
       merchant_confidence: 'low', date_confidence: 'low',
       raw_total_line: null, notes: null,
+    },
+  },
+  {
+    /**
+     * A PAYMENT SLIP (D18a) — captured, not refused. Under the old prompt this
+     * same screenshot answered `is_receipt:false`; it is now an expense with a
+     * card default (D19), and the payee keeps the bank's masking because that
+     * masked form is what the Memory tab learns.
+     */
+    label: 'payment slip — InstaPay transfer',
+    ok: true, category: null, dupReceipt: false, dupSms: false,
+    dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false },
+    defaultMethod: 'Visa',
+    extraction: {
+      doc_type: 'payment_slip', is_receipt: true, amount: 800, currency: 'EGP',
+      merchant_display: 'MOHAMED G**** R', merchant_latin: 'mohamed g r',
+      date: '2026-08-11', payment_hint: 'card',
+      amount_confidence: 'high', merchant_confidence: 'high', date_confidence: 'high',
+      raw_total_line: 'تم تنفيذ تحويل لحظي بمبلغ 800.00 جم', notes: null,
+    },
+  },
+  {
+    /**
+     * ALREADY IN THE BOOK. The slip arrived days after the SMS wrote the row, so
+     * the 6 h `xsrc` cache is long gone and only the book knows. Nothing is
+     * written unless he explicitly acknowledges it (`dupAck`), and the app shows
+     * him the row it found rather than just asserting a clash.
+     */
+    label: 'payment slip his book already holds',
+    ok: true, category: 'Transportation', dupReceipt: false, dupSms: false,
+    dupBook: {
+      checked: true, reason: null, count: 1, undatedAmountMatch: false,
+      match: {
+        date: '11/8/2026', description: 'Uber', method: 'Visa',
+        category: 'Transportation', amount: 355.96, currency: 'EGP', tab: 'Aug',
+      },
+    },
+    defaultMethod: 'Visa',
+    extraction: {
+      doc_type: 'payment_slip', is_receipt: true, amount: 355.96, currency: 'EGP',
+      merchant_display: 'UBER RIDES', merchant_latin: 'uber rides',
+      date: '2026-08-11', payment_hint: 'card',
+      amount_confidence: 'high', merchant_confidence: 'high', date_confidence: 'high',
+      raw_total_line: 'Paid 355.96 EGP', notes: null,
     },
   },
 ];
