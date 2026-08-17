@@ -46,7 +46,23 @@ const vite = await createServer({ server: { middlewareMode: true }, appType: 'cu
 
 try {
   const { CategoryChips } = await vite.ssrLoadModule('/src/views/ReceiptView.jsx');
+  const { categoryLabel: L } = await vite.ssrLoadModule('/src/i18n/strings.js');
   const LIST = ['Eating out', 'Groceries', 'Car', 'Gifts'];
+
+  /**
+   * ——— THE LABEL IS WHAT HE READS; THE VALUE IS WHAT IS WRITTEN (finding M2).
+   *
+   * Every expectation below is stated as `L(value)` rather than as the Latin
+   * string, so these assertions keep testing ORDER and PRESENCE — which is what
+   * they are for — in whichever language the app is speaking. Stating them as
+   * literals would mean this whole file silently only ever checked the English
+   * install, on an app whose default is Arabic.
+   *
+   * The value's survival is asserted where it actually matters — at the callback
+   * below, and at the wire in test-entry.mjs.
+   */
+  ok(L('Groceries') !== 'Groceries', 'the Arabic label is NOT the frozen value — or this file proves nothing');
+  ok(L('Science Pitchers') === 'Science Pitchers', 'while a proper noun is left exactly as it is');
 
   const render = (selected) =>
     renderToStaticMarkup(createElement('div', null,
@@ -59,7 +75,7 @@ try {
   eq(count(none), LIST.length, 'every category is offered when nothing is selected');
   eq(count(picked), LIST.length, 'and STILL every category after one is selected — none vanishes');
   for (const c of LIST) {
-    ok(picked.includes(`>${c}</button>`) || picked.includes(`✓ ${c}</button>`),
+    ok(picked.includes(`>${L(c)}</button>`) || picked.includes(`✓ ${L(c)}</button>`),
       `${c} is still present after selecting Car`);
   }
 
@@ -73,25 +89,32 @@ try {
    * alphabetical order, which is what lets these two cases separate.
    */
   const order = (selected) => textRuns(render(selected)).map((t) => t.replace('✓ ', ''));
-  eq(order(null).join(','), LIST.join(','), 'with nothing selected the order is untouched');
-  eq(order('Car')[0], 'Car', 'the selected chip floats to the front');
+  const labels = (arr) => arr.map(L).join(',');
+  eq(order(null).join(','), labels(LIST), 'with nothing selected the order is untouched');
+  eq(order('Car')[0], L('Car'), 'the selected chip floats to the front');
   eq(order('Car').length, LIST.length, 'and nothing is added or lost in the move');
-  eq(order('Car').slice(1).join(','), LIST.filter((c) => c !== 'Car').join(','),
+  eq(order('Car').slice(1).join(','), labels(LIST.filter((c) => c !== 'Car')),
     'the REST keep their original most-used-first order — not alphabetised');
-  eq(order('Gifts')[0], 'Gifts', 'any chip floats, not just one that already sorted early');
-  eq(order('Gifts').slice(1).join(','), 'Eating out,Groceries,Car',
+  eq(order('Gifts')[0], L('Gifts'), 'any chip floats, not just one that already sorted early');
+  eq(order('Gifts').slice(1).join(','), labels(['Eating out', 'Groceries', 'Car']),
     'and again the remainder is stable');
 
   // A selection this install does not offer must NOT be prepended as a phantom
   // chip — that would hand him a button the server will refuse.
-  eq(order('Transportation').join(','), LIST.join(','),
+  eq(order('Transportation').join(','), labels(LIST),
     'a selection absent from the list adds nothing and reorders nothing');
 
   // ——— the choice must be visible to a machine, not only to a colour.
   eq((picked.match(/aria-pressed="true"/g) || []).length, 1, 'exactly one chip reports selected');
   eq((none.match(/aria-pressed="true"/g) || []).length, 0, 'and none does when nothing is chosen');
-  ok(picked.includes('✓ Car</button>'), 'the selected chip is marked in TEXT, not by colour alone');
-  ok(!picked.includes('✓ Groceries'), 'and the others are not');
+  ok(picked.includes(`✓ ${L('Car')}</button>`), 'the selected chip is marked in TEXT, not by colour alone');
+  ok(!picked.includes(`✓ ${L('Groceries')}`), 'and the others are not');
+  /**
+   * AND THE FROZEN VALUE IS NOT PAINTED AT HIM. The chip is 48px of one line;
+   * the value belongs on the wire and, during the changeover, under the guess
+   * button — not doubled onto every chip in the grid.
+   */
+  ok(!picked.includes('>Car</button>'), 'the raw wire value is not the chip text');
 
   // ——— toggle semantics, asserted through the callback rather than by eye.
   let handed = 'unset';

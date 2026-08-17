@@ -1,8 +1,8 @@
-import { C, FONT_DISPLAY, NUMERALS, PREV_SERIES_OPACITY, TAP } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, NUMERALS, PREV_SERIES_OPACITY, TAP } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
-import { S } from '../i18n/strings.js';
+import { S, categoryLabel } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
-import { comb, seriesFor, sumTo, cumsum, lastIdxOf } from '../lib/series.js';
+import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
 import { Delta, LATIN } from './Primitives.jsx';
 
 /**
@@ -16,14 +16,16 @@ import { Delta, LATIN } from './Primitives.jsx';
 
 // Cumulative race: colored line (this period) vs grey line (last period), with a
 // marker pair at "the same point in time" — an honest partial-period comparison.
-export function CumulativeChart({ cur, prev, color }) {
-  const W = 320, H = 116, P = 8;
+export function CumulativeChart({ cur, prev, color, labelled = true }) {
+  // 12px of headroom at the top so a label on a marker near the ceiling still
+  // has somewhere to sit.
+  const W = 320, H = 128, P = 8, TOP = 14;
   const cumC = cumsum(cur), cumP = cumsum(prev);
   const li = lastIdxOf(cumC);
   const n = Math.max(cur.length, prev.length);
   const max = Math.max(cumP[cumP.length - 1] || 0, cumC[li] || 0, 1);
   const x = (i) => P + (i / (n - 1)) * (W - 2 * P);
-  const y = (v) => H - P - (v / max) * (H - 2 * P - 8);
+  const y = (v) => H - P - (v / max) * (H - P - TOP - 8);
   const path = (arr, stop) => {
     let d = '';
     for (let i = 0; i <= stop; i++) {
@@ -38,6 +40,33 @@ export function CumulativeChart({ cur, prev, color }) {
   const prevRaw = cumP[Math.min(li, cumP.length - 1)];
   const hasPrev = prevRaw != null;
   const prevAt = hasPrev ? prevRaw : 0;
+
+  /**
+   * THE TWO NUMBERS, ON THE TWO MARKERS (finding S6).
+   *
+   * This chart carried no figure anywhere: no axis, no value at the live marker,
+   * none at the grey one. He could see a shape and had to decode it through the
+   * metric cards below and then a three-line paragraph below those — which was
+   * the longest block of text in the app, on the screen he opens most, and it
+   * existed only to explain a grey line. A chart that needs a paragraph has not
+   * landed; labelling the markers deletes the paragraph.
+   *
+   * `hasPrev` gates the grey label the same way it already gates the grey dot:
+   * a missing comparison (the 2025 file is not connected) must not render as a
+   * confident 0. Honest-render, at the chart.
+   */
+  const curY = y(cumC[li] || 0);
+  const prevY = y(prevAt);
+  // Near the right edge the labels would run off the viewBox, so they flip to
+  // the other side of the marker. `li` is "today", so on the 28th of a month
+  // this is the normal case, not the edge case.
+  const flip = x(li) > W * 0.62;
+  const labelX = flip ? x(li) - 8 : x(li) + 8;
+  const anchor = flip ? 'end' : 'start';
+  // Two labels within 13px of each other would overlap; push the grey one clear.
+  const collide = hasPrev && Math.abs(curY - prevY) < 13;
+  const prevLabelY = collide ? (prevY <= curY ? prevY - 9 : prevY + 11) : prevY - 5;
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }} aria-hidden="true">
       {[0.25, 0.5, 0.75, 1].map((f) => (
@@ -46,8 +75,33 @@ export function CumulativeChart({ cur, prev, color }) {
       <line x1={x(li)} x2={x(li)} y1={y(Math.max(cumC[li] || 0, prevAt))} y2={H - 2} stroke={C.muted} strokeWidth="0.8" />
       <path d={path(cumP, cumP.length - 1)} stroke={C.muted} strokeOpacity={PREV_SERIES_OPACITY} strokeWidth="2.5" fill="none" strokeLinecap="round" />
       <path d={path(cumC, li)} stroke={color} strokeWidth="3.2" fill="none" strokeLinecap="round" />
-      {hasPrev && <circle cx={x(li)} cy={y(prevAt)} r="4" fill={C.muted} fillOpacity={PREV_SERIES_OPACITY} />}
-      <circle cx={x(li)} cy={y(cumC[li] || 0)} r="5.5" fill={C.shell} stroke={color} strokeWidth="3" />
+      {hasPrev && <circle cx={x(li)} cy={prevY} r="4" fill={C.muted} fillOpacity={PREV_SERIES_OPACITY} />}
+      <circle cx={x(li)} cy={curY} r="5.5" fill={C.shell} stroke={color} strokeWidth="3" />
+
+      {/* The grey one first, so the coloured one wins any remaining overlap. */}
+      {labelled && hasPrev && (
+        <text
+          x={labelX} y={prevLabelY} textAnchor={anchor}
+          fontSize="10" fontWeight="600" fill={C.muted}
+          // A shell-coloured outline UNDER the glyphs, so a label crossing a
+          // grid line or the grey curve is still readable. `paintOrder` is what
+          // makes the stroke sit behind the fill rather than fattening it.
+          stroke={C.shell} strokeWidth="3" paintOrder="stroke"
+          style={{ fontFamily: FONT_UI }}
+        >
+          {moneyRound(prevAt)}
+        </text>
+      )}
+      {labelled && (
+        <text
+          x={labelX} y={curY - 9} textAnchor={anchor}
+          fontSize="12" fontWeight="700" fill={color}
+          stroke={C.shell} strokeWidth="3" paintOrder="stroke"
+          style={{ fontFamily: FONT_DISPLAY, ...NUMERALS }}
+        >
+          {moneyRound(cumC[li] || 0)}
+        </text>
+      )}
     </svg>
   );
 }
@@ -178,7 +232,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
         <div key={c.name} style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
             {/* Category name is frozen-schema Latin — isolated so RTL cannot reorder it */}
-            <span style={{ fontWeight: 600, ...LATIN }} dir="auto">{c.name}</span>
+            <span style={{ fontWeight: 600 }} dir="auto">{categoryLabel(c.name)}</span>
             <span style={{ fontWeight: 700, fontFamily: FONT_DISPLAY }}>
               <span style={LATIN}>{money(c.now)}</span>
               <Delta now={c.now} prev={c.prev} />
@@ -222,7 +276,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
         * A null `total` is the CALLER saying its payload cannot back that claim
         * (a V17 backend sends a top-5 list and no `uncategorized` figure, so the
         * rows on screen do not account for the month). The decision is made
-        * where the payload is known — see the gate in views/SummaryView.jsx —
+        * where the payload is known — see the gate in views/BookView.jsx —
         * and this component simply prints a total when it is handed one. It must
         * NOT start second-guessing that from `uncategorized`, which carries a
         * different question.
@@ -261,24 +315,21 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
    * Weeks and years pass nothing: a week window cannot contain an undated row,
    * and the year series is built from month totals that already include them.
    */
-  const computed = {};
-  for (const m of METRICS) {
-    const c = seriesFor(data.cur, m.key);
-    const p = seriesFor(data.prev, m.key);
-    const idx = lastIdxOf(c);
-    // `|| 0` here would turn "we have no data for last year" into a confident
-    // "0" — telling him he spent nothing in 2025 when the truth is that the 2025
-    // file isn't connected. Null is carried through and rendered as an absence.
-    const at = cumsum(p)[Math.min(idx, p.length - 1)];
-    const extra = m.key === 'all'
-      ? (offPlot.Visa || 0) + (offPlot.Cash || 0)
-      : (offPlot[m.key] || 0);
-    computed[m.key] = { now: sumTo(c) + extra, prevAt: at == null ? null : at };
-  }
+  // ONE computation, in lib/series.js — the Book's header leads with the same
+  // figures these cards show, and two derivations of one number is how this
+  // project has produced three of its bugs.
+  const computed = periodTotals(data, METRICS, offPlot);
 
   // No comparison data at all — e.g. the previous-year spreadsheet isn't
   // connected. Say so plainly rather than describing a chart that isn't there.
   const hasPrevData = prev.some((v) => v != null);
+  /**
+   * A PERIOD WITH ONE POINT GETS NO CHART (finding M7). On the first day of a
+   * week the line is a dot at the origin, the bars are all last week's grey, and
+   * every metric card reads ▼100% — all true, and the screen reads as broken.
+   * The figures stay; only the shape is withheld, and it says why.
+   */
+  const plottable = hasShape(cur);
 
   return (
     <div>
@@ -290,21 +341,55 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
           <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>{S.cumulativeNote}</span>
         </div>
         {/* Time axes stay left→right regardless of the RTL document */}
+        {!plottable ? (
+          <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '18px 8px 10px' }}>
+            {S.periodJustStarted(periodNames.cur)}
+          </p>
+        ) : (
         <div dir="ltr">
-          <CumulativeChart cur={cur} prev={prev} color={color} />
+          {/**
+            * THE MARKER IS LABELLED ONLY WHEN THE CURVE IS THE WHOLE PERIOD.
+            *
+            * `offPlot` is money that belongs to the period and to no plottable
+            * slot — for a month, the rows whose date cell cannot be read. When
+            * there is any, the curve's endpoint is knowably SHORT of the period,
+            * and the card above it already shows the true total. Printing the
+            * endpoint next to it would put two different figures for "the month"
+            * on one screen and let him read the smaller one as his spending.
+            *
+            * Caught by scripts/test-accountability.mjs, which has asserted since
+            * D16d that `375` — the daily-series sum of its fixture — must never
+            * appear where `425` is the month. Labelling the marker made it
+            * appear, in a place nobody had thought to look. The footnote under
+            * the card still names the gap; this simply stops the chart from
+            * quietly disagreeing with the number beside it.
+            */}
+          <CumulativeChart
+            cur={cur} prev={prev} color={color}
+            labelled={!((offPlot.Visa || 0) + (offPlot.Cash || 0))}
+          />
           {showBars && <PairedBars cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color} />}
         </div>
+        )}
       </div>
       <MetricCards metric={metric} setMetric={setMetric} computed={computed} />
       {footnote}
-      {/* This paragraph explains a grey line and a grey marker. When there is no
-          comparison data neither is drawn, and describing them would send him
-          looking for something that isn't on screen. */}
-      {hasPrevData ? (
-        <p style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', lineHeight: 1.6, margin: '10px 0 0' }}>
-          {S.comparisonHelp(periodNames.prev, periodNames.unit)}
-        </p>
-      ) : (
+      {/**
+        * THE THREE-LINE EXPLAINER IS GONE (finding S6).
+        *
+        * It read: "the grey is July, and the grey dot is where it stood at the
+        * same point — a fair comparison even halfway through the month. Tap any
+        * card to recolour the chart." Three lines of instruction, on the screen
+        * he opens most often, and the longest block of text in the app. It was
+        * there because the chart carried no numbers; both markers are labelled
+        * now, so the sentence describing them has nothing left to add.
+        *
+        * WHAT SURVIVES is the case where there is nothing to compare against —
+        * that is not an explanation, it is a fact about the data, and the
+        * honest-render law requires saying it rather than drawing a chart that
+        * looks like a comparison and isn't.
+        */}
+      {!hasPrevData && (
         <p style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', lineHeight: 1.6, margin: '10px 0 0' }}>
           {S.noComparison(periodNames.prev)}
         </p>

@@ -176,7 +176,18 @@ export function mockSummary() {
   const todayEntries = [
     { date: `${today.d}/${today.m}/${today.y}`, description: 'Coffee', method: 'Cash', category: 'Eating out', amount: 60, currency: 'EGP' },
     { date: `${today.d}/${today.m}/${today.y}`, description: 'Taqa', method: 'Cash', category: 'Elect. Recharge', amount: 200, currency: 'EGP' },
-    { date: `${today.d}/${today.m}/${today.y}`, description: 'Uber', method: 'Visa', category: 'Personal expenses', amount: 214.75, currency: 'EGP' },
+    /**
+     * `auto: true` — the server flags a row whose category the merchant memory
+     * would have chosen, i.e. one he never had to pick (finding A2). Uber is the
+     * honest example: `uber → Personal expenses` is a seeded Memory rule, so
+     * every Uber row this app has ever logged was filed without a tap.
+     *
+     * MOCK PARITY: exactly one row carries it, and the flag is ABSENT elsewhere
+     * rather than `false` — which is what the server sends. A mock that set
+     * `auto: false` on the others would certify a client against a field the
+     * server never emits.
+     */
+    { date: `${today.d}/${today.m}/${today.y}`, description: 'Uber', method: 'Visa', category: 'Personal expenses', amount: 214.75, currency: 'EGP', auto: true },
     // A travel row: excluded from EGP sums, shown verbatim as it sits in the sheet.
     { date: `${today.d}/${today.m}/${today.y}`, description: 'Café de Flore', method: 'Visa', category: 'Eating out', amount: 12.5, currency: 'EUR' },
     ...pendingToday,
@@ -232,6 +243,16 @@ export function mockSummary() {
         ],
         unpriced: 1,
         undated: 0,
+        /**
+         * The month's most-visited place — the fact that replaced A8's weekly
+         * question. The server sends `null` far more often than not (a tie has
+         * no "most" in it, and twice is not a habit), so a mock that always
+         * populated it would certify a client that never renders the common
+         * case. Kept present here because the ABSENT case is what
+         * `MOCK_PREVLOG_NULL` already exercises, and the log card's own suite
+         * asserts both directions directly.
+         */
+        mostOften: { name: 'Hyper1', times: 6 },
       },
     },
     year: {

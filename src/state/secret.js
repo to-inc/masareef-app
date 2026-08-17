@@ -12,6 +12,23 @@
  */
 const K_SECRET = 'masareef.secret';
 const K_URL = 'masareef.execUrl';
+/**
+ * HIS SHEET'S OWN ADDRESS (finding A7) — optional, and stored beside the
+ * credentials because it is set at the same moment by the same person.
+ *
+ * NOT a credential: a spreadsheet URL is not secret, and anyone holding it still
+ * needs Google to let them in. It lives here because SetupView is where Tarek
+ * already pastes the two things only he knows, and asking for a third at that
+ * moment costs nothing.
+ *
+ * OPTIONAL, and that word is load-bearing. The whole trust proposition of this
+ * app is "your sheet is untouched and still yours". A link that opens the WRONG
+ * document, or a dead one, damages exactly the thing it exists to prove — so
+ * with no URL stored the app shows no link at all rather than guessing one from
+ * the /exec address (which it cannot: a container-bound script's URL contains
+ * the SCRIPT's id, not the spreadsheet's).
+ */
+const K_SHEET = 'masareef.sheetUrl';
 
 export function getCreds() {
   try {
@@ -23,15 +40,42 @@ export function getCreds() {
   }
 }
 
-export function setCreds(secret, execUrl) {
+export function setCreds(secret, execUrl, sheetUrl) {
   localStorage.setItem(K_SECRET, String(secret).trim());
   localStorage.setItem(K_URL, String(execUrl).trim());
+  const sheet = String(sheetUrl || '').trim();
+  if (sheet) localStorage.setItem(K_SHEET, sheet);
+  else localStorage.removeItem(K_SHEET);
+}
+
+/**
+ * The sheet's URL, or null.
+ *
+ * ONLY an https Google Sheets address is handed back. This string goes into an
+ * `href` he taps, so anything else — a `javascript:` URL, a typo, a link to
+ * somewhere that is not his book — is refused rather than rendered. The
+ * allow-list is deliberately narrow: there is exactly one document this link is
+ * ever for.
+ */
+export function getSheetUrl() {
+  try {
+    const raw = (localStorage.getItem(K_SHEET) || '').trim();
+    if (!raw) return null;
+    const u = new URL(raw);
+    if (u.protocol !== 'https:') return null;
+    if (u.hostname !== 'docs.google.com') return null;
+    if (!u.pathname.startsWith('/spreadsheets/')) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
 }
 
 export function clearCreds() {
   try {
     localStorage.removeItem(K_SECRET);
     localStorage.removeItem(K_URL);
+    localStorage.removeItem(K_SHEET);
   } catch { /* nothing to do */ }
 }
 

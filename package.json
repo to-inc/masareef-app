@@ -20,8 +20,11 @@
     "check:i18n": "node scripts/test-i18n.mjs",
     "check:refresh": "node scripts/test-refresh.mjs",
     "check:recent": "node scripts/test-recent.mjs",
+    "check:book": "node scripts/test-book.mjs",
+    "check:tier3": "node scripts/test-tier3.mjs",
     "check:accountability": "node scripts/test-accountability.mjs",
     "check:entry": "node scripts/test-entry.mjs",
+    "check:dock": "node scripts/test-dock.mjs",
     "check:receipt-dup": "node scripts/test-receipt-dup.mjs"
   },
   "dependencies": {

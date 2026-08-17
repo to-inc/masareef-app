@@ -15,9 +15,10 @@
  * 2026-08-01 is a Saturday (so that week starts Sunday 26 July), 2026-08-09 is a
  * Sunday, and 2026-07-29 is a Wednesday.
  */
+import { readFile } from 'node:fs/promises';
 import {
   FILTERS, isFilter, parseSheetDate, dayKey, weekWindow, monthsFor,
-  filterEntries, undatedIn, sortForDisplay,
+  filterEntries, undatedIn, sortForDisplay, monthStrip,
 } from '../src/state/recent.js';
 
 let pass = 0;
@@ -224,6 +225,47 @@ eq(dayKey(null), null, 'an unreadable date has no key');
   ok(/const payload = editPayload\(item, category\);/.test(fn),
     'and the Recent handler builds its payload with it');
   ok(!/rowHint/.test(fn), 'with no rowHint anywhere in the handler');
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THE MONTH STRIP OPENS ON THE MONTH HE IS IN (finding S9).
+ *
+ * It rendered `1..12` ascending, so in August the strip opened on «يناير» and
+ * the month he is standing in was eight chips off the right edge — reachable
+ * only by a sideways scroll, on the one control whose entire job is "show me a
+ * month I might revisit". The months he revisits are this one and the last one.
+ */
+{
+  const aug = monthStrip({ y: 2026, m: 8, d: 17 });
+  eq(aug.length, 12, 'still twelve months — reordering must not make one unreachable');
+  eq(`${aug[0].y}-${aug[0].m}`, '2026-8', 'the first chip is the month he is standing in');
+  eq(`${aug[1].y}-${aug[1].m}`, '2026-7', 'the second is the one before it');
+  eq(`${aug[7].y}-${aug[7].m}`, '2026-1', 'and January is where it belongs — eighth, not first');
+
+  /**
+   * THE YEAR WRAP, which the old code could not express at all: it built every
+   * chip as `{ y: todayCairo.y, m }`, so a strip reaching past January would
+   * have asked the server for THIS year's December — a month that has not
+   * happened — and rendered an empty list as though the book were empty.
+   */
+  const feb = monthStrip({ y: 2026, m: 2, d: 3 });
+  eq(`${feb[0].y}-${feb[0].m}`, '2026-2', 'February opens on February…');
+  eq(`${feb[1].y}-${feb[1].m}`, '2026-1', '…then January…');
+  eq(`${feb[2].y}-${feb[2].m}`, '2025-12', '…then LAST YEAR\'s December, carrying its own year');
+  eq(`${feb[11].y}-${feb[11].m}`, '2025-3', 'and the tail is a full twelve months back');
+  ok(feb.every((r) => r.m >= 1 && r.m <= 12), 'every month number is a real month');
+  ok(feb.some((r) => r.y === 2025), 'the previous year is genuinely represented, not clamped away');
+
+  const jan = monthStrip({ y: 2026, m: 1, d: 1 });
+  eq(`${jan[1].y}-${jan[1].m}`, '2025-12', 'and January itself steps straight back over the boundary');
+
+  // The view must READ this, not keep its own ascending loop.
+  const view = await readFile(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
+  ok(/monthStrip\(today\)/.test(view), 'the browser renders from the shared order…');
+  ok(!/Array\.from\(\{ length: 12 \}/.test(view), '…and its old ascending loop is gone');
+  ok(/ref\.y !== today\.y/.test(view),
+    'and a chip from another year says so — otherwise last December wears this year\'s clothes');
 }
 
 const report = failures.length

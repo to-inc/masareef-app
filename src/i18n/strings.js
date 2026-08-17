@@ -26,6 +26,18 @@ export const monthName = LOCALE.monthName;
 /** His TAB name ("Jul") → the reader's language. Opaque in, readable out. */
 export const monthByTab = LOCALE.monthByTab;
 
+/**
+ * A category's VALUE → its LABEL (finding M2).
+ *
+ * The value is the frozen-schema string his dashboard matches on and the only
+ * thing that ever reaches the wire; the label is what he reads on the button.
+ * In Arabic they differ, in English they are the same string. Every category
+ * rendered anywhere in the app goes through here — a view that interpolates
+ * `{c}` directly is rendering a wire value at a person, which is the whole
+ * finding.
+ */
+export const categoryLabel = LOCALE.categoryLabel;
+
 export const WEEK_DAYS = LOCALE.WEEK_DAYS;
 export const MONTH_LABELS = LOCALE.MONTH_LABELS;
 

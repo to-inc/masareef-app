@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { C, TAP } from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
-import { S } from '../i18n/strings.js';
+import { S, categoryLabel } from '../i18n/strings.js';
 import { LATIN } from './Primitives.jsx';
 import { needsHim } from '../state/inboxOutcomes.js';
 
@@ -71,7 +71,7 @@ export function OutcomeNote({ outcome }) {
       {named && (
         <>
           {s === 'conflict' && <span style={{ fontWeight: 500 }}>{S.cardConflictIs}</span>}
-          <span style={LATIN} dir="auto">{named}</span>
+          <span dir="auto">{categoryLabel(named)}</span>
         </>
       )}
     </div>
@@ -87,8 +87,21 @@ export function OutcomeNote({ outcome }) {
  * meant to touch. Height stays constant; only the colour changes.
  */
 export function CategoryActions({ guess, outcome, onPick }) {
-  // No guess → straight to the full grid. Never a wrong green button (D5).
-  const [showAll, setShowAll] = useState(!guess);
+  /**
+   * SIX AND «أنواع تانية…» IN BOTH CASES (finding S7).
+   *
+   * This used to be `useState(!guess)` — no guess meant the card opened with all
+   * twenty-seven categories. The intent was right (D5: never show him a green
+   * button we are not sure of, so make him choose) but the execution inverted
+   * the help: the card the app is LEAST sure about was the one that dropped a
+   * wall of chips on him, pushing every other card off the screen. Measured on
+   * the device, one un-guessed card is taller than the whole viewport.
+   *
+   * Six plausible options is a MENU, not a guess. D5 forbids asserting a
+   * category we have not earned — it says nothing about how many we offer, and
+   * the guessed card has always offered exactly this shortlist.
+   */
+  const [showAll, setShowAll] = useState(false);
   const inert = !needsHim(outcome);
 
   return (
@@ -99,12 +112,18 @@ export function CategoryActions({ guess, outcome, onPick }) {
           onClick={() => onPick(guess)}
           disabled={inert}
           style={{
-            marginTop: 12, width: '100%', minHeight: 56, padding: '15px 0',
+            marginTop: 12, width: '100%', minHeight: 56, padding: '10px 0',
             borderRadius: 14, background: C.harbor, color: C.onDark,
             fontSize: 18.5, fontWeight: 700, opacity: inert ? 0.45 : 1,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          ✓ <span style={LATIN} dir="auto">{guess}</span>
+          {/* Arabic label, with the frozen value underneath in small type
+              (finding M2). Both, on this button only: it is 56px tall, it is
+              the tap he makes most, and seeing the two together is what lets
+              him check the app against his own sheet during the changeover. */}
+          <span>✓ {categoryLabel(guess)}</span>
+          <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.72, ...LATIN }} dir="auto">{guess}</span>
         </button>
       )}
 
@@ -124,7 +143,7 @@ export function CategoryActions({ guess, outcome, onPick }) {
               }}
               dir="auto"
             >
-              {c}
+              {categoryLabel(c)}
             </button>
           ))}
         {!showAll && (

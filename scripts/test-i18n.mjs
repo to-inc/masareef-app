@@ -19,6 +19,7 @@
 import { AR_LOCALE } from '../src/i18n/strings.ar.js';
 import { EN_LOCALE } from '../src/i18n/strings.en.js';
 import { getLang, setLang, otherLang, applyDocumentLang, LANGS } from '../src/state/lang.js';
+import { readFile } from 'node:fs/promises';
 
 let pass = 0;
 const failures = [];
@@ -94,6 +95,37 @@ for (const k of enKeys) {
 }
 ok(ARABIC.test(EN_LOCALE.switchTo), 'except the toggle label, which is Arabic ON PURPOSE in the English locale');
 ok(!ARABIC.test(AR_LOCALE.switchTo), 'and English in the Arabic one — it always names where you are going');
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * WHERE THE TOGGLE LIVES (finding S8).
+ *
+ * It sat in the header, which made it the second most prominent control on
+ * every screen in the app — for a setting Dad will change exactly zero times.
+ * He reads Arabic and Arabic is the default; English exists because Tarek runs
+ * the same build against his own book.
+ *
+ * The requirement that put it in the header is real and still holds: SetupView
+ * only renders when there are NO stored credentials, so a toggle living there
+ * alone is unreachable from the moment the app is set up — which is every
+ * moment that matters. So this asserts the requirement, not the position: it is
+ * out of the header, and it is somewhere that renders on every tab.
+ */
+{
+  const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  const header = app.slice(app.indexOf('<header'), app.indexOf('</header>'));
+  ok(header.length > 0, 'the header is findable in the source');
+  ok(!/<LangToggle/.test(header), 'the language switch is NOT in the header any more');
+  ok(/<LangToggle/.test(app), 'but it is still somewhere in the shell…');
+  const footer = app.slice(app.indexOf('<footer'), app.indexOf('</footer>'));
+  ok(/<LangToggle/.test(footer), '…specifically the footer, which renders under every tab');
+  /**
+   * NOT behind a tab test. `{tab === 'summary' && <LangToggle/>}` would satisfy
+   * every assertion above and strand him on the Inbox with no way to switch.
+   */
+  ok(!/tab === '[a-z]+' && <LangToggle/.test(app),
+    'and it is not gated on one tab — that would strand him wherever he happens to be');
+}
 
 // ——————————————————————— the locale envelope
 for (const [name, loc] of [['ar', AR_LOCALE], ['en', EN_LOCALE]]) {

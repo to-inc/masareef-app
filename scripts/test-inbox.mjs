@@ -29,6 +29,16 @@ import {
   reconcile, remaining, headlineFor, pruneSettled, applyCategoryToToday,
 } from '../src/state/inboxOutcomes.js';
 import { confirmPayload, editPayload } from '../src/state/fixPayload.js';
+import { CATEGORIES, SHORT_LIST } from '../src/lib/constants.js';
+import { AR, AR_LOCALE } from '../src/i18n/strings.ar.js';
+
+/**
+ * The app renders a category's LABEL and posts its VALUE (finding M2). These
+ * expectations go through the same map the screen does, so they keep asserting
+ * presence and ordering rather than accidentally asserting the language.
+ * The value's survival is pinned at the wire, in test-entry.mjs.
+ */
+const L = AR_LOCALE.categoryLabel;
 
 let pass = 0;
 const failures = [];
@@ -292,7 +302,7 @@ try {
 
   eq(strip(null), '', 'an untouched card has no strip at all');
   ok(strip({ status: 'done', category: 'Team' }).includes('اتسجل ✓'), 'done says so in words');
-  ok(strip({ status: 'done', category: 'Team' }).includes('Team'),
+  ok(strip({ status: 'done', category: 'Team' }).includes(L('Team')),
     'and names the category that was written');
 
   /**
@@ -317,7 +327,7 @@ try {
   const confCard = withStatus({ status: 'conflict', category: 'Car', sheetCategory: 'Groceries' });
   ok(text(confCard).includes('النوع اتغير في الشيت'),
     'and the right outcome reaches it — a sentence that exists nowhere else on the screen');
-  ok(text(confCard).includes('Groceries'), 'carrying the sheet value with it');
+  ok(text(confCard).includes(L('Groceries')), 'carrying the sheet value with it');
 
   ok(strip({ status: 'saving', category: 'Team' }).includes('بيتسجل…'),
     'in flight, the strip says only that the tap registered');
@@ -328,7 +338,7 @@ try {
 
   const conf = strip({ status: 'conflict', category: 'Car', sheetCategory: 'Groceries' });
   ok(conf.includes('النوع اتغير في الشيت'), 'a conflict is said plainly, with no error code');
-  ok(conf.includes('Groceries'), 'and shows what the SHEET says now…');
+  ok(conf.includes(L('Groceries')), 'and shows what the SHEET says now…');
   ok(!conf.includes('Car'), '…never the category he pressed');
 
   const blind = strip({ status: 'conflict', category: 'Car', sheetCategory: null });
@@ -547,6 +557,148 @@ try {
     '…and the Recent edit calls the other one');
   ok(!/newCategory: category \}/.test(appSrc),
     'and neither one still assembles a fix_category payload inline');
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * HOW MANY CHIPS A CARD OPENS WITH — the S7 finding, and a blind spot.
+   *
+   * This suite had 131 assertions and not one of them rendered the picker's
+   * chip grid. `CategoryActions` opened with `useState(!guess)`, so an
+   * un-guessed card dropped all twenty-seven categories onto the screen —
+   * measured on the device, taller than the whole viewport, which pushed every
+   * other waiting card out of view. Changing that initial state to `false` left
+   * the suite fully green, which is how the gap was found: the fix was silent,
+   * so the behaviour was never pinned.
+   *
+   * The rule being pinned is NOT "six" as a number — it is that the card the app
+   * is LEAST confident about must not be the one that buries the list. D5 is
+   * untouched by this: it forbids asserting a category we have not earned, and
+   * offering a shortlist asserts nothing.
+   */
+  const chipNames = (html) => CATEGORIES.filter((c) => html.includes(`>${L(c)}</button>`));
+
+  const unguessed = renderToStaticMarkup(createElement(InboxView, {
+    pending: [row('Aug', 14)], settled: {}, onConfirm: () => {},
+  }));
+  const withGuess = renderToStaticMarkup(createElement(InboxView, {
+    pending: [{ ...row('Aug', 14), guess: 'Groceries' }], settled: {}, onConfirm: () => {},
+  }));
+
+  eq(chipNames(unguessed).length, SHORT_LIST.length,
+    'an un-guessed card opens with the shortlist, not the whole schema');
+  ok(chipNames(unguessed).length < CATEGORIES.length,
+    'and that is strictly fewer than every category — the assertion above must be able to fail');
+  ok(unguessed.includes(AR.more),
+    'with the way to the other twenty-one on screen, so nothing is unreachable');
+  ok(!unguessed.includes(L('omara2 al behar')),
+    'a category from the far end of the list is NOT rendered until he asks for it');
+
+  /**
+   * The guessed card is the control: same shortlist, minus the one that already
+   * has its own green button. A picker that ignored `guess` would pass the
+   * count above and offer him the same category twice.
+   */
+  ok(withGuess.includes(L('Groceries')), 'the guess itself is on screen…');
+  /**
+   * AND THE FROZEN VALUE IS UNDER IT — both, on this one button (finding M2).
+   * It is the tap he makes most, and during the changeover seeing the label
+   * beside the value is what lets him check the app against his own sheet.
+   */
+  ok(withGuess.includes('>Groceries<'), '…with the value his sheet holds printed under it');
+  eq(chipNames(withGuess).filter((c) => c === 'Groceries').length, 0,
+    '…but never twice — the chip grid drops whatever the green button already says');
+  eq(chipNames(withGuess).length, SHORT_LIST.length - 1,
+    'so a guessed card shows one chip fewer than an un-guessed one');
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * THE HEADLINE COUNTS WHAT THE BADGE COUNTS — the S3 finding.
+   *
+   * The badge in App.jsx counts `remaining(reconcile(pending, settled))` over
+   * ALL pending rows; the headline used to count only the fresh ones. With two
+   * fresh rows and two folded behind «مصاريف قديمة», the app showed a red 4 over
+   * a list headed «2 عمليات مستنية». Both numbers were defensible; together they
+   * were a contradiction on the home screen.
+   */
+  {
+    const mixed = [
+      row('Aug', 14),
+      row('Aug', 15, { description: 'SECOND' }),
+      { ...row('Jun', 3, { description: 'OLD ONE' }), stale: true },
+      { ...row('Jun', 4, { description: 'OLD TWO' }), stale: true },
+    ];
+    const html = renderToStaticMarkup(createElement(InboxView, {
+      pending: mixed, settled: {}, onConfirm: () => {},
+    }));
+    // The badge's own arithmetic, from the module the shell reads.
+    eq(remaining(reconcile(mixed, {})), 4, 'four rows still need him');
+    ok(html.includes(AR.inboxWaiting(4)),
+      'and the headline says four — the same number the tab badge shows');
+    ok(!html.includes(AR.inboxWaiting(2)),
+      'not two, which is what it said while it counted only the unfolded ones');
+    // And the folded group still declares its own share, so 2 + 2 = 4 on screen.
+    ok(html.includes(AR.inboxOldTitle(2)),
+      'with the folded rows counted where they are folded, so the arithmetic is visible');
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * THE DEVELOPER BREADCRUMB IS GONE — the S10 finding.
+   *
+   * «الرسالة الأصلية» opened to reveal `Aug · #14`: a tab name and a row index,
+   * on the card he taps most often. The prototype's version of this disclosure
+   * showed the original bank SMS, which was worth showing; what survived the
+   * port to sheet-backed rows was a place he cannot go, named in a vocabulary he
+   * does not use.
+   */
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * THE BATCH BUTTON APPEARS WHEN IT EARNS ITS PLACE (finding M4).
+   *
+   * `batchable` is unit-tested in test-book.mjs; this is the other half, and it
+   * is the half this project keeps getting wrong — a correct function beside a
+   * view that never mounts it, or mounts it always. Both directions are checked
+   * because each alone passes for a button that is permanently on or off.
+   */
+  {
+    const guessed = (n) => Array.from({ length: n }, (_, i) => ({
+      ...row('Aug', 20 + i, { description: `SHOP ${i}` }), guess: 'Groceries',
+    }));
+    const withBatch = renderToStaticMarkup(createElement(InboxView, {
+      pending: guessed(3), settled: {}, onConfirm: () => {}, onConfirmMany: () => {},
+    }));
+    ok(withBatch.includes(AR.inboxBatch(3)), 'three rows the app knows offers to settle all three');
+
+    const one = renderToStaticMarkup(createElement(InboxView, {
+      pending: guessed(1), settled: {}, onConfirm: () => {}, onConfirmMany: () => {},
+    }));
+    ok(!one.includes(AR.inboxBatch(1)),
+      'but ONE is not a batch — it is the card\'s own green button, one line further down');
+
+    /**
+     * AND IT COUNTS ONLY WHAT IT WILL SEND. A label of 3 over a run that settles
+     * 2 is the badge-vs-headline contradiction (S3) reappearing on a button that
+     * writes to his sheet.
+     */
+    const mixed = [...guessed(2), row('Aug', 30, { description: 'UNKNOWN SHOP' })];
+    const mixedHtml = renderToStaticMarkup(createElement(InboxView, {
+      pending: mixed, settled: {}, onConfirm: () => {}, onConfirmMany: () => {},
+    }));
+    ok(mixedHtml.includes(AR.inboxBatch(2)),
+      'with two known and one unknown it offers TWO — never the un-guessed row (D5)');
+    ok(!mixedHtml.includes(AR.inboxBatch(3)), 'and never the whole list');
+
+    // No handler, no button — the Book renders the same picker and has no batch.
+    const noHandler = renderToStaticMarkup(createElement(InboxView, {
+      pending: guessed(3), settled: {}, onConfirm: () => {},
+    }));
+    ok(!noHandler.includes(AR.inboxBatch(3)), 'and a caller that offers no batch handler gets no button');
+  }
+
+  ok(!unguessed.includes('<details'), 'no disclosure triangle on the card any more');
+  ok(!unguessed.includes(AR.inboxOriginal), 'and the label that opened it is gone with it');
+  ok(!/#14/.test(unguessed), 'the row index is not printed at him anywhere on the card');
+  ok(unguessed.includes('150'), 'while the amount, which IS his, is still there');
 } finally {
   await vite.close();
 }

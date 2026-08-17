@@ -83,6 +83,34 @@ eq(AR.methodCash === 'Cash', false, '…in either direction');
     'and an empty one falls back to the category, never to blank');
   eq(Object.keys(p).sort().join(','), 'amount,category,clientId,description,entryDate,method',
     'exactly the six fields §3.1 names — no more, so nothing private leaks into a write');
+
+  /**
+   * ——— TRAVEL MODE ADDS A SEVENTH FIELD, AND ONLY WHILE HE IS TRAVELLING (A4).
+   *
+   * The payload he sends EVERY DAY has to stay exactly the six above — same
+   * keys, same bytes as the path in production since Phase 1 — because that is
+   * the one this app's whole capture story rests on. So the assertion is in two
+   * halves: at home the key is ABSENT (not present holding undefined, which
+   * `Object.keys` would still count), and abroad it is there with a value the
+   * server's allow-list accepts.
+   */
+  eq(Object.keys(manualPayload({ ...base, currency: 'EGP' })).indexOf('currency'), -1,
+    'in Cairo there is no currency key at all — the daily payload is untouched');
+  eq(Object.keys(manualPayload({ ...base, currency: undefined })).indexOf('currency'), -1,
+    'and none when the caller says nothing about currency');
+  eq(manualPayload({ ...base, currency: 'EUR' }).currency, 'EUR',
+    'abroad the currency rides along…');
+  eq(Object.keys(manualPayload({ ...base, currency: 'EUR' })).sort().join(','),
+    'amount,category,clientId,currency,description,entryDate,method',
+    '…as the seventh field, and nothing else appears with it');
+  /**
+   * A CURRENCY THE SERVER WOULD REFUSE NEVER LEAVES. `normalizeCurrency_`
+   * coerces an unknown code to EGP — so sending one would write a foreign amount
+   * into his book as POUNDS, a wrong number with a ✓ over it. Dropping it here
+   * means the app and the server agree before the request is made.
+   */
+  eq(Object.keys(manualPayload({ ...base, currency: 'BTC' })).indexOf('currency'), -1,
+    'a currency outside the offered list is dropped rather than sent to be silently coerced');
 }
 
 /**

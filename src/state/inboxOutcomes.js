@@ -160,6 +160,36 @@ export function headlineFor(rows) {
 }
 
 /**
+ * THE ROWS THE APP ALREADY KNOWS — the batch's contents (finding M4).
+ *
+ * His evening pass is several rows at once, and the Memory table has usually
+ * seen most of the merchants before: those arrive carrying a server-computed
+ * `guess`, which is exactly the set that can be settled without a decision from
+ * him. One button, then the genuinely unknown ones as cards — which is where his
+ * attention was supposed to go all along.
+ *
+ * WHAT IS DELIBERATELY EXCLUDED, and each exclusion is the honest one:
+ *
+ *  · rows with NO guess. That is D5 — never assert a category we have not
+ *    earned. A batch that filled these in would be the one thing this app has
+ *    never done.
+ *  · rows that no longer need him (`needsHim`), so pressing twice cannot
+ *    re-send a row that is already saving, done, or queued.
+ *  · STALE rows. They are folded behind «مصاريف قديمة» precisely because they
+ *    are months old and want reading, not sweeping; a button that silently
+ *    settled forty travel rows he cannot see is the opposite of the batch's
+ *    point.
+ *
+ * Returns the ROWS, not a count, so the button and its label read one list. A
+ * count computed separately is how the badge and the headline came to disagree.
+ */
+export function batchable(rows) {
+  return (Array.isArray(rows) ? rows : []).filter((r) => (
+    r && r.item && !r.item.stale && r.item.guess && needsHim(r.outcome)
+  ));
+}
+
+/**
  * Forget the rows the server has stopped listing.
  *
  * A ✓ is worth keeping only while the row it belongs to is still on screen —

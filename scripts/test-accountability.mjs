@@ -91,6 +91,43 @@ try {
     'and never the daily-series sum, which is short by exactly the rows it could not plot');
 
   /**
+   * ——— AND THAT RULE NOW REACHES INSIDE THE CHART (finding S6, 2026-08-17).
+   *
+   * Labelling the cumulative marker with its own value is what let the Month
+   * screen delete its three-line explainer paragraph. But the marker's value IS
+   * the daily-series sum — so on a month with undated rows it prints 375 beside
+   * a card reading 425, which is exactly the number this suite has forbidden
+   * since D16d, arriving through a door nobody had thought to check.
+   *
+   * The resolution is not to drop the labels: it is that a curve which is
+   * knowably short of its period does not get to state a total. Weeks and years
+   * pass no off-plot money and stay labelled; a clean month stays labelled too.
+   */
+  /**
+   * SCOPED TO THE SVG, and that correction is the assertion's whole worth.
+   *
+   * The first version of this check asked `render({}).includes('375')` and
+   * passed with the labels ripped out entirely — because the METRIC CARD also
+   * prints 375 on a clean month. It was measuring the card while claiming to
+   * measure the chart. Caught by mutation, which is the only thing that could
+   * have caught it: every value in it was correct.
+   */
+  const svgOf = (html) => {
+    const i = html.indexOf('<svg');
+    return i === -1 ? '' : html.slice(i, html.indexOf('</svg>', i));
+  };
+  const cleanSvg = svgOf(render({}));
+  const undatedSvg = svgOf(render({ Visa: UNDATED.Visa, Cash: UNDATED.Cash }));
+
+  ok(cleanSvg.length > 0, 'there is a chart to look inside');
+  ok(cleanSvg.includes('>375<'),
+    'with nothing off the plot, the MARKER states the figure — this is what replaced the paragraph');
+  ok(!undatedSvg.includes('>375<'),
+    'and with undated money the chart states nothing, rather than contradicting the card beside it');
+  ok(cleanSvg !== undatedSvg,
+    'the two charts genuinely differ — otherwise the pair above is satisfied by a chart that never labels');
+
+  /**
    * ——— AND THE OTHER PERIODS ARE UNTOUCHED. A week window cannot contain an
    * undated row and the year series is built from month totals that already
    * include them, so both pass nothing and must still read as before.
@@ -117,7 +154,7 @@ try {
    * because a note that always shows and a note that never shows each pass half
    * of this on their own.
    */
-  const SummaryView = (await vite.ssrLoadModule('/src/views/SummaryView.jsx')).default;
+  const BookView = (await vite.ssrLoadModule('/src/views/BookView.jsx')).default;
   const payload = (undated) => ({
     ok: true,
     today_cairo: { y: 2026, m: 8, d: 9 },
@@ -133,8 +170,8 @@ try {
   });
   const monthScreen = (undated) => {
     // The Month period is behind a tab press, so the note is asserted through
-    // the footnote SummaryView builds — the same value it hands the chart.
-    const html = renderToStaticMarkup(createElement(SummaryView, { data: payload(undated) }));
+    // the footnote the Book builds — the same value it hands the chart.
+    const html = renderToStaticMarkup(createElement(BookView, { data: payload(undated) }));
     return text(html);
   };
 
@@ -175,7 +212,7 @@ try {
    * so a substring test reads as present on every short month and proves nothing
    * either way. What is asserted is the LINE — the label followed by the figure.
    */
-  const { MonthScreen } = await vite.ssrLoadModule('/src/views/SummaryView.jsx');
+  const { MonthScreen } = await vite.ssrLoadModule('/src/views/BookView.jsx');
   ok(typeof MonthScreen === 'function', 'the Month screen is a component this suite can render');
 
   // A V17 top-5 cut: it does NOT add up to the month, which is the entire reason
@@ -238,18 +275,30 @@ try {
    * ——— AND THE VIEW ACTUALLY HANDS THE MONEY OVER.
    *
    * Everything above renders `PeriodSummary` directly with an explicit prop, so
-   * it proves the component is right and says nothing about whether SummaryView
+   * it proves the component is right and says nothing about whether the Book
    * passes it. The Month period sits behind a tab press that SSR cannot make, so
    * the wiring is asserted at the source — the same route already used for the
    * Inbox's two doors and the shared key rule, and for the same reason: this is
    * the third time in this project that a correct component has been mounted
    * with the wrong props and every render assertion still passed.
    */
-  const src = await readFile(new URL('../src/views/SummaryView.jsx', import.meta.url), 'utf8');
+  const src = await readFile(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
   ok(/offPlot=\{\{\s*Visa:\s*undated/.test(src),
     'the Month period hands its undated money to the card');
-  eq((src.match(/offPlot=/g) || []).length, 1,
-    'and ONLY the Month does — a week cannot contain an undated row, and the year already counts them');
+  /**
+   * ONLY THE MONTH SUPPLIES IT — a week cannot contain an undated row, and the
+   * year series is built from month totals that already include them.
+   *
+   * Counted as LITERAL SUPPLY (`offPlot={{`) rather than as every mention,
+   * because the Book routes its periods through one `PeriodBlock` which passes
+   * the prop straight down (`offPlot={offPlot}`). That pass-through is not a
+   * second source of phantom money; a second `offPlot={{` would be.
+   */
+  eq((src.match(/offPlot=\{\{/g) || []).length, 1,
+    'and it is the ONLY place that invents one — the rest is pass-through');
+  const weekYearCalls = src.match(/<PeriodBlock[\s\S]*?\/>/g) || [];
+  eq(weekYearCalls.filter((c) => /offPlot/.test(c)).length, 1,
+    'exactly one of the period call sites mentions off-plot money at all');
   /**
    * AND THE MONTH TAB MOUNTS IT. Everything above renders `MonthScreen`
    * directly, which is exactly the blind spot that extracting it opened: a

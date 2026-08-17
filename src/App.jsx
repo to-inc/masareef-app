@@ -3,7 +3,7 @@ import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
-import { fetchSummary, fixCategory, postManual, receiptConfirm, USING_MOCK } from './api/index.js';
+import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
 import { enqueue, flush, partition, remove as dropQueued } from './state/outbox.js';
@@ -12,15 +12,20 @@ import {
 } from './state/inboxOutcomes.js';
 import { confirmPayload, editPayload } from './state/fixPayload.js';
 import { DEFAULT_METHOD, manualPayload, applyEntryToToday } from './state/entryPayload.js';
+import { entryReady } from './state/entryDock.js';
+import { openingTab, cairoHourOf } from './state/opening.js';
+import { remember } from './state/repeats.js';
+import { setBadge } from './state/badge.js';
+import { getCurrency, setCurrency as persistCurrency } from './state/travel.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
 import { TabButton, Toast, OfflineBanner, LangToggle, RefreshButton } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
-import EntryView from './views/EntryView.jsx';
+import EntryView, { EntryDock } from './views/EntryView.jsx';
 import ReceiptView from './views/ReceiptView.jsx';
-import SummaryView from './views/SummaryView.jsx';
-import RecentView from './views/RecentView.jsx';
+import DictateView from './views/DictateView.jsx';
+import BookView from './views/BookView.jsx';
 
 /**
  * The app shell.
@@ -40,6 +45,13 @@ export default function App() {
   const [booted, setBooted] = useState(false);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [tab, setTab] = useState('inbox');
+  /**
+   * THE ﹢ TAB HAS TWO MODES (finding M1). «فاتورة» was a whole destination
+   * holding one button; a receipt is a way of making an entry, not a place, so
+   * the camera is a mode of the entry screen. Reset on every visit to the tab:
+   * he should always land on the keypad, which is the daily path.
+   */
+  const [entryMode, setEntryMode] = useState('keypad');
   const [data, setData] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
   const [offline, setOffline] = useState(false);
@@ -55,6 +67,8 @@ export default function App() {
   const [entryDesc, setEntryDesc] = useState('');
   const [entryCat, setEntryCat] = useState(null);
   const [entryMethod, setEntryMethod] = useState(DEFAULT_METHOD);
+  // Travel mode (A4) — sticky, and read once so the screen cannot change under him.
+  const [entryCurrency, setEntryCurrency] = useState(() => getCurrency());
   const [entryBusy, setEntryBusy] = useState(false);
 
   const showToast = useCallback((msg) => {
@@ -114,7 +128,7 @@ export default function App() {
   const refresher = useRef(null);
   if (!refresher.current) {
     refresher.current = createRefresher(
-      () => (tabRef.current === 'recent' && recentLoader.current
+      () => (tabRef.current === 'book' && recentLoader.current
         ? recentLoader.current()
         : refresh()),
     );
@@ -145,6 +159,38 @@ export default function App() {
     if (sent > 0) refresh();
   }, [sendQueued, refresh]);
 
+  /**
+   * THE ONE COUNT, and it is computed ABOVE every early return.
+   *
+   * ——— WHY IT MOVED, which is a bug this rev caused and the device caught.
+   *
+   * The badge effect was first written next to the render that uses this number,
+   * which sits below `if (!booted) return null`. On the very first paint React
+   * ran 28 hooks; on the next it ran 29, and the app died with "rendered more
+   * hooks than during the previous render" — the error boundary's «في حاجة وقفت»
+   * screen, on launch, before anything was on screen at all.
+   *
+   * The suite was fully green when that happened. Hook ORDER is not something a
+   * pure-function suite or an SSR render can see, which is precisely why this
+   * project's rule is that a change is not done until it has been opened.
+   */
+  const pendingCount = remaining(reconcile(data?.pending, settled));
+
+  /**
+   * THE SAME COUNT, ON THE HOME-SCREEN ICON (finding A6).
+   *
+   * `pendingCount` and nothing else — the badge, the tab and the Inbox headline
+   * all read one number, which is finding S3 held one layer further out. A third
+   * counter on the icon would be the badge-vs-headline contradiction arriving
+   * where he sees it before the app is even open.
+   *
+   * Passive by construction: no permission prompt, no push server, no
+   * notification. It appears when something is waiting and clears itself when
+   * nothing is — the automatic PROMPT the Fogg model wants, without the nagging
+   * CLAUDE.md #5 forbids.
+   */
+  useEffect(() => { setBadge(pendingCount); }, [pendingCount]);
+
   // ——— boot
   useEffect(() => {
     // Direction first: index.html ships the Arabic default, and this only has to
@@ -160,6 +206,21 @@ export default function App() {
     if (snap) {
       setData(snap.data);
       setSavedAt(snap.savedAt);
+      /**
+       * THE EVENING RECAP IS THE FRONT DOOR (finding A1).
+       *
+       * Decided ONCE, here, from the snapshot already in hand — so the landing
+       * screen is chosen before the first frame and never changes under him.
+       * Re-running this on every render would move the screen at 19:00 while he
+       * was reaching for it.
+       *
+       * The Book's «النهاردة» IS the recap the brief asked for: the day's
+       * figure, the count, the split, and a button naming whatever still needs a
+       * category. Nothing new is built — it is simply what he finds after 7pm.
+       */
+      const hour = cairoHourOf(snap.data && snap.data.serverTime);
+      const hasDay = !!(snap.data && snap.data.today && (snap.data.today.entries || []).length);
+      setTab(openingTab(hour, hasDay));
     }
     setBooted(true);
     setStaleQueue(partition().stale);
@@ -195,7 +256,7 @@ export default function App() {
     queued: S.queued,
   };
 
-  const confirmPending = async (item, category) => {
+  const confirmPending = async (item, category, opts = {}) => {
     const key = cardKey(item);
     // Acknowledge the tap — and acknowledge ONLY the tap. The card greys and
     // its buttons die immediately, so he can move to the next one without
@@ -218,11 +279,89 @@ export default function App() {
     }
 
     setSettled((s) => ({ ...s, [key]: outcome }));
-    showToast(CONFIRM_TOAST[outcome.status] || S.genericError);
-    // A success needs no refetch — the card already says what happened, and
-    // nine of them in a row would be nine cold starts. Everything else means
-    // the sheet and the screen disagree, so go and look.
-    if (outcome.status !== 'done') refresh();
+    /**
+     * `quiet` is the BATCH calling (M4): every card still records its own
+     * outcome above — that is the part that must not change — but one toast per
+     * row would fire five in a row over each other, and one refetch per row
+     * would be five Apps Script cold starts. The batch reports the run once and
+     * refreshes once, at the end.
+     */
+    if (!opts.quiet) {
+      showToast(CONFIRM_TOAST[outcome.status] || S.genericError);
+      // A success needs no refetch — the card already says what happened, and
+      // nine of them in a row would be nine cold starts. Everything else means
+      // the sheet and the screen disagree, so go and look.
+      if (outcome.status !== 'done') refresh();
+    }
+    return outcome;
+  };
+
+  /**
+   * DICTATION (finding A5) — a sentence in, a row out.
+   *
+   * NOTHING IS PARSED HERE. The text goes to `type:'voice'`, the endpoint the
+   * Siri Shortcut has used since Phase 1: it reads the first number as the
+   * amount, matches an Arabic keyword for the category, defaults to Cash, and
+   * falls back to ❓ rather than guessing. A client-side parser would be two
+   * implementations of "what did he say", disagreeing on exactly the
+   * Arabic-Indic digits the server normalises for.
+   *
+   * NO OPTIMISTIC ROW, and that is the difference from the keypad. There, the
+   * app knows the amount and the category before it posts, so it can show the
+   * line immediately. Here it knows a SENTENCE — inventing a row from it would
+   * mean guessing what the server will make of the words, and being wrong in
+   * front of him. It refreshes instead, and the row appears as the server read
+   * it.
+   */
+  const sendDictated = async (text) => {
+    if (!text) return;
+    setEntryBusy(true);
+    try {
+      const res = await postVoice({ text, clientId: newClientId() });
+      if (res && res.ok === true) {
+        setEntryMode('keypad');
+        showToast(S.saved);
+        refresh();
+      } else {
+        showToast(S.genericError);
+      }
+    } catch {
+      // Offline: the voice path has no outbox entry of its own, so rather than
+      // invent one, say plainly that it did not go and keep his words on screen.
+      showToast(S.genericError);
+    } finally {
+      setEntryBusy(false);
+    }
+  };
+
+  /**
+   * THE BATCH (finding M4) — every row settled through the SAME call as a single
+   * tap, one after another.
+   *
+   * SEQUENTIAL, DELIBERATELY, and it is not about the quota (five rows is
+   * nothing against 30 simultaneous executions). It is that `fix_category` takes
+   * a script LOCK and re-locates the row by content; firing five at once means
+   * five writers contending for one lock on one sheet, and the failure mode of
+   * losing that race is a write landing on a row he did not tap. In series each
+   * row is the same operation the green button performs, with the same guard.
+   *
+   * NO BATCH-LEVEL OUTCOME. Each card still receives its own — `done`, `already`,
+   * `conflict`, `failed`, `queued` — because a single "5 saved ✓" over a run
+   * where the third one conflicted is precisely the one-state-for-four-outcomes
+   * bug WS3-C exists to have killed. The toast reports the run; the cards report
+   * themselves.
+   */
+  const confirmMany = async (items) => {
+    let failed = 0;
+    for (const item of items) {
+      // eslint-disable-next-line no-await-in-loop -- see the lock note above
+      const outcome = await confirmPending(item, item.guess, { quiet: true });
+      if (outcome && outcome.status !== 'done' && outcome.status !== 'already') failed += 1;
+    }
+    showToast(failed ? S.batchPartly(items.length - failed, failed) : S.batchDone(items.length));
+    // One refresh for the whole run rather than one per row — and only here,
+    // because a batch is the one place several rows change at once.
+    refresh();
   };
 
   /**
@@ -260,8 +399,16 @@ export default function App() {
    * chose rather than always crediting Cash.
    */
   const submitEntry = async () => {
+    /**
+     * ONE readiness rule, read from `state/entryDock.js` — the same value the
+     * pinned button's `disabled` reads. This handler used to carry its own
+     * second, subtly different version of the same test, which accepted a "0"
+     * that the view's own check rejected. scripts/test-dock.mjs greps this file
+     * for that expression, so the sentence describing it deliberately does not
+     * spell it.
+     */
+    if (!entryReady({ amount: entryAmount, cat: entryCat, busy: entryBusy })) return;
     const amount = parseFloat(entryAmount);
-    if (!amount || !entryCat || entryBusy) return;
 
     const clientId = newClientId();
     const payload = manualPayload({
@@ -271,6 +418,7 @@ export default function App() {
       description: entryDesc,
       clientId,
       entryDate: cairoDateStr(),
+      currency: entryCurrency,
     });
 
     setEntryBusy(true);
@@ -298,13 +446,22 @@ export default function App() {
       showToast(S.queued);
     } finally {
       setEntryBusy(false);
+      /**
+       * Recorded AFTER the write is accepted, never on the tap (finding A3).
+       * A chip offering to repeat something that failed to reach his sheet would
+       * be the app remembering an expense he does not have.
+       */
+      remember({
+        description: payload.description, category: payload.category,
+        method: payload.method, amount: Number(payload.amount), currency: entryCurrency,
+      });
       setEntryAmount('');
       setEntryDesc('');
       setEntryCat(null);
       // Back to Cash, deliberately. A sticky Card would file his next cash
       // expense into the card column on a screen he has stopped reading.
       setEntryMethod(DEFAULT_METHOD);
-      setTab('summary');
+      setTab('book');
     }
   };
 
@@ -329,7 +486,7 @@ export default function App() {
 
   // The badge counts what is still HIS to do — same predicate the buttons and
   // the section header use, so the three can never disagree.
-  const pendingCount = remaining(reconcile(data?.pending, settled));
+
 
   return (
     <div
@@ -350,7 +507,7 @@ export default function App() {
          * container — a well-known WebKit failure, and this app has exactly one
          * device to be wrong on. Here it simply sits still behind the content.
          */
-        background: tab === 'summary' && !needsSetup ? MORNING_CROWN : C.shell,
+        background: tab === 'book' && !needsSetup ? MORNING_CROWN : C.shell,
         fontFamily: FONT_UI,
         color: C.ink,
         fontSize: 17,
@@ -371,15 +528,6 @@ export default function App() {
             </span>
           )}
           {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} />}
-          {/**
-            * THE LANGUAGE SWITCH LIVES HERE, not only in SetupView.
-            *
-            * SetupView is shown ONLY when there are no stored credentials, so a
-            * toggle that lived there alone would be unreachable the moment the
-            * app is set up — which is every moment that matters. The header is on
-            * every screen and costs one tap from anywhere.
-            */}
-          <LangToggle />
         </span>
       </header>
 
@@ -398,18 +546,31 @@ export default function App() {
             ) : (
               <>
                 {tab === 'inbox' && (
-                  <InboxView pending={data.pending} settled={settled} onConfirm={confirmPending} />
+                  <InboxView
+                    pending={data.pending} settled={settled}
+                    onConfirm={confirmPending} onConfirmMany={confirmMany}
+                  />
                 )}
-                {tab === 'entry' && (
+                {tab === 'entry' && entryMode === 'keypad' && (
                   <EntryView
                     amount={entryAmount} setAmount={setEntryAmount}
                     desc={entryDesc} setDesc={setEntryDesc}
                     cat={entryCat} setCat={setEntryCat}
                     method={entryMethod} setMethod={setEntryMethod}
-                    onSubmit={submitEntry} busy={entryBusy}
+                    currency={entryCurrency}
+                    setCurrency={(c) => setEntryCurrency(persistCurrency(c))}
+                    onCamera={() => setEntryMode('receipt')}
+                    onDictate={() => setEntryMode('dictate')}
                   />
                 )}
-                {tab === 'receipt' && (
+                {tab === 'entry' && entryMode === 'dictate' && (
+                  <DictateView
+                    busy={entryBusy}
+                    onCancel={() => setEntryMode('keypad')}
+                    onSend={sendDictated}
+                  />
+                )}
+                {tab === 'entry' && entryMode === 'receipt' && (
                   <ReceiptView
                     onSaved={(msg, queuedPayload) => {
                       // A confirm that could not reach the server still has to
@@ -425,18 +586,20 @@ export default function App() {
                       }
                       showToast(msg);
                     }}
-                    onManual={() => setTab('entry')}
+                    // «أسجّلها بنفسي» is now a mode switch rather than a tab
+                    // change — same screen, other half.
+                    onManual={() => setEntryMode('keypad')}
                   />
                 )}
-                {tab === 'recent' && (
-                  <RecentView
-                    todayCairo={data.today_cairo}
+                {tab === 'book' && (
+                  <BookView
+                    data={data}
                     settled={settled}
                     onEdit={editRecent}
+                    onGoToInbox={() => setTab('inbox')}
                     onBusyChange={(fn) => { recentLoader.current = fn; }}
                   />
                 )}
-                {tab === 'summary' && <SummaryView data={data} onGoToInbox={() => setTab('inbox')} />}
                 {/**
                   * THE STAMP IS VISIBLE WHENEVER WE HAVE ONE — not only offline.
                   *
@@ -450,12 +613,32 @@ export default function App() {
                   * moment costs one quiet line. A failed refresh leaves it
                   * untouched, which is the whole rule (state/refresh.js).
                   */}
-                {savedAt && (
-                  <p style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', marginTop: 14 }}>
-                    {refreshState === 'failed' ? `${S.refreshFailed} · ` : ''}
-                    {S.lastUpdated} <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{cairoClock(savedAt)}</span>
-                  </p>
-                )}
+                {/**
+                  * THE FOOTER — the timestamp, and now the language switch (S8).
+                  *
+                  * The toggle used to sit in the header, where it was the second
+                  * most prominent control on every screen in the app, for a
+                  * setting Dad will change exactly zero times: he reads Arabic,
+                  * and Arabic is the default. It cost prime real estate on all
+                  * five tabs to serve Tarek's own install once.
+                  *
+                  * It is still reachable from EVERY screen — this footer renders
+                  * under every tab's content — which is the requirement that put
+                  * it in the header in the first place (SetupView is unreachable
+                  * once the app is set up). It is just no longer shouting.
+                  */}
+                <footer style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 12, marginTop: 18, flexWrap: 'wrap',
+                }}>
+                  {savedAt && (
+                    <span style={{ fontSize: 12.5, color: C.muted }}>
+                      {refreshState === 'failed' ? `${S.refreshFailed} · ` : ''}
+                      {S.lastUpdated} <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{cairoClock(savedAt)}</span>
+                    </span>
+                  )}
+                  <LangToggle subtle />
+                </footer>
               </>
             )}
           </>
@@ -464,6 +647,19 @@ export default function App() {
 
       <Toast message={toast} />
 
+      {/**
+        * THE PINNED SUBMIT (S1). Outside <main> on purpose: inside it, it scrolls
+        * with the keypad and the category grid, which is exactly how it ended up
+        * ~200px below the fold on the one screen the five-second law is about.
+        * It is a sibling of the tab bar, so it is on screen from the first frame.
+        */}
+      {!needsSetup && data && tab === 'entry' && entryMode === 'keypad' && (
+        <EntryDock
+          amount={entryAmount} cat={entryCat} currency={entryCurrency}
+          onSubmit={submitEntry} busy={entryBusy}
+        />
+      )}
+
       {!needsSetup && (
         <nav
           style={{
@@ -471,11 +667,22 @@ export default function App() {
             paddingBottom: 'env(safe-area-inset-bottom)', flexShrink: 0,
           }}
         >
+          {/**
+            * THREE DESTINATIONS (finding M1). What needs him · make an entry ·
+            * read the book. «فاتورة» became a mode of ﹢, and «اليوم» and «الأخير»
+            * were one list at two zooms — they are «الدفتر» now, with the period
+            * control on top.
+            *
+            * The ﹢ ALWAYS returns to the keypad. Landing on the camera because
+            * that is where he happened to leave the tab is the shape-changed-
+            * under-you problem, on the screen where five seconds are the law.
+            */}
           <TabButton active={tab === 'inbox'} onClick={() => setTab('inbox')} label={S.tabInbox} badge={pendingCount || null} icon="✉" />
-          <TabButton active={tab === 'entry'} onClick={() => setTab('entry')} label={S.tabEntry} icon="﹢" big />
-          <TabButton active={tab === 'receipt'} onClick={() => setTab('receipt')} label={S.tabReceipt} icon="🧾" />
-          <TabButton active={tab === 'recent'} onClick={() => setTab('recent')} label={S.tabRecent} icon="⟲" />
-          <TabButton active={tab === 'summary'} onClick={() => setTab('summary')} label={S.tabSummary} icon="☰" />
+          <TabButton
+            active={tab === 'entry'} label={S.tabEntry} icon="﹢" big
+            onClick={() => { setEntryMode('keypad'); setTab('entry'); }}
+          />
+          <TabButton active={tab === 'book'} onClick={() => setTab('book')} label={S.tabBook} icon="☰" />
         </nav>
       )}
 

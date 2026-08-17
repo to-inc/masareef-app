@@ -39,6 +39,8 @@ export const AR = {
   inboxOldOpen: 'افتحها',
   inboxOldHide: 'اقفلها',
   more: 'أنواع تانية…',
+  // الزرار اللي بيقفل الصفوف اللي إحنا عارفينها كلها مرة واحدة (M4).
+  inboxBatch: (n) => `سجّل الـ${n} اللي عارفينهم`,
   travel: '✈ سفر',
 
   // ——— what happened to a card he tapped (WS3-C, 2026-08-03).
@@ -57,17 +59,46 @@ export const AR = {
   cardQueued: 'هيتسجّل أول ما النت يرجع',
 
   // ——— المصروف اليدوي (كاش أو فيزا — شوف state/entryPayload.js)
-  entryTitle: 'مصروف جديد — المبلغ، وبعدين النوع',
-  entryLog: 'سجّل المصروف',
+  // العنوان القديم «مصروف جديد — المبلغ، وبعدين النوع» اتشال: الزرار المثبّت
+  // تحت بقى بيقول الخطوة الناقصة بنفسه، والترتيب على الشاشة اتغيّر (S1/S2).
+  // قصيرة عن قصد: السطر ده بيشارك مكانه مع تلات زراير (صوت/عملة/فاتورة)،
+  // والعنوان الطويل كان بيلفّ لسطرين ويدفع أنواع المصاريف تحت الطيّة.
+  entryRepeats: 'زي قبل كده',
+  entryLog: 'سجّل',
+  // الزرار المثبّت بيسمّي الخطوة الناقصة بدل ما يبقى رمادي وبس (S1).
+  entryNeedAmount: 'اكتب المبلغ',
+  entryNeedCategory: 'اختار النوع',
   // اسم المجموعة لقارئ الشاشة. دول اللي بيقراهم؛ القيمة اللي بتتبعت
   // 'Cash' و 'Visa' ومفيش طريق تخلي الكلمة دي تبقى قيمة.
   entryMethod: 'الدفع كان إزاي',
   methodCash: 'كاش',
   methodCard: 'فيزا',
   currency: 'جنيه',
+  // ——— وضع السفر (A4): العملة بتتقال بالاسم في زرار التسجيل.
+  // Always a STRING — an unmapped code renders as itself rather than as
+  // whatever type it arrived as. A currency chip is a button he has to read.
+  currencyName: (c) => String(({
+    EGP: 'جنيه', EUR: 'يورو', SEK: 'كرونة', NOK: 'كرونة نرويجي',
+    USD: 'دولار', GBP: 'جنيه إسترليني',
+  }[c]) || c || ''),
+  entryCurrency: 'العملة',
+  // الزرار بيقول العملة اللي هيحوّل ليها، مش اللي إنت فيها — زي زرار اللغة.
+  currencySwitchTo: (c) => (c === 'EGP' ? 'بالجنيه' : 'باليورو'),
+  // العنوان لما مفيش صف اختصارات — في وضع السفر (A4).
+  entryTitleShort: 'مصروف جديد',
+  // ——— الإملاء (A5): دوس على الميكروفون بتاع الكيبورد وقول المبلغ والحاجة.
+  dictateShort: '🎙 بالصوت',
+  dictateTitle: 'قول المصروف',
+  dictateBody: 'دوس على الميكروفون في الكيبورد وقول المبلغ والحاجة — زي «٥٠ جنيه قهوة».',
+  dictatePlaceholder: '٥٠ جنيه قهوة',
+  dictateSend: 'سجّل',
+  dictateCancel: 'إلغاء',
+  dictateNeedText: 'اكتب أو قول المصروف الأول',
 
   // ——— receipt
   receiptStart: '📷 صوّر الفاتورة',
+  // النسخة القصيرة — بتقعد جنب عنوان شاشة «جديد» من غير ما تاخد سطر (M1).
+  receiptShort: '📷 فاتورة',
   receiptIntro: 'صوّر الفاتورة وهنقرا المبلغ لوحدنا. مش هيتسجل حاجة غير لما توافق.',
   receiptReading: 'بنقرا الفاتورة…',
   receiptSlow: 'الشبكة بطيئة شوية. تقدر تستنى أو تسجّلها بنفسك.',
@@ -158,6 +189,8 @@ export const AR = {
   logUnpriced: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير تمن`,
   logUndated: (n) => `${n} من غير يوم محدد`,
   logTo: (initials) => `إلى القبطان ${initials}`,
+  // A8 اتشال؛ ده اللي مكانه — حقيقة من دفتره، مرة في الشهر، مش سؤال.
+  logMostOften: (name, times) => `أكتر مكان رحته: ${name} — ${times} مرات`,
   logSignoff: 'كل قرش له سطر. تمام يا فندم.',
   // Quiet, and final for this month. Not "close", not "×" — an acknowledgement.
   logDismiss: 'تمام',
@@ -167,6 +200,22 @@ export const AR = {
   periodWeek: 'الأسبوع',
   periodMonth: 'الشهر',
   periodYear: 'السنة',
+  // ——— «الدفتر» (M1): «اليوم» و«الأخير» بقوا حاجة واحدة بأربع مستويات.
+  tabBook: 'الدفتر',
+  todayCount: (n) => `${n} ${n === 1 ? 'حاجة' : 'حاجات'} النهاردة`,
+  // الفلوس بعملة تانية بتتعد لوحدها — مش بتتجمع مع الجنيه (D8).
+  travelApart: 'لوحدها',
+  // السطر اللي من غير نوع بقى زرار في كل مكان بيظهر فيه (M6).
+  rowNeedsCategory: '؟ دوس للنوع',
+  // A2: الصف ده اتصنّف لوحده من الذاكرة — مش إنت اللي اخترته.
+  rowAuto: '· لوحده',
+  rowAutoTitle: 'النوع ده اتحط تلقائي من الذاكرة — دوس لو عايز تغيّره',
+  todayNeedCategory: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير نوع — دوس تصنّفهم`,
+  // الجملة الواحدة اللي بيبتدي بيها الشهر والأسبوع (M5).
+  lessThan: (prev) => `أقل من ${prev} بـ`,
+  moreThan: (prev) => `أكتر من ${prev} بـ`,
+  sameAs: (prev) => `زي ${prev} بالظبط`,
+  wasThen: 'كان',
   todayTitle: 'مصاريف النهاردة — زي ما هي في الشيت بالظبط',
   todayEmptyTitle: 'لسه مفيش حاجة اتسجلت النهاردة',
   todayEmptyBody: 'أكّد العمليات من الوارد، أو سجّل مصروف جديد.',
@@ -182,7 +231,8 @@ export const AR = {
   unitMonth: 'الشهر',
   unitYear: 'السنة',
 
-  metricAll: 'كل المصاريف',
+  // قصيرة عشان تدخل في تلت الشاشة من غير ما تتقص (S6b).
+  metricAll: 'الكل',
   metricVisa: 'فيزا',
   metricCash: 'كاش',
 
@@ -192,9 +242,8 @@ export const AR = {
   // Shown when there is nothing to compare against — better than describing a
   // grey line he cannot see.
   noComparison: (prev) => `مفيش بيانات لـ${prev} للمقارنة.`,
-
-  comparisonHelp: (prev, unit) =>
-    `الرمادي هو ${prev}، والنقطة الرمادية مكانه في نفس التوقيت — مقارنة عادلة حتى في نص ${unit}. دوس على أي كارت عشان تبدّل الرسم.`,
+  // فترة لسه في أولها مفيهاش شكل يترسم — الرقم موجود، الرسم لأ (M7).
+  periodJustStarted: (cur) => `${cur} لسه في أوله — الرسم هيبان بعد يوم كمان.`,
 
   // Rows whose date cell in his sheet is unreadable (10/210/2, 221, 31/0).
   // They count in the month total but belong to no day, so the chart cannot show
@@ -217,6 +266,14 @@ export const AR = {
   uncategorizedHint: 'دوس عشان تصنّفها',
   monthTotalLine: 'إجمالي الشهر',
 
+  // ——— الشيت نفسه، على بُعد ضغطة (A7). الوعد كله إن دفتره زي ما هو.
+  openTheSheet: 'افتح الشيت ↗',
+
+
+  // ——— رابط الشيت في شاشة الإعداد (A7) — اختياري.
+  setupSheet: 'رابط الشيت (اختياري)',
+  setupSheetHint: 'عشان يظهر زرار «افتح الشيت». سيبه فاضي ومش هيظهر.',
+
   // ——— the manual refresh (D16c). A BUTTON, never a gesture.
   refresh: 'حدّث',
   refreshing: 'بيحدّث…',
@@ -226,6 +283,9 @@ export const AR = {
   lastUpdated: 'آخر تحديث',
   saving: 'جارٍ الحفظ…',
   saved: 'اتسجل ✓',
+  // نتيجة الدفعة (M4). كل كارت بيقول لوحده حصله إيه؛ دول بيلخّصوا الجولة.
+  batchDone: (n) => `${n} اتسجلوا ✓`,
+  batchPartly: (ok, bad) => `${ok} اتسجلوا · ${bad} محتاجين نظرة`,
   alreadyFixed: 'اتسجّلت خلاص ✓',
   queued: 'هيتسجّل أول ما النت يرجع',
   genericError: 'حصلت مشكلة. جرّب تاني',
@@ -253,6 +313,78 @@ export const AR = {
   setupBadSecret: 'الكلمة السرية غلط',
   setupUnreachable: 'مش قادر يوصل. اتأكد إن الرابط بينتهي بـ /exec وإن النشر Anyone.',
 };
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * HIS CATEGORIES, IN ARABIC — LABELS ONLY (finding M2).
+ *
+ * ——— THE FINDING. The single most frequent interaction in this app is tapping
+ * a category, and until now every one of those taps landed on a Latin-alphabet
+ * word inside an Arabic RTL screen, for a man who reads Arabic. «Groceries»,
+ * «Eating out», «Personal expenses». CLAUDE.md #6 says Arabic is everywhere;
+ * it was everywhere except on the buttons.
+ *
+ * ——— WHY THIS IS SAFE, and it is the whole design. The frozen-schema law binds
+ * the VALUE — the string his dashboard's SUMIF criteria match, which round-trips
+ * to the sheet byte-identical. It says nothing about the label on a button.
+ * Nothing in this map ever reaches the wire: `state/*Payload.js` build every
+ * request from the vocabulary, and `scripts/test-categories.mjs` asserts that no
+ * label is a value.
+ *
+ * ——— WHAT IS DELIBERATELY NOT TRANSLATED.
+ *
+ * Proper nouns. `Science Pitchers` is a company, `HYS` is a programme; rendering
+ * them in Arabic would be inventing names for real things. They map to
+ * themselves, which is also the honest fallback for anything unmapped.
+ *
+ * ——— AND HIS OWN TRANSLITERATIONS ARE THE EVIDENCE THIS WAS WANTED.
+ *
+ * `omara2 al behar` and `fara7` are Arabic words he typed in Latin letters
+ * because a Google Sheet on a phone made that easier than switching keyboards.
+ * They are «عمارة البحر» and «فرح». Giving them back their own alphabet is the
+ * clearest case in the list — and the reason to show this to him before trusting
+ * it is the opposite case: he has read `Groceries` on his own rows for years.
+ *
+ * TO REVERT: make this map empty. Everything falls through to the Latin value,
+ * which is exactly what the English locale does.
+ */
+const CATEGORY_AR = {
+  'Eating out': 'أكل بره',
+  Groceries: 'سوبر ماركت',
+  Car: 'العربية',
+  Gifts: 'هدايا',
+  Donations: 'صدقات',
+  Internet: 'إنترنت',
+  Telephone: 'تليفون',
+  Medical: 'دوا وعلاج',
+  'Personal expenses': 'مصاريف شخصية',
+  'omara2 al behar': 'عمارة البحر',
+  'Elect. Recharge': 'شحن كهربا',
+  'Water. Recharge': 'شحن مياه',
+  Villa: 'الفيلا',
+  'Taxes and fines': 'ضرايب ومخالفات',
+  Gas: 'غاز',
+  'Madinety club': 'نادي مدينتي',
+  'Shams club': 'نادي الشمس',
+  'Officers club': 'نادي الضباط',
+  Vacations: 'أجازات',
+  Utilities: 'فواتير البيت',
+  fara7: 'فرح',
+  Transportation: 'مواصلات',
+  'InstaPay - Services': 'إنستاباي — خدمات',
+  'InstaPay - Purchases': 'إنستاباي — مشتريات',
+  // Proper nouns, left alone on purpose.
+  'Science Pitchers': 'Science Pitchers',
+  HYS: 'HYS',
+  Team: 'الفريق',
+};
+
+/**
+ * A category's LABEL. Anything unmapped falls through as itself — a category
+ * added to the server's whitelist before this map knows about it must render as
+ * a usable button, not as a blank.
+ */
+const categoryLabel = (c) => (typeof c === 'string' ? (CATEGORY_AR[c.trim()] || c) : '');
 
 // The server returns English month names (they mirror his tab names). Shown in
 // Arabic; anything unmapped falls through unchanged rather than blanking.
@@ -293,6 +425,7 @@ export const AR_LOCALE = {
   S: AR,
   monthName,
   monthByTab: (t) => (typeof t === 'string' ? (MONTH_BY_TAB[t.trim()] || t) : ''),
+  categoryLabel,
   WEEK_DAYS,
   MONTH_LABELS,
   CAPTAIN_INITIALS,

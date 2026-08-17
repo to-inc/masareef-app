@@ -19,6 +19,8 @@
  * the near-duplicate is what `canonicalCategory_` collapses server-side.
  */
 import { CATEGORIES, SHORT_LIST, CASH_QUICK, UNKNOWN_CATEGORY } from '../src/lib/constants.js';
+import { AR_LOCALE } from '../src/i18n/strings.ar.js';
+import { EN_LOCALE } from '../src/i18n/strings.en.js';
 
 let pass = 0;
 const failures = [];
@@ -124,6 +126,70 @@ for (const q of CASH_QUICK) {
   if (q.category === null) { pass++; continue; }   // deliberately unguessed (D5)
   ok(CATEGORIES.includes(q.category),
     `the "${q.label}" preset names a real category: ${JSON.stringify(q.category)}`);
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THE LABEL AND THE VALUE (finding M2) — and why this is the load-bearing file.
+ *
+ * Until 2026-08-17 every category tap in this app landed on a Latin word inside
+ * an Arabic RTL screen. The fix renders an Arabic LABEL while the frozen VALUE
+ * goes on the wire — which means the app now holds two strings per category
+ * where it held one, and this project's own history says exactly what happens
+ * next: `entryPayload.js` exists because a chooser's LABEL reached the wire as a
+ * METHOD and wrote card money into the Cash column with a ✓ on screen.
+ *
+ * That failure is worse here. `normalizeMethod_` coerces; `canonicalCategory_`
+ * REJECTS, so a label reaching the wire is a row that lands as ❓ rather than a
+ * silent mis-file. But the reverse — a label that happens to equal some OTHER
+ * category's value — would be a wrong-but-accepted write, and the whole point of
+ * the map is that it is hand-written and can be edited by anyone.
+ *
+ * So: no label is any category's value, both directions, for all of them.
+ */
+{
+  const AR_L = AR_LOCALE.categoryLabel;
+  const EN_L = EN_LOCALE.categoryLabel;
+  const values = new Set(CATEGORIES);
+
+  for (const c of CATEGORIES) {
+    const label = AR_L(c);
+    ok(typeof label === 'string' && label.length > 0,
+      `${c} has a label — an unmapped category must render as SOMETHING tappable`);
+    /**
+     * A label may equal ITS OWN value (proper nouns: `HYS`, `Science Pitchers`,
+     * left in Latin on purpose). It may never equal a DIFFERENT one, which is
+     * the case that would post the wrong category and be accepted.
+     */
+    ok(!(values.has(label) && label !== c),
+      `the label for ${c} is not some OTHER category's frozen value — that write would be accepted and wrong`);
+  }
+
+  // The map covers the whole schema. A category added to constants.js without a
+  // label still works (it falls through to itself) — this counts how many do.
+  const translated = CATEGORIES.filter((c) => AR_L(c) !== c);
+  ok(translated.length >= 20,
+    `most of the schema is actually in Arabic — ${translated.length} of ${CATEGORIES.length}`);
+  ok(AR_L('Groceries') !== 'Groceries', 'the most-tapped category is translated…');
+  ok(AR_L('HYS') === 'HYS', '…while a programme name is left as its own name');
+  ok(AR_L('Science Pitchers') === 'Science Pitchers', 'and so is a company');
+  eq(AR_L('omara2 al behar'), 'عمارة البحر',
+    'his own transliteration gets its alphabet back — the clearest case in the list');
+  eq(AR_L('fara7'), 'فرح', 'and so does the other one');
+
+  // ENGLISH IS THE IDENTITY, which is what makes the whole thing revertible: an
+  // empty map is the English behaviour, and the English behaviour is the old app.
+  for (const c of CATEGORIES) {
+    ok(EN_L(c) === c, `in English the label IS the value: ${c}`);
+  }
+
+  // Nothing unmapped blanks out — a category the server accepts must never
+  // render as an empty button he cannot identify.
+  eq(AR_L('Some Future Category'), 'Some Future Category', 'an unmapped value renders as itself');
+  eq(AR_L('  Groceries  '), AR_L('Groceries'), 'and lookup trims, as every other comparison here does');
+  eq(AR_L(null), '', 'a missing value is an empty label rather than a crash');
+  eq(AR_L(undefined), '', 'and so is an absent one');
+  eq(EN_L(null), '', 'both locales agree about nothing');
 }
 
 const report = failures.length

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
-import { S } from '../i18n/strings.js';
+import { S, categoryLabel } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, normalizeDigits } from '../lib/format.js';
 import { newClientId, cairoClock } from '../lib/dates.js';
@@ -537,7 +537,7 @@ export default function ReceiptView({ onSaved, onManual }) {
                 textAlign: 'right',
               }}
             >
-              {category ? <span style={LATIN} dir="auto">{category}</span> : '—'}
+              {category ? <span dir="auto">{categoryLabel(category)}</span> : '—'}
             </div>
           </Field>
 
@@ -585,7 +585,7 @@ export default function ReceiptView({ onSaved, onManual }) {
         */}
         {category && !showAllCats && (
           <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: C.harbor, color: C.onDark, fontSize: 18, fontWeight: 700, minHeight: 56 }}>
-            ✓ <span style={LATIN} dir="auto">{category}</span>
+            ✓ <span dir="auto">{categoryLabel(category)}</span>
           </button>
         )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
@@ -924,7 +924,7 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
         }}
         dir="auto"
       >
-        {isSelected ? '✓ ' : ''}{c}
+        {isSelected ? '✓ ' : ''}{categoryLabel(c)}
       </button>
     );
   });

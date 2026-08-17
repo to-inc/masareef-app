@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
-import { S, monthByTab, CAPTAIN_INITIALS } from '../i18n/strings.js';
+import { S, monthByTab, categoryLabel, CAPTAIN_INITIALS } from '../i18n/strings.js';
 import { money } from '../lib/format.js';
 import { LATIN } from './Primitives.jsx';
 import { shouldShowLog, isDismissed, dismiss } from '../state/logCard.js';
@@ -66,7 +66,7 @@ export default function LogCard({ prevLog, todayCairo }) {
       <div style={{ marginTop: 14 }}>
         {prevLog.top.map((c) => (
           <div key={c.name} style={line}>
-            <span style={{ fontSize: 16, color: C.ink, ...LATIN }} dir="auto">{c.name}</span>
+            <span style={{ fontSize: 16, color: C.ink }} dir="auto">{categoryLabel(c.name)}</span>
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
               {money(c.amount)}
             </span>
@@ -83,6 +83,30 @@ export default function LogCard({ prevLog, todayCairo }) {
         * they ARE nonzero the total above is knowably short, and the card is
         * required to say so (06 §2.2).
         */}
+      {/**
+        * THE PLACE HE WENT MOST — the fact that replaced the weekly question.
+        *
+        * A8 proposed asking him to confirm his biggest day. Tarek killed it
+        * ("a bit weird") and asked for something factual instead. This is that:
+        * one line, in the report he already receives once a month, stating a
+        * true thing about his own book. It asks nothing, compares to nothing,
+        * and sets no target — which is what keeps it on the right side of "no
+        * gamification, no nagging".
+        *
+        * OUTSIDE the caveats block, and that was a real bug in the first
+        * version: nested with «مصاريف من غير تمن» it would have appeared only in
+        * months the app could NOT fully account for — so a clean month, which is
+        * the good case and the common one, would silently never get it.
+        *
+        * The server sends `null` far more often than not: a tie has no "most"
+        * in it, and twice is not a habit.
+        */}
+      {prevLog.mostOften && (
+        <div style={{ marginTop: 12, fontSize: 14, color: C.ink }}>
+          {S.logMostOften(prevLog.mostOften.name, prevLog.mostOften.times)}
+        </div>
+      )}
+
       {(prevLog.unpriced > 0 || prevLog.undated > 0) && (
         <div style={{ marginTop: 14, fontSize: 14, color: C.ink, lineHeight: 1.9 }}>
           {prevLog.unpriced > 0 && <div>{S.logUnpriced(prevLog.unpriced)}</div>}

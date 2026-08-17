@@ -22,6 +22,17 @@ export const fixCategory = (args) =>
 export const postManual = (args) =>
   USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.manual(args);
 
+/**
+ * DICTATION (finding A5) — the `voice` action, reached from a text field.
+ *
+ * The mock answers `{ok:true}` and NOTHING ELSE, which is the mock-parity rule
+ * this project learned twice in one day: the server's own answer to `voice` is a
+ * bare envelope, so a mock that invented a parsed entry here would certify a
+ * client against a response the server has never sent.
+ */
+export const postVoice = (args) =>
+  (USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.voice(args));
+
 export const ping = () => (USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.ping());
 
 export const receiptExtract = (args) =>

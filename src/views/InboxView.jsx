@@ -4,7 +4,7 @@ import { S } from '../i18n/strings.js';
 import { money } from '../lib/format.js';
 import { SectionLabel, Chip, LATIN } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
-import { cardKey, reconcile, remaining, needsHim, headlineFor } from '../state/inboxOutcomes.js';
+import { cardKey, reconcile, remaining, needsHim, headlineFor, batchable } from '../state/inboxOutcomes.js';
 
 /**
  * The Inbox is where the 5-second law is won or lost. Each card is one purchase
@@ -19,7 +19,7 @@ import { cardKey, reconcile, remaining, needsHim, headlineFor } from '../state/i
  * what makes a confirmed card stay confirmed on screen no matter what the
  * server keeps sending.
  */
-export default function InboxView({ pending, settled = {}, onConfirm }) {
+export default function InboxView({ pending, settled = {}, onConfirm, onConfirmMany }) {
   const rows = reconcile(pending, settled);
 
   if (rows.length === 0) {
@@ -42,9 +42,25 @@ export default function InboxView({ pending, settled = {}, onConfirm }) {
   // backlog — which is the exact friction the whole design exists to prevent.
   const fresh = rows.filter((r) => !r.item.stale);
   const stale = rows.filter((r) => r.item.stale);
-  // Counted from the SAME predicate the buttons use, so the header can never
-  // announce work he has already done — nor claim a ✓ the server has not given.
-  const head = headlineFor(fresh);
+  /**
+   * THE HEADLINE COUNTS EVERY ROW, INCLUDING THE FOLDED ONES (finding S3).
+   *
+   * It used to count `fresh` while the tab badge counted all of `pending`, so
+   * the app showed a red 4 over a list headed «2 عمليات مستنية». Both numbers
+   * were defensible and together they were a contradiction on the home screen —
+   * the same class of thing `needsHim` exists to make impossible between the
+   * badge, the header and the buttons.
+   *
+   * Counting everything here is the honest direction rather than teaching the
+   * badge to count fresh: the four rows all need him, and the two that are old
+   * are folded, not cancelled. The arithmetic is now visible on one screen —
+   * two cards, plus «مصاريف قديمة (2)» right under them, equals the four the
+   * badge claims.
+   */
+  const head = headlineFor(rows);
+  // The batch's contents, from the shared rule — the button's label counts the
+  // very list it will send, so the two cannot disagree.
+  const batch = onConfirmMany ? batchable(fresh) : [];
   const HEADLINE = {
     waiting: S.inboxWaiting(head.count),
     saving: S.cardSaving,
@@ -54,7 +70,33 @@ export default function InboxView({ pending, settled = {}, onConfirm }) {
 
   return (
     <div>
-      {fresh.length > 0 && <SectionLabel>{HEADLINE[head.kind]}</SectionLabel>}
+      {/* Rendered whenever there is anything at all — a month where every
+          outstanding row is old still has a headline, and it still counts them. */}
+      {rows.length > 0 && <SectionLabel>{HEADLINE[head.kind]}</SectionLabel>}
+
+      {/**
+        * THE BATCH (finding M4). Offered only when it saves him something: at one
+        * row it is the same tap as the card's own green button, one row further
+        * down, so it is noise. From two it is the difference between an evening
+        * pass and a queue.
+        *
+        * It never appears on rows the app has not earned — `batchable` excludes
+        * anything without a server guess (D5) — so this button can only ever do
+        * what the green buttons under it would have done.
+        */}
+      {batch.length > 1 && (
+        <button
+          className="bigbtn"
+          onClick={() => onConfirmMany(batch.map((r) => r.item))}
+          style={{
+            width: '100%', minHeight: 52, borderRadius: 14, marginBottom: 14,
+            background: C.harbor, color: C.onDark, fontSize: 17, fontWeight: 700,
+          }}
+        >
+          ✓ {S.inboxBatch(batch.length)}
+        </button>
+      )}
+
       {fresh.map((row) => (
         <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} />
       ))}
@@ -113,43 +155,59 @@ function PendingCard({ item, outcome, onConfirm }) {
         transition: 'opacity .2s ease',
       }}
     >
+      {/**
+        * THE MERCHANT LEADS (finding M3).
+        *
+        * The amount used to be set at 30px with the merchant at 17.5px under it.
+        * But the question this card asks is "what KIND of purchase was this?",
+        * and only the merchant answers it — the amount is context. He is not
+        * deciding anything about 860; he is deciding about Hyper1.
+        *
+        * The two also swapped places for a second reason: at 30px the amount
+        * plus a 56px guess button plus twenty-seven chips made one card taller
+        * than the viewport. Merchant-leading with the amount beside it puts three
+        * cards on screen where there were one and a half, which is what makes the
+        * evening pass feel like a pass rather than a queue.
+        */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+        <div style={{ fontSize: 19, fontWeight: 650, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...LATIN }} dir="auto">
+          {p.description}
+        </div>
         {/* A row he never priced has NO amount. Rendering money(null) as "0"
             would state a figure he never wrote — the same lie the unpriced
             counter exists to prevent. Show the absence instead. */}
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 650, color: C.ink, flexShrink: 0, ...LATIN, ...NUMERALS }}>
           {p.amount == null ? '—' : money(p.amount)}{' '}
-          {p.amount != null && <span style={{ fontSize: 15, color: C.muted, fontWeight: 500 }}>{p.currency}</span>}
+          {p.amount != null && <span style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}>{p.currency}</span>}
         </div>
-        <Chip kind={p.method} label={p.method === 'Visa' ? S.metricVisa : S.metricCash} />
       </div>
 
-      <div style={{ fontSize: 17.5, fontWeight: 600, marginTop: 2, ...LATIN }} dir="auto">{p.description}</div>
-      <div style={{ fontSize: 13, color: C.muted, marginTop: 3 }}>
+      <div style={{ fontSize: 13, color: C.muted, marginTop: 5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Chip kind={p.method} small label={p.method === 'Visa' ? S.metricVisa : S.metricCash} />
         <span style={LATIN}>{p.date}</span>
         {/* Only a REAL foreign currency is travel. An unpriced row has
             currency null, and `null !== 'EGP'` would mislabel it. */}
-        {p.currency && p.currency !== 'EGP' ? ` · ${S.travel}` : ''}
+        {p.currency && p.currency !== 'EGP' ? <span>{S.travel}</span> : null}
       </div>
 
       <OutcomeNote outcome={outcome} />
 
       <CategoryActions guess={item.guess} outcome={outcome} onPick={(c) => onConfirm(item, c)} />
 
-      {/* The prototype showed the original SMS here. The row now comes from the
-          sheet, so the equivalent "show your work" gesture is where it lives —
-          he can always go look at exactly that row himself. */}
-      <details style={{ marginTop: 10 }}>
-        <summary style={{ fontSize: 12.5, color: C.muted, cursor: 'pointer' }}>{S.inboxOriginal}</summary>
-        <div
-          style={{
-            fontSize: 13.5, color: C.muted, background: C.shell, borderRadius: 10,
-            padding: 10, marginTop: 6, lineHeight: 1.8,
-          }}
-        >
-          <span style={LATIN} dir="auto">{item.tab}</span> · <span style={LATIN}>{`#${item.rowHint}`}</span>
-        </div>
-      </details>
+      {/**
+        * «الرسالة الأصلية» IS GONE (finding S10).
+        *
+        * The prototype showed the original bank SMS here, which was a real
+        * "show your work" gesture. The row now comes from the sheet instead, so
+        * what the disclosure actually revealed was `Aug · #14` — a tab name and
+        * a row index. That is a developer's breadcrumb: it names a place he
+        * cannot go, in a vocabulary he does not use, and it sat on the card he
+        * taps most often in the app.
+        *
+        * The honest version of the same gesture is «افتح الشيت» at the foot of
+        * the book, where it opens the actual file. This card keeps the amount,
+        * the merchant and the date — which is everything the sheet row holds.
+        */}
     </div>
   );
 }

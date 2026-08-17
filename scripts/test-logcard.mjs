@@ -25,7 +25,7 @@ import { readFile } from 'node:fs/promises';
 import {
   isLogWindow, hasLog, shouldShowLog, isDismissed, dismiss, LOG_WINDOW_DAYS,
 } from '../src/state/logCard.js';
-import { monthByTab } from '../src/i18n/strings.js';
+import { monthByTab, categoryLabel } from '../src/i18n/strings.js';
 
 let pass = 0;
 const failures = [];
@@ -137,7 +137,9 @@ try {
   ok(text(card).includes('دفتر يوليو — مقفول'), 'it names the month it is closing, in Arabic');
   ok(text(card).includes('31,341'), 'it states the total');
   for (const c of LOG.top) {
-    ok(text(card).includes(c.name), `it lists ${c.name}`);
+    // Listed by LABEL (finding M2) — the value is what his sheet holds and
+    // what the server ranked; the card is read, never tapped.
+    ok(text(card).includes(categoryLabel(c.name)), `it lists ${c.name}`);
   }
   ok(text(card).includes('10,234'), 'with its amount');
   ok(text(card).includes('إلى القبطان أ.ع.'), 'it is addressed to the captain');
@@ -220,6 +222,29 @@ try {
   // ——— it costs nothing: the card must never fetch.
   ok(!/fetch\(|api\/|useEffect/.test(src),
     'the card makes no request and runs no effect — it rides the summary every screen already has');
+  /**
+   * ——————————————————————— THE PLACE HE WENT MOST (replaces A8).
+   *
+   * Both directions, because a line that always shows and one that never shows
+   * each pass half of this alone — and the ALWAYS case is the damaging one: the
+   * server returns null far more often than not, so a card that printed
+   * something regardless would be inventing a habit out of a month that has no
+   * clear one.
+   */
+  {
+    const withFact = text(render({ ...LOG, mostOften: { name: 'Hyper1', times: 6 } }, DAY1));
+    ok(withFact.includes('Hyper1'), 'the log names the place he went most…');
+    ok(withFact.includes('6'), '…and how many times he went');
+
+    const noFact = text(render({ ...LOG, mostOften: null }, DAY1));
+    ok(!noFact.includes('Hyper1'),
+      'while a month with no clear "most" says nothing rather than picking one');
+    const omitted = text(render(LOG, DAY1));
+    ok(omitted.length > 0, 'a payload without the field at all still renders the log…');
+    ok(!/Most visited|أكتر مكان/.test(omitted), '…and simply omits the line');
+  }
+
+
 } finally {
   await vite.close();
 }

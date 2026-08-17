@@ -15,6 +15,34 @@ export const FILTERS = ['today', 'week', 'month'];
 export const isFilter = (f) => FILTERS.indexOf(f) !== -1;
 
 /**
+ * THE MONTH BROWSER'S ORDER — the current month first, then backwards (S9).
+ *
+ * It used to render `1..12` ascending, so in August the strip opened on
+ * «يناير» and he had eight chips of sideways scrolling to reach the month he is
+ * standing in. The months he actually revisits are this one and the one before
+ * it; January is the one he will never open.
+ *
+ * Backwards from today, wrapping into the previous year's tail, which is also
+ * the order a paper ledger falls open at. The YEAR is carried on each entry
+ * rather than assumed, because `fetchEntries` is asked for `{y, m}` and a strip
+ * that ran off the start of the year while still claiming `todayCairo.y` would
+ * request twelve months that do not exist in this book.
+ *
+ * Twelve entries exactly — the same count as before, so nothing became
+ * unreachable by reordering.
+ */
+export function monthStrip(todayCairo, count = 12) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    let m = todayCairo.m - i;
+    let y = todayCairo.y;
+    while (m < 1) { m += 12; y -= 1; }
+    out.push({ y, m });
+  }
+  return out;
+}
+
+/**
  * `d/M/yyyy`, the sheet's format, tolerantly — leading zeros and stray spaces
  * are fine. Anything else is `null`, which is the honest answer for the cells
  * that genuinely cannot be read: `221`, `10/210/2`, an empty string.

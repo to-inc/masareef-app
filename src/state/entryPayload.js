@@ -1,3 +1,4 @@
+import { wireCurrency } from './travel.js';
 /**
  * The manual entry: its METHOD, its payload, and its effect on Today.
  *
@@ -49,7 +50,7 @@ export function isMethod(v) {
  * feature: nothing in the app should ever reach it, and the suite pins that a
  * label arriving here does NOT become `Visa`.
  */
-export function manualPayload({ amount, method, category, description, clientId, entryDate }) {
+export function manualPayload({ amount, method, category, description, clientId, entryDate, currency }) {
   return {
     amount,
     method: isMethod(method) ? method : DEFAULT_METHOD,
@@ -59,6 +60,19 @@ export function manualPayload({ amount, method, category, description, clientId,
     // Stamped at TAP time, not send time — an entry flushed after midnight must
     // keep the day he actually spent the money.
     entryDate,
+    /**
+     * TRAVEL MODE (finding A4), and the KEY IS ABSENT AT HOME — not present
+     * holding undefined.
+     *
+     * `wireCurrency` returns undefined in EGP, and spreading a conditional
+     * object is what keeps the key itself out. That matters beyond tidiness:
+     * §3.1 names six fields for a manual write, and the payload he sends every
+     * day must still BE those six — same keys, same order, same bytes as the
+     * path in production since Phase 1. Travel adds a seventh field only while
+     * he is actually travelling, which is the only time the server has anything
+     * to do with it.
+     */
+    ...(wireCurrency(currency) ? { currency: wireCurrency(currency) } : {}),
   };
 }
 

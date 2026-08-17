@@ -23,8 +23,24 @@ export const entries = ({ y, m }) => call({ action: 'entries', y, m }, 'read');
 export const fixCategory = ({ tab, rowHint, match, newCategory }) =>
   call({ action: 'fix_category', tab, rowHint, match, newCategory }, 'write');
 
-export const manual = ({ amount, method, category, description, clientId, entryDate }) =>
-  call({ action: 'manual', amount, method, category, description, clientId, entryDate }, 'write');
+export const manual = ({ amount, method, category, description, clientId, entryDate, currency }) =>
+  call({ action: 'manual', amount, method, category, description, clientId, entryDate, currency }, 'write');
+
+/**
+ * DICTATION (finding A5) — the same `voice` action the Siri Shortcut has always
+ * used, reached from a text field instead of from Siri.
+ *
+ * The PWA design verified that the Web Speech API is silently broken in
+ * installed standalone apps and named this as the documented fallback: a plain
+ * text field where he taps the iOS keyboard's OWN microphone. Keyboard dictation
+ * is just text input, so it works where `SpeechRecognition` does not — and the
+ * text lands in the parser that has handled «٥٠ جنيه قهوة» since Phase 1.
+ *
+ * No new server surface: the endpoint, the Arabic keyword map and the ❓ fallback
+ * are the ones already in production.
+ */
+export const voice = ({ text, clientId }) =>
+  call({ action: 'voice', text, clientId }, 'write');
 
 /**
  * WS4 fills these in behind ReceiptView.

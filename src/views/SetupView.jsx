@@ -23,6 +23,8 @@ const DEV_PREFILL = import.meta.env.DEV ? (import.meta.env.VITE_GAS_URL || '') :
 export default function SetupView({ onDone }) {
   const [url, setUrl] = useState(DEV_PREFILL);
   const [secret, setSecret] = useState('');
+  // Optional (A7). Never a gate: an empty field means no link, not a broken setup.
+  const [sheet, setSheet] = useState('');
   const [state, setState] = useState('idle');   // idle | testing | error
   const [error, setError] = useState('');
 
@@ -37,7 +39,7 @@ export default function SetupView({ onDone }) {
     try {
       const res = await probe(url.trim(), secret.trim());
       if (res?.ok) {
-        setCreds(secret.trim(), url.trim());
+        setCreds(secret.trim(), url.trim(), sheet.trim());
         onDone();
         return;
       }
@@ -92,6 +94,31 @@ export default function SetupView({ onDone }) {
           onChange={(e) => { setSecret(e.target.value); setState('idle'); }}
           style={field}
         />
+      </label>
+
+      {/**
+        * HIS SHEET'S ADDRESS (finding A7) — optional, and it is the last field
+        * on purpose. The two above are what the app cannot work without; this
+        * one only decides whether «افتح الشيت» appears at the foot of the Book.
+        * It is validated on READ rather than here (state/secret.js accepts only
+        * an https docs.google.com/spreadsheets URL), so a typo costs him a
+        * missing link rather than a failed setup.
+        */}
+      <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.muted, marginTop: 14 }}>
+        {S.setupSheet}
+        <input
+          type="url"
+          inputMode="url"
+          dir="ltr"
+          autoComplete="off"
+          placeholder="https://docs.google.com/spreadsheets/…"
+          value={sheet}
+          onChange={(e) => setSheet(e.target.value)}
+          style={field}
+        />
+        <span style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: C.muted, marginTop: 4, lineHeight: 1.6 }}>
+          {S.setupSheetHint}
+        </span>
       </label>
 
       {state === 'error' && (

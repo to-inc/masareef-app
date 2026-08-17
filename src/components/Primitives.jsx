@@ -11,6 +11,22 @@ import { getLang, setLang, otherLang } from '../state/lang.js';
 export const LATIN = { unicodeBidi: 'isolate', direction: 'ltr', display: 'inline-block' };
 
 /**
+ * ISOLATION WITHOUT A DIRECTION — for a run whose script is not known in advance.
+ *
+ * `LATIN` pins a run to left-to-right, which is right for a frozen category value
+ * or an amount and WRONG for anything that might be Arabic. The repeats row
+ * (finding A3) is exactly that case: it holds his own descriptions, which are
+ * Arabic, beside the hand-written presets, which are Latin. Wrapping both in
+ * `LATIN` forced «قهوة» to render left-to-right and collapsed the space between
+ * it and its amount — «قهوة60».
+ *
+ * Pair with `dir="auto"` so the browser picks the direction from the first
+ * strong character of each run, while `isolate` still stops that run from
+ * reordering its neighbours.
+ */
+export const ISOLATE = { unicodeBidi: 'isolate', display: 'inline-block' };
+
+/**
  * The language switch (D16b) — one tap, and it is ALWAYS labelled in the
  * language it switches TO. He never has to read the language he is stuck in to
  * find his way out of it, which is the whole failure mode of a toggle labelled
