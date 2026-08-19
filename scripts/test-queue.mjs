@@ -41,7 +41,7 @@ const job = (id, stage, queuedAt, extra = {}) => ({ id, stage, queuedAt, ...extr
  */
 const okRes = (over = {}) => ({
   ok: true,
-  extraction: { is_receipt: true, merchant_display: 'Hyper1', ...over },
+  extraction: { is_receipt: true, merchant_display: 'Nile Star Market', ...over },
 });
 const notReceiptRes = () => okRes({ is_receipt: false, merchant_display: null });
 
@@ -115,7 +115,7 @@ eq(receiptVerdict(okRes({ is_receipt: 'false' })), null,
  * silently, with the queue looking tidy. Read by `=== false` it is what it is:
  * no answer.
  */
-eq(receiptVerdict({ ok: true, extraction: { merchant_display: 'Hyper1' } }), null,
+eq(receiptVerdict({ ok: true, extraction: { merchant_display: 'Nile Star Market' } }), null,
   'an extraction carrying no verdict FIELD is no answer — never a "not a receipt"');
 eq(receiptVerdict({ ok: true, extraction: { is_receipt: undefined } }), null,
   'and an explicitly undefined one is the same');
@@ -190,7 +190,7 @@ for (const [label, res] of [['a receipt', okRes()], ['a verdict', notReceiptRes(
 }
 
 // ——————————————————————————— the name on the card
-eq(jobMerchant(job('a', 'ready', 1, { extraction: okRes() })), 'Hyper1',
+eq(jobMerchant(job('a', 'ready', 1, { extraction: okRes() })), 'Nile Star Market',
   'a read job names itself by its shop');
 eq(jobMerchant(job('a', 'queued', 1)), null,
   'an unread one has NO name yet — the card falls back to the time it was taken');

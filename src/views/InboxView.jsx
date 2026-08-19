@@ -161,7 +161,7 @@ function PendingCard({ item, outcome, onConfirm }) {
         * The amount used to be set at 30px with the merchant at 17.5px under it.
         * But the question this card asks is "what KIND of purchase was this?",
         * and only the merchant answers it — the amount is context. He is not
-        * deciding anything about 860; he is deciding about Hyper1.
+        * deciding anything about 860; he is deciding about Nile Star Market.
         *
         * The two also swapped places for a second reason: at 30px the amount
         * plus a 56px guess button plus twenty-seven chips made one card taller

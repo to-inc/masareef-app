@@ -232,12 +232,12 @@ try {
    * clear one.
    */
   {
-    const withFact = text(render({ ...LOG, mostOften: { name: 'Hyper1', times: 6 } }, DAY1));
-    ok(withFact.includes('Hyper1'), 'the log names the place he went most…');
+    const withFact = text(render({ ...LOG, mostOften: { name: 'Nile Star Market', times: 6 } }, DAY1));
+    ok(withFact.includes('Nile Star Market'), 'the log names the place he went most…');
     ok(withFact.includes('6'), '…and how many times he went');
 
     const noFact = text(render({ ...LOG, mostOften: null }, DAY1));
-    ok(!noFact.includes('Hyper1'),
+    ok(!noFact.includes('Nile Star Market'),
       'while a month with no clear "most" says nothing rather than picking one');
     const omitted = text(render(LOG, DAY1));
     ok(omitted.length > 0, 'a payload without the field at all still renders the log…');

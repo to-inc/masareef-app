@@ -6,6 +6,7 @@
  *   A3  his own last entries, with their amounts   state/repeats.js
  *   A6  the ❓ count on the home-screen icon        state/badge.js
  *   A7  «افتح الشيت» — one tap to his own book     state/secret.js
+ *   —   capability gating (the dictation defect)    state/capabilities.js
  *
  * ——— WHAT THIS FILE IS ACTUALLY GUARDING.
  *
@@ -208,6 +209,204 @@ const { CASH_QUICK } = await import('../src/lib/constants.js');
   setCreds('s', 'https://script.google.com/x/exec', REAL);
   clearCreds();
   eq(getSheetUrl(), null, 'and clearing the credentials takes it with them');
+}
+
+
+/* ═══════════ THE DEFECT THAT SHIPPED · capability gating ════════════════ */
+{
+  const { supportsAction, SERVER_ACTIONS, loadBuild, saveBuild, _reset: resetCaps } =
+    await import('../src/state/capabilities.js');
+  // Read from the PURE module, not from api/index.js — that one needs Vite for
+  // `import.meta.env`, and a fact that is awkward to import is a fact nobody tests.
+  const MOCK_ACTIONS = SERVER_ACTIONS;
+
+  /**
+   * ——— WHAT WENT WRONG, AS AN ASSERTION.
+   *
+   * The dictation button posted `{action:'voice'}`. The serving backend knows
+   * nine actions and `voice` is not one, so every press answered
+   * `unknown_action` — a dead control on his primary manual path, live on his
+   * phone, past 2,412 green assertions.
+   *
+   * It survived because `api/mock.js` modelled NO action list, so nothing could
+   * ask whether the server knew the verb. These two lines are that hole closed:
+   * the mock now carries the real list, and the list does not contain `voice`.
+   */
+  ok(MOCK_ACTIONS.length === 10, 'the mock models all TEN actions handleAction_ dispatches as of 20260817-1180');
+  for (const a of SERVER_ACTIONS) {
+    ok(MOCK_ACTIONS.indexOf(a) !== -1, `${a} is an action the server really answers`);
+  }
+
+  /**
+   * ——— IT FAILS CLOSED, WHICH IS WHY IT FIXES ANYTHING TODAY.
+   *
+   * `build.actions` does not exist on the serving backend. If an absent list
+   * read as "assume supported", this whole change would be decorative and the
+   * broken button would still be on his phone.
+   */
+  ok(!supportsAction(null, 'voice'), 'no build at all ⇒ not supported');
+  ok(!supportsAction({}, 'voice'), 'a build with no action list ⇒ not supported — THE case that matters today');
+  ok(!supportsAction({ actions: 'voice' }, 'voice'), 'a string is not a list — never coerced');
+  ok(!supportsAction({ actions: true }, 'voice'), 'nor is a boolean');
+  ok(!supportsAction({ actions: [] }, 'voice'), 'an empty list supports nothing');
+  ok(!supportsAction({ actions: ['manual', 'summary'] }, 'voice'),
+    'and a list without the verb does not support the verb');
+  ok(supportsAction({ actions: ['manual', 'voice'] }, 'voice'),
+    'while a list that names it DOES — this is what lights the button up at V20, with no flag to flip');
+  ok(!supportsAction({ actions: ['voice'] }, ''), 'an empty action name is never supported');
+
+  /**
+   * The cache exists so a gated control does not materialise under his thumb a
+   * second after launch — the shape-changing-while-you-reach problem.
+   */
+  resetCaps();
+  eq(loadBuild(), null, 'a fresh install has seen no build…');
+  saveBuild({ id: 'x', actions: ['voice'] });
+  ok(supportsAction(loadBuild(), 'voice'), '…and once seen, the answer survives a cold launch');
+  saveBuild(null);
+  ok(loadBuild() !== null, 'saving nothing does not erase what we knew');
+  resetCaps();
+
+  /**
+   * AND THE SHELL ACTUALLY GATES ON IT. The pure rule being right while the view
+   * mounts the button unconditionally is this project's most repeated bug —
+   * three of its defects were a correct function beside a wrong call site.
+   */
+  const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  ok(/onDictate=\{supportsAction\(build, 'voice'\)/.test(app),
+    'the dictation control is mounted ONLY when the server says it knows the verb');
+  ok(/ping\(\)\.then/.test(app), 'and the capability is read from ping, which is what carries `build`');
+  ok(!/onDictate=\{\(\) => setEntryMode\('dictate'\)\}/.test(app),
+    'the ungated version is gone — this exact line is what shipped broken');
+}
+
+
+/* ═══════════ DICTATION · the mock models the SERVICE, refusals included ═══ */
+{
+  const { mockVoice, _resetMockVoice } = await import('../src/api/mock.js');
+  const { UNKNOWN_CATEGORY } = await import('../src/lib/constants.js');
+  const { SERVER_ACTIONS, supportsAction } = await import('../src/state/capabilities.js');
+  _resetMockVoice();
+
+  /**
+   * FOUR BRANCHES, because each is a different sentence the app must render.
+   * The mock had NO handler at all, which is why a dead control passed 2,412
+   * assertions — a mock that cannot refuse cannot catch a client that assumes.
+   */
+  eq((await mockVoice({ text: '' })).error, 'no_text', 'nothing arrived is `no_text`…');
+  eq((await mockVoice({ text: '   ' })).error, 'no_text', '…including whitespace only');
+  eq((await mockVoice({ text: 'قهوة' })).error, 'no_amount',
+    '…and heard-him-but-no-number is `no_amount` — a DIFFERENT sentence, never collapsed');
+  ok((await mockVoice({ text: '' })).error !== (await mockVoice({ text: 'قهوة' })).error,
+    'the two refusals stay distinct — only one of them is his to fix by speaking again');
+
+  const ok50 = await mockVoice({ text: '٥٠ جنيه قهوة' });
+  eq(ok50.ok, true, 'Arabic-Indic digits are heard…');
+  eq(ok50.entry.amount, 50, '…and normalised to a Western number, as the sheet requires');
+  eq(ok50.entry.category, 'Eating out', 'قهوة matches the keyword map…');
+  eq(ok50.entry.method, 'Cash', '…and voice defaults to Cash, which is what he uses it for');
+
+  const visa = await mockVoice({ text: '٢٠٠ فيزا بنزين' });
+  eq(visa.entry.method, 'Visa', 'فيزا switches the method…');
+  eq(visa.entry.category, 'Car', '…and the keyword still lands');
+
+  const unknown = await mockVoice({ text: '75 حاجة غريبة' });
+  eq(unknown.entry.category, UNKNOWN_CATEGORY,
+    'no keyword ⇒ ❓, never a guess — chips, exactly as D5 requires everywhere else');
+
+  /**
+   * IDEMPOTENT, like `manual`. The outbox depends on it: `duplicate` settles a
+   * queued item, anything else re-queues it.
+   */
+  const first = await mockVoice({ text: '٦٠ جنيه قهوة', clientId: 'cid-1' });
+  const replay = await mockVoice({ text: '٦٠ جنيه قهوة', clientId: 'cid-1' });
+  ok(!first.skipped, 'the first send writes…');
+  eq(replay.skipped, 'duplicate', '…and a replayed clientId answers duplicate rather than doubling his coffee');
+  eq(replay.ok, true, 'a duplicate is still ok:true — it is a settled outcome, not a failure');
+
+  /**
+   * NEVER MORE PERMISSIVE THAN THE SERVER. `handleVoice_` requires a positive
+   * number; a mock that accepted these would certify a client against successes
+   * it will never see in his hand.
+   */
+  eq((await mockVoice({ text: 'صفر جنيه قهوة' })).error, 'no_amount',
+    'a spelled-out number is not a number — he must SAY the digits');
+  eq((await mockVoice({ text: '0 جنيه قهوة' })).error, 'no_amount', 'and zero is not an expense');
+  eq((await mockVoice({ text: null })).error, 'no_text', 'and nothing at all does not throw');
+
+  /**
+   * THE VERB IS NOW REAL. Backend 20260817-1180 dispatches `voice`, so the list
+   * says so — and the gate lights the control up from the same fact.
+   */
+  ok(SERVER_ACTIONS.indexOf('voice') !== -1,
+    'the server dispatches `voice` as of 20260817-1180, and the list records it');
+  ok(supportsAction({ actions: SERVER_ACTIONS }, 'voice'),
+    'so a server publishing this list turns the dictation button back on, with nothing to flip');
+}
+
+
+/* ═══════════ TRAVEL MODE IS CAPABILITY-GATED · CONTRACT-06 ①ial ═════════ */
+{
+  const { supportsCurrency, effectiveCurrency } = await import('../src/state/capabilities.js');
+  const { HOME_CURRENCY, AWAY_CURRENCY } = await import('../src/state/travel.js');
+
+  /**
+   * ——— THE DEFECT THIS PREVENTS, AND WHY IT OUTRANKS THE VOICE ONE.
+   *
+   * Travel mode went to his phone at ~15:30 against V19, whose `handleManual_`
+   * hardcoded `currency:'EGP'` (deployed/20260816-1011.gs:39) and never read the
+   * field. A €41.50 dinner would have landed as 41.50 EGP in the column his
+   * dashboard sums, with a ✓ on screen.
+   *
+   * V20 (deployed/20260817-1180.gs:45) now honours it — but publishes NO
+   * `currencies` list, and a backend that can do a thing without saying so is
+   * indistinguishable from one that cannot, because the client only sees the
+   * wire. So the gate stands, and every assertion below still describes the
+   * serving build.
+   */
+  ok(!supportsCurrency(null, 'EUR'), 'no build ⇒ the server cannot take euros');
+  ok(!supportsCurrency({}, 'EUR'),
+    'a build with no currency list ⇒ NOT supported — the serving build publishes none');
+  ok(!supportsCurrency({ currencies: 'EUR' }, 'EUR'), 'a string is not a list');
+  ok(!supportsCurrency({ currencies: [] }, 'EUR'), 'an empty list accepts nothing');
+  ok(!supportsCurrency({ currencies: ['EGP'] }, 'EUR'), 'and EGP-only does not imply euros');
+  ok(supportsCurrency({ currencies: ['EGP', 'EUR'] }, 'EUR'),
+    'while a server publishing EUR can be trusted with it');
+
+  /**
+   * ——— THE HALF THAT HIDING THE BUTTON DOES NOT COVER.
+   *
+   * The preference is STICKY. A phone already flipped to euros before this gate
+   * existed would keep writing euros as pounds — with the toggle now hidden, so
+   * there is not even a control left to flip back. Hiding an affordance does not
+   * undo the state it set, so the ANSWER is gated too.
+   */
+  eq(effectiveCurrency('EUR', {}), HOME_CURRENCY,
+    'a phone STUCK in euro mode writes pounds while the server cannot take euros — the dangerous case');
+  eq(effectiveCurrency('EUR', null), HOME_CURRENCY, 'and with no build at all');
+  eq(effectiveCurrency('EUR', { currencies: ['EGP'] }), HOME_CURRENCY,
+    'and against a server that takes only pounds');
+  eq(effectiveCurrency('EUR', { currencies: ['EGP', 'EUR'] }), AWAY_CURRENCY,
+    'while a capable server honours the mode he chose');
+  eq(effectiveCurrency('EGP', {}), HOME_CURRENCY, 'home needs no capability — it is the default');
+  eq(effectiveCurrency(null, {}), HOME_CURRENCY, 'and an unset preference is home');
+
+  /**
+   * THE STORED PREFERENCE IS NOT REWRITTEN. It becomes true again the moment the
+   * backend can honour it; silently clearing a setting he chose would be the app
+   * editing his intent rather than declining to act on it.
+   */
+  const stored = 'EUR';
+  effectiveCurrency(stored, {});
+  eq(stored, 'EUR', 'gating the ANSWER never rewrites what he chose');
+
+  const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  ok(/const entryCurrency = effectiveCurrency\(storedCurrency, build\);/.test(app),
+    'the payload carries the EFFECTIVE currency, not the stored one — this is the guard that writes');
+  ok(/setCurrency=\{supportsCurrency\(build, AWAY_CURRENCY\)/.test(app),
+    'and the toggle is offered only where the write can honour it');
+  ok(!/useState\(\(\) => getCurrency\(\)\);[\s\S]{0,80}entryCurrency/.test(app),
+    'the ungated read is gone — it is what shipped able to write euros as pounds');
 }
 
 const report = failures.length

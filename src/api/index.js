@@ -5,11 +5,19 @@
  * Script redirect/CORS quirk outside our control — is one contained module if it
  * ever has to change.
  */
-import { mockFetchSummary, mockReceiptExtract, mockEntries } from './mock.js';
+import { mockFetchSummary, mockReceiptExtract, mockEntries, mockVoice } from './mock.js';
 import * as live from './endpoints.js';
 
 // Vite statically replaces this. Anything other than an explicit 'false' keeps
 // the mock on, so a misconfigured build can never quietly reach his real sheet.
+import { SERVER_ACTIONS } from '../state/capabilities.js';
+
+/**
+ * The mock answers the SERVER's real verb list — including what it does not
+ * know. Modelling no list at all is how a dead control passed 2,412 assertions.
+ */
+export const MOCK_ACTIONS = SERVER_ACTIONS;
+
 export const USING_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 
 export const fetchSummary = () => (USING_MOCK ? mockFetchSummary() : live.summary());
@@ -22,18 +30,22 @@ export const fixCategory = (args) =>
 export const postManual = (args) =>
   USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.manual(args);
 
-/**
- * DICTATION (finding A5) — the `voice` action, reached from a text field.
- *
- * The mock answers `{ok:true}` and NOTHING ELSE, which is the mock-parity rule
- * this project learned twice in one day: the server's own answer to `voice` is a
- * bare envelope, so a mock that invented a parsed entry here would certify a
- * client against a response the server has never sent.
- */
-export const postVoice = (args) =>
-  (USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.voice(args));
+export const ping = () => (USING_MOCK
+  ? Promise.resolve({
+    ok: true,
+    v: 1,
+    build: { id: 'mock', assertions: 0, actions: MOCK_ACTIONS.slice(), complete: true },
+  })
+  : live.ping());
 
-export const ping = () => (USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.ping());
+/**
+ * DICTATION. The mock models the SERVICE — including its refusals (`no_text`,
+ * `no_amount`, `skipped:'duplicate'`), and is never more permissive than the
+ * server's own parse. A mock with no handler at all is how a dead control
+ * passed 2,412 assertions; see `mockVoice` for the full note.
+ */
+export const postVoice = (args) => (USING_MOCK ? mockVoice(args) : live.voice(args));
+
 
 export const receiptExtract = (args) =>
   USING_MOCK ? mockReceiptExtract(args) : live.receiptExtract(args);

@@ -3,7 +3,7 @@ import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
-import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, USING_MOCK } from './api/index.js';
+import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, ping, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
 import { enqueue, flush, partition, remove as dropQueued } from './state/outbox.js';
@@ -16,7 +16,8 @@ import { entryReady } from './state/entryDock.js';
 import { openingTab, cairoHourOf } from './state/opening.js';
 import { remember } from './state/repeats.js';
 import { setBadge } from './state/badge.js';
-import { getCurrency, setCurrency as persistCurrency } from './state/travel.js';
+import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY } from './state/travel.js';
+import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
 import { TabButton, Toast, OfflineBanner, LangToggle, RefreshButton } from './components/Primitives.jsx';
@@ -68,7 +69,26 @@ export default function App() {
   const [entryCat, setEntryCat] = useState(null);
   const [entryMethod, setEntryMethod] = useState(DEFAULT_METHOD);
   // Travel mode (A4) — sticky, and read once so the screen cannot change under him.
-  const [entryCurrency, setEntryCurrency] = useState(() => getCurrency());
+  const [storedCurrency, setStoredCurrency] = useState(() => getCurrency());
+  /**
+   * WHAT THE SERVING BACKEND CAN ANSWER — seeded from the last `ping` we saw, so
+   * a gated control does not flicker into existence a second after launch.
+   *
+   * This exists because the dictation button shipped posting an action the
+   * backend has never known (`unknown_action`, every press, on his primary
+   * manual path while abroad). It fails CLOSED: no list means no button.
+   */
+  const [build, setBuild] = useState(() => loadBuild());
+  /**
+   * THE CURRENCY ANY WRITE ACTUALLY CARRIES (Planner 4, CONTRACT-06).
+   *
+   * Gated, not merely hidden. His book serves V19, whose `handleManual_`
+   * hardcodes EGP — so a euro amount would land as pounds in the column his
+   * dashboard sums. Hiding the toggle protects a phone that never used travel
+   * mode; THIS protects the one already stuck in it, where the sticky
+   * preference would keep writing euros as pounds with no control left to see.
+   */
+  const entryCurrency = effectiveCurrency(storedCurrency, build);
   const [entryBusy, setEntryBusy] = useState(false);
 
   const showToast = useCallback((msg) => {
@@ -226,6 +246,13 @@ export default function App() {
     setStaleQueue(partition().stale);
     refresh();
     runOutbox();
+    /**
+     * FIRE AND FORGET. `ping` is the only response carrying `build`, and the
+     * capability it answers gates a secondary control — so it must never block
+     * the first paint or make a failed launch look broken. A rejection leaves
+     * the cached answer in place, which is the honest previous state.
+     */
+    ping().then((res) => { if (res && res.build) setBuild(saveBuild(res.build)); }).catch(() => {});
   }, [refresh, runOutbox]);
 
   // Flush on reconnect and whenever he brings the app back to the front — the
@@ -558,9 +585,25 @@ export default function App() {
                     cat={entryCat} setCat={setEntryCat}
                     method={entryMethod} setMethod={setEntryMethod}
                     currency={entryCurrency}
-                    setCurrency={(c) => setEntryCurrency(persistCurrency(c))}
+                    /**
+                      * The toggle is offered only where the write can honour it
+                      * — same rule as the dictation button, and for a worse
+                      * reason: a dead control does nothing, this one would post
+                      * a wrong number and report success.
+                      */
+                    setCurrency={supportsCurrency(build, AWAY_CURRENCY)
+                      ? (c) => setStoredCurrency(persistCurrency(c))
+                      : undefined}
                     onCamera={() => setEntryMode('receipt')}
-                    onDictate={() => setEntryMode('dictate')}
+                    /**
+                      * SHOWN ONLY IF THE SERVER KNOWS THE VERB. Absent
+                      * capability list ⇒ no button, which is the state of the
+                      * backend serving right now. It lights up on its own the
+                      * moment V20 publishes `voice`; there is no flag to flip.
+                      */
+                    onDictate={supportsAction(build, 'voice')
+                      ? () => setEntryMode('dictate')
+                      : undefined}
                   />
                 )}
                 {tab === 'entry' && entryMode === 'dictate' && (

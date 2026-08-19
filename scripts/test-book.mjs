@@ -199,7 +199,7 @@ eq(hasShape([1, 2, 3, 4, 5, 6, 7]), true, 'a full week certainly does');
 {
   const item = (over = {}) => ({
     tab: 'Aug', rowHint: 1, guess: 'Groceries', stale: false,
-    match: { date: '17/8/2026', description: 'Hyper1', method: 'Visa', category: '❓', amount: 10, currency: 'EGP' },
+    match: { date: '17/8/2026', description: 'Nile Star Market', method: 'Visa', category: '❓', amount: 10, currency: 'EGP' },
     ...over,
   });
   const asRows = (items) => items.map((it, i) => ({ key: String(i), item: it, outcome: null }));
@@ -242,7 +242,7 @@ const vite = await createServer({ server: { middlewareMode: true }, appType: 'cu
 try {
   const BookView = (await vite.ssrLoadModule('/src/views/BookView.jsx')).default;
   const day = (over = {}) => ({
-    date: '17/8/2026', description: 'Hyper1', method: 'Visa',
+    date: '17/8/2026', description: 'Nile Star Market', method: 'Visa',
     category: 'Groceries', amount: 100, currency: 'EGP', ...over,
   });
   const payload = (entries, totals) => ({

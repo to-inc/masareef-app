@@ -249,7 +249,7 @@ try {
    * the label read the stage alone. Same defect as the bare `{ok:true}` bodies
    * in the queue suite: a fixture more permissive than reality.
    */
-  const isReceipt = { ok: true, extraction: { is_receipt: true, merchant_display: 'Hyper1' } };
+  const isReceipt = { ok: true, extraction: { is_receipt: true, merchant_display: 'Nile Star Market' } };
   const notReceipt = { ok: true, extraction: { is_receipt: false, merchant_display: null } };
 
   const known = listText([
@@ -301,7 +301,7 @@ try {
   /**
    * ——— THE NAME ON THE CARD (R-receipts 2). "No name… that's terrible UX."
    */
-  ok(rowText([{ id: 'n', stage: 'ready', queuedAt: 1, extraction: isReceipt }]).includes('Hyper1'),
+  ok(rowText([{ id: 'n', stage: 'ready', queuedAt: 1, extraction: isReceipt }]).includes('Nile Star Market'),
     'a read job is named by its shop');
   ok(rowText([{ id: 'n', stage: 'queued', queuedAt: Date.UTC(2026, 7, 14, 9, 30) }]).includes('صورة الساعة'),
     'and an unread one by the time it was taken');

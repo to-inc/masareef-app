@@ -169,7 +169,7 @@ export function mockSummary() {
    * it is a certificate for code that has never met reality.
    */
   const pendingToday = [
-    { date: `${today.d}/${today.m}/${today.y}`, description: 'Hyper1', method: 'Visa', category: UNKNOWN_CATEGORY, amount: 860, currency: 'EGP' },
+    { date: `${today.d}/${today.m}/${today.y}`, description: 'Nile Star Market', method: 'Visa', category: UNKNOWN_CATEGORY, amount: 860, currency: 'EGP' },
     { date: `${today.d}/${today.m}/${today.y}`, description: 'Zaytouna Bakery', method: 'Visa', category: UNKNOWN_CATEGORY, amount: 75, currency: 'EGP' },
   ];
 
@@ -252,7 +252,7 @@ export function mockSummary() {
          * `MOCK_PREVLOG_NULL` already exercises, and the log card's own suite
          * asserts both directions directly.
          */
-        mostOften: { name: 'Hyper1', times: 6 },
+        mostOften: { name: 'Nile Star Market', times: 6 },
       },
     },
     year: {
@@ -485,7 +485,7 @@ const MOCK_MONTH_ROWS = (y, m, today, pendingToday, todayEntries) => {
   if (y !== today.y) return [];
   if (m === today.m) {
     return [
-      { date: `2/${m}/${y}`, description: 'Hyper1', method: 'Visa', category: 'Groceries', amount: 612, currency: 'EGP' },
+      { date: `2/${m}/${y}`, description: 'Nile Star Market', method: 'Visa', category: 'Groceries', amount: 612, currency: 'EGP' },
       { date: `4/${m}/${y}`, description: 'Zaytouna Bakery', method: 'Cash', category: 'Eating out', amount: 48, currency: 'EGP' },
       { date: '221', description: 'Guards', method: 'Cash', category: 'Gifts', amount: 100, currency: 'EGP' },
       { date: `5/${m}/${y}`, description: 'Northgate Hotel', method: 'Visa', category: 'Vacations', amount: null, currency: null },
@@ -519,3 +519,95 @@ export function mockEntries({ y, m }) {
     undated: rows.filter((r) => !/^\s*\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}\s*$/.test(String(r.date))).length,
   }), 380));
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DICTATION — and the third failure of the mock-parity law.
+ *
+ * There was no voice handler here at all. The client sent `{action:'voice'}` to
+ * a server that had no such case, every press answered `unknown_action`, nothing
+ * was ever written — and 2,412 assertions saw none of it, because a mock with no
+ * handler cannot refuse anything. CLAUDE.md records this law as "learned twice
+ * in one day"; this was the third time, in the exact shape it names.
+ *
+ * So this models the SERVICE, including what the service REFUSES.
+ *
+ * ——— THE RULE THAT MATTERS MOST: never more permissive than the server.
+ *
+ * The parse below mirrors `handleVoice_` deliberately — same first-number regex,
+ * same Arabic-Indic normalisation, same `فيزا`-switches-method, same ❓ when no
+ * keyword matches. A mock that accepted a sentence the server rejects would
+ * certify a client against a success it will never see in his hand, which is
+ * this bug wearing a different hat.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+// The keywords the server actually matches, in its own order — first hit wins.
+const MOCK_VOICE_KEYWORDS = [
+  ['قهو', 'Eating out'], ['كافيه', 'Eating out'], ['اكل', 'Eating out'], ['أكل', 'Eating out'],
+  ['سوبر', 'Groceries'], ['خضار', 'Groceries'], ['بقال', 'Groceries'],
+  ['بنزين', 'Car'], ['غسيل', 'Car'],
+  ['دوا', 'Medical'], ['صيدلي', 'Medical'],
+  ['كهرب', 'Elect. Recharge'], ['غاز', 'Gas'],
+];
+
+/** Arabic-Indic → Western, and the two Arabic separators the server normalises. */
+const mockNormalizeDigits = (t) => String(t == null ? '' : t)
+  .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+  .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+  .replace(/\u066B/g, '.')
+  .replace(/\u066C/g, '');
+
+// Replayed clientIds, so an outbox retry answers `duplicate` exactly as the
+// server's 6 h cache does. Module-scoped: the mock is one "server" per session.
+const mockVoiceSeen = new Set();
+
+export function mockVoice({ text, clientId } = {}) {
+  const raw = String(text == null ? '' : text).trim();
+  /**
+   * `no_text` and `no_amount` are DIFFERENT and must never collapse. "We heard
+   * nothing" and "we heard no number" are two different sentences to put in
+   * front of him, and only one of them is his to fix by speaking again.
+   */
+  if (!raw) return Promise.resolve({ ok: false, v: 1, error: 'no_text' });
+
+  const normalized = mockNormalizeDigits(raw);
+  const m = normalized.match(/(\d[\d.,]*)/);
+  if (!m) return Promise.resolve({ ok: false, v: 1, error: 'no_amount' });
+  const amount = Number(String(m[1]).replace(/,/g, ''));
+  if (!isFinite(amount) || amount <= 0) {
+    return Promise.resolve({ ok: false, v: 1, error: 'no_amount' });
+  }
+
+  let category = null;
+  for (const [word, cat] of MOCK_VOICE_KEYWORDS) {
+    if (normalized.indexOf(word) !== -1) { category = cat; break; }
+  }
+  const method = normalized.indexOf('فيزا') !== -1 ? 'Visa' : 'Cash';
+  const description = raw.replace(m[1], '').replace(/جنيه|فيزا|كاش/g, '').trim()
+    || (category || 'voice');
+
+  const today = cairoToday();
+  const entry = {
+    date: `${today.d}/${today.m}/${today.y}`,
+    description,
+    method,
+    // ❓ when no keyword matched — chips, never a guess (D5).
+    category: category || UNKNOWN_CATEGORY,
+    amount,
+    currency: 'EGP',
+  };
+
+  // Idempotent, like `manual`. The outbox depends on it: `duplicate` settles,
+  // anything else re-queues.
+  if (clientId) {
+    if (mockVoiceSeen.has(clientId)) {
+      return Promise.resolve({ ok: true, v: 1, skipped: 'duplicate', entry });
+    }
+    mockVoiceSeen.add(clientId);
+  }
+  return Promise.resolve({ ok: true, v: 1, entry });
+}
+
+/** Test seam — a suite must be able to replay a clientId from a clean slate. */
+export function _resetMockVoice() { mockVoiceSeen.clear(); }
