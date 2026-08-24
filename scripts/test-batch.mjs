@@ -20,6 +20,7 @@
  * (Ratified with Planner 4: Drive-side artefacts carry real names by necessity;
  * the public repo carries none, ever.)
  */
+import { readFile } from 'node:fs/promises';
 import {
   ROW_STATUSES, WRITABLE_STATUSES, EDITABLE_FIELDS, isWritable, defaultTicked,
   rowKey, twinKey, mergeJobs, initialTicks, toConfirmRows, reattachEdits, unsettledCount,
@@ -395,6 +396,21 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
   } finally {
     await vite.close();
   }
+}
+
+/**
+ * ——— THE PICKER CAN REACH EVERY CATEGORY (field-found: the batch picker
+ * offered SHORT_LIST with no expansion, so the six per-install extras were
+ * unreachable on the one screen classifying a whole statement). Source-pinned
+ * because the expansion is behind a per-row click SSR cannot perform: the map
+ * must branch to the FULL list and an affordance must exist to open it.
+ */
+{
+  const src = await readFile(new URL('../src/views/BatchReviewView.jsx', import.meta.url), 'utf8');
+  ok(/catsOpen \? CATEGORIES : SHORT_LIST/.test(src),
+    'the batch picker expands to the FULL category list, extras included');
+  ok(src.includes('setCatsOpen(true)') && src.includes('S.more'),
+    'and the expansion has a visible affordance — a list nobody can open is SHORT_LIST wearing a flag');
 }
 
 const report = failures.length

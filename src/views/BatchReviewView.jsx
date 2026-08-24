@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
 import { S, categoryLabel } from '../i18n/strings.js';
-import { SHORT_LIST } from '../lib/constants.js';
+import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, moneyRound } from '../lib/format.js';
 import { LATIN, ISOLATE } from '../components/Primitives.jsx';
 import {
@@ -275,6 +275,14 @@ function statusNote(row) {
 }
 
 function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTick, onOverride, onPick }) {
+  /**
+   * Per-row, collapsing when the row closes — 27 chips left open on every row
+   * would turn the reconciliation list back into the five-row grid EntryView
+   * retired. A picked category that lives outside SHORT_LIST renders via the
+   * `category === c` highlight once expanded; the collapsed view already shows
+   * the chosen name in the row's chip line.
+   */
+  const [catsOpen, setCatsOpen] = useState(false);
   const writable = isWritable(row.row_status);
   const note = statusNote(row);
   const dup = row.dupBook;
@@ -414,7 +422,16 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
           )}
           {writable && !bookDup && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {SHORT_LIST.map((c) => (
+              {/**
+                * FIELD-FOUND (Tarek, 2026-08-24, first real batch): the picker
+                * offered SHORT_LIST with no way out — six base categories, and
+                * his six per-install extras plus fifteen others simply
+                * UNREACHABLE on the one screen classifying a whole bank
+                * statement. EntryView had solved this (showAll) the day the
+                * chip grid shipped; the pattern just never crossed files. Same
+                * expansion here, per row.
+                */}
+              {(catsOpen ? CATEGORIES : SHORT_LIST).map((c) => (
                 <button
                   key={c} className="catchip" onClick={() => onPick(c)}
                   style={{
@@ -429,6 +446,18 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                   {category === c ? '✓ ' : ''}{categoryLabel(c)}
                 </button>
               ))}
+              {!catsOpen && (
+                <button
+                  className="catchip" onClick={() => setCatsOpen(true)}
+                  style={{
+                    padding: '9px 13px', minHeight: 44, borderRadius: 999,
+                    background: 'transparent', color: C.harbor,
+                    border: `1px dashed ${C.harbor}`, fontSize: 14, fontWeight: 600,
+                  }}
+                >
+                  {S.more}
+                </button>
+              )}
             </div>
           )}
         </div>
