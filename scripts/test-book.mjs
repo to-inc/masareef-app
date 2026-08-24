@@ -30,6 +30,7 @@ import {
   egpTotalOf, travelOf, needsCategory,
 } from '../src/state/book.js';
 import { periodTotals, comparisonOf, hasShape } from '../src/lib/series.js';
+import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../src/state/foreign.js';
 import { METRICS, UNKNOWN_CATEGORY } from '../src/lib/constants.js';
 import { batchable } from '../src/state/inboxOutcomes.js';
 import { AR, AR_LOCALE } from '../src/i18n/strings.ar.js';
@@ -231,6 +232,50 @@ eq(hasShape([1, 2, 3, 4, 5, 6, 7]), true, 'a full week certainly does');
 }
 
 /**
+ * ═══════════ «THIS WEEK 0» — THE RENDER HALF ═══════════
+ *
+ * D8 excludes non-EGP rows from every EGP sum, correctly. But a week spent
+ * entirely abroad then has an EGP total of ZERO, and the screen would render
+ * «0» beside «▼100%» — telling a retired man he spent nothing in a week he
+ * spent two hundred euros. Two defensible figures, one falsehood, in the
+ * largest type on the screen.
+ */
+ok(!hasForeign(null), 'an ordinary period has no foreign money');
+ok(!hasForeign({ count: 0, byCurrency: {} }), 'and neither does one that says so');
+ok(hasForeign({ count: 3, byCurrency: { EUR: 200 } }), 'while three euro rows is foreign money');
+/**
+ * COUNT, NOT byCurrency's emptiness. A period can hold an UNPRICED foreign row —
+ * he wrote the shop down and never the price — which is money we know is there
+ * and cannot size. Reading `byCurrency` would call that period clean and restore
+ * the bare total in exactly the case with the least information behind it.
+ */
+ok(hasForeign({ count: 1, byCurrency: {} }),
+  'an unpriced foreign row still forbids the bare total — we know it is there and cannot size it');
+
+ok(mayCompare(null, null), 'two clean periods may be compared');
+ok(!mayCompare({ count: 2, byCurrency: { EUR: 90 } }, null),
+  'a period WITH foreign money may never show a percentage — this is the ▼100% case');
+ok(!mayCompare(null, { count: 2, byCurrency: { EUR: 90 } }),
+  'and neither may one compared AGAINST a foreign period — the base is a subset either way');
+/**
+ * The one place here that fails OPEN, deliberately: an absent `prevForeign` means
+ * "we were not told", not "it was dirty". Refusing every comparison for want of a
+ * field would delete a true and useful sentence from every ordinary month, and
+ * the dangerous side — the CURRENT period — is always known.
+ */
+ok(mayCompare({ count: 0 }, undefined), 'an unknown previous period does not veto a clean comparison');
+
+eq(JSON.stringify(foreignLines({ count: 2, byCurrency: { SEK: 100, EUR: 200 } })),
+  '[{"currency":"EUR","amount":200},{"currency":"SEK","amount":100}]',
+  'one line per currency, stable order');
+ok(!JSON.stringify(foreignLines({ count: 2, byCurrency: { SEK: 100, EUR: 200 } })).includes('300'),
+  'NEVER summed across currencies — 200 EUR + 100 SEK is not 300 of anything');
+eq(foreignLines(null).length, 0, 'nothing is no lines');
+eq(unsizedForeign({ count: 3, byCurrency: { EUR: 200 } }), 2,
+  'money we know is there and cannot size is counted, not swallowed');
+eq(unsizedForeign({ count: 1, byCurrency: { EUR: 200 } }), 0, 'and a fully-sized period reports none');
+
+/**
  * ——————————————————————— AND THE SCREEN ACTUALLY DOES ALL OF THAT.
  *
  * Everything above is a pure function. This project's recurring failure is a
@@ -240,7 +285,9 @@ eq(hasShape([1, 2, 3, 4, 5, 6, 7]), true, 'a full week certainly does');
  */
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 try {
-  const BookView = (await vite.ssrLoadModule('/src/views/BookView.jsx')).default;
+  const mod = await vite.ssrLoadModule('/src/views/BookView.jsx');
+  const BookView = mod.default;
+  const { PeriodBlock } = mod;
   const day = (over = {}) => ({
     date: '17/8/2026', description: 'Nile Star Market', method: 'Visa',
     category: 'Groceries', amount: 100, currency: 'EGP', ...over,
@@ -308,7 +355,30 @@ try {
   const gapAuto = text(render(payload([day({ category: UNKNOWN_CATEGORY, auto: true })], { Visa: 100, Cash: 0 })));
   ok(!gapAuto.includes(AR.rowAuto), 'and never on a gap, which says its own thing already');
 
+  /**
+   * ——— AND THE SCREEN OBEYS BOTH HALVES.
+   *
+   * Rendered, not asserted at the source, because this is the exact class the
+   * «This week 0» defect belongs to: every function correct, the SCREEN wrong.
+   */
+  const week = (foreign) => ({
+    cur: { Visa: [200, null], Cash: [0, null] },
+    prev: { Visa: [500, 500], Cash: [0, 0] },
+    foreign,
+  });
+  const withF = text(renderToStaticMarkup(createElement(PeriodBlock, { data: week({ count: 2, byCurrency: { EUR: 200 } }) })));
+  ok(withF.includes('200'), 'the foreign money is NAMED beside the pounds figure…');
+  ok(withF.includes(AR.foreignNoCompare), '…and the screen says why no percentage is shown');
+  ok(!/[▲▼]/.test(withF), 'NO percentage marker at all — not a suppressed one, an absent one');
+  ok(!withF.includes(AR.noComparison('')) , 'and it does not claim there is no data to compare — there is; it is incomparable');
+
+  const clean = text(renderToStaticMarkup(createElement(PeriodBlock, { data: week(null) })));
+  ok(/[▲▼]/.test(clean), 'while an ordinary period DOES compare — the gate can be satisfied');
+  ok(!clean.includes(AR.foreignNoCompare), 'and says nothing about foreign money it does not have');
+
   const src = await readFile(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
+  ok(/mayCompare\(foreign, prevForeign\) \? comparisonOf/.test(src),
+    'the gate is consulted BEFORE the percentage is computed — there is no path on which the misleading figure exists');
   ok(/showDate=\{period !== 'today'\}/.test(src),
     'and the other periods DO get it, where the date is what tells the rows apart');
 } finally {

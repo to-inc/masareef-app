@@ -11,6 +11,7 @@ import * as live from './endpoints.js';
 // Vite statically replaces this. Anything other than an explicit 'false' keeps
 // the mock on, so a misconfigured build can never quietly reach his real sheet.
 import { SERVER_ACTIONS } from '../state/capabilities.js';
+import { CURRENCIES as SERVER_CURRENCIES } from '../state/travel.js';
 
 /**
  * The mock answers the SERVER's real verb list — including what it does not
@@ -34,7 +35,24 @@ export const ping = () => (USING_MOCK
   ? Promise.resolve({
     ok: true,
     v: 1,
-    build: { id: 'mock', assertions: 0, actions: MOCK_ACTIONS.slice(), complete: true },
+    /**
+     * BOTH advertisements, because the serving backend publishes both
+     * (`buildIdentity_`: `actions: KNOWN_ACTIONS.slice()`,
+     * `currencies: MANUAL_CURRENCIES.slice()`).
+     *
+     * `currencies` was missing and travel mode was therefore INVISIBLE under
+     * mock while working against a publishing server — the mock modelling the
+     * service as LESS capable than it is. Same law as the voice defect, opposite
+     * direction, and the cost is that no test could exercise the travel UI at
+     * all while the mock withheld the capability it needs.
+     */
+    build: {
+      id: 'mock',
+      assertions: 0,
+      actions: MOCK_ACTIONS.slice(),
+      currencies: SERVER_CURRENCIES.slice(),
+      complete: true,
+    },
   })
   : live.ping());
 

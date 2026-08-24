@@ -400,6 +400,17 @@ const { CASH_QUICK } = await import('../src/lib/constants.js');
   effectiveCurrency(stored, {});
   eq(stored, 'EUR', 'gating the ANSWER never rewrites what he chose');
 
+  /**
+   * MOCK PARITY FOR THE ADVERTISEMENT ITSELF. The serving backend publishes BOTH
+   * lists. A mock publishing only `actions` models the service as less capable
+   * than it is — travel mode invisible under mock while working for real, so no
+   * test could exercise it.
+   */
+  const api = await readFile(new URL('../src/api/index.js', import.meta.url), 'utf8');
+  ok(/currencies: SERVER_CURRENCIES\.slice\(\)/.test(api),
+    'the mock advertises CURRENCIES too — the server publishes both, so the mock must');
+  ok(/actions: MOCK_ACTIONS\.slice\(\)/.test(api), 'and actions, from the same one list');
+
   const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
   ok(/const entryCurrency = effectiveCurrency\(storedCurrency, build\);/.test(app),
     'the payload carries the EFFECTIVE currency, not the stored one — this is the guard that writes');

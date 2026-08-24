@@ -4,6 +4,7 @@ import { S, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS } from
 import { METRICS } from '../lib/constants.js';
 import { money, moneyRound } from '../lib/format.js';
 import { periodTotals, comparisonOf } from '../lib/series.js';
+import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { fetchEntries } from '../api/index.js';
 import { PeriodSummary, CategoryCompare } from '../components/Charts.jsx';
 import { Chip, LATIN, SectionLabel } from '../components/Primitives.jsx';
@@ -49,6 +50,7 @@ import LogCard from '../components/LogCard.jsx';
  */
 export default function BookView({
   data, settled = {}, onEdit, onGoToInbox, onBusyChange,
+  unsettledBatch = 0, onOpenBatch,
 }) {
   const [period, setPeriod] = useState('today');
   const [metric, setMetric] = useState('all');
@@ -123,7 +125,10 @@ export default function BookView({
       </div>
 
       {period === 'today' && (
-        <TodayHead totals={data.today.totals} entries={data.today.entries} onGoToInbox={onGoToInbox} />
+        <TodayHead
+          totals={data.today.totals} entries={data.today.entries} onGoToInbox={onGoToInbox}
+          unsettledBatch={unsettledBatch} onOpenBatch={onOpenBatch}
+        />
       )}
 
 
@@ -266,7 +271,7 @@ const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
  * showed a total that was quietly missing one. Naming it is the honest-render
  * law applied to a sum rather than to a null.
  */
-function TodayHead({ totals, entries, onGoToInbox }) {
+function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBatch }) {
   const egp = egpTotalOf(totals);
   const travel = travelOf(entries);
   const unknown = (entries || []).filter((e) => needsCategory(e)).length;
@@ -292,6 +297,27 @@ function TodayHead({ totals, entries, onGoToInbox }) {
           ))} — {S.travelApart}
         </div>
       )}
+      {/**
+        * EXPENSES NOT YET LOGGED — money missing from his book, said out loud on
+        * the screen he opens every evening. Silence here is the same defect as
+        * «This week 0»: a screen that looks complete while something real is
+        * absent from it. Distinct from «محتاجين نوع» below, and deliberately so —
+        * that one is money IN the book needing a label; this is money that is
+        * not in the book at all.
+        */}
+      {unsettledBatch > 0 && onOpenBatch && (
+        <button
+          onClick={onOpenBatch}
+          style={{
+            marginTop: 12, minHeight: TAP, borderRadius: 12, padding: '9px 16px',
+            background: C.sand, border: `1px solid ${C.line}`,
+            color: C.amberInk, fontSize: 14.5, fontWeight: 700,
+          }}
+        >
+          {S.batchWaiting(unsettledBatch)}
+        </button>
+      )}
+
       {unknown > 0 && (
         <button
           onClick={onGoToInbox}
@@ -315,10 +341,32 @@ function TodayHead({ totals, entries, onGoToInbox }) {
  * metric cards inside `PeriodSummary` make, so the headline and the card can
  * never disagree about the period's total.
  */
-function PeriodBlock({ data, labels, liveIndex, metric, setMetric, names, showBars, offPlot, footnote }) {
+/**
+ * EXPORTED for the same reason `MonthScreen` is: a period sits behind a tab
+ * press no server render can make, and the «This week 0» defect is precisely the
+ * class where every function is correct and the SCREEN is wrong. A suite that
+ * can only read this file's source text cannot see a percentage being rendered.
+ */
+export function PeriodBlock({
+  data, labels = [], liveIndex = -1, metric = 'all', setMetric = () => {},
+  names = { cur: '', prev: '' }, showBars = false, offPlot, footnote,
+}) {
   const totals = periodTotals(data, METRICS, offPlot || {});
   const shown = totals[metric] || totals.all;
-  const cmp = comparisonOf(shown.now, shown.prevAt);
+  /**
+   * THE «THIS WEEK 0» RULE, APPLIED BEFORE THE PERCENTAGE IS COMPUTED.
+   *
+   * A week spent entirely abroad has an EGP total of zero and would render «0»
+   * beside «▼100%» — telling him he spent nothing in a week he spent two hundred
+   * euros. `mayCompare` is consulted FIRST rather than used to suppress a
+   * percentage afterwards, so there is no path on which the misleading figure
+   * exists at all.
+   */
+  const foreign = data && data.foreign;
+  const prevForeign = data && data.prevForeign;
+  const lines = foreignLines(foreign);
+  const unsized = unsizedForeign(foreign);
+  const cmp = mayCompare(foreign, prevForeign) ? comparisonOf(shown.now, shown.prevAt) : null;
 
   return (
     <>
@@ -334,6 +382,24 @@ function PeriodBlock({ data, labels, liveIndex, metric, setMetric, names, showBa
           * more". Rendering «▲ ∞%» there is the kind of confident nonsense the
           * honest-render law exists to stop.
           */}
+        {/**
+          * NEVER A BARE TOTAL. Where foreign money exists the EGP figure is a
+          * PART of the period, and may only appear accompanied by what it
+          * excludes — one line per currency, never summed across them.
+          */}
+        {hasForeign(foreign) && (
+          <div style={{ fontSize: 14.5, color: C.muted, marginTop: 6, lineHeight: 1.7 }}>
+            {lines.map((l) => (
+              <span key={l.currency} style={{ marginInlineEnd: 10 }}>
+                {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {l.currency}</b>
+              </span>
+            ))}
+            {/* Money we know is there and cannot size — said, not implied. */}
+            {unsized > 0 && <div style={{ fontSize: 13 }}>{S.foreignUnsized(unsized)}</div>}
+            <div style={{ fontSize: 13, marginTop: 2 }}>{S.foreignNoCompare}</div>
+          </div>
+        )}
+
         {cmp ? (
           <div style={{ fontSize: 16, marginTop: 6 }}>
             {cmp.direction === 'same'
@@ -346,7 +412,7 @@ function PeriodBlock({ data, labels, liveIndex, metric, setMetric, names, showBa
                 </>
               )}
           </div>
-        ) : (
+        ) : hasForeign(foreign) || hasForeign(prevForeign) ? null : (
           <div style={{ fontSize: 13.5, color: C.muted, marginTop: 6 }}>{S.noComparison(names.prev)}</div>
         )}
       </div>
@@ -356,6 +422,11 @@ function PeriodBlock({ data, labels, liveIndex, metric, setMetric, names, showBa
         metric={metric} setMetric={setMetric}
         periodNames={{ cur: names.cur, prev: names.prev }}
         showBars={showBars} footnote={footnote} offPlot={offPlot}
+        /**
+         * The cards carry percentages too. Gating only the headline left «▼100%»
+         * on a period whose EGP figure is a subset — smaller type, same lie.
+         */
+        comparable={mayCompare(foreign, prevForeign)}
       />
     </>
   );

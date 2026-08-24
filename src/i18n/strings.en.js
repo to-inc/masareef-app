@@ -186,6 +186,42 @@ export const EN = {
   todayCount: (n) => `${n} ${n === 1 ? 'thing' : 'things'} today`,
   // Foreign money is counted on its own — never added into the EGP sum (D8).
   travelApart: 'on its own',
+
+  // ═══ D20 — the statement review screen ═══
+  batchTitle: 'Review the statement',
+  batchCount: (n, total) => `${n} of ${total} will be logged`,
+  batchAll: 'Select all',
+  batchNone: 'Clear all',
+  batchConfirm: (n) => `✓ Log ${n} ${n === 1 ? 'expense' : 'expenses'}`,
+  batchNothing: 'Choose what to log',
+  batchSending: 'Logging…',
+  batchDeclined: 'Declined — never left your account',
+  batchIncoming: 'Money in — not an expense',
+  batchPending: 'Still pending',
+  batchRoundup: (n) => `Spare change${n ? ` · ${n} movements` : ''}`,
+  batchUnclear: 'Could not read it',
+  batchNeedCategory: '? category',
+  batchDupBook: 'Already in your book',
+  batchDupBookIntro: 'Your book already has this:',
+  batchDupBatch: 'Same as the one above, in this photo',
+  batchDupUnchecked: 'We could not check',
+  batchSaveAnyway: 'Log it anyway',
+  batchTruncated: (shown, total) => `Showing ${shown} of ${total} — the list is cut off. Photograph the rest.`,
+  batchWritten: 'Logged',
+  batchSkippedDup: 'Was already logged',
+  batchErrored: 'Not logged',
+  batchNotChosen: 'You did not choose it',
+  batchDone: (w, s, e) => `${w} logged ✓${s ? ` · ${s} already there` : ''}${e ? ` · ${e} had trouble` : ''}`,
+  batchBack: 'Done — back to the book',
+  batchExpired: 'This photo has gone stale — take it again and we will restore your choices',
+  batchResnap: '📷 Photograph it again',
+  batchDiscard: 'Discard this review',
+  batchWaiting: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'} not logged yet`,
+
+  // ——— foreign money inside a period: the EGP figure is not the whole period.
+  andAlso: 'and with them',
+  foreignNoCompare: 'This period has foreign spending — a pounds-only comparison would not be true',
+  foreignUnsized: (n) => `and ${n} foreign ${n === 1 ? 'expense' : 'expenses'} with no price`,
   // A row with no category is a door wherever it appears (M6).
   rowNeedsCategory: '? tap to file',
   // A2: filed from the merchant memory — he never chose it.

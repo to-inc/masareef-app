@@ -203,14 +203,50 @@ decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a backg
     }
   };
   walk(new URL('../src', import.meta.url));
+  /**
+   * ═══ ONE AMBER PER SCREEN — not one per app (Planner 4, 2026-08-19) ═══
+   *
+   * The previous form pinned amber to `views/EntryView.jsx` by FILE and counted
+   * one use in the whole tree. It fired twice in one rev — on DictateView, and on
+   * the batch review's confirm — and the second time the escalation was right:
+   * a global-once reading means only ONE SCREEN IN THE APP may ever have a
+   * primary action, which is not the rule. The rule serves "one decision per
+   * screen"; it was enforcing the stricter reading by accident of implementation.
+   *
+   * Rendering the highest-consequence button in the app — the one that writes N
+   * rows into his book in a single irreversible tap — in harbour made it look
+   * SECONDARY, which inverts the hierarchy amber exists to encode.
+   *
+   * So: at most one amber per view file, and at least one somewhere. That is
+   * strictly stronger than what it replaces, because it holds for screens not yet
+   * written rather than naming the one file that existed when it was authored.
+   *
+   * `EntryDock` lives in EntryView.jsx and is rendered by the shell between
+   * <main> and the tab bar — it is ON the entry screen, so one file is one
+   * screen here.
+   */
   const users = all
     .map((p) => [p.pathname.split('/src/')[1], (fs.readFileSync(p, 'utf8').match(/C\.amber\b/g) || []).length])
     .filter(([, n]) => n > 0);
-  const total = users.reduce((s, [, n]) => s + n, 0);
-  // views/EntryView.jsx — renamed from CashView with R-receipts 1; the rule is
-  // unchanged, and the amber is still the one on its submit button.
-  if (total === 1 && users[0][0] === 'views/EntryView.jsx') pass++;
-  else failures.push(`amber must appear exactly once, in views/EntryView.jsx — found ${total} use(s) in ${JSON.stringify(users.map(([f]) => f))}`);
+
+  const crowded = users.filter(([, n]) => n > 1);
+  if (!crowded.length) pass++;
+  else failures.push(`at most ONE amber per screen — ${JSON.stringify(crowded)} uses it more than once, `
+    + 'and a second amber on one screen empties the first of meaning');
+
+  /**
+   * A SCREEN is a view. The accent belongs on a primary ACTION, so a shared
+   * component reaching for it would put the app's one emphasis in a place no
+   * single screen owns — that is the drift the original rule was written against
+   * and it survives the relaxation.
+   */
+  const nonViews = users.filter(([f]) => !f.startsWith('views/'));
+  if (!nonViews.length) pass++;
+  else failures.push(`amber belongs to a SCREEN's primary action, not to shared furniture — `
+    + `found in ${JSON.stringify(nonViews.map(([f]) => f))}`);
+
+  if (users.length) pass++;
+  else failures.push('the warm accent is used NOWHERE — an accent nothing uses is not a design system, it is a dead token');
 }
 
 // ——————————————————————— every token must be measured somewhere.

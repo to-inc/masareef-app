@@ -145,7 +145,15 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
 }
 
 // Tappable metric cards — tap to recolor every chart to that metric.
-export function MetricCards({ metric, setMetric, computed }) {
+/**
+ * `comparable: false` suppresses every Delta on this row.
+ *
+ * Found by the «This week 0» render assertion: gating the HEADLINE sentence left
+ * the metric cards still printing «▼100%» against a period whose EGP figure is a
+ * subset. Same rule, second render path — and the cards are the smaller type, so
+ * it would have survived a visual check.
+ */
+export function MetricCards({ metric, setMetric, computed, comparable = true }) {
   return (
     <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
       {METRICS.map((m) => {
@@ -188,7 +196,7 @@ export function MetricCards({ metric, setMetric, computed }) {
             <div style={{ fontSize: 12, color: active ? C.onDark : C.muted }}>
               {/* No comparison data ≠ a comparison of zero */}
               <span style={LATIN}>{prevAt == null ? '—' : moneyRound(prevAt)}</span>
-              <Delta now={now} prev={prevAt} />
+              {comparable && <Delta now={now} prev={prevAt} />}
             </div>
           </button>
         );
@@ -296,7 +304,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
   );
 }
 
-export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {} }) {
+export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true }) {
   const color = METRICS.find((m) => m.key === metric).color;
   const cur = seriesFor(data.cur, metric);
   const prev = seriesFor(data.prev, metric);
@@ -372,7 +380,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
         </div>
         )}
       </div>
-      <MetricCards metric={metric} setMetric={setMetric} computed={computed} />
+      <MetricCards metric={metric} setMetric={setMetric} computed={computed} comparable={comparable} />
       {footnote}
       {/**
         * THE THREE-LINE EXPLAINER IS GONE (finding S6).
