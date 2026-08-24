@@ -208,6 +208,10 @@ export const EN = {
   batchNone: 'Clear all',
   batchConfirm: (n) => `✓ Log ${n} ${n === 1 ? 'expense' : 'expenses'}`,
   batchNothing: 'Choose what to log',
+  sortLabel: 'Sort',
+  sortName: (k) => ({ date: 'Date', amount: 'Largest', name: 'Name' }[k] || String(k)),
+  rowsLoading: 'Reading the month from your book…',
+  rowsLoadFailed: 'Could not read this month right now — pull refresh to try again.',
   dupTitle: (n) => `${n} rows might be the same expense twice`,
   dupBody: 'Same day, same amount, same currency. That happens for real — two coffees in one day are two coffees — so this only points, it never decides.',
   dupTier: (t) => ({
@@ -218,6 +222,8 @@ export const EN = {
   dupUnpriced: (n) => `${n} ${n === 1 ? 'row has' : 'rows have'} no amount, so ${n === 1 ? 'it was' : 'they were'} not compared.`,
   dupNoDescription: '(no description)',
   dupOpenSheet: 'Open the sheet to check them',
+  batchTooLarge: 'The server takes at most 40 rows per confirm — untick down to 40 and log the rest after.',
+  batchOverCap: (n, max) => `${n} ticked — the most in one go is ${max}`,
   batchFailed: 'Could not reach the server — nothing was written. Your ticks are safe; try again.',
   batchSending: 'Logging…',
   batchDeclined: 'Declined — never left your account',
@@ -236,7 +242,15 @@ export const EN = {
   batchSkippedDup: 'Was already logged',
   batchErrored: 'Not logged',
   batchNotChosen: 'You did not choose it',
-  batchDone: (w, s, e) => `${w} logged ✓${s ? ` · ${s} already there` : ''}${e ? ` · ${e} had trouble` : ''}`,
+  /**
+   * NOT named `batchDone` — that key already exists lower in this SAME object
+   * (the outbox flush toast), and in a literal the LAST definition silently
+   * wins: the three-count header was being shadowed by the one-count toast and
+   * rendered «undefined logged ✓» territory while every suite stayed green
+   * (verification finding). The dedup check in test-i18n now makes a repeat
+   * key a failure, so this class dies with this rename.
+   */
+  batchSettled: (w, s, e) => `${w} logged ✓${s ? ` · ${s} already there` : ''}${e ? ` · ${e} had trouble` : ''}`,
   batchBack: 'Done — back to the book',
   batchExpired: 'This photo has gone stale — take it again and we will restore your choices',
   batchResnap: '📷 Photograph it again',

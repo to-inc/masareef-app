@@ -34,6 +34,14 @@
  * D10). The distinction is not "client data vs server data"; it is *what he
  * decided* versus *what the machine read*.
  */
+/**
+ * The vocabulary of HIS edits — what the review screen may overlay on a row.
+ * NOT the wire allow-list: `toConfirmRows` builds the request from §3.5's
+ * field list explicitly and does not consult this (it did once; the
+ * verification pass flagged the leftover as a trap — a constant that LOOKS
+ * load-bearing and changes nothing invites someone to "fix" the wire by
+ * editing it).
+ */
 export const EDITABLE_FIELDS = ['amount', 'category', 'description', 'date', 'method'];
 
 /** The six the extractor may emit (06 §3.5). */
@@ -49,6 +57,16 @@ export const ROW_STATUSES = ['completed', 'declined', 'pending', 'incoming', 'ro
  * tick the write will refuse. If the two ever disagree the server wins, loudly.
  */
 export const WRITABLE_STATUSES = ['completed', 'pending', 'roundup', 'unclear'];
+
+/**
+ * The server's whole-batch cap, mirrored so the confirm button can refuse
+ * BEFORE the wire does (`CONFIG.BATCH_MAX_ROWS` in Code.gs; over it the server
+ * refuses the ENTIRE batch with no per-row answers). Two 40-row screenshots
+ * merge to 80 ticked-by-default rows, so this is reachable by one ordinary
+ * evening of Revolut. Mirrored, not derived — the server is the enforcer; this
+ * copy exists only so the UI never offers a tap the write will refuse whole.
+ */
+export const BATCH_MAX_ROWS = 40;
 
 export const isWritable = (status) => WRITABLE_STATUSES.indexOf(status) !== -1;
 
@@ -114,7 +132,12 @@ export function mergeJobs(jobs) {
   (Array.isArray(jobs) ? jobs : []).forEach((job, photoOrder) => {
     if (!job || !Array.isArray(job.entries)) return;
     job.entries.forEach((e, i) => {
-      rows.push({ ...e, sourceHash: job.sourceHash || job.clientHash || '', index: i, photoOrder });
+      rows.push({
+        ...e, sourceHash: job.sourceHash || job.clientHash || '', index: i, photoOrder,
+        // The server's per-list method ruling rides the job (D19); stamped per
+        // row so the wire builder never has to reach back to a job by hash.
+        defaultMethod: job.defaultMethod || null,
+      });
     });
   });
 
@@ -175,17 +198,81 @@ export function initialTicks(rows) {
  * same reason — a chooser's label once reached the wire as a method and wrote
  * card money into the Cash column.
  */
-export function toConfirmRows(rows, ticks, edits = {}) {
+/**
+ * ISO `yyyy-MM-dd` (how a decorated list row carries its server-resolved date)
+ * → Cairo `d/M/yyyy` (the ONLY form `batchRowDate_` parses — it reads
+ * `row.dateStr` via `parseCairoDateStr_` and nothing else).
+ * An unresolvable date returns null and the field is OMITTED: the server then
+ * answers `bad_date` for that row, per row, visibly — never a silently
+ * substituted today (§3.5's own rule about dates, applied to ourselves).
+ */
+export function wireDateStr(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  if (!m) return null;
+  return `${Number(m[3])}/${Number(m[2])}/${Number(m[1])}`;
+}
+
+/**
+ * THE WIRE ROW — §3.5's request shape, field by field, FROM THE SERVER'S READER.
+ *
+ * ⚠️ THE FIRST VERSION OF THIS BUILDER SENT `EDITABLE_FIELDS` AND NOTHING ELSE,
+ * and every gap was a wrong number waiting in his book:
+ *   · no `currency` → `batchConfirmRow_` defaults absent currency to EGP, so a
+ *     ticked €15.47 row would have been APPENDED AS 15.47 EGP — the exact
+ *     corruption the capability advertisement exists to prevent (§2.1), arriving
+ *     through a door that advertisement does not guard;
+ *   · `date` where the server reads `dateStr` (`d/M/yyyy`) → every row
+ *     `bad_date`, nothing written;
+ *   · no `description`/`merchantLatin` → the book records the CATEGORY as the
+ *     description (server fallback), and Memory learns nothing;
+ *   · no `method` → `normalizeMethod_(undefined)` is Cash, filing his card
+ *     statement into the wrong column;
+ *   · no `dupAck` → the review screen's override button changed a pixel and
+ *     nothing else — the server refuses without `dupAck:true`.
+ * None of it ever fired only because the response-shape bug upstream kept every
+ * confirm from being reachable. The two bugs concealed each other.
+ *
+ * `row_status` STAYS OFF THE WIRE — contract law (§3.5): the server re-reads it
+ * from its own cached extraction; a request-carried status is "the UI is the
+ * only guard" wearing server clothes.
+ */
+export function toConfirmRows(rows, ticks, edits = {}, opts = {}) {
+  const overridden = opts.overridden || {};
   const out = [];
   for (const row of Array.isArray(rows) ? rows : []) {
     const key = rowKey(row);
     if (!ticks || ticks[key] !== true) continue;
     if (!isWritable(row.row_status)) continue;       // belt and braces; the server refuses too
     const edited = { ...row, ...(edits[key] || {}) };
-    const payload = { sourceHash: row.sourceHash, index: row.index };
-    for (const f of EDITABLE_FIELDS) {
-      if (edited[f] !== undefined) payload[f] = edited[f];
-    }
+    const payload = {
+      sourceHash: row.sourceHash,
+      index: row.index,
+      amount: edited.amount,
+      // The row's own currency, always — absent means EGP to the server, and
+      // these rows are exactly the ones that are usually NOT in EGP.
+      currency: edited.currency || row.currency || 'EGP',
+      /**
+       * An explicit cash hint on the row wins; otherwise the server's own
+       * per-list ruling (defaultMethod, D19). The client composes from what the
+       * SERVER said, twice over — it decides nothing here.
+       */
+      method: edited.method
+        || (row.payment_hint === 'cash' ? 'Cash' : (row.defaultMethod || 'Visa')),
+      /**
+       * `❓` when nobody — Memory or him — has an answer. The server accepts it
+       * and the row joins `pending[]`, one tap from fixed in the Inbox (D5).
+       * Omitting the field instead would be `bad_category`: a ticked expense
+       * REFUSED because it was not yet classified, which inverts capture-is-
+       * sacred at the last step.
+       */
+      category: edited.category || row.category || '❓',
+      description: edited.description !== undefined
+        ? edited.description : (row.merchant_display || ''),
+    };
+    const dateStr = wireDateStr(edited.date !== undefined ? edited.date : row.date);
+    if (dateStr) payload.dateStr = dateStr;
+    if (row.merchant_latin) payload.merchantLatin = row.merchant_latin;
+    if (overridden[key]) payload.dupAck = true;
     out.push(payload);
   }
   return out;

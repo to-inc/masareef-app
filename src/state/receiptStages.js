@@ -77,7 +77,7 @@ export function nextJob(jobs) {
  * never completed — offline, timeout — which is retryable and must NOT be
  * confused with a server that answered "no".
  *
- * The cap is singled out deliberately. `ocr_daily_cap` is the system working:
+ * The cap is singled out deliberately. `daily-limit` is the system working:
  * the photo is safe, the budget is spent, tomorrow it proceeds. Reporting that
  * as `failed` would invite him to retry all day against a wall.
  */
@@ -99,8 +99,20 @@ export function nextJob(jobs) {
 export function isTransactionList(res) {
   const e = res && res.extraction;
   if (!e || typeof e !== 'object') return false;
+  /**
+   * ⚠️ `e.entries`, NOT `res.entries` — VERIFIED AGAINST `Code.gs`, THE HARD WAY.
+   * `receiptExtractResponse_` returns `{ok, extraction: decorateListRows_(x),
+   * entriesTotal, defaultMethod}` — the rows ride INSIDE the extraction; only
+   * the count is top-level. The first version of this function read
+   * `res.entries` — a shape taken from OUR OWN MOCK rather than from the server
+   * — so every real list answered `false` here, fell to the truncated-list
+   * guard below, and rendered «Did not work — try again» on a response that was
+   * complete and correct. Tarek hit it within the hour, on all three photos.
+   * Mock parity, fifth occurrence, and the first one that was the mock's AUTHOR
+   * certifying his own assumption.
+   */
   return e.doc_type === 'transaction_list'
-    && Array.isArray(res.entries) && res.entries.length > 0;
+    && Array.isArray(e.entries) && e.entries.length > 0;
 }
 
 export function resultStage(res, threw) {
@@ -147,7 +159,17 @@ export function resultStage(res, threw) {
   }
 
   const code = (res && res.error) || 'unknown';
-  if (code === 'ocr_daily_cap') return { stage: 'capped', error: code, retryable: false };
+  /**
+   * ⚠️ THE SERVER'S STRING, NOT A PLAUSIBLE ONE. `handleReceiptExtract_`
+   * returns `error:'daily-limit'` when the vision budget is spent (its own
+   * suite pins that exact string) — this line matched `'ocr_daily_cap'`, a
+   * code no server has ever sent, so a capped photo was classed
+   * failed/retryable and the whole `capped` stage (with its
+   * wait-for-tomorrow release) was DEAD CODE while every suite stayed green.
+   * Verification finding; the correct string already existed twelve lines
+   * away in ReceiptView's error map, which is how vocabulary drift looks.
+   */
+  if (code === 'daily-limit') return { stage: 'capped', error: code, retryable: false };
   if (code === 'ocr_not_configured') return { stage: 'failed', error: code, retryable: false };
   return { stage: 'failed', error: code, retryable: true };
 }

@@ -5,7 +5,7 @@ import { SHORT_LIST } from '../lib/constants.js';
 import { money, moneyRound } from '../lib/format.js';
 import { LATIN, ISOLATE } from '../components/Primitives.jsx';
 import {
-  rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows,
+  rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows, BATCH_MAX_ROWS,
 } from '../state/batchDraft.js';
 
 /**
@@ -42,7 +42,13 @@ export default function BatchReviewView({
   const [overridden, setOverridden] = useState({});
 
   const settled = !!results;
-  const chosen = useMemo(() => toConfirmRows(rows, ticks, edits), [rows, ticks, edits]);
+  // `overridden` rides into the wire as `dupAck` — without it the override
+  // button was a pixel that changed nothing: the server refuses a book
+  // duplicate unless the request says the flag was SHOWN and overruled (D18a).
+  const chosen = useMemo(
+    () => toConfirmRows(rows, ticks, edits, { overridden }),
+    [rows, ticks, edits, overridden],
+  );
 
   /**
    * WHAT HE IS ABOUT TO WRITE, BEFORE HE READS A ROW — and it moves as he ticks.
@@ -94,7 +100,7 @@ export default function BatchReviewView({
       <div style={{ textAlign: 'center', padding: '2px 0 12px' }}>
         {settled ? (
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 650 }}>
-            {S.batchDone(results.written, results.skipped, results.errored)}
+            {S.batchSettled(results.written, results.skipped, results.errored)}
           </div>
         ) : (
           <>
@@ -169,7 +175,7 @@ export default function BatchReviewView({
         <button
           className="bigbtn"
           onClick={settled ? onDiscard : () => onConfirm(chosen)}
-          disabled={!settled && (busy || chosen.length === 0)}
+          disabled={!settled && (busy || chosen.length === 0 || chosen.length > BATCH_MAX_ROWS)}
           style={{
             width: '100%', minHeight: 58, borderRadius: 14, fontSize: 18, fontWeight: 700,
             /**
@@ -194,7 +200,8 @@ export default function BatchReviewView({
         >
           {settled ? S.batchBack
             : busy ? S.batchSending
-              : chosen.length ? S.batchConfirm(chosen.length) : S.batchNothing}
+              : chosen.length > BATCH_MAX_ROWS ? S.batchOverCap(chosen.length, BATCH_MAX_ROWS)
+                : chosen.length ? S.batchConfirm(chosen.length) : S.batchNothing}
         </button>
       </div>
     </div>
@@ -366,7 +373,13 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
 
         {/* A null amount renders —, never 0. An aggregate has no single figure. */}
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16.5, fontWeight: 650, ...LATIN, ...NUMERALS }}>
-          {row.amount == null ? '—' : money(Math.abs(row.amount))}
+          {/* The unit rides the row whenever it is not the home default —
+              'UNKNOWN' included, rendered as ؟: a figure whose currency nobody
+              read must not sit indistinguishable from pounds, because ticking
+              it writes it as pounds (server rule: UNKNOWN → EGP). */}
+          {row.amount == null ? '—'
+            : `${money(Math.abs(row.amount))}${!row.currency || row.currency === 'EGP' ? ''
+              : row.currency === 'UNKNOWN' ? ' ؟' : ` ${row.currency}`}`}
         </span>
       </div>
 

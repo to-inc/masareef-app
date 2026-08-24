@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
 import { S, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
@@ -58,6 +58,29 @@ export default function BookView({
   const [browsing, setBrowsing] = useState(null);   // a specific {y,m}, or null
   const [fetched, setFetched] = useState([]);
   const [fetchedTab, setFetchedTab] = useState('');
+  const [loadingRows, setLoadingRows] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [sortBy, setSortBy] = useState('date');   // 'date' | 'amount' | 'name'
+  /**
+   * THE FETCH SEQUENCE — answers are only as ordered as the network feels like.
+   *
+   * Field-found (Tarek, 2026-08-24): he tapped July, then June seconds later.
+   * Two reads in flight; whichever resolves LAST wins the screen, and a cold
+   * closed-month read takes 15–25 s while a cached one takes two — so July's
+   * answer landing after June's would render July's rows under June's chip.
+   * Every await below checks it still holds the latest ticket and otherwise
+   * drops its answer unrendered. Last-tap-wins, not last-network-wins.
+   */
+  const fetchSeq = useRef(0);
+  /**
+   * CLOSED MONTHS DO NOT CHANGE UNDER HIM MID-SESSION — his book is append-at-
+   * the-current-month — so a browsed month is kept for the session and a
+   * return visit renders instantly instead of re-paying the Apps Script round
+   * trip. The CURRENT month is deliberately never cached here: it is the one
+   * that grows, and the server's own 60 s blob is the freshness authority.
+   * Session-lifetime only (a ref, not storage): a new visit re-reads truth.
+   */
+  const monthCache = useRef(new Map());
   const [undated, setUndated] = useState(0);
   const [open, setOpen] = useState(null);
   // Read once — it cannot change while he is looking at the screen.
@@ -74,11 +97,71 @@ export default function BookView({
    */
   const needsFetch = rowsSource(period, browsing) === 'fetch';
 
-  const load = useCallback(async () => {
-    if (!needsFetch) return true;
+  const load = useCallback(async (force) => {
+    /**
+     * THE TICKET IS CLAIMED FIRST, EVEN WHEN NOTHING WILL BE FETCHED — the
+     * verification pass refuted the first version here: the !needsFetch return
+     * sat ABOVE the claim, so tapping «النهاردة» during a cold June read issued
+     * no new ticket, the abandoned June fetch still held the latest one, and on
+     * resolve it wrote June's rows, tab and undated count into a screen now
+     * showing Today — while the spinner it had set stayed up for the whole 20 s.
+     * "Last tap wins" only holds if every tap takes a ticket, fetching or not.
+     */
+    const ticket = ++fetchSeq.current;
+    if (!needsFetch || period === 'year') {
+      // The year renders no row list (a 12-month scroll is a scroll he
+      // abandons), so fetching for it would be a paid Apps Script read nothing
+      // displays — and its undated note would be scoped to one month, a wrong
+      // number on a screen about twelve.
+      setLoadingRows(false);
+      return true;
+    }
+    if (force) {
+      // The header refresh button means "read it AGAIN" — serving the session
+      // cache from it would make the one control that promises freshness the
+      // one place staleness hides.
+      monthCache.current.clear();
+    }
+    const cacheKey = (ref) => `${ref.y}_${ref.m}`;
+    const isClosed = (ref) => !(ref.y === today.y && ref.m === today.m);
     try {
       const months = browsing ? [browsing] : monthsFor(period === 'year' ? 'month' : period, today);
-      const answers = await Promise.all(months.map((ref) => fetchEntries(ref)));
+      /**
+       * LOADING IS A STATE THE SCREEN ADMITS TO. The old code kept the previous
+       * rows on screen while the next month loaded — so a slow read left August
+       * rendered under a tapped June for twenty seconds, which on a phone reads
+       * as "the months do not match the transactions", because that is exactly
+       * what the screen said. Stale rows presented as current are a confident
+       * wrong answer; «loading» is a true one.
+       */
+      const allCached = months.every((ref) => monthCache.current.has(cacheKey(ref)));
+      if (!allCached) setLoadingRows(true);
+      const answers = await Promise.all(months.map(async (ref) => {
+        const hit = monthCache.current.get(cacheKey(ref));
+        if (hit) return hit;
+        const a = await fetchEntries(ref);
+        if (a && Array.isArray(a.entries) && isClosed(ref)) {
+          monthCache.current.set(cacheKey(ref), a);
+        }
+        return a;
+      }));
+      // A superseded answer is DROPPED, whole — rendering it would put the
+      // slower month's rows under the faster tap's chip.
+      if (ticket !== fetchSeq.current) return true;
+      /**
+       * A WELL-FORMED {ok:false} IS A REAL ANSWER, NOT ZERO ROWS. The transport
+       * throws only on transport failure; a server refusal resolves normally —
+       * and flat-mapping it to [] rendered «no expenses this month» over a
+       * month the server had just REFUSED to read: the honest-render law
+       * violated for a whole month at once (verification finding). A refusal
+       * renders as a refusal.
+       */
+      if (answers.some((a) => a && a.ok === false)) {
+        setFetched([]); setFetchedTab(''); setUndated(0);
+        setLoadError(true); setLoadingRows(false);
+        return false;
+      }
+      setLoadError(false);
       const all = answers.flatMap((a) => (a && Array.isArray(a.entries) ? a.entries : []));
       const shown = browsing ? all : filterEntries(all, period, today);
       setFetched(sortForDisplay(shown));
@@ -86,19 +169,52 @@ export default function BookView({
       // Counted from the rows ON SCREEN: a week spanning two months is assembled
       // from two responses and neither one's figure describes it.
       setUndated(browsing || period === 'month' ? 0 : undatedIn(all));
+      setLoadingRows(false);
       return true;
     } catch {
       // Losing signal in Cairo is normal. Keep what is on screen and say nothing
       // it cannot back up — the shell's offline banner is the one that speaks.
+      if (ticket === fetchSeq.current) { setLoadingRows(false); setLoadError(true); }
       return false;
     }
   }, [period, browsing, today, needsFetch]);
 
   useEffect(() => { load(); }, [load]);
   // The header's refresh button reloads THIS view's data while it is showing.
-  useEffect(() => { if (onBusyChange) onBusyChange(load); }, [onBusyChange, load]);
+  useEffect(() => { if (onBusyChange) onBusyChange(() => load(true)); }, [onBusyChange, load]);
 
-  const rows = needsFetch ? fetched : sortForDisplay(data.today.entries || []);
+  /**
+   * AN EDIT INVALIDATES THE CACHED MONTH IT TOUCHED. The cache's premise —
+   * closed months do not change mid-session — is falsified by exactly one
+   * actor: him, editing a browsed row. Without this, a fixed ❓ kept showing
+   * as ❓ from the cache for the rest of the session, and the refresh button
+   * (now force=true) was the only exit.
+   */
+  const editThenBust = useCallback((item, category) => {
+    if (browsing) monthCache.current.delete(`${browsing.y}_${browsing.m}`);
+    return onEdit(item, category);
+  }, [browsing, onEdit]);
+
+  const fetchedOrToday = needsFetch ? fetched : sortForDisplay(data.today.entries || []);
+  /**
+   * SORTING (Tarek, 2026-08-24). Three orders, stated in words. Date stays the
+   * default and the definition stays `sortForDisplay`'s — one definition of
+   * display order, not two. Amount: largest first, UNPRICED ROWS LAST BUT
+   * PRESENT (an absent amount is `—`, not zero, so it cannot be ordered among
+   * numbers — hiding it would be the quiet version of «This week 0»). Name:
+   * locale compare, so Arabic descriptions sort as Arabic.
+   */
+  const rows = sortBy === 'date' ? fetchedOrToday
+    : [...fetchedOrToday].sort(sortBy === 'amount'
+      ? (a, b) => {
+        const an = typeof a.amount === 'number' ? a.amount : null;
+        const bn = typeof b.amount === 'number' ? b.amount : null;
+        if (an === null && bn === null) return 0;
+        if (an === null) return 1;
+        if (bn === null) return -1;
+        return bn - an;
+      }
+      : (a, b) => String(a.description || '').localeCompare(String(b.description || ''), undefined, { sensitivity: 'base' }));
 
   const seg = (key) => (
     <button
@@ -188,9 +304,12 @@ export default function BookView({
         </div>
       )}
 
-      {browsing && fetchedTab && <SectionLabel>{monthByTab(fetchedTab)}</SectionLabel>}
+      {/* Gated on !loadingRows with everything else: during a cold July read
+          this used to show JUNE's name above July's active chip — the exact
+          months-don't-match lie the loading state was added to kill. */}
+      {browsing && fetchedTab && !loadingRows && <SectionLabel>{monthByTab(fetchedTab)}</SectionLabel>}
 
-      {undated > 0 && (
+      {undated > 0 && !loadingRows && period !== 'year' && (
         <p style={{
           fontSize: 12.5, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
           borderRadius: 10, padding: '8px 12px', margin: '10px 0', lineHeight: 1.6, textAlign: 'center',
@@ -204,12 +323,65 @@ export default function BookView({
         * list he reads, it is a scroll he abandons, and every one of them is one
         * tap away under «الشهر».
         */}
-      {period !== 'year' && <Lookalikes rows={rows} sheetUrl={sheetUrl} />}
-      {period !== 'year' && (
+      {period !== 'year' && !loadingRows && !loadError && <Lookalikes rows={rows} sheetUrl={sheetUrl} />}
+      {/**
+        * The sort strip earns its place only when there is something to sort —
+        * two rows have an order already, whatever it is.
+        */}
+      {period !== 'year' && !loadingRows && !loadError && rows.length > 2 && (
+        <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 12 }}>
+          <span style={{ color: C.muted, fontSize: 12.5, fontWeight: 700 }}>{S.sortLabel}</span>
+          {['date', 'amount', 'name'].map((k) => (
+            <button
+              key={k} onClick={() => setSortBy(k)} aria-pressed={sortBy === k}
+              style={{
+                minHeight: 34, padding: '4px 12px', borderRadius: 999, fontSize: 13,
+                fontWeight: 600,
+                background: sortBy === k ? C.harbor : C.card,
+                color: sortBy === k ? C.onDark : C.ink,
+                border: `1px solid ${sortBy === k ? C.harbor : C.line}`,
+              }}
+            >
+              {S.sortName(k)}
+            </button>
+          ))}
+        </div>
+      )}
+      {/**
+        * LOADING IS SAID, NOT PAPERED OVER. The alternative — the previous
+        * month's rows under this month's chip — is the screenshot that filed
+        * this bug.
+        */}
+      {period !== 'year' && loadingRows && (
+        <div style={{ textAlign: 'center', paddingTop: 48, color: C.muted }}>
+          <div style={{ fontSize: 34 }}>⌛</div>
+          <div style={{ fontSize: 15.5, marginTop: 8 }}>{S.rowsLoading}</div>
+        </div>
+      )}
+      {period !== 'year' && !loadingRows && loadError && (
+        <div style={{ textAlign: 'center', paddingTop: 48, color: C.muted }}>
+          <div style={{ fontSize: 34 }}>🌫</div>
+          <div style={{ fontSize: 15.5, marginTop: 8 }}>{S.rowsLoadFailed}</div>
+        </div>
+      )}
+      {period !== 'year' && !loadingRows && !loadError && (
         <RowList
-          rows={rows} settled={settled} onEdit={onEdit}
+          rows={rows} settled={settled} onEdit={editThenBust}
           open={open} setOpen={setOpen}
-          tabName={fetchedTab || (data.month && data.month.names && data.month.names.cur) || ''}
+          /**
+            * ⚠️ TODAY'S ROWS NEVER BORROW A BROWSED MONTH'S TAB — refuted into
+            * this form by the verification pass. `fetchedTab` survives leaving
+            * the months browser (nothing refetches on the way back to
+            * «النهاردة»), so the old `fetchedTab || current` fallback aimed
+            * every Today category edit at JUNE's tab after a June visit; the
+            * server requires date equality within the named tab, so each edit
+            * answered `row_not_found` — «editing doesn't work», with no error
+            * anywhere. The tab is chosen by WHERE THE ROWS CAME FROM, not by
+            * what was fetched most recently.
+            */
+          tabName={needsFetch
+            ? fetchedTab
+            : ((data.month && data.month.names && data.month.names.cur) || '')}
           /**
             * THE DATE IS DROPPED UNDER «النهاردة» (finding S5). The old grid
             * printed `17/8/2026` once per row on a screen whose title already

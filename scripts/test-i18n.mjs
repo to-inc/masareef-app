@@ -67,6 +67,39 @@ for (const k of arKeys) {
  * Called with plausible arguments, in both locales — a template that throws or
  * returns undefined is a blank line on his screen.
  */
+/**
+ * ——— NO KEY DEFINED TWICE. In an object literal the LAST definition silently
+ * wins, so a duplicate key is a working feature shadowed by an unrelated one —
+ * `batchDone` was defined at line ~245 (three-count settled header) and again
+ * at ~335 (one-count outbox toast), and the header rendered the toast's shape
+ * while 2,931 assertions stayed green. The runtime object cannot show this
+ * (the literal has already collapsed), so the SOURCE is what is checked.
+ */
+for (const [name, file] of [['ar', '../src/i18n/strings.ar.js'], ['en', '../src/i18n/strings.en.js']]) {
+  const src = await readFile(new URL(file, import.meta.url), 'utf8');
+  /**
+   * Scoped to the `S` literal — the first version scanned the whole file and
+   * promptly reddened on `May:` living in BOTH month-name helper maps, which is
+   * two keys in two objects and no shadowing at all. A guard that cries wolf on
+   * the first healthy file it meets is a guard that gets switched off; the S
+   * literal's own closing `};` at column zero is the honest boundary.
+   */
+  // The literal is `export const AR = {` / `export const EN = {` — verified
+  // against the files, not guessed (the first anchor was guessed, found
+  // nothing, and the guard reported itself unable to scan, which is at least
+  // the honest failure).
+  const open = src.indexOf(`export const ${name.toUpperCase()} = {`);
+  const close = src.indexOf('\n};', open);
+  if (open === -1 || close === -1) { failures.push(`${name}: cannot locate the ${name.toUpperCase()} literal — the dup-key guard has nothing to scan`); continue; }
+  const body = src.slice(open, close);
+  const seenKeys = new Map();
+  for (const m of body.matchAll(/^  ([A-Za-z_$][\w$]*):/gm)) {
+    const k = m[1];
+    if (seenKeys.has(k)) failures.push(`${name}.S.${k} is defined twice — the second silently shadows the first`);
+    else { seenKeys.set(k, 1); pass++; }
+  }
+}
+
 const ARGS = { 1: [1], 2: ['July', 'the month'] };
 
 /**

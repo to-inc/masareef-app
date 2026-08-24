@@ -356,41 +356,67 @@ export function mockFetchSummary() {
  */
 const LIST_FIXTURE = {
   label: 'D20 transaction list',
-  ok: true, category: null, dupReceipt: false, dupSms: false,
-  dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false },
-  defaultMethod: 'Visa',
+  ok: true,
+  /**
+   * ⚠️ SHAPE COPIED FROM `receiptExtractResponse_` IN Code.gs, FIELD BY FIELD —
+   * NOT from what the client would find convenient. The first version of this
+   * fixture put `entries` at the TOP level, beside `extraction`; the server
+   * nests them INSIDE it (`extraction: decorateListRows_(extraction)`) with only
+   * `entriesTotal` outside. Every suite then certified a client that read the
+   * top level — which shipped, and answered «Did not work — try again» to three
+   * real bank screenshots whose extractions were complete and correct.
+   * Mock parity's rule has a sharper corollary now: **the mock's shape is
+   * transcribed from the server's response builder, never composed from memory.**
+   *
+   * Row fields are `validateListRow_`'s output + `decorateListRows_`'s two
+   * additions (`category`, `dupBook`) — no `index` (rows are positional), no
+   * `section_date` (consumed into `date`, ISO or null, server-resolved).
+   * A list response carries NO top-level `category`/`dupBook` — per-document
+   * answers to per-row questions — and DOES carry `defaultMethod` (D19: a card
+   * list is card money; the client is told, it never decides).
+   */
   entriesTotal: 6,
-  entries: [
-    { index: 0, amount: 15.47, currency: 'EUR', merchant_display: 'Lantern Grocer',
-      merchant_latin: 'lantern grocer', section_date: '08-24', row_status: 'completed',
-      payment_hint: 'card', aggregate_count: null, category: 'Groceries', date: '2026-08-24',
-      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
-    { index: 1, amount: 27.40, currency: 'EUR', merchant_display: 'Bridge Cafe',
-      merchant_latin: 'bridge cafe', section_date: '08-24', row_status: 'completed',
-      payment_hint: 'card', aggregate_count: null, category: 'Eating out', date: '2026-08-24',
-      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
-    { index: 2, amount: 163.00, currency: 'EUR', merchant_display: 'Harbour Baths',
-      merchant_latin: 'harbour baths', section_date: '08-23', row_status: 'declined',
-      payment_hint: 'card', aggregate_count: null, category: null, date: '2026-08-23',
-      dupBook: { checked: false, reason: 'month_not_cached', match: null, count: 0, undatedAmountMatch: false } },
-    { index: 3, amount: 42.00, currency: 'EUR', merchant_display: 'Refund from Ferry Co',
-      merchant_latin: 'ferry co', section_date: '08-23', row_status: 'incoming',
-      payment_hint: 'card', aggregate_count: null, category: null, date: '2026-08-23',
-      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
-    { index: 4, amount: 6.50, currency: 'EUR', merchant_display: 'Spare change',
-      merchant_latin: 'spare change', section_date: '08-23', row_status: 'roundup',
-      payment_hint: 'card', aggregate_count: 3, category: null, date: '2026-08-23',
-      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
-    { index: 5, amount: null, currency: 'EUR', merchant_display: 'Kiosk',
-      merchant_latin: 'kiosk', section_date: '08-22', row_status: 'unclear',
-      payment_hint: 'unknown', aggregate_count: null, category: null, date: '2026-08-22',
-      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
-  ],
+  defaultMethod: 'Visa',
   extraction: {
-    doc_type: 'transaction_list', is_receipt: false, amount: null, currency: 'EUR',
-    merchant_display: null, merchant_latin: null, date: null, payment_hint: 'card',
+    doc_type: 'transaction_list', is_receipt: false, amount: null, currency: 'UNKNOWN',
+    merchant_display: null, merchant_latin: null, date: null, payment_hint: 'unknown',
     amount_confidence: 'low', merchant_confidence: 'low', date_confidence: 'low',
-    raw_total_line: null, notes: null, not_expense_reason: null,
+    raw_total_line: null, notes: null,
+    /**
+     * `entries_total` rides INSIDE the extraction too — validateExtraction_
+     * sets it on the object receiptExtractResponse_ then nests, so the real
+     * wire carries both this and the top-level `entriesTotal`. And there is NO
+     * `not_expense_reason` here: the server adds that key only under
+     * doc_type 'not_expense'. Both were wrong in the first transcription —
+     * checked against Code.gs line by line this time, by an adversary.
+     */
+    entries_total: 6,
+    entries: [
+      { amount: 15.47, currency: 'EUR', merchant_display: 'Lantern Grocer',
+        merchant_latin: 'lantern grocer', date: '2026-08-24', row_status: 'completed',
+        payment_hint: 'card', aggregate_count: null, category: 'Groceries',
+        dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+      { amount: 27.40, currency: 'EUR', merchant_display: 'Bridge Cafe',
+        merchant_latin: 'bridge cafe', date: '2026-08-24', row_status: 'completed',
+        payment_hint: 'card', aggregate_count: null, category: 'Eating out',
+        dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+      { amount: 163.00, currency: 'EUR', merchant_display: 'Harbour Baths',
+        merchant_latin: 'harbour baths', date: '2026-08-23', row_status: 'declined',
+        payment_hint: 'card', aggregate_count: null, category: null,
+        dupBook: { checked: false, reason: 'month_not_cached', match: null, count: 0, undatedAmountMatch: false } },
+      { amount: 42.00, currency: 'EUR', merchant_display: 'Refund from Ferry Co',
+        merchant_latin: 'ferry co', date: '2026-08-23', row_status: 'incoming',
+        payment_hint: 'card', aggregate_count: null, category: null,
+        dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+      { amount: 6.50, currency: 'EUR', merchant_display: 'Spare change',
+        merchant_latin: 'spare change', date: '2026-08-23', row_status: 'roundup',
+        payment_hint: 'card', aggregate_count: 3, category: null,
+        dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+      { amount: null, currency: 'EUR', merchant_display: 'Kiosk',
+        merchant_latin: 'kiosk', date: '2026-08-22', row_status: 'unclear',
+        payment_hint: 'unknown', aggregate_count: null, category: null,
+        dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+    ],
   },
 };
 
@@ -405,9 +431,22 @@ export function mockBatchConfirm({ rows } = {}) {
   const list = Array.isArray(rows) ? rows : [];
   const results = list.map((r, i) => {
     if (i === 1 && list.length > 2) {
+      // Shape from batchBookCheck_: `inBatch` on EVERY path, and `match` is
+      // publicRow_ (date · description · method · category · amount ·
+      // currency) plus the resolved `tab`. The narrower first version had
+      // never shown a client three of the fields the real server sends.
       return { index: r.index, status: 'book_duplicate',
-        dupBook: { checked: true, reason: null, count: 1, undatedAmountMatch: false,
-          match: { date: '24/8/2026', description: 'Bridge Cafe', amount: 27.4, currency: 'EUR' } } };
+        dupBook: { checked: true, reason: null, count: 1, undatedAmountMatch: false, inBatch: false,
+          match: { tab: 'Aug', date: '24/8/2026', description: 'Bridge Cafe',
+            method: 'Visa', category: 'Eating out', amount: 27.4, currency: 'EUR' } } };
+    }
+    // The idempotent replay answer, so the settle screen has SEEN a
+    // `duplicate` row before the wire shows it one (mock parity is about
+    // refusals as much as successes).
+    if (i === 2 && list.length > 3) {
+      return { index: r.index, status: 'duplicate',
+        entry: { date: '23/8/2026', description: r.description || 'row', method: r.method || 'Visa',
+          category: r.category || '❓', amount: r.amount, currency: r.currency || 'EUR' } };
     }
     return { index: r.index, status: 'written',
       entry: { date: '24/8/2026', description: r.description || 'row', method: r.method || 'Visa',

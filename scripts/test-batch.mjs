@@ -172,10 +172,59 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
    */
   ok(!('row_status' in wire[0]), 'row_status NEVER leaves the client — the server re-reads it from its own cache');
   ok(!JSON.stringify(wire).includes('row_status'), 'not anywhere in the payload');
-  ok(!('merchant_display' in wire[0]), 'and nothing outside the editable allow-list rides along');
+  ok(!('merchant_display' in wire[0]), 'raw row fields never ride — description is the MAPPED one');
+  /**
+   * THE WIRE VOCABULARY IS §3.5's REQUEST ROW, ENUMERATED FROM THE CONTRACT.
+   *
+   * ⚠️ The first version of this loop allowed `EDITABLE_FIELDS` + identity and
+   * nothing else — an allow-list taken from the client's own aspiration rather
+   * than from the server's reader, and it CERTIFIED every omission that
+   * mattered: no `currency` (server defaults absent → EGP: a €15.47 row would
+   * have been appended as 15.47 EGP), `date` where the server reads `dateStr`
+   * (every row `bad_date`), no `description`/`merchantLatin` (the book records
+   * the category as the merchant; Memory learns nothing), no `method`
+   * (`normalizeMethod_(undefined)` is Cash — his card statement filed as cash),
+   * no `dupAck` (the override button changed nothing). A test whose expected
+   * list is copied from the code under test asserts only that the code equals
+   * itself.
+   */
+  const WIRE_FIELDS = ['sourceHash', 'index', 'amount', 'currency', 'method',
+    'category', 'description', 'dateStr', 'merchantLatin', 'dupAck'];
   for (const f of Object.keys(wire[0])) {
-    ok(f === 'sourceHash' || f === 'index' || EDITABLE_FIELDS.indexOf(f) !== -1,
-      `${f} is identity or one of his edits — nothing else may be on the wire`);
+    ok(WIRE_FIELDS.indexOf(f) !== -1,
+      `${f} is in §3.5's request row — nothing else may be on the wire`);
+  }
+
+  // ——— each mapped field, with the wrong implementation it kills
+  eq(wire[0].currency, 'EUR',
+    'currency RIDES — absent means EGP to the server, and these rows are the ones that are not');
+  eq(wire[0].dateStr, '14/8/2026',
+    'the date crosses as Cairo d/M/yyyy — batchRowDate_ reads dateStr and nothing else');
+  ok(!('date' in wire[0]), 'and never as the ISO `date` the server would ignore');
+  eq(wire[0].description, 'Almond Tree Bakery',
+    'description is the merchant as printed — else his book records "Groceries" as what he bought');
+  eq(wire[0].method, 'Visa',
+    'method defaults from the SERVER\'s per-list ruling (D19) — normalizeMethod_(undefined) is Cash');
+  eq(wire[0].category, '❓',
+    'an unclassified ticked row goes as ❓ and joins the Inbox — omitting it would be bad_category, a refused expense');
+  ok(!('dupAck' in wire[0]), 'dupAck is ABSENT unless he overrode — presence is the claim the flag was shown');
+
+  // ——— the cash hint outranks the list default; an override rides as dupAck
+  {
+    const r2 = mergeJobs([{ sourceHash: 'p2', defaultMethod: 'Visa', entries: [
+      row({ amount: 5, payment_hint: 'cash' }),
+    ] }]);
+    const t2 = {}; t2[rowKey(r2[0])] = true;
+    const w2 = toConfirmRows(r2, t2, {}, { overridden: { [rowKey(r2[0])]: true } });
+    eq(w2[0].method, 'Cash', 'an explicit cash hint on the row outranks the list default');
+    eq(w2[0].dupAck, true, 'and an overridden duplicate says so, by name, per row (D18a)');
+  }
+  {
+    const und = mergeJobs([{ sourceHash: 'p3', entries: [row({ amount: 7, date: null })] }]);
+    const t3 = {}; t3[rowKey(und[0])] = true;
+    const w3 = toConfirmRows(und, t3, {});
+    ok(!('dateStr' in w3[0]),
+      'an undated row OMITS dateStr — the server answers bad_date per row, visibly, never a silently substituted today');
   }
 
   // Forcing a tick onto a non-writable row still cannot send it.

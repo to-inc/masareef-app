@@ -129,9 +129,16 @@ eq(resultStage(null, true).error, 'offline', 'with the reason named, not blank')
  * Calling it `failed` would invite him to retry all day against a wall — and
  * `retryable` is what separates the two, so both are asserted.
  */
-eq(resultStage({ ok: false, error: 'ocr_daily_cap' }, false).stage, 'capped',
+/**
+ * 'daily-limit' — THE SERVER'S string (Code.gs handleReceiptExtract_, pinned by
+ * its own suite). This fixture previously asserted 'ocr_daily_cap', a code no
+ * server ever sent — so the suite and the code agreed with each other and both
+ * disagreed with reality, which is a fixture certifying its own invention. The
+ * server's string is the only defensible source for an error-code fixture.
+ */
+eq(resultStage({ ok: false, error: 'daily-limit' }, false).stage, 'capped',
   'the daily cap is its own stage, not a failure');
-eq(resultStage({ ok: false, error: 'ocr_daily_cap' }, false).retryable, false,
+eq(resultStage({ ok: false, error: 'daily-limit' }, false).retryable, false,
   'and retrying it today cannot help');
 eq(resultStage({ ok: false, error: 'ocr_not_configured' }, false).stage, 'failed',
   'an unarmed key IS a failure…');

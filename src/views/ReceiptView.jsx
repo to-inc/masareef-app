@@ -140,13 +140,23 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
      * control on that screen re-opened the same verdict. The rows existed; the
      * screen had no door.
      */
-    if (e.doc_type === 'transaction_list' && Array.isArray(res.entries) && res.entries.length) {
+    if (e.doc_type === 'transaction_list' && Array.isArray(e.entries) && e.entries.length) {
       setStage('batch');
       if (onBatch) {
         onBatch({
           sourceHash: clientHash,
-          entries: res.entries,
-          entriesTotal: res.entriesTotal != null ? res.entriesTotal : res.entries.length,
+          // INSIDE the extraction — Code.gs nests the rows; only the count is
+          // top-level. res.entries was the mock's invention, not the server's.
+          entries: e.entries,
+          entriesTotal: res.entriesTotal != null ? res.entriesTotal : e.entries.length,
+          /**
+           * The server's per-list method ruling (D19 via CONFIG.SLIP_METHOD —
+           * "sent so a client never has to know that a card list is card
+           * money"). Carried on the job because the wire builder needs it: a
+           * confirm row with no `method` is normalised to CASH server-side,
+           * which would file his card statement into the wrong column.
+           */
+          defaultMethod: isMethod(res.defaultMethod) ? res.defaultMethod : DEFAULT_METHOD,
         });
       }
       return;
@@ -809,113 +819,125 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
   const name = merchant || (at ? S.jobPhotoAt(at) : S.jobPhoto);
   const label = JOB_LABEL()[stage];
 
+  /**
+   * TWO LINES, NOT ONE — restructured on a field screenshot (Tarek, 2026-08-24).
+   *
+   * The single-line layout was written when a row carried at most ONE action
+   * chip. «Read it again» made it two, and on a 375-pt phone the arithmetic
+   * stopped working: thumbnail + name + two padded chips + the ✕ exceeded the
+   * row, so flexbox shrank the one child allowed to shrink — the NAME — down to
+   * a strip of clipped letters showing THROUGH the chips. Nobody chose that
+   * rendering; it was the layout resolving an overflow nobody had re-checked
+   * after the second chip landed.
+   *
+   * Now the row is a COLUMN: identity (thumb · name · status · ✕) on the first
+   * line, actions on their own line below, wrapping if a locale runs long. The
+   * name can never collide with an action again no matter how many actions a
+   * stage grows, which is the property the one-line layout silently lacked.
+   */
+  const actions = [];
+  if (stage === 'ready') {
+    actions.push({ key: 'review', primary: true, label: S.jobReady, onTap: () => onReview(job) });
+  }
+  if (stage === 'notReceipt') {
+    actions.push({ key: 'verdict', primary: false, label: S.jobNotReceipt, onTap: () => onReview(job) });
+    /**
+     * READ IT AGAIN — the way forward a not-a-receipt job never had.
+     * Nearly free: `receipt_extract` is cached by `rcpthash_<clientHash>` for
+     * six hours, so a re-read inside that window returns the same extraction
+     * without a second vision call (06 §5). Deliberately not automatic — a
+     * verdict he has read is settled; this puts the tap in his hand.
+     */
+    if (job.base64) {
+      actions.push({ key: 'reread', primary: false, label: S.jobReadAgain, onTap: () => onRetry(job) });
+    }
+  }
+  if (stage === 'failed' && isActionable(job)) {
+    actions.push({ key: 'retry', primary: false, label: S.jobRetry, onTap: () => onRetry(job) });
+  }
+
   return (
     <div
       style={{
-        display: 'flex', alignItems: 'center', gap: 10,
         background: C.card, border: `1px solid ${C.line}`,
         borderRadius: 12, padding: '10px 12px', marginBottom: 6,
       }}
     >
-      {/* No thumbnail is a missing picture, never a broken one — `thumbUrl`
-          answers null where it cannot make one, and this simply renders the
-          placeholder tile instead. */}
-      {thumb ? (
-        <img
-          src={thumb} alt={S.jobThumbAlt}
-          style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, flexShrink: 0,
-            border: `1px solid ${C.line}`, opacity: stage === 'dismissed' ? 0.5 : 1 }}
-        />
-      ) : (
-        <div style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0,
-          background: C.shell, border: `1px solid ${C.line}`, display: 'flex',
-          alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* No thumbnail is a missing picture, never a broken one — `thumbUrl`
+            answers null where it cannot make one, and this simply renders the
+            placeholder tile instead. */}
+        {thumb ? (
+          <img
+            src={thumb} alt={S.jobThumbAlt}
+            style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, flexShrink: 0,
+              border: `1px solid ${C.line}`, opacity: stage === 'dismissed' ? 0.5 : 1 }}
+          />
+        ) : (
+          <div style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0,
+            background: C.shell, border: `1px solid ${C.line}`, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
+        )}
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{ fontSize: 14.5, fontWeight: 600, color: C.ink,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          dir="auto"
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{ fontSize: 14.5, fontWeight: 600, color: C.ink,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            dir="auto"
+          >
+            {name}
+          </div>
+          <div style={{ fontSize: 12.5, fontWeight: stage === 'ready' ? 700 : 500,
+            color: stage === 'failed' ? C.conflictInk : C.muted }}>
+            {/* An UNKNOWN stage is never silently rendered as "waiting" — an
+                unnamed state is a state we do not understand, and saying so is
+                the only honest option. */}
+            {label || `؟ ${job.stage}`}
+          </div>
+        </div>
+
+        {/*
+          CANCEL, ON EVERY STAGE (R-receipts 3) — including `reading`, which is the
+          one that needs it most: a photo being read is a photo he cannot get rid
+          of, and that is exactly when he decided it was the wrong photo.
+          It stays on the IDENTITY line: removing is about the photo, not about
+          any one action, and its position should not move as actions come and go.
+        */}
+        <button
+          className="catchip"
+          onClick={() => onCancel(job)}
+          aria-label={S.jobRemoveTitle}
+          title={S.jobRemoveTitle}
+          style={{ minWidth: TAP, minHeight: TAP, borderRadius: 999, flexShrink: 0,
+            background: 'transparent', border: `1px solid ${C.line}`,
+            color: C.muted, fontSize: 16, fontWeight: 700, lineHeight: 1 }}
         >
-          {name}
-        </div>
-        <div style={{ fontSize: 12.5, fontWeight: stage === 'ready' ? 700 : 500,
-          color: stage === 'failed' ? C.conflictInk : C.muted }}>
-          {/* An UNKNOWN stage is never silently rendered as "waiting" — an
-              unnamed state is a state we do not understand, and saying so is
-              the only honest option. */}
-          {label || `؟ ${job.stage}`}
-        </div>
+          ✕
+        </button>
       </div>
 
-      {stage === 'ready' && (
-        <button className="catchip" onClick={() => onReview(job)}
-          style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
-            background: C.harbor, color: C.onDark, fontWeight: 700, fontSize: 13.5 }}>
-          {S.jobReady}
-        </button>
+      {actions.length > 0 && (
+        <div style={{
+          display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end',
+          marginTop: 8,
+        }}>
+          {actions.map((a) => (
+            <button
+              key={a.key} className="catchip" onClick={a.onTap}
+              style={{
+                padding: '8px 14px', minHeight: TAP, borderRadius: 999, fontSize: 13.5,
+                whiteSpace: 'nowrap',
+                background: a.primary ? C.harbor : C.shell,
+                color: a.primary ? C.onDark : C.ink,
+                fontWeight: a.primary ? 700 : 600,
+                border: a.primary ? 'none' : `1px solid ${C.line}`,
+              }}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
       )}
-      {stage === 'notReceipt' && (
-        <button className="catchip" onClick={() => onReview(job)}
-          style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
-            background: C.shell, border: `1px solid ${C.line}`, fontSize: 13.5 }}>
-          {S.jobNotReceipt}
-        </button>
-      )}
-      {/**
-        * READ IT AGAIN — offered on a not-a-receipt job, where there was
-        * previously no way forward at all.
-        *
-        * ⚠️ WHY THIS IS NOT MERELY A CONVENIENCE. Three transaction-list
-        * screenshots were classified `notReceipt` under the old rule, and the
-        * worker keeps a body only for `ready` — so their extracted rows were
-        * DISCARDED on this device. The classifier is fixed, but that cannot
-        * reach a job already stored: the only way to recover those rows is to
-        * ask the server again.
-        *
-        * And asking again is nearly free: `receipt_extract` is keyed by
-        * `rcpthash_<clientHash>` for six hours, so a re-read of the same photo
-        * returns the SAME extraction without a second vision call (06 §5). The
-        * photo is still in IndexedDB, so nothing needs re-taking.
-        *
-        * It is deliberately not automatic. A verdict he has read is settled, and
-        * a list that silently re-read itself would be the zombie card again in
-        * another costume — this puts the tap in his hand.
-        */}
-      {stage === 'notReceipt' && !!job.base64 && (
-        <button className="catchip" onClick={() => onRetry(job)}
-          style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
-            background: C.shell, border: `1px solid ${C.line}`, fontSize: 13.5 }}>
-          {S.jobReadAgain}
-        </button>
-      )}
-      {stage === 'failed' && isActionable(job) && (
-        <button className="catchip" onClick={() => onRetry(job)}
-          style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
-            background: C.shell, border: `1px solid ${C.line}`, fontSize: 13.5 }}>
-          {S.jobRetry}
-        </button>
-      )}
-
-      {/*
-        CANCEL, ON EVERY STAGE (R-receipts 3) — including `reading`, which is the
-        one that needs it most: a photo being read is a photo he cannot get rid
-        of, and that is exactly when he decided it was the wrong photo.
-        A button, at the tap floor, not a swipe: a swipe is an accelerator for
-        people who know it exists, and this list is read by someone who does not.
-      */}
-      <button
-        className="catchip"
-        onClick={() => onCancel(job)}
-        aria-label={S.jobRemoveTitle}
-        title={S.jobRemoveTitle}
-        style={{ minWidth: TAP, minHeight: TAP, borderRadius: 999, flexShrink: 0,
-          background: 'transparent', border: `1px solid ${C.line}`,
-          color: C.muted, fontSize: 16, fontWeight: 700, lineHeight: 1 }}
-      >
-        ✕
-      </button>
     </div>
   );
 }

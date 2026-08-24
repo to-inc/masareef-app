@@ -165,8 +165,22 @@ export default function App() {
         && res.results.every((r) => r && r.error === 'extraction_expired');
       if (allExpired) { setBatchExpired(true); return; }
 
+      /**
+       * ⚠️ ONLY A REAL PER-ROW ANSWER MAY SETTLE THE DRAFT — refuted into this
+       * form by the verification pass. The first version stored WHATEVER came
+       * back as `settled`, so a whole-batch refusal ({ok:false,
+       * error:'batch_too_large'}, no results[]) rendered as a DONE screen
+       * reading «undefined logged ✓», every row outcome blank — and the one
+       * remaining button, Back, discarded the draft. Nothing written, ticks
+       * destroyed, reported as success. A refusal keeps the draft and says why;
+       * settling is reserved for a response that actually answers the rows.
+       */
+      if (!res || res.ok !== true || !Array.isArray(res.results)) {
+        showToast(res && res.error === 'batch_too_large' ? S.batchTooLarge : S.batchFailed);
+        return;
+      }
       setBatch((prev) => saveDraft({ ...prev, settled: { ...res, sent: chosen } }));
-      if (res && res.written) refresh();
+      if (res.written) refresh();
     } catch {
       showToast(S.batchFailed);
     } finally {
