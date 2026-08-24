@@ -78,7 +78,7 @@ export const EN = {
   entryCurrency: 'Currency',
   // The button names the currency it switches TO, never the one you are in —
   // the same rule as the language toggle.
-  currencySwitchTo: (c) => (c === 'EGP' ? 'In EGP' : 'In EUR'),
+  currencyIn: (c) => (c === 'EGP' ? 'In EGP' : 'In EUR'),
   // The heading when there is no shortcut row — in travel mode (A4).
   entryTitleShort: 'New expense',
   // ——— dictation (A5): tap the keyboard's own mic and say it.
@@ -115,6 +115,20 @@ export const EN = {
   // A verdict, not a card to confirm. It used to say "Ready — check it" and
   // there was nothing to check (R-receipts 4).
   jobNotReceipt: 'Not a receipt',
+  jobReadAgain: 'Read it again',
+  /**
+   * WHY A REFUSAL WAS A REFUSAL (06 §6 `not_expense_reason`). Returns null for
+   * an absent or unrecognised reason so the caller falls back to the generic
+   * body — a server that predates the field, or a reason the enum does not name,
+   * must not produce an empty paragraph.
+   */
+  notExpenseReason: (r) => ({
+    balance_screen: 'This looks like an account balance, not a purchase. Balances are not expenses — photograph the receipt or the payment confirmation instead.',
+    pending_or_declined: 'This payment has not gone through yet, or it was declined. Nothing has left your account, so there is nothing to record.',
+    incoming: 'This is money coming IN. This book records what you spent, so incoming transfers and refunds are left out on purpose.',
+    menu_or_pricelist: 'This looks like a menu or a price list rather than a bill you paid.',
+    other: null,
+  }[r] || null),
   jobDismissed: 'Closed',
   jobFailed: 'Did not work — try again',
   jobCapped: "That's today's limit — it continues tomorrow",
@@ -194,6 +208,17 @@ export const EN = {
   batchNone: 'Clear all',
   batchConfirm: (n) => `✓ Log ${n} ${n === 1 ? 'expense' : 'expenses'}`,
   batchNothing: 'Choose what to log',
+  dupTitle: (n) => `${n} rows might be the same expense twice`,
+  dupBody: 'Same day, same amount, same currency. That happens for real — two coffees in one day are two coffees — so this only points, it never decides.',
+  dupTier: (t) => ({
+    same: 'Same description',
+    similar: 'Nearly the same description',
+    different: 'Different descriptions — most likely two real purchases',
+  }[t] || null),
+  dupUnpriced: (n) => `${n} ${n === 1 ? 'row has' : 'rows have'} no amount, so ${n === 1 ? 'it was' : 'they were'} not compared.`,
+  dupNoDescription: '(no description)',
+  dupOpenSheet: 'Open the sheet to check them',
+  batchFailed: 'Could not reach the server — nothing was written. Your ticks are safe; try again.',
   batchSending: 'Logging…',
   batchDeclined: 'Declined — never left your account',
   batchIncoming: 'Money in — not an expense',
@@ -220,7 +245,7 @@ export const EN = {
 
   // ——— foreign money inside a period: the EGP figure is not the whole period.
   andAlso: 'and with them',
-  foreignNoCompare: 'This period has foreign spending — a pounds-only comparison would not be true',
+  foreignNoCompare: 'This period has foreign spending — an EGP-only comparison would not be true',
   foreignUnsized: (n) => `and ${n} foreign ${n === 1 ? 'expense' : 'expenses'} with no price`,
   // A row with no category is a door wherever it appears (M6).
   rowNeedsCategory: '? tap to file',

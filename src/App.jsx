@@ -3,7 +3,7 @@ import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
-import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, ping, USING_MOCK } from './api/index.js';
+import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, ping, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
 import { enqueue, flush, partition, remove as dropQueued } from './state/outbox.js';
@@ -16,6 +16,9 @@ import { entryReady } from './state/entryDock.js';
 import { openingTab, cairoHourOf } from './state/opening.js';
 import { remember } from './state/repeats.js';
 import { setBadge } from './state/badge.js';
+import {
+  loadDraft, saveDraft, clearDraft, mergeJobs, unsettledCount,
+} from './state/batchDraft.js';
 import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY } from './state/travel.js';
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
@@ -27,6 +30,7 @@ import EntryView, { EntryDock } from './views/EntryView.jsx';
 import ReceiptView from './views/ReceiptView.jsx';
 import DictateView from './views/DictateView.jsx';
 import BookView from './views/BookView.jsx';
+import BatchReviewView from './views/BatchReviewView.jsx';
 
 /**
  * The app shell.
@@ -53,6 +57,21 @@ export default function App() {
    * he should always land on the keypad, which is the daily path.
    */
   const [entryMode, setEntryMode] = useState('keypad');
+  /**
+   * THE BATCH DRAFT — his ticks on a bank screenshot, kept on this device.
+   *
+   * Loaded ONCE at boot rather than read per render: it is his work, and the
+   * extraction it describes may already have expired on the server. The split is
+   * by cost (state/batchDraft.js) — the cheap half is allowed to expire, the
+   * expensive half is not.
+   *
+   * `{ jobs, settled }`: `jobs` are the photos' extractions, `settled` is the
+   * server's per-row answer once he has confirmed, plus the rows we SENT, which
+   * is what lets the review screen put each outcome beside the right row.
+   */
+  const [batch, setBatch] = useState(() => loadDraft() || { jobs: [], settled: null });
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchExpired, setBatchExpired] = useState(false);
   const [data, setData] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
   const [offline, setOffline] = useState(false);
@@ -90,6 +109,85 @@ export default function App() {
    */
   const entryCurrency = effectiveCurrency(storedCurrency, build);
   const [entryBusy, setEntryBusy] = useState(false);
+
+  /**
+   * A PHOTO TURNED OUT TO BE A TRANSACTION LIST — take its rows into the draft
+   * and open the review surface.
+   *
+   * Its OWN screen, entered from the job card, and deliberately NOT الوارد
+   * (CONTRACT-10 Q1): الوارد means rows already in his book that need a
+   * category, and an Inbox row he ignores is still counted as ❓. A batch row he
+   * ignores is not captured AT ALL. One habit, two consequences, and the wrong
+   * half loses money.
+   *
+   * Keyed by `sourceHash`, so re-reading the same photo REPLACES its rows rather
+   * than doubling them — a second read of one screenshot is a fresher answer to
+   * the same question, never a second screenshot.
+   */
+  const takeBatchJob = useCallback((job) => {
+    if (!job || !job.sourceHash || !Array.isArray(job.entries)) return;
+    setBatchExpired(false);
+    setBatch((prev) => {
+      const jobs = (prev.jobs || []).filter((j) => j.sourceHash !== job.sourceHash).concat(job);
+      // A NEW photo invalidates a settled result: the answers on screen describe
+      // rows that are no longer the whole list, and leaving them would label the
+      // new rows with the old batch's verdicts.
+      return saveDraft({ jobs, settled: null });
+    });
+    setEntryMode('batch');
+  }, []);
+
+  /**
+   * WRITE THE ROWS HE TICKED. One call, per-row answers.
+   *
+   * `sent` is stored beside the response because the server does not echo
+   * `sourceHash`, and `index` alone is per-photo — so the ONLY sound way to put
+   * an outcome beside its row is the order they were sent in, and that order has
+   * to be remembered here rather than reconstructed later from ticks that may
+   * since have moved.
+   */
+  const confirmBatch = useCallback(async (chosen) => {
+    if (!chosen || !chosen.length) return;
+    setBatchBusy(true);
+    try {
+      const res = await batchConfirm({
+        batchClientId: newClientId(),
+        clientHash: (batch.jobs && batch.jobs[0] && batch.jobs[0].sourceHash) || '',
+        rows: chosen,
+      });
+      /**
+       * `extraction_expired` is the status guard failing CLOSED, exactly as 06
+       * §6.0 says it must: the server could not re-read the rows' statuses from
+       * its own cache, so it refused rather than trusting the request. Nothing
+       * was written. His edits survive; one fresh read re-attaches them.
+       */
+      const allExpired = Array.isArray(res && res.results) && res.results.length
+        && res.results.every((r) => r && r.error === 'extraction_expired');
+      if (allExpired) { setBatchExpired(true); return; }
+
+      setBatch((prev) => saveDraft({ ...prev, settled: { ...res, sent: chosen } }));
+      if (res && res.written) refresh();
+    } catch {
+      showToast(S.batchFailed);
+    } finally {
+      setBatchBusy(false);
+    }
+  }, [batch.jobs]);
+
+  /** Settled or abandoned — the draft goes, and so does the screen. */
+  const discardBatch = useCallback(() => {
+    clearDraft();
+    setBatch({ jobs: [], settled: null });
+    setBatchExpired(false);
+    setEntryMode('keypad');
+  }, []);
+
+  /** The extraction expired; the PHOTO has not. One fresh read, edits intact. */
+  const resnapBatch = useCallback(() => {
+    setBatchExpired(false);
+    setBatch((prev) => saveDraft({ ...prev, settled: null }));
+    setEntryMode('receipt');
+  }, []);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -632,12 +730,37 @@ export default function App() {
                     // «أسجّلها بنفسي» is now a mode switch rather than a tab
                     // change — same screen, other half.
                     onManual={() => setEntryMode('keypad')}
+                    onBatch={takeBatchJob}
+                  />
+                )}
+                {tab === 'entry' && entryMode === 'batch' && (
+                  <BatchReviewView
+                    jobs={batch.jobs}
+                    expired={batchExpired}
+                    busy={batchBusy}
+                    results={batch.settled}
+                    onConfirm={confirmBatch}
+                    onResnap={resnapBatch}
+                    onDiscard={discardBatch}
                   />
                 )}
                 {tab === 'book' && (
                   <BookView
                     data={data}
                     settled={settled}
+                    /**
+                      * HOW MANY EXPENSES ARE WAITING, UNLOGGED — on a screen he
+                      * passes daily (CONTRACT-10, "not optional").
+                      *
+                      * A pending batch is MONEY MISSING FROM HIS BOOK, and
+                      * silence about it is the same defect as «This week 0»: a
+                      * screen that looks complete while something real is absent
+                      * from it. Tapping it returns him to the review.
+                      */
+                    unsettledBatch={unsettledCount({
+                      rows: mergeJobs(batch.jobs), settled: batch.settled,
+                    })}
+                    onOpenBatch={() => { setEntryMode('batch'); setTab('entry'); }}
                     onEdit={editRecent}
                     onGoToInbox={() => setTab('inbox')}
                     onBusyChange={(fn) => { recentLoader.current = fn; }}

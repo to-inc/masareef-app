@@ -29,7 +29,7 @@ export const C = {
 
   // ——— canonical: ink
   ink: '#2C4356',       // body text
-  muted: '#7B8B96',     // secondary text — see the contrast table for its floor
+  muted: '#5C6871',     // secondary text — see the contrast table for its floor
 
   // ——— canonical: primary
   harbor: '#3E7CA6',    // active tabs, primary buttons, chart stroke, suggested category
@@ -44,12 +44,29 @@ export const C = {
    */
   amber: '#D9A441',
   amberInk: '#3d2f0d',  // the only text colour that goes on amber
+  /**
+   * THE RIM ON THE ONE WARM ACTION, and why the fill was not simply darkened.
+   *
+   * `amber` at 2.10:1 against `shell` fails WCAG 1.4.11 — not because the LABEL
+   * is hard to read (it is 5.80:1 and fine) but because the button's own EDGE
+   * dissolves into a cream page, so the control has no visible boundary.
+   *
+   * The measured minimal fix was `amber → #B48836`, which passes (3.01:1, and
+   * the label still clears at 4.04:1 — checked, because the suggestion never
+   * said so). It was NOT taken: `#D9A441` is D15's "dawn amber", ruled by the
+   * Owner as the single warm action and carried by the icon. A contrast finding
+   * about an EDGE is not a licence to restate a colour the Owner chose.
+   *
+   * So the edge gets its own token and the fill keeps its ruling. Boundary
+   * contrast is what 1.4.11 actually asks for.
+   */
+  amberRim: '#A87F2E',  // 3.42:1 on shell — the CTA's boundary, never its fill
 
   // ——— canonical: the two settled/unsettled card states (WS3-C)
   conflictInk: '#A05446',
   conflictBg: '#FDF1EE',
   conflictLine: '#ECCDC5',
-  settledInk: '#4E7D52',
+  settledInk: '#4C7950',
   settledBg: '#EEF4EE',
   settledLine: '#D5E4D3',
 

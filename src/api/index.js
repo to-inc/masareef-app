@@ -5,7 +5,7 @@
  * Script redirect/CORS quirk outside our control — is one contained module if it
  * ever has to change.
  */
-import { mockFetchSummary, mockReceiptExtract, mockEntries, mockVoice } from './mock.js';
+import { mockFetchSummary, mockReceiptExtract, mockEntries, mockVoice, mockBatchConfirm } from './mock.js';
 import * as live from './endpoints.js';
 
 // Vite statically replaces this. Anything other than an explicit 'false' keeps
@@ -70,3 +70,18 @@ export const receiptExtract = (args) =>
 
 export const receiptConfirm = (args) =>
   USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.receiptConfirm(args);
+
+/**
+ * BATCH CONFIRM. The mock answers PER ROW, including the refusals — a flat
+ * `{ok:true}` here would certify a settle screen that has never rendered a
+ * `book_duplicate` or an `error` beside a row.
+ *
+ * This is the fourth time mock parity has been the thing that mattered (the CORS
+ * mock accepting what Google refuses · prev-year data the server does not send ·
+ * no `voice` handler at all, which let a dead button pass 2,412 assertions). The
+ * rule that came out of those: a mock's DEFAULT must match the real service's
+ * default, and it may never model the service as more capable — or more
+ * uniformly successful — than it is.
+ */
+export const batchConfirm = (args) =>
+  USING_MOCK ? mockBatchConfirm(args) : live.batchConfirm(args);

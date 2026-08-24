@@ -184,7 +184,11 @@ export default function BatchReviewView({
              * hierarchy amber exists to encode.
              */
             background: settled ? C.card : (chosen.length && !busy ? C.amber : C.line),
-            border: settled ? `1px solid ${C.line}` : 'none',
+            // Same rim as the keypad's commit: amber needs a boundary against
+            // the shell (theme.js `amberRim`), and this is the higher-stakes of
+            // the two buttons — it writes N rows in one tap.
+            border: `1px solid ${settled ? C.line
+              : (chosen.length && !busy ? C.amberRim : C.line)}`,
             color: settled ? C.ink : (chosen.length && !busy ? C.amberInk : C.ink),
           }}
         >
@@ -212,9 +216,43 @@ function blockedByDup(row, overridden) {
   return !!(d && d.checked && d.match);
 }
 
+/**
+ * WHICH ANSWER BELONGS TO WHICH ROW — by POSITION, and it degrades to silence.
+ *
+ * ⚠️ THIS USED TO MATCH ON `sourceHash` + `index`, AND IT COULD NEVER MATCH.
+ * The server's `results[]` carries `{index, status, …}` and **does not echo
+ * `sourceHash`** — it reads the field from the request and never sends it back
+ * (06 §3.5's response shape, verified against `Code.gs`). So the strict equality
+ * compared a real hash against `undefined` for every row, and every outcome came
+ * back `null`: after a confirm, nothing would have said what happened to
+ * anything. Found only by wiring the screen up, which is the argument for
+ * wiring it.
+ *
+ * `index` ALONE is not a repair: it is per-photo, and a batch spanning two
+ * screenshots has two rows numbered 0. That exact collision already cost a real
+ * expense once — dropped and reported as a successful no-op — which is why the
+ * idempotency key was widened to `<batchClientId>:<sourceHash>:<index>`.
+ *
+ * So the mapping rides on what the server DOES guarantee: it processes rows in
+ * request order and pushes exactly one outcome per row, error cases included.
+ * `results.sent` is the array this screen actually sent, captured at confirm
+ * time, so position is meaningful here and nowhere else.
+ *
+ * AND IT IS GUARDED. If the two lengths disagree the assumption has failed, and
+ * this returns null for every row rather than sliding outcomes one place along —
+ * a green «written» beside a row that errored is a confident wrong number, which
+ * is the one forbidden output. Silence is the honest degradation.
+ *
+ * (The server echoing `sourceHash` would remove the implicit coupling entirely;
+ * commissioned, and this can then assert instead of assume.)
+ */
 function outcomeOf(results, row) {
   const list = (results && results.results) || [];
-  return list.find((r) => r.sourceHash === row.sourceHash && r.index === row.index) || null;
+  const sent = (results && results.sent) || [];
+  if (!sent.length || sent.length !== list.length) return null;
+  const key = rowKey(row);
+  const at = sent.findIndex((s) => rowKey(s) === key);
+  return at === -1 ? null : (list[at] || null);
 }
 
 /** The reason a non-writable row is on screen at all, in words. */

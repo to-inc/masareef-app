@@ -340,7 +340,88 @@ export function mockFetchSummary() {
  * actually be walked without a vision key: confident → uncertain → travel →
  * duplicate-of-SMS → not-a-receipt.
  */
+/**
+ * A TRANSACTION LIST (D20). Its `is_receipt` is FALSE — deliberately, per 06
+ * §3.5 — so a client that has not learned `doc_type` lands on its not-a-receipt
+ * branch instead of misbehaving. That degradation is the contract's design, and
+ * it is also exactly what shipped: the app branched on `is_receipt` alone and
+ * threw three real bank screenshots onto the "Not a receipt" pile with the rows
+ * already extracted and paid for. The fixture exists so that can never be true
+ * again silently — a client that ignores `doc_type` fails this mock.
+ *
+ * The rows carry the statuses that actually change behaviour: a `completed` pair
+ * ticked by default, a `declined` row that must have NO tick at all, an
+ * `incoming` one for the same reason, a `roundup` with its aggregate count, and
+ * an unpriced `unclear`. Merchants invented; the repo is public.
+ */
+const LIST_FIXTURE = {
+  label: 'D20 transaction list',
+  ok: true, category: null, dupReceipt: false, dupSms: false,
+  dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false },
+  defaultMethod: 'Visa',
+  entriesTotal: 6,
+  entries: [
+    { index: 0, amount: 15.47, currency: 'EUR', merchant_display: 'Lantern Grocer',
+      merchant_latin: 'lantern grocer', section_date: '08-24', row_status: 'completed',
+      payment_hint: 'card', aggregate_count: null, category: 'Groceries', date: '2026-08-24',
+      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+    { index: 1, amount: 27.40, currency: 'EUR', merchant_display: 'Bridge Cafe',
+      merchant_latin: 'bridge cafe', section_date: '08-24', row_status: 'completed',
+      payment_hint: 'card', aggregate_count: null, category: 'Eating out', date: '2026-08-24',
+      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+    { index: 2, amount: 163.00, currency: 'EUR', merchant_display: 'Harbour Baths',
+      merchant_latin: 'harbour baths', section_date: '08-23', row_status: 'declined',
+      payment_hint: 'card', aggregate_count: null, category: null, date: '2026-08-23',
+      dupBook: { checked: false, reason: 'month_not_cached', match: null, count: 0, undatedAmountMatch: false } },
+    { index: 3, amount: 42.00, currency: 'EUR', merchant_display: 'Refund from Ferry Co',
+      merchant_latin: 'ferry co', section_date: '08-23', row_status: 'incoming',
+      payment_hint: 'card', aggregate_count: null, category: null, date: '2026-08-23',
+      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+    { index: 4, amount: 6.50, currency: 'EUR', merchant_display: 'Spare change',
+      merchant_latin: 'spare change', section_date: '08-23', row_status: 'roundup',
+      payment_hint: 'card', aggregate_count: 3, category: null, date: '2026-08-23',
+      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+    { index: 5, amount: null, currency: 'EUR', merchant_display: 'Kiosk',
+      merchant_latin: 'kiosk', section_date: '08-22', row_status: 'unclear',
+      payment_hint: 'unknown', aggregate_count: null, category: null, date: '2026-08-22',
+      dupBook: { checked: true, reason: null, match: null, count: 0, undatedAmountMatch: false } },
+  ],
+  extraction: {
+    doc_type: 'transaction_list', is_receipt: false, amount: null, currency: 'EUR',
+    merchant_display: null, merchant_latin: null, date: null, payment_hint: 'card',
+    amount_confidence: 'low', merchant_confidence: 'low', date_confidence: 'low',
+    raw_total_line: null, notes: null, not_expense_reason: null,
+  },
+};
+
+/**
+ * PER-ROW ANSWERS, INCLUDING THE REFUSALS.
+ *
+ * `results` comes back IN REQUEST ORDER, one entry per row sent — which is what
+ * the review screen relies on to put an outcome beside the right row, since the
+ * server does not echo `sourceHash` and `index` alone is per-photo.
+ */
+export function mockBatchConfirm({ rows } = {}) {
+  const list = Array.isArray(rows) ? rows : [];
+  const results = list.map((r, i) => {
+    if (i === 1 && list.length > 2) {
+      return { index: r.index, status: 'book_duplicate',
+        dupBook: { checked: true, reason: null, count: 1, undatedAmountMatch: false,
+          match: { date: '24/8/2026', description: 'Bridge Cafe', amount: 27.4, currency: 'EUR' } } };
+    }
+    return { index: r.index, status: 'written',
+      entry: { date: '24/8/2026', description: r.description || 'row', method: r.method || 'Visa',
+        category: r.category || '❓', amount: r.amount, currency: r.currency || 'EUR' } };
+  });
+  const written = results.filter((r) => r.status === 'written').length;
+  return new Promise((resolve) => setTimeout(() => resolve({
+    ok: true, v: 1, results,
+    written, skipped: results.length - written, errored: 0,
+  }), 500));
+}
+
 const RECEIPT_FIXTURES = [
+  LIST_FIXTURE,
   {
     label: 'S2 confident EGP cash',
     ok: true, category: 'Medical', dupReceipt: false, dupSms: false,

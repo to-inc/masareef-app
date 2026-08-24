@@ -42,7 +42,7 @@ const ERROR_TEXT = {
   'vision_failed': S.receiptFailed,
 };
 
-export default function ReceiptView({ onSaved, onManual }) {
+export default function ReceiptView({ onSaved, onManual, onBatch }) {
   const [stage, setStage] = useState('idle');
   const [slow, setSlow] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -96,7 +96,7 @@ export default function ReceiptView({ onSaved, onManual }) {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const applyExtraction = (res, snapDate) => {
+  const applyExtraction = (res, snapDate, clientHash) => {
     const e = res.extraction;
     setExtraction(e);
     setDup(dupState(res));
@@ -124,6 +124,33 @@ export default function ReceiptView({ onSaved, onManual }) {
     setMethod(isMethod(res.defaultMethod) ? res.defaultMethod : DEFAULT_METHOD);
     setCategory(res.category || null);
     setShowAllCats(!res.category);
+    /**
+     * ⚠️ `doc_type` IS ASKED FIRST, AND `is_receipt` IS NOT THE QUESTION.
+     *
+     * 06 §3.5: a transaction LIST answers `is_receipt: false` DELIBERATELY, so
+     * that a client which predates D20 lands on its not-a-receipt branch rather
+     * than misbehaving — the degradation target was "no regression", not "no
+     * capability". The contract's instruction to clients that DO know about
+     * lists is explicit: *test `doc_type === 'transaction_list'` FIRST.*
+     *
+     * This line used to read `e.is_receipt ? 'review' : 'notReceipt'` and never
+     * looked at `doc_type` at all. The cost was not theoretical: three real bank
+     * screenshots were refused on the phone as «Not a receipt» with their rows
+     * already extracted and the vision call already paid for, and the only
+     * control on that screen re-opened the same verdict. The rows existed; the
+     * screen had no door.
+     */
+    if (e.doc_type === 'transaction_list' && Array.isArray(res.entries) && res.entries.length) {
+      setStage('batch');
+      if (onBatch) {
+        onBatch({
+          sourceHash: clientHash,
+          entries: res.entries,
+          entriesTotal: res.entriesTotal != null ? res.entriesTotal : res.entries.length,
+        });
+      }
+      return;
+    }
     setStage(e.is_receipt ? 'review' : 'notReceipt');
   };
 
@@ -184,7 +211,7 @@ export default function ReceiptView({ onSaved, onManual }) {
     if (!job?.extraction) return;
     setShot({ base64: job.base64, clientHash: job.clientHash, snapDate: job.snapDate });
     setReviewingId(job.id);
-    applyExtraction(job.extraction, job.snapDate);
+    applyExtraction(job.extraction, job.snapDate, job.clientHash);
   };
 
   const retry = async (job) => {
@@ -348,7 +375,21 @@ export default function ReceiptView({ onSaved, onManual }) {
           {S.receiptNotReceipt}
         </div>
         <p style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
-          {S.receiptNotReceiptBody}
+          {/**
+            * THE REASON, WHEN THE SERVER GAVE ONE (06 §6, `not_expense_reason`).
+            *
+            * The field was added in August precisely because a refusal without a
+            * reason is useless to the person holding the phone: two perfectly
+            * legible screenshots were refused CORRECTLY and the app could only
+            * say "try again in better light, or enter it yourself" — advice that
+            * fitted neither. It has been on the wire since and this screen has
+            * never read it.
+            *
+            * Falls back to the generic body when absent, which is every older
+            * server and every reason the enum does not name.
+            */}
+          {S.notExpenseReason(extraction && extraction.not_expense_reason)
+            || S.receiptNotReceiptBody}
         </p>
         <button
           className="bigbtn"
@@ -820,6 +861,33 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
           style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
             background: C.shell, border: `1px solid ${C.line}`, fontSize: 13.5 }}>
           {S.jobNotReceipt}
+        </button>
+      )}
+      {/**
+        * READ IT AGAIN — offered on a not-a-receipt job, where there was
+        * previously no way forward at all.
+        *
+        * ⚠️ WHY THIS IS NOT MERELY A CONVENIENCE. Three transaction-list
+        * screenshots were classified `notReceipt` under the old rule, and the
+        * worker keeps a body only for `ready` — so their extracted rows were
+        * DISCARDED on this device. The classifier is fixed, but that cannot
+        * reach a job already stored: the only way to recover those rows is to
+        * ask the server again.
+        *
+        * And asking again is nearly free: `receipt_extract` is keyed by
+        * `rcpthash_<clientHash>` for six hours, so a re-read of the same photo
+        * returns the SAME extraction without a second vision call (06 §5). The
+        * photo is still in IndexedDB, so nothing needs re-taking.
+        *
+        * It is deliberately not automatic. A verdict he has read is settled, and
+        * a list that silently re-read itself would be the zombie card again in
+        * another costume — this puts the tap in his hand.
+        */}
+      {stage === 'notReceipt' && !!job.base64 && (
+        <button className="catchip" onClick={() => onRetry(job)}
+          style={{ padding: '8px 12px', minHeight: TAP, borderRadius: 999,
+            background: C.shell, border: `1px solid ${C.line}`, fontSize: 13.5 }}>
+          {S.jobReadAgain}
         </button>
       )}
       {stage === 'failed' && isActionable(job) && (

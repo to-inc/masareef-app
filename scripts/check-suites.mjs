@@ -44,7 +44,7 @@ import { dirname, join } from 'node:path';
  * If you are here because the run went red: the number below is a claim about
  * the suite, and one of the two is wrong. Neither is automatically the number.
  */
-const EXPECTED_ASSERTIONS = 2764;
+const EXPECTED_ASSERTIONS = 2898;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -54,6 +54,7 @@ const SUITES = [
   'test-recent.mjs',
   'test-book.mjs',
   'test-batch.mjs',
+  'test-duplicates.mjs',
   'test-tier3.mjs',
   'test-entry.mjs',
   'test-dock.mjs',

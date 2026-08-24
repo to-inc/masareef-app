@@ -158,7 +158,7 @@ export default function EntryView({
                 fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
               }}
             >
-              {S.currencySwitchTo(toggleCurrency(currency))}
+              {S.currencyIn(currency)}
             </button>
           )}
           {onCamera && (
@@ -401,6 +401,11 @@ export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENC
         style={{
           width: '100%', minHeight: 58, padding: '16px 0', borderRadius: 14,
           background: ready ? C.amber : C.line,
+          // The rim, not a darker fill — see theme.js `amberRim`. Amber's edge
+          // against the cream shell is 2.10:1; WCAG 1.4.11 asks 3:1 of the
+          // control's BOUNDARY, which is what this supplies without restating
+          // the Owner's ruled accent.
+          border: `1px solid ${ready ? C.amberRim : C.line}`,
           color: ready ? C.amberInk : C.ink,
           fontSize: 18, fontWeight: 700,
         }}

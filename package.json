@@ -22,6 +22,7 @@
     "check:recent": "node scripts/test-recent.mjs",
     "check:book": "node scripts/test-book.mjs",
     "check:batch": "node scripts/test-batch.mjs",
+    "check:duplicates": "node scripts/test-duplicates.mjs",
     "check:tier3": "node scripts/test-tier3.mjs",
     "check:accountability": "node scripts/test-accountability.mjs",
     "check:entry": "node scripts/test-entry.mjs",

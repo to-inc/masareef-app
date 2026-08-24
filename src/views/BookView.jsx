@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
 import { S, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
-import { money, moneyRound } from '../lib/format.js';
+import { money, moneyRound, amountWithCurrency } from '../lib/format.js';
 import { periodTotals, comparisonOf } from '../lib/series.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { fetchEntries } from '../api/index.js';
+import { findLookalikes, lookalikeCounts } from '../state/duplicates.js';
 import { PeriodSummary, CategoryCompare } from '../components/Charts.jsx';
-import { Chip, LATIN, SectionLabel } from '../components/Primitives.jsx';
+import { Chip, LATIN, ISOLATE, SectionLabel } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, needsHim } from '../state/inboxOutcomes.js';
 import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay } from '../state/recent.js';
@@ -203,6 +204,7 @@ export default function BookView({
         * list he reads, it is a scroll he abandons, and every one of them is one
         * tap away under «الشهر».
         */}
+      {period !== 'year' && <Lookalikes rows={rows} sheetUrl={sheetUrl} />}
       {period !== 'year' && (
         <RowList
           rows={rows} settled={settled} onEdit={onEdit}
@@ -271,6 +273,98 @@ const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
  * showed a total that was quietly missing one. Naming it is the honest-render
  * law applied to a sum rather than to a null.
  */
+
+/**
+ * «MIGHT BE THE SAME EXPENSE TWICE» — a report, and only ever a report.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * IT OFFERS NO WAY TO REMOVE ANYTHING, AND THAT IS THE CONSTITUTION SPEAKING.
+ * docs/09 §4: row deletion is human-only, and the backend has no delete
+ * capability and never will. So this card ends at a sentence and a link INTO his
+ * sheet; the removing is done by him, in his own book, with both rows in front
+ * of him. `state/duplicates.js` cannot act either — its suite asserts that.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * IT SUGGESTS AND NEVER ASSERTS, because two identical coffees on one day is a
+ * real pattern, not an error. Every string here is "look at these", never
+ * "these are duplicates" — the same reason `dupBook` flags a receipt instead of
+ * refusing it (06 §3.4). The system does not know which of two true-looking rows
+ * is the mistake; the man holding the phone does.
+ *
+ * Runs over the rows ALREADY ON SCREEN — no extra read, and the population it
+ * examined is the one he is looking at, so the card can never describe a month
+ * he is not on.
+ */
+function Lookalikes({ rows, sheetUrl }) {
+  const report = findLookalikes(rows);
+  const counts = lookalikeCounts(report);
+  if (!counts.groups) return null;              // the ordinary case is silence
+
+  return (
+    <div style={{
+      marginTop: 14, padding: '13px 15px', borderRadius: 14,
+      background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
+    }}>
+      <div style={{ color: C.conflictInk, fontSize: 15, fontWeight: 700 }}>
+        {S.dupTitle(counts.rows)}
+      </div>
+      <div style={{ color: C.ink, fontSize: 14, marginTop: 4, lineHeight: 1.55 }}>
+        {S.dupBody}
+      </div>
+
+      {report.groups.map((g) => (
+        <div key={g.key} style={{
+          marginTop: 10, padding: '9px 11px', borderRadius: 10,
+          background: C.card, border: `1px solid ${C.line}`,
+        }}>
+          {/* The tier is stated in words — a percentage would invite him to
+              trust a number this has no basis to produce. */}
+          <div style={{ color: C.muted, fontSize: 12.5, fontWeight: 700 }}>
+            {S.dupTier(g.tier)}
+          </div>
+          {g.rows.map((r, i) => (
+            <div key={`${g.key}#${i}`} style={{
+              display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 5,
+            }}>
+              <span style={{ color: C.ink, fontSize: 14.5, ...ISOLATE }}>
+                {r.description || S.dupNoDescription}
+              </span>
+              <span style={{ color: C.ink, fontSize: 14.5, fontWeight: 700, ...NUMERALS, ...LATIN }}>
+                {amountWithCurrency(r.amount, r.currency)}
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
+
+      {/**
+        * WHAT IT DID NOT EXAMINE, IT SAYS. An unpriced row has nothing to match
+        * on, so it is never grouped — and a detector that silently skipped part
+        * of its population would be a check that cannot fail on what it dropped.
+        */}
+      {report.unpriced > 0 && (
+        <div style={{ color: C.muted, fontSize: 12.5, marginTop: 9 }}>
+          {S.dupUnpriced(report.unpriced)}
+        </div>
+      )}
+
+      {/* The only exit: his sheet. Deliberately not a button that does it for
+          him — see the header of this component. */}
+      {sheetUrl && (
+        <a
+          href={sheetUrl} target="_blank" rel="noreferrer"
+          style={{
+            display: 'inline-block', marginTop: 11, minHeight: TAP, lineHeight: '30px',
+            color: C.harbor, fontSize: 14, fontWeight: 700, textDecoration: 'underline',
+          }}
+        >
+          {S.dupOpenSheet}
+        </a>
+      )}
+    </div>
+  );
+}
+
 function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBatch }) {
   const egp = egpTotalOf(totals);
   const travel = travelOf(entries);

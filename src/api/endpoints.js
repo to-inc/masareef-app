@@ -55,3 +55,26 @@ export const receiptExtract = ({ image, clientHash, snapDate, signal }) =>
 
 export const receiptConfirm = (fields) =>
   call({ action: 'receipt_confirm', ...fields }, 'write');
+
+/**
+ * BATCH CONFIRM (D20, 06 §3.5) — one screenshot of a transaction LIST becomes N
+ * candidates; this writes only the rows he ticked.
+ *
+ * ⚠️ `rows` CARRIES NO `row_status`, AND THAT IS CONTRACT LAW RATHER THAN
+ * TIDINESS. The server re-reads each row's status from its OWN cached extraction
+ * (`rcpthash_<sourceHash>` → `entries[index]`), because a request-carried status
+ * is "the UI is the only guard" wearing server clothes — and the row it would
+ * wave through is a `declined` one: money that never left his account, written
+ * into his book with nothing on screen to notice it by. `toConfirmRows` builds
+ * each row from an allow-list for exactly this reason; this function must never
+ * "helpfully" widen it.
+ *
+ * `batchClientId` is the batch's idempotency namespace; the per-row key is
+ * `<batchClientId>:<sourceHash>:<index>`, which is why every row names its own
+ * photo. A key of `<batchClientId>:<index>` was unique only while a batch meant
+ * ONE photo — once rows came from several, two rows collided, the second was
+ * answered `duplicate` and never written, and a real expense was dropped and
+ * reported as a successful no-op.
+ */
+export const batchConfirm = ({ batchClientId, clientHash, rows }) =>
+  call({ action: 'batch_confirm', batchClientId, clientHash, rows }, 'write');

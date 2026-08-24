@@ -315,6 +315,56 @@ try {
   ok(withTravel.includes(AR.travelApart), '…as standing apart from it');
   ok(!withTravel.includes('112.5'), 'and NEVER adds euros to pounds');
 
+  /**
+   * ——— THE LOOKALIKE CARD ACTUALLY RENDERS, FROM THE SCREEN HE OPENS.
+   *
+   * ⚠️ ASSERTED HERE AND NOT ONLY IN `test-duplicates.mjs`, DELIBERATELY. That
+   * suite proves the DETECTOR is correct; it cannot prove the card is reachable,
+   * and this project has just paid for exactly that gap twice in one rev —
+   * `BatchReviewView` was built, mutation-hardened at 57 checks, and imported by
+   * zero files, and the batch door itself was a `doc_type` branch nobody called.
+   * A tested component with no render site is a tested component nobody sees.
+   */
+  const dupes = text(render(payload([
+    day({ description: 'Nile Star Market', amount: 100 }),
+    day({ description: 'nile star market ', amount: 100 }),
+  ], { Visa: 200, Cash: 0 })));
+  ok(dupes.includes(AR.dupTitle(2).slice(0, 10)),
+    'two rows with the same day, amount and currency raise the lookalike card ON THE SCREEN');
+  ok(dupes.includes(AR.dupTier('same')),
+    'and it says HOW alike in words — a percentage would invite trust it has no basis for');
+  ok(!/(?:remove|delete|احذف|امسح)/i.test(dupes),
+    'the card offers NO delete control of any kind, in either locale');
+  /**
+   * ⚠️ THE SHEET LINK IS ASSERTED FROM SOURCE, NOT FROM THIS RENDER, and the
+   * reason is worth recording rather than working around silently: the link is
+   * `{sheetUrl && …}` and `sheetUrl` comes from stored credentials, which this
+   * SSR fixture has none of. So the rendered card correctly omits it here, and
+   * an assertion that it appears would have been a true claim about the wrong
+   * environment — passing only once someone wired credentials into a unit test.
+   *
+   * What must hold unconditionally is the SHAPE of the exit: one anchor to his
+   * own sheet, and no control that acts. docs/09 §4.
+   */
+  const bookSrc = await readFile(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
+  const lookalikes = bookSrc.slice(bookSrc.indexOf('function Lookalikes('),
+    bookSrc.indexOf('function TodayHead('));
+  ok(lookalikes.includes('href={sheetUrl}'),
+    'the card\'s one exit is an anchor into his own sheet…');
+  ok(!lookalikes.includes('<button'),
+    '…and it renders no button at all — there is nothing here that acts on his book');
+  ok(!/onClick/.test(lookalikes),
+    'and no click handler either: a detector that could act is no longer a detector');
+
+  // AND THE ORDINARY CASE IS SILENCE — the other direction, which is the one a
+  // card that always rendered would pass.
+  const noDupes = text(render(payload([
+    day({ description: 'Nile Star Market', amount: 100 }),
+    day({ description: 'Harbour Cafe', amount: 55 }),
+  ], { Visa: 155, Cash: 0 })));
+  ok(!noDupes.includes(AR.dupTitle(2).slice(0, 10)),
+    'a day with no lookalikes shows no card at all — no badge, no empty state, nothing');
+
   // The gap is a door, in the rendered screen and not merely in the predicate.
   const withGap = text(render(payload([day({ category: UNKNOWN_CATEGORY })], { Visa: 100, Cash: 0 })));
   ok(withGap.includes(AR.rowNeedsCategory),

@@ -81,9 +81,52 @@ export function nextJob(jobs) {
  * the photo is safe, the budget is spent, tomorrow it proceeds. Reporting that
  * as `failed` would invite him to retry all day against a wall.
  */
+/**
+ * IS THIS A TRANSACTION LIST? (D20, 06 §3.5.)
+ *
+ * ⚠️ ASKED BEFORE `receiptVerdict`, ALWAYS — and the ordering is the whole fix.
+ * A list answers `is_receipt: false` deliberately, so that a client which never
+ * heard of D20 degrades to its not-a-receipt branch instead of misbehaving. Ask
+ * the verdict first and a list is a refusal forever, which is precisely what
+ * happened on his phone: three bank screenshots classified `notReceipt`, and —
+ * because the worker stores a body only for `ready` — **their extracted rows
+ * were thrown away**, after the vision call had been made and paid for.
+ *
+ * Requires the rows to actually be present. A `transaction_list` with no
+ * `entries` is a truncated answer, not an offer, and it must fall through to the
+ * `bad_extraction` path rather than opening an empty review screen.
+ */
+export function isTransactionList(res) {
+  const e = res && res.extraction;
+  if (!e || typeof e !== 'object') return false;
+  return e.doc_type === 'transaction_list'
+    && Array.isArray(res.entries) && res.entries.length > 0;
+}
+
 export function resultStage(res, threw) {
   if (threw) return { stage: 'failed', error: 'offline', retryable: true };
   if (res && res.ok) {
+    // A list is a READY job: it has something for him to act on, and `ready` is
+    // the only stage whose body the worker keeps. Which surface it opens is
+    // decided at review time from `doc_type`, not by a stage of its own — one
+    // more stage would have to be threaded through every reader in this file.
+    if (isTransactionList(res)) return { stage: 'ready', error: null, retryable: false };
+    /**
+     * A LIST THAT ARRIVED WITH NO ROWS IS A BROKEN READ, NOT A VERDICT.
+     *
+     * Without this it fell through to `receiptVerdict`, which sees
+     * `is_receipt:false` and answers «Not a receipt» — a confident wrong verdict
+     * about a photo the server actually recognised, and a dead end, because
+     * `notReceipt` is terminal. `failed`/`bad_extraction` is the same judgement
+     * this function already makes for a truthy envelope with nothing usable in
+     * it, and it is retryable, which is the honest offer here.
+     *
+     * (Caught by running the four cases rather than by reading them: the comment
+     * above claimed this fall-through and the code did not have it.)
+     */
+    if (res.extraction && res.extraction.doc_type === 'transaction_list') {
+      return { stage: 'failed', error: 'bad_extraction', retryable: true };
+    }
     /**
      * `ok` says the CALL succeeded. It does not say what was found, and
      * conflating those is what put two immortal «Ready — check it» rows on his
@@ -142,6 +185,10 @@ export function receiptVerdict(res) {
 export function effectiveStage(job) {
   if (!job || !isStage(job.stage)) return null;
   if (job.stage !== 'ready') return job.stage;
+  // Same precedence as `resultStage`, for the same reason — the two layers must
+  // never disagree about one job, and a stored list would otherwise derive to
+  // `notReceipt` on every read and undo the classification above.
+  if (isTransactionList(job.extraction)) return 'ready';
   const verdict = receiptVerdict(job.extraction);
   if (verdict === true) return 'ready';
   if (verdict === false) return 'notReceipt';

@@ -119,10 +119,16 @@ for (const [name, bg] of [['shell', C.shell], ['card', C.card], ['mist', C.mist]
 canonical('secondary (muted) on shell', C.muted, C.shell, 13, false, 'muted → #5C6871 (5.35 / 5.72 / 4.62 on shell / card / mist)');
 canonical('secondary (muted) on card', C.muted, C.card, 13, false, 'muted → #5C6871');
 /**
- * NOT `muted` on mist — 2.84:1, which is under 3:1 and therefore unreadable at
- * any size. The only small text that sits over the morning crown is the Today
- * screen's period strip, so its inactive label is `ink`. This composition is
- * mine (the crown is new), so it is a hard check and not a flag.
+ * The period strip's inactive label is `ink`, not `muted`, and it stays that way.
+ *
+ * ⚠️ THE ORIGINAL REASON EXPIRED, WHICH IS WORTH SAYING RATHER THAN QUIETLY
+ * EDITING: this note used to read "NOT muted on mist — 2.84:1, unreadable at any
+ * size". That was true of the OLD muted (#7B8B96). Since muted darkened to
+ * #5C6871 it clears mist at 4.62:1, so the prohibition no longer follows from
+ * the number. `ink` is kept anyway — the strip is the one control that sits over
+ * the crown and it should read as strongly there as everywhere else — but it is
+ * now a design choice rather than a contrast floor, and a comment that kept
+ * citing 2.84 would be asserting a measurement the file itself disproves.
  */
 check('inactive period tab, over the crown', C.ink, C.mist, 15, true);
 
@@ -154,8 +160,25 @@ check('active tab label', C.harbor, C.card, 13.5, true);
 
 // ——————————————————————— the one warm action
 check('cash CTA label — amberInk on amber', C.amberInk, C.amber, 18.5, true);
-canonicalUi('cash CTA silhouette against the shell', C.amber, C.shell,
-  'amber → #B48836 (3.01:1). The LABEL on it is fine at 5.80:1 — it is the button\'s outline against the page that is soft.');
+/**
+ * THE BOUNDARY IS WHAT 1.4.11 ASKS FOR, so the boundary is what is measured.
+ *
+ * This was a flagged pair: `amber` on `shell` is 2.10:1 and the suggested
+ * minimal fix was to darken the FILL to #B48836. The Owner ruled otherwise —
+ * `#D9A441` is D15's dawn amber, and a finding about an EDGE is not a licence to
+ * restate a colour he chose. The control now carries `amberRim`, so the rim is
+ * the thing that has to clear 3:1 and it does.
+ *
+ * The fill's own ratio stays MEASURED AND PRINTED below rather than deleted:
+ * removing the line would leave the app with no record that the fill is soft,
+ * and the next reader would rediscover it. It is recorded as decorative because
+ * the meaning is genuinely carried elsewhere — by the rim, and by a label that
+ * clears 5.80:1.
+ */
+canonicalUi('cash CTA rim against the shell', C.amberRim, C.shell,
+  'amberRim is the boundary token; if it is ever lightened past 3:1 the control loses its edge again.');
+decorative('cash CTA fill against the shell', C.amber, C.shell,
+  'the rim that outlines it (amberRim, 3.42:1) and the label on it (5.80:1)');
 
 // ——————————————————————— tertiary and advisory surfaces
 check('category chip label', C.ink, C.shell, 15);

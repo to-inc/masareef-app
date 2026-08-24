@@ -293,13 +293,50 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
       '…so a cut-off list never reads as complete');
 
     // ——— after confirm: three counts, never one verdict, and nothing moves
-    const settled = text(render({ jobs, results: { written: 2, skipped: 1, errored: 0, results: [
-      { sourceHash: 'p', index: 0, status: 'written' },
-      { sourceHash: 'p', index: 2, status: 'book_duplicate' },
+/**
+     * ——— OUTCOMES ARE MATCHED BY POSITION, AGAINST THE ROWS WE SENT.
+     *
+     * ⚠️ THIS FIXTURE USED TO CARRY `sourceHash` IN THE RESULTS, AND THE SERVER
+     * NEVER SENDS IT. `batch_confirm` answers `{index, status, …}` and reads
+     * `row.sourceHash` from the REQUEST without echoing it (verified against
+     * `Code.gs`, not inferred). So the old matcher compared a real hash to
+     * `undefined` and every outcome resolved to null — on a screen whose entire
+     * job after a confirm is saying what happened to each row. The fixture
+     * modelled a response the server does not produce, which is mock parity's
+     * lesson wearing a test's clothes: a fixture more generous than the service
+     * certifies a client that cannot work.
+     *
+     * `sent` is the array the screen actually posted, kept beside the response.
+     */
+    const sent = [{ sourceHash: 'p', index: 0 }, { sourceHash: 'p', index: 2 }];
+    const settled = text(render({ jobs, results: { written: 2, skipped: 1, errored: 0, sent, results: [
+      { index: 0, status: 'written' },
+      { index: 2, status: 'book_duplicate' },
     ] } }));
     ok(settled.includes(AR.batchWritten), 'a written row says so…');
     ok(settled.includes(AR.batchSkippedDup), '…and a skipped one says something else — never one verdict for the batch');
     ok(settled.includes('Harbour Baths'), 'and every row is STILL THERE — nothing moves, nothing disappears');
+
+    /**
+     * ——— AND IT REFUSES TO GUESS WHEN THE ASSUMPTION FAILS.
+     *
+     * Position is only meaningful while `results` and `sent` are the same
+     * length. If they are not, the server did something this screen does not
+     * understand, and sliding the answers one place along would put a green
+     * «written» beside a row that errored — a confident wrong number, the one
+     * forbidden output. Silence is the honest degradation.
+     */
+    const mismatched = text(render({ jobs, results: { written: 1, skipped: 0, errored: 0, sent,
+      results: [{ index: 0, status: 'written' }] } }));
+    ok(!mismatched.includes(AR.batchWritten),
+      'a results/sent length mismatch shows NO outcomes rather than mis-attributing them');
+    ok(mismatched.includes('Harbour Baths'),
+      'and still shows every row — refusing to label them is not refusing to display them');
+
+    const noSent = text(render({ jobs, results: { written: 1, skipped: 0, errored: 0,
+      results: [{ index: 0, status: 'written' }] } }));
+    ok(!noSent.includes(AR.batchWritten),
+      'and a response with no `sent` at all is the same refusal — the old shape cannot silently half-work');
 
     // ——— the expired draft never silently drops his work
     const exp = text(render({ jobs, expired: true }));

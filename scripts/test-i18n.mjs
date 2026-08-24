@@ -68,11 +68,62 @@ for (const k of arKeys) {
  * returns undefined is a blank line on his screen.
  */
 const ARGS = { 1: [1], 2: ['July', 'the month'] };
+
+/**
+ * ——— THE LOOKUPS THAT MAY HONESTLY ANSWER NOTHING.
+ *
+ * A TEMPLATE must always render — an `undefined` mid-sentence is a blank line on
+ * his screen, which is what the loop below exists to prevent. A LOOKUP is a
+ * different animal: `notExpenseReason` maps the server's `not_expense_reason`
+ * enum (06 §6) to a sentence, and returns `null` for a value it does not name so
+ * the caller falls back to the generic body. That null is the contract, not a
+ * hole — a server predating the field, or a reason added later, must not produce
+ * an empty paragraph.
+ *
+ * So these are exempted from "always renders" and given a STRICTER pair of
+ * checks instead: every value the contract names must produce real words, and an
+ * unknown value must produce exactly `null`, because the caller's fallback is
+ * unreachable otherwise. Exempting without replacing would be a check switched
+ * off; this is a check made sharper.
+ */
+const NULLABLE_LOOKUPS = {
+  /**
+   * The three tiers `findLookalikes` can produce. `null` for anything else, so
+   * the card renders nothing rather than an empty label — a lookup with no
+   * answer says nothing, exactly like `notExpenseReason`. One convention for
+   * both; two would be the second quieter implementation this project keeps
+   * paying for.
+   */
+  dupTier: {
+    named: ['same', 'similar', 'different'],
+    nulls: ['not_a_tier', undefined, null, ''],
+  },
+  notExpenseReason: {
+    // 'other' is deliberately absent: the enum carries it, and it means "no
+    // more specific reason", which is exactly when the generic body is right.
+    named: ['balance_screen', 'pending_or_declined', 'incoming', 'menu_or_pricelist'],
+    nulls: ['other', 'a_reason_invented_next_year', undefined, null, ''],
+  },
+};
 for (const [name, loc] of [['ar', AR_LOCALE], ['en', EN_LOCALE]]) {
   for (const k of Object.keys(loc.S)) {
     const v = loc.S[k];
     if (typeof v === 'string') { ok(v.length > 0, `${name}.${k} is not an empty string`); continue; }
     if (typeof v !== 'function') { failures.push(`${name}.${k} is neither a string nor a template`); continue; }
+    const nullable = NULLABLE_LOOKUPS[k];
+    if (nullable) {
+      for (const value of nullable.named) {
+        let s2; try { s2 = v(value); } catch { s2 = null; }
+        ok(typeof s2 === 'string' && s2.length > 0 && !s2.includes('undefined'),
+          `${name}.${k}('${value}') says something true in words`);
+      }
+      for (const value of nullable.nulls) {
+        let s2; try { s2 = v(value); } catch { s2 = 'THREW'; }
+        ok(s2 === null,
+          `${name}.${k}(${JSON.stringify(value)}) is null, so the caller's fallback is reachable`);
+      }
+      continue;
+    }
     let out;
     try { out = v(...(ARGS[v.length] || [1])); } catch (err) { out = null; }
     ok(typeof out === 'string' && out.length > 0 && !out.includes('undefined'),
