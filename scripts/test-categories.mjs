@@ -46,10 +46,11 @@ const BASE = [
 const EXTRAS = [
   'Transportation', 'InstaPay - Services', 'InstaPay - Purchases',
   'Science Pitchers', 'HYS', 'Team',      // 2026-08-03, his ruling
+  'Leisure', 'Sports', 'Hobbies',         // 2026-08-24, his ruling (docs/02 round 6)
 ];
 
 // ——————————————————————— the set
-eq(CATEGORIES.length, 21 + 6, 'twenty-one shared plus this install\'s six');
+eq(CATEGORIES.length, 21 + 9, 'twenty-one shared plus this install\'s nine');
 eq(CATEGORIES.length, BASE.length + EXTRAS.length, 'and nothing else has crept in');
 
 for (let i = 0; i < BASE.length; i++) {

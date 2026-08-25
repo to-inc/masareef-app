@@ -6,6 +6,7 @@ import { money, moneyRound } from '../lib/format.js';
 import { LATIN, ISOLATE } from '../components/Primitives.jsx';
 import {
   rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows, BATCH_MAX_ROWS,
+  outcomeFor, isRetryable, retryRows, unsettledCount,
 } from '../state/batchDraft.js';
 
 /**
@@ -33,7 +34,7 @@ import {
  * ═══════════════════════════════════════════════════════════════════════════
  */
 export default function BatchReviewView({
-  jobs, expired, busy, results, onConfirm, onResnap, onDiscard,
+  jobs, expired, busy, results, onConfirm, onResnap, onDiscard, onLeave,
 }) {
   const rows = useMemo(() => mergeJobs(jobs), [jobs]);
   const [ticks, setTicks] = useState(() => initialTicks(rows));
@@ -46,9 +47,32 @@ export default function BatchReviewView({
   // button was a pixel that changed nothing: the server refuses a book
   // duplicate unless the request says the flag was SHOWN and overruled (D18a).
   const chosen = useMemo(
-    () => toConfirmRows(rows, ticks, edits, { overridden }),
-    [rows, ticks, edits, overridden],
+    () => (settled
+      /**
+       * AFTER A SETTLE THE SCREEN IS ABOUT WHAT IS LEFT (docs/05 `6139886`
+       * loose thread). A `book_duplicate` refused at CONFIRM time — not at
+       * extraction time, where the pre-settle panel already answers it — had no
+       * door at all: the override panel rendered only before the settle, so his
+       * one recovery was to photograph the statement again. The book moves
+       * between the extraction and the write (an SMS lands, a Shortcut fires),
+       * so that second refusal is the one that hits rows which looked clean.
+       *
+       * Only refusals he has overridden and rows he never sent may ride; a
+       * written row cannot be re-sent from here at all.
+       */
+      ? retryRows(rows, results, overridden, edits, ticks)
+      : toConfirmRows(rows, ticks, edits, { overridden })),
+    [settled, results, rows, ticks, edits, overridden],
   );
+
+  /**
+   * WHAT IS STILL NOT IN HIS BOOK — the same number the Book screen shows, from
+   * the same function, because a rule enforced at one render site is not
+   * enforced. The settled header states three counts about what HAPPENED; this
+   * states what is still OUTSTANDING, and after a partial confirm those are
+   * different sentences.
+   */
+  const outstanding = settled ? unsettledCount({ rows, settled: results }) : 0;
 
   /**
    * WHAT HE IS ABOUT TO WRITE, BEFORE HE READS A ROW — and it moves as he ticks.
@@ -99,9 +123,22 @@ export default function BatchReviewView({
     <div>
       <div style={{ textAlign: 'center', padding: '2px 0 12px' }}>
         {settled ? (
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 650 }}>
-            {S.batchSettled(results.written, results.skipped, results.errored)}
-          </div>
+          <>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 650 }}>
+              {S.batchSettled(results.written, results.skipped, results.errored)}
+            </div>
+            {/**
+              * THREE COUNTS ABOUT WHAT HAPPENED ARE NOT A STATEMENT ABOUT WHAT
+              * IS LEFT. «10 logged ✓ · 2 already there» reads as finished, and
+              * two of those rows may be expenses the server refused and nobody
+              * wrote. This says so, in the same words the Book screen uses.
+              */}
+            {outstanding > 0 && (
+              <div style={{ fontSize: 13.5, color: C.conflictInk, marginTop: 4, fontWeight: 600 }}>
+                {S.batchWaiting(outstanding)}
+              </div>
+            )}
+          </>
         ) : (
           <>
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: 38, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
@@ -141,7 +178,7 @@ export default function BatchReviewView({
             <Row
               key={rowKey(r)} row={r}
               ticked={ticks[rowKey(r)] === true}
-              outcome={settled ? outcomeOf(results, r) : null}
+              outcome={settled ? outcomeFor(results, r) : null}
               edit={edits[rowKey(r)]}
               isOpen={open === rowKey(r)}
               overrode={!!overridden[rowKey(r)]}
@@ -171,11 +208,31 @@ export default function BatchReviewView({
         </p>
       )}
 
+      {/**
+        * ═══ THE FOOTER, AND WHY «BACK» IS NOT ALWAYS ONE BUTTON ═══
+        *
+        * The settled screen used to offer exactly one control — «Done — back to
+        * the book» — and it called `onDiscard`, which DESTROYS the draft. On a
+        * clean batch that is right and there is nothing to lose. On a batch with
+        * refusals it threw away rows the server had never written, from a button
+        * whose word for it was «Done». (The same shape the verification pass
+        * caught one level up: a whole-batch refusal rendering as a DONE screen
+        * whose only exit destroyed the unwritten draft.)
+        *
+        * So: while anything is still outstanding, leaving KEEPS the draft — that
+        * is what makes the Book's waiting count answerable tomorrow — and
+        * discarding is a separate, second control that names what it destroys.
+        * When nothing is outstanding the two collapse back into one button,
+        * because there is then no difference between them.
+        */}
       <div style={{ paddingTop: 14 }}>
         <button
           className="bigbtn"
-          onClick={settled ? onDiscard : () => onConfirm(chosen)}
-          disabled={!settled && (busy || chosen.length === 0 || chosen.length > BATCH_MAX_ROWS)}
+          onClick={settled
+            ? (chosen.length ? () => onConfirm(chosen)
+              : outstanding > 0 ? onLeave : onDiscard)
+            : () => onConfirm(chosen)}
+          disabled={busy || (!chosen.length && !settled) || chosen.length > BATCH_MAX_ROWS}
           style={{
             width: '100%', minHeight: 58, borderRadius: 14, fontSize: 18, fontWeight: 700,
             /**
@@ -188,21 +245,43 @@ export default function BatchReviewView({
              * irreversible tap — the highest-consequence control here — and
              * rendering it in harbour made it read as secondary, inverting the
              * hierarchy amber exists to encode.
+             *
+             * It is warm when it WRITES and cool when it merely leaves, before
+             * and after a settle alike: the accent tracks the consequence, not
+             * the position on the screen.
              */
-            background: settled ? C.card : (chosen.length && !busy ? C.amber : C.line),
+            background: chosen.length && !busy ? C.amber : (settled ? C.card : C.line),
             // Same rim as the keypad's commit: amber needs a boundary against
             // the shell (theme.js `amberRim`), and this is the higher-stakes of
             // the two buttons — it writes N rows in one tap.
-            border: `1px solid ${settled ? C.line
-              : (chosen.length && !busy ? C.amberRim : C.line)}`,
-            color: settled ? C.ink : (chosen.length && !busy ? C.amberInk : C.ink),
+            border: `1px solid ${chosen.length && !busy ? C.amberRim : C.line}`,
+            color: chosen.length && !busy ? C.amberInk : C.ink,
           }}
         >
-          {settled ? S.batchBack
-            : busy ? S.batchSending
-              : chosen.length > BATCH_MAX_ROWS ? S.batchOverCap(chosen.length, BATCH_MAX_ROWS)
-                : chosen.length ? S.batchConfirm(chosen.length) : S.batchNothing}
+          {busy ? S.batchSending
+            : chosen.length > BATCH_MAX_ROWS ? S.batchOverCap(chosen.length, BATCH_MAX_ROWS)
+              : chosen.length ? S.batchConfirm(chosen.length)
+                : settled ? (outstanding > 0 ? S.batchLeave : S.batchBack)
+                  : S.batchNothing}
         </button>
+
+        {/**
+          * DISCARD IS ITS OWN ACT, and it says the price out loud. It appears
+          * only once there is a price to say — on a fully-written batch the
+          * button above already is this one.
+          */}
+        {settled && outstanding > 0 && (
+          <button
+            className="catchip" onClick={onDiscard}
+            style={{
+              marginTop: 10, width: '100%', minHeight: TAP, borderRadius: 12,
+              background: 'transparent', border: `1px solid ${C.line}`,
+              color: C.muted, fontSize: 14.5,
+            }}
+          >
+            {S.batchDiscardWaiting(outstanding)}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -224,43 +303,14 @@ function blockedByDup(row, overridden) {
 }
 
 /**
- * WHICH ANSWER BELONGS TO WHICH ROW — by POSITION, and it degrades to silence.
- *
- * ⚠️ THIS USED TO MATCH ON `sourceHash` + `index`, AND IT COULD NEVER MATCH.
- * The server's `results[]` carries `{index, status, …}` and **does not echo
- * `sourceHash`** — it reads the field from the request and never sends it back
- * (06 §3.5's response shape, verified against `Code.gs`). So the strict equality
- * compared a real hash against `undefined` for every row, and every outcome came
- * back `null`: after a confirm, nothing would have said what happened to
- * anything. Found only by wiring the screen up, which is the argument for
- * wiring it.
- *
- * `index` ALONE is not a repair: it is per-photo, and a batch spanning two
- * screenshots has two rows numbered 0. That exact collision already cost a real
- * expense once — dropped and reported as a successful no-op — which is why the
- * idempotency key was widened to `<batchClientId>:<sourceHash>:<index>`.
- *
- * So the mapping rides on what the server DOES guarantee: it processes rows in
- * request order and pushes exactly one outcome per row, error cases included.
- * `results.sent` is the array this screen actually sent, captured at confirm
- * time, so position is meaningful here and nowhere else.
- *
- * AND IT IS GUARDED. If the two lengths disagree the assumption has failed, and
- * this returns null for every row rather than sliding outcomes one place along —
- * a green «written» beside a row that errored is a confident wrong number, which
- * is the one forbidden output. Silence is the honest degradation.
- *
- * (The server echoing `sourceHash` would remove the implicit coupling entirely;
- * commissioned, and this can then assert instead of assume.)
+ * ⚠️ `outcomeOf` USED TO LIVE HERE. It is `outcomeMap`/`outcomeFor` in
+ * `state/batchDraft.js` now — unmoved in behaviour, including the length guard
+ * that returns NOTHING rather than sliding answers one place along. It moved
+ * because the unsettled COUNT needs the same mapping, and two readers of one
+ * mapping is the shape that has cost this project the most: the «This week 0»
+ * gate held at the headline while the metric cards printed «▼100%» in smaller
+ * type from their own copy of the question.
  */
-function outcomeOf(results, row) {
-  const list = (results && results.results) || [];
-  const sent = (results && results.sent) || [];
-  if (!sent.length || sent.length !== list.length) return null;
-  const key = rowKey(row);
-  const at = sent.findIndex((s) => rowKey(s) === key);
-  return at === -1 ? null : (list[at] || null);
-}
 
 /** The reason a non-writable row is on screen at all, in words. */
 function statusNote(row) {
@@ -291,6 +341,30 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
   const category = (edit && edit.category) || row.category;
   const settled = !!outcome;
 
+  /**
+   * ——— A REFUSAL AT CONFIRM TIME IS STILL A QUESTION FOR HIM.
+   *
+   * `book_duplicate` is the only outcome an override answers, because `dupAck`
+   * is the only thing the server is waiting for. The row was NOT written; the
+   * server found a match in his book and stopped, which is the dedupe gate
+   * doing its job — and «two identical coffees in one day are two coffees» is
+   * why the gate asks rather than decides.
+   *
+   * The evidence is the server's own match when it sent one (§3.5 `dupBook`),
+   * and the extraction-time match otherwise. Never a fabricated row: if neither
+   * exists he gets the sentence and the choice, with no box pretending to show
+   * him something we do not have.
+   */
+  const retryable = isRetryable(outcome);
+  const awaitingRetry = retryable && overrode;
+  const matchRow = settled
+    ? ((outcome.dupBook && outcome.dupBook.match) || (bookDup ? dup.match : null))
+    : (bookDup ? dup.match : null);
+  const showOverride = (settled ? retryable : !!bookDup) && !overrode;
+  // Nothing to open is nothing to tap: a written row's title is not a control.
+  const canOpen = !settled || showOverride;
+  const TitleTag = canOpen ? 'button' : 'div';
+
   const tone = {
     bad: { fg: C.conflictInk, bg: C.conflictBg },
     warn: { fg: C.amberInk, bg: C.sand },
@@ -314,8 +388,12 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
           * he cannot use is a question about why; the reason is in words instead.
           */}
         {settled ? (
-          <span style={{ flex: '0 0 26px', textAlign: 'center', color: C.muted }}>
-            {outcome.status === 'written' ? '✓' : outcome.status === 'error' ? '!' : '·'}
+          <span style={{
+            flex: '0 0 26px', textAlign: 'center',
+            color: awaitingRetry ? C.harbor : C.muted, fontWeight: awaitingRetry ? 700 : 400,
+          }}>
+            {awaitingRetry ? '✓'
+              : outcome.status === 'written' ? '✓' : outcome.status === 'error' ? '!' : '·'}
           </span>
         ) : writable ? (
           <button
@@ -336,9 +414,9 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
           <span style={{ flex: '0 0 30px', textAlign: 'center', color: C.muted, fontSize: 18 }}>✕</span>
         )}
 
-        <button
-          onClick={onToggleOpen}
-          aria-expanded={isOpen}
+        <TitleTag
+          onClick={canOpen ? onToggleOpen : undefined}
+          aria-expanded={canOpen ? isOpen : undefined}
           style={{ flex: 1, minWidth: 0, textAlign: 'start', background: 'transparent', padding: 0 }}
         >
           <span style={{
@@ -350,10 +428,26 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             {row.merchant_display || row.description || '—'}
           </span>
           <span style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, color: C.muted, marginTop: 2 }}>
+            {/**
+              * FOUR ANSWERS, FOUR SENTENCES. `duplicate` means WE wrote this row
+              * on an earlier attempt — it is in his book. `book_duplicate` means
+              * the server refused and wrote NOTHING. One is finished and the
+              * other is waiting for him, and the old code gave both «was already
+              * logged», which hides a possibly-real expense behind a word that
+              * says it is handled. (The same «two cases must never render
+              * identically» rule that keeps «we could not check» apart from «we
+              * checked and it is clean».)
+              */}
             {settled && (
-              <b style={{ color: outcome.status === 'written' ? C.settledInk : C.conflictInk }}>
-                {outcome.status === 'written' ? S.batchWritten
-                  : outcome.status === 'error' ? S.batchErrored : S.batchSkippedDup}
+              <b style={{
+                color: awaitingRetry ? C.harbor
+                  : outcome.status === 'written' ? C.settledInk : C.conflictInk,
+              }}>
+                {awaitingRetry ? S.batchRetryPending
+                  : outcome.status === 'written' ? S.batchWritten
+                    : outcome.status === 'error' ? S.batchErrored
+                      : outcome.status === 'book_duplicate' ? S.batchRefusedDup
+                        : S.batchSkippedDup}
               </b>
             )}
             {!settled && note && (
@@ -377,7 +471,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             )}
             {category && <span dir="auto">{categoryLabel(category)}</span>}
           </span>
-        </button>
+        </TitleTag>
 
         {/* A null amount renders —, never 0. An aggregate has no single figure. */}
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16.5, fontWeight: 650, ...LATIN, ...NUMERALS }}>
@@ -391,23 +485,36 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
         </span>
       </div>
 
-      {isOpen && !settled && (
+      {isOpen && canOpen && (
         <div style={{ padding: '0 12px 12px' }}>
           {/**
             * THE MATCHED ROW ITSELF, so he judges rather than trusts — and the
             * override REPLACES the tick rather than sitting beside it, which is
             * the shape already proven on the SMS duplicate.
+            *
+            * THE SAME PANEL SERVES BOTH REFUSALS, deliberately. The pre-settle
+            * one answers what the extraction found; the post-settle one answers
+            * what the WRITE found, and until now only the first had a door — so
+            * a row refused at confirm could be captured only by photographing
+            * the statement again. Two panels would be two places for one rule to
+            * drift apart in.
             */}
-          {bookDup && !overrode && (
+          {showOverride && (
             <>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.conflictInk }}>{S.batchDupBookIntro}</div>
-              <div style={{
-                background: C.shell, border: `1px solid ${C.line}`, borderRadius: 9,
-                padding: '9px 11px', fontSize: 13, marginTop: 6, lineHeight: 1.7, ...ISOLATE,
-              }} dir="auto">
-                <span style={LATIN}>{dup.match.date}</span> · {dup.match.description} ·{' '}
-                <span style={LATIN}>{money(dup.match.amount)} {dup.match.currency}</span>
-              </div>
+              {/* No evidence, no evidence box — the sentence and the choice
+                  stand on their own rather than framing an empty space. */}
+              {matchRow && (
+                <>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.conflictInk }}>{S.batchDupBookIntro}</div>
+                  <div style={{
+                    background: C.shell, border: `1px solid ${C.line}`, borderRadius: 9,
+                    padding: '9px 11px', fontSize: 13, marginTop: 6, lineHeight: 1.7, ...ISOLATE,
+                  }} dir="auto">
+                    <span style={LATIN}>{matchRow.date}</span> · {matchRow.description} ·{' '}
+                    <span style={LATIN}>{money(matchRow.amount)} {matchRow.currency}</span>
+                  </div>
+                </>
+              )}
               <button
                 className="catchip" onClick={onOverride}
                 style={{
@@ -420,7 +527,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               </button>
             </>
           )}
-          {writable && !bookDup && (
+          {!settled && writable && !bookDup && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {/**
                 * FIELD-FOUND (Tarek, 2026-08-24, first real batch): the picker

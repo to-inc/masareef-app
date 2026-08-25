@@ -3,6 +3,7 @@ import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
+import { rollup } from '../lib/priorities.js';
 import { Delta, LATIN } from './Primitives.jsx';
 
 /**
@@ -298,6 +299,132 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
           <span style={{ fontWeight: 700, color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN, ...NUMERALS }}>
             {moneyRound(total)}
           </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * THE PRIORITIES LENS — four groups, a remainder, and nothing else (D-lens,
+ * ratified by Tarek 2026-08-24; mapping and laws in `lib/priorities.js`).
+ *
+ * ——— WHAT IS DELIBERATELY ABSENT, and each absence is the ruling.
+ *
+ * No bars, no deltas, no percentages, no sort. `CategoryCompare` directly below
+ * carries all of that and is right to: it answers «how does this month compare».
+ * This answers «where did the month go», and the moment it grows a comparison it
+ * has started telling him what to think about his own priorities. Sorting the
+ * groups by size would do it silently — see the note on fixed order in
+ * `lib/priorities.js`.
+ *
+ * ——— IT IS CLOSED UNTIL HE OPENS IT.
+ *
+ * Per-install, defaulting shut (`state/lens.js`), so Dad's Month screen gains
+ * one quiet line and no numbers he did not ask for. The header is the toggle;
+ * the state persists, so he opens it once.
+ */
+export function PriorityLens({ cats, uncategorized, open, onToggle }) {
+  const folded = rollup(cats, uncategorized);
+  /**
+   * A payload that cannot back the arithmetic renders NOTHING — not four
+   * confident groups with his ❓ money silently outside all of them. The gate
+   * lives in `rollup` and this is the render half of it (fail CLOSED, §6.0:
+   * this protects the truth of a figure, not a capture).
+   */
+  if (!folded) return null;
+
+  const row = (label, amount, strong) => (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', gap: 10,
+      fontSize: 15, padding: '9px 0',
+    }}>
+      <span style={{ fontWeight: strong ? 700 : 600, color: C.ink }}>{label}</span>
+      <span style={{
+        fontWeight: 700, color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN, ...NUMERALS,
+      }}>{moneyRound(amount)}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: '4px 14px 10px', marginTop: 12 }}>
+      <button
+        onClick={onToggle}
+        aria-expanded={open}
+        style={{
+          width: '100%', minHeight: TAP, display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: 8, background: 'transparent',
+          padding: '0', textAlign: 'start',
+        }}
+      >
+        <span style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>{S.lensTitle}</span>
+        <span style={{ fontSize: 13, color: C.muted }}>{open ? '▾' : '▸'}</span>
+      </button>
+
+      {open && (
+        <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 2, paddingTop: 4 }}>
+          {/**
+            * ALL FOUR, ALWAYS — a group with no spend this month is a true zero
+            * and the fixed frame is the point of a lens. Hiding it would make
+            * the shape of his month change with its contents, which is the one
+            * thing a frame may not do.
+            */}
+          {folded.groups.map((g) => (
+            <div key={g.key}>{row(S.lensGroup(g.key), g.total)}</div>
+          ))}
+
+          {/**
+            * THE REMAINDER, AND IT NAMES ITSELF.
+            *
+            * Law 1: the rollup accounts for the month's whole figure or it is
+            * «This week 0» in a nicer shirt. The names matter as much as the
+            * number — a bare figure would hide WHICH of his categories the map
+            * has not placed, and those names are how he re-draws it.
+            *
+            * ⚠️ THIS GATE READ `> 0` AND THAT HID TWO REAL STATES.
+            *
+            *  · A NEGATIVE remainder. Refunds and reversals are an ordinary
+            *    server state, so an unmapped category can legitimately come back
+            *    below zero — and the whole block disappeared while
+            *    `folded.total` went on subtracting it. Four figures summing to
+            *    8,500 above a bold «إجمالي الشهر» reading 7,300, with the 1,200
+            *    and its category name on no line of the panel. That is the
+            *    reconciliation failure this lens exists to prevent, produced by
+            *    the lens.
+            *  · A remainder that nets to exactly zero while ❓ money is in it
+            *    (+500 uncategorised against a −500 unmapped row). docs/05 is
+            *    explicit: it «must STILL render whenever the uncategorized total
+            *    is nonzero — an empty remainder is a claim, not a decoration».
+            *
+            * So it renders whenever it is CARRYING anything: a figure of either
+            * sign, a name, or ❓ money. Only a genuinely empty remainder — the
+            * ordinary state once the map places everything — stays off, on the
+            * same reasoning that keeps «0 غير مصنّف» off a clean month.
+            */}
+          {(folded.remainder.total !== 0
+            || folded.remainder.names.length > 0
+            || folded.remainder.uncategorized !== 0) && (
+            <>
+              <div style={{ borderTop: `1px solid ${C.line}` }}>
+                {row(S.lensRemainder, folded.remainder.total)}
+              </div>
+              {folded.remainder.names.length > 0 && (
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7, paddingBottom: 6 }} dir="auto">
+                  {folded.remainder.names.map((n) => categoryLabel(n)).join(' · ')}
+                </div>
+              )}
+            </>
+          )}
+
+          {/**
+            * THE FIGURE THE FOUR GROUPS ADD UP TO — the same number the card
+            * above shows and the same one `CategoryCompare` prints. Stated so he
+            * can reconcile the lens against something, which is the whole
+            * difference between a rollup and a decoration.
+            */}
+          <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 2 }}>
+            {row(S.monthTotalLine, folded.total, true)}
+          </div>
         </div>
       )}
     </div>

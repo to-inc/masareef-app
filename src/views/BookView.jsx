@@ -7,13 +7,14 @@ import { periodTotals, comparisonOf } from '../lib/series.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { fetchEntries } from '../api/index.js';
 import { findLookalikes, lookalikeCounts } from '../state/duplicates.js';
-import { PeriodSummary, CategoryCompare } from '../components/Charts.jsx';
+import { PeriodSummary, CategoryCompare, PriorityLens } from '../components/Charts.jsx';
 import { Chip, LATIN, ISOLATE, SectionLabel } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, needsHim } from '../state/inboxOutcomes.js';
 import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay } from '../state/recent.js';
 import { bookPeriods, rowsSource, travelOf, egpTotalOf, needsCategory } from '../state/book.js';
 import { getSheetUrl } from '../state/secret.js';
+import { lensOpen as loadLensOpen, setLensOpen } from '../state/lens.js';
 import LogCard from '../components/LogCard.jsx';
 
 /**
@@ -54,6 +55,13 @@ export default function BookView({
   unsettledBatch = 0, onOpenBatch,
 }) {
   const [period, setPeriod] = useState('today');
+  /**
+   * THE PRIORITIES LENS'S OPEN STATE — read once, at the top, with every other
+   * hook. Never below a branch: a `useEffect` under an early return is what took
+   * the whole app out on launch with «rendered more hooks than during the
+   * previous render», and hook ORDER is invisible to a pure suite and to SSR.
+   */
+  const [lensIsOpen, setLensIsOpen] = useState(() => loadLensOpen());
   const [metric, setMetric] = useState('all');
   const [browsing, setBrowsing] = useState(null);   // a specific {y,m}, or null
   const [fetched, setFetched] = useState([]);
@@ -258,7 +266,11 @@ export default function BookView({
       )}
 
       {period === 'month' && (
-        <MonthScreen data={data} metric={metric} setMetric={setMetric} onGoToInbox={onGoToInbox} />
+        <MonthScreen
+          data={data} metric={metric} setMetric={setMetric} onGoToInbox={onGoToInbox}
+          lensOpen={lensIsOpen}
+          onToggleLens={() => setLensIsOpen((v) => setLensOpen(!v))}
+        />
       )}
 
       {period === 'year' && (
@@ -708,7 +720,7 @@ export function PeriodBlock({
  * mounted with the wrong props — the class a source regex cannot see. As a
  * component, `test-accountability.mjs` renders exactly what he sees.
  */
-export function MonthScreen({ data, metric, setMetric, onGoToInbox }) {
+export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens }) {
   // Honest incompleteness (06 §2.2): a month we cannot fully account for must
   // never render as a confident number. `undated` rows are in the total but not
   // the chart; `unpriced` rows are in neither, so the total is knowably short.
@@ -771,6 +783,19 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox }) {
          * screen.
          */
         offPlot={{ Visa: undated?.Visa || 0, Cash: undated?.Cash || 0 }}
+      />
+      {/**
+        * THE PRIORITIES LENS sits between the month's ONE figure and its
+        * per-category detail, because that is the order the three of them
+        * actually answer: how much · where it went · how each line moved.
+        * Per-install and closed by default (`state/lens.js`), so on Dad's phone
+        * this is one quiet line and nothing more.
+        */}
+      <PriorityLens
+        cats={data.monthCats}
+        uncategorized={data.month?.uncategorized}
+        open={lensOpen}
+        onToggle={onToggleLens}
       />
       <CategoryCompare
         cats={data.monthCats}

@@ -54,6 +54,25 @@ export const CATEGORIES = [
    * and every later transfer to them arrives already categorised.
    */
   'Science Pitchers', 'HYS', 'Team',
+  /**
+   * 2026-08-24, Tarek's ruling in the field — a sauna subscription and a
+   * workshop had nowhere to go, and he named both the want and the labels
+   * (docs/02 round 6). Exact sheet labels, character-exact, because each becomes
+   * a SUMIF criterion in his dashboard: `Leisure` · `Sports` · `Hobbies`.
+   *
+   * `Hobbies` was ruled against the Planner's hold-off: the recommendation was
+   * "add it when a real stream exists" and he named one in the next breath
+   * (horse-riding gear) — the bar met, not waived. The Sports-vs-Hobbies
+   * boundary is his to draw per purchase at capture; nothing enforces it and
+   * nothing should.
+   *
+   * ⚠️ THESE RIDE WITH THE DEPLOY CYCLE THAT PUTS THEM IN
+   * `CONFIG.EXTRA_CATEGORIES` (six → nine), NEVER BEFORE IT. Until that paste
+   * reaches his book the server refuses the value and the row lands as ❓ — the
+   * dark dictation button, one screen over. Planner 5 owns the sequencing and
+   * ships both halves in one sitting; this list is staged for that hour.
+   */
+  'Leisure', 'Sports', 'Hobbies',
 ];
 
 // The six that cover most of his spending — shown before "أنواع تانية…".

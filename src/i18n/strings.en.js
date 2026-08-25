@@ -240,6 +240,18 @@ export const EN = {
   batchTruncated: (shown, total) => `Showing ${shown} of ${total} — the list is cut off. Photograph the rest.`,
   batchWritten: 'Logged',
   batchSkippedDup: 'Was already logged',
+  /**
+   * A REFUSAL IS NOT A REPLAY, AND THEY MUST NOT READ THE SAME.
+   *
+   * `duplicate` means the per-row idempotency key was already seen — WE wrote
+   * that row on an earlier attempt, and «was already logged» is exactly true.
+   * `book_duplicate` means the server found a matching row in his book and
+   * WROTE NOTHING, pending his judgement. One is finished, the other is waiting
+   * for him, and collapsing them into one sentence hides an expense that may be
+   * real behind a word that says it is handled.
+   */
+  batchRefusedDup: 'Your book already has one like it — not logged',
+  batchRetryPending: 'Will be logged anyway',
   batchErrored: 'Not logged',
   batchNotChosen: 'You did not choose it',
   /**
@@ -255,6 +267,14 @@ export const EN = {
   batchExpired: 'This photo has gone stale — take it again and we will restore your choices',
   batchResnap: '📷 Photograph it again',
   batchDiscard: 'Discard this review',
+  /**
+   * LEAVING AND DISCARDING ARE DIFFERENT ACTS, and one button used to do both.
+   * After a settle the only control was «Done — back to the book», and it
+   * DESTROYED the draft — including rows the server had refused and never
+   * written. Leaving keeps them; discarding says out loud what it throws away.
+   */
+  batchLeave: 'Leave it for now',
+  batchDiscardWaiting: (n) => `Discard — and with it ${n} ${n === 1 ? 'expense' : 'expenses'} that never reached the book`,
   batchWaiting: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'} not logged yet`,
 
   // ——— foreign money inside a period: the EGP figure is not the whole period.
@@ -319,6 +339,21 @@ export const EN = {
   uncategorizedLine: 'Uncategorised ?',
   uncategorizedHint: 'tap to categorise',
   monthTotalLine: 'Month total',
+
+  /**
+   * ——— THE PRIORITIES LENS: it states, and never advises.
+   *
+   * These names are presentation only — categories are the permanent layer, and
+   * this map can be re-drawn at any time without touching a single stored value.
+   */
+  lensTitle: 'By priority',
+  lensGroup: (key) => ({
+    essentials: 'Essentials',
+    health: 'Health',
+    joy: 'Joy',
+    projects: 'Projects',
+  }[key] || String(key)),
+  lensRemainder: 'Everything else',
 
   // ——— the sheet itself, one tap away (A7). The whole promise is that his
   // book is untouched; this is what lets him check rather than take our word.

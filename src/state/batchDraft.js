@@ -48,15 +48,39 @@ export const EDITABLE_FIELDS = ['amount', 'category', 'description', 'date', 'me
 export const ROW_STATUSES = ['completed', 'declined', 'pending', 'incoming', 'roundup', 'unclear'];
 
 /**
- * The four that may ever become a row in his book.
+ * The THREE that may ever become a row in his book.
  *
  * `declined` is absent because the money never left the account. `incoming` is
  * absent because income is out of scope by design. Mirrors the server's
  * `WRITABLE_ROW_STATUSES` — and mirrors it rather than deriving from it, because
  * the server is the enforcer and this copy exists only to avoid OFFERING him a
  * tick the write will refuse. If the two ever disagree the server wins, loudly.
+ *
+ * ——— `roundup` LEFT THIS LIST (D22, ruled 2026-08-24; docs/04).
+ *
+ * Revolut's «Spare change» rows are a BTC auto-investment: round-ups are
+ * categorically not expenses, so writing one into his book is a wrong number
+ * with a ✓ over it. The server dropped it first —
+ * `WRITABLE_ROW_STATUSES = ['completed', 'pending', 'unclear']` in build
+ * `20260824-1347`, read out of `backend/Code.gs` rather than taken from a
+ * report — and this is the mirror following, which is the half docs/05
+ * commissioned to this seat.
+ *
+ * **The row does not disappear and does not lose its figure.** It keeps its
+ * amount, its aggregate count and its sentence («فكة متجمعة · N حركات») and
+ * loses only the tick, because capture is sacred and he is entitled to SEE
+ * what the screenshot said even about money this app may not write. That is
+ * the same shape `declined` and `incoming` already have: no tick at all rather
+ * than a disabled one, since a control he cannot use is a question about why.
+ *
+ * ⚠️ THE ONE-CYCLE COST IS DELIBERATE AND ALLOWED. Until that build reaches his
+ * book the serving backend still accepts a roundup row, so this mirror costs a
+ * tick he could technically have used. §6.0: a guard protecting THE BOOK fails
+ * CLOSED, and a closed guard is allowed to cost a feature. The reverse — the app
+ * offering a tick the server answers `row_not_writable` — is the dark dictation
+ * button, and both halves ship in the same hour anyway.
  */
-export const WRITABLE_STATUSES = ['completed', 'pending', 'roundup', 'unclear'];
+export const WRITABLE_STATUSES = ['completed', 'pending', 'unclear'];
 
 /**
  * The server's whole-batch cap, mirrored so the confirm button can refuse
@@ -75,8 +99,9 @@ export const isWritable = (status) => WRITABLE_STATUSES.indexOf(status) !== -1;
  *
  * Only `completed` — a purchase the bank has settled and he almost certainly
  * made. Everything else writable is OFF and tickable by deliberate tap, each for
- * its own reason: `pending` may yet settle, `unclear` is ours to have failed at,
- * `roundup` is a taxonomy question that is Tarek's seat rather than ours.
+ * its own reason: `pending` may yet settle, `unclear` is ours to have failed at.
+ * (`roundup` used to be the third of those. D22 answered its taxonomy question —
+ * a round-up is not an expense — so it is no longer writable at all.)
  *
  * Non-writable rows are not "off" — they have no tick at all. A control he
  * cannot use is a question about why.
@@ -279,6 +304,244 @@ export function toConfirmRows(rows, ticks, edits = {}, opts = {}) {
 }
 
 /**
+ * THE OUTCOMES THAT MAY BE ASKED AGAIN — an ALLOW-LIST, by name.
+ *
+ * `book_duplicate` is the ONLY refusal an override can answer, because `dupAck`
+ * is the only thing the server is waiting for: it found a row in his book that
+ * matches and refused pending his judgement (§3.3, §3.5). Two identical coffees
+ * on one day are two coffees, and only he knows which case this is.
+ *
+ * The three absent statuses are absent deliberately, and each for its own
+ * reason:
+ *   · `written` — it is in his book; asking again is asking for a second copy;
+ *   · `duplicate` — the per-row idempotency key was already seen, so WE wrote it
+ *     on an earlier attempt. It is in his book by our hand, and `dupAck` does
+ *     not apply to it. Rendering it as retryable would invite him to write the
+ *     same expense twice by tapping the thing that looks like the fix;
+ *   · `error` — `bad_date`, `bad_category`, `extraction_expired`: real problems
+ *     with real causes, none of which an acknowledgement of a DUPLICATE
+ *     addresses. Offering «save anyway» there would be a button that cannot
+ *     work, which is worse than no button.
+ *
+ * An allow-list rather than "everything except written": a status this file has
+ * never heard of arrives non-retryable, which is the closed direction, and the
+ * book is what a wrong retry costs.
+ */
+export const RETRYABLE_OUTCOMES = ['book_duplicate'];
+
+export const isRetryable = (outcome) =>
+  !!outcome && RETRYABLE_OUTCOMES.indexOf(outcome.status) !== -1;
+
+/**
+ * WHICH ANSWER BELONGS TO WHICH ROW — ONE definition, used by every reader.
+ *
+ * This lived in `BatchReviewView` as a local function while the review screen
+ * was the only thing that needed it. It is here now because the unsettled COUNT
+ * needs the same mapping, and «the second place always exists and is quieter»
+ * is this project's most expensive recurring class — the «This week 0» gate
+ * suppressed the headline and the metric cards went on printing their own
+ * «▼100%» in smaller type. Two readers of one mapping is exactly that shape,
+ * so there is one mapping.
+ *
+ * ——— TWO SHAPES, AND THE OLDER ONE IS NOT DEAD YET.
+ *
+ * `byKey` is what `mergeOutcomes` writes and is authoritative: a keyed map
+ * survives a SECOND confirm that sends a different, shorter list of rows.
+ * A settled object with only `{sent, results}` is the PRE-MERGE shape, and it is
+ * still reachable in one real way — a draft saved by the previous build, sitting
+ * in localStorage across a deploy, restored by `loadDraft()` on his phone. It is
+ * read positionally, exactly as it was, rather than dropped: dropping it would
+ * blank every outcome on an upgrade, which is the app forgetting what it told
+ * him an hour ago.
+ *
+ * POSITION IS THE ONLY SOUND KEY FOR THAT SHAPE, and it is guarded. The server
+ * answers `{index, status, …}` and does NOT echo `sourceHash` (§3.5, verified
+ * against `Code.gs`); `index` alone is per-photo, and two screenshots both have
+ * a row 0 — that exact collision already dropped a real expense and reported it
+ * as a successful no-op. So the mapping rides on what the server does guarantee:
+ * one outcome per row, in request order. If the two lengths disagree the
+ * assumption has failed and this returns an EMPTY map rather than sliding
+ * answers one place along — a green «written» beside a row that errored is the
+ * one forbidden output, and silence is the honest degradation.
+ *
+ * (Commission F asks the server to echo `sourceHash`; when it does, this can
+ * assert instead of assume.)
+ */
+export function outcomeMap(settled) {
+  const out = new Map();
+  if (!settled || typeof settled !== 'object') return out;
+
+  if (settled.byKey && typeof settled.byKey === 'object') {
+    for (const key of Object.keys(settled.byKey)) {
+      if (settled.byKey[key]) out.set(key, settled.byKey[key]);
+    }
+    return out;
+  }
+
+  return pairAnswers(settled.results, settled.sent);
+}
+
+/**
+ * PAIR EACH ANSWER WITH THE ROW IT ANSWERS — the ONE definition, used by the
+ * reader above and by the merge below. Two copies of this question is the
+ * hazard that has cost this project the most, and this one decides which row in
+ * his book a «written» belongs to.
+ *
+ * ═══ §3.5a: THE SERVER MAY NOW ECHO `sourceHash`, AND WE ASSERT ON IT ═══
+ *
+ * Commission F asked for the echo precisely because the positional match rests
+ * on a guarantee that is *observable in the implementation and promised
+ * nowhere*: one outcome per row, in request order, error paths included. With
+ * the echo, identity travels WITH the answer and the client can check rather
+ * than trust.
+ *
+ * ——— PRESENCE-GATED, AND THAT IS THE RULING (Planner 5, post-staging).
+ *
+ * The echo is contract text; it is not necessarily in the build his phone is
+ * talking to tonight. *A client that infers capability from the REPO is wrong
+ * by exactly one deploy, every time.* So this reads the echo when EVERY answer
+ * carries one and falls back to position — with its length guard intact — when
+ * they do not. Nothing here asks whether the repo has the feature; it asks what
+ * arrived.
+ *
+ * ——— AND WHEN THE ECHO IS PRESENT IT IS CHECKED, NOT MERELY BELIEVED.
+ *
+ * Every echoed key must name a row we actually sent. If one does not, the
+ * server is answering about something we did not ask, this function does not
+ * understand the response, and it returns NOTHING — §3.5a's own instruction («a
+ * mismatch renders NO outcomes rather than sliding answers one place along»).
+ * A green «written» beside a row that errored is the one forbidden output, and
+ * silence is the honest degradation. Same direction as the length guard it
+ * replaces: refuse rather than guess.
+ */
+export function pairAnswers(results, sent) {
+  const out = new Map();
+  const list = Array.isArray(results) ? results : [];
+  const rows = Array.isArray(sent) ? sent : [];
+  if (!list.length || !rows.length) return out;
+
+  /**
+   * ALL or NONE. A response where only some rows carry the echo is a shape
+   * neither §3.5a nor the positional guarantee describes, so it takes the
+   * positional path and its length guard rather than a half-keyed map.
+   */
+  const echoed = list.every((r) => r && typeof r.sourceHash === 'string' && r.sourceHash);
+  if (echoed) {
+    const asked = new Set(rows.map((r) => rowKey(r)));
+    for (const r of list) {
+      // Built through `rowKey`, so the echo is read with the SAME identity
+      // function the request was keyed by — never a second spelling of it.
+      const key = rowKey(r);
+      if (!asked.has(key)) return new Map();
+      out.set(key, r);
+    }
+    return out;
+  }
+
+  if (rows.length !== list.length) return out;
+  for (let i = 0; i < rows.length; i++) {
+    if (list[i]) out.set(rowKey(rows[i]), list[i]);
+  }
+  return out;
+}
+
+/** One row's answer, or null. Null means "nothing is known", never "nothing happened". */
+export function outcomeFor(settled, row) {
+  return outcomeMap(settled).get(rowKey(row)) || null;
+}
+
+/**
+ * OUTCOMES ACCUMULATE ACROSS CONFIRMS; THEY NEVER REPLACE.
+ *
+ * ⚠️ THE DEFECT THIS EXISTS TO PREVENT, AND IT IS A DOUBLE WRITE.
+ *
+ * A second confirm — the override path below — sends ONLY the refused rows he
+ * chose to insist on. Two rows go out, two answers come back. Had the response
+ * simply replaced `settled`, the positional mapping would then have covered two
+ * rows out of fourteen, every other row would have resolved to «nothing known»,
+ * and a row that was WRITTEN a minute ago would have re-rendered as an
+ * unanswered, tickable candidate. The next «اختار الكل» writes his whole
+ * statement into his book a second time.
+ *
+ * So the merge is keyed, and the three counts are RECOMPUTED FROM THE MAP rather
+ * than added up across responses: a row that answered `book_duplicate` and then
+ * `written` is one row that ended written, not one skipped plus one written. A
+ * running total would drift further from his book with every override — and it
+ * is the number the settled header states out loud.
+ */
+export function mergeOutcomes(prev, res, sent) {
+  const byKey = {};
+  for (const [key, outcome] of outcomeMap(prev)) byKey[key] = outcome;
+
+  // Through the ONE pairing definition — echo when the server sends it,
+  // position when it does not, nothing at all when neither can be trusted.
+  for (const [key, outcome] of pairAnswers(res && res.results, sent)) byKey[key] = outcome;
+
+  let written = 0, skipped = 0, errored = 0;
+  for (const key of Object.keys(byKey)) {
+    const status = byKey[key] && byKey[key].status;
+    if (status === 'written') written++;
+    else if (status === 'error') errored++;
+    else skipped++;
+  }
+  return { byKey, written, skipped, errored };
+}
+
+/**
+ * THE ROWS HE HAS INSISTED ON AFTER A REFUSAL — the second confirm's payload.
+ *
+ * ⚠️ THE THREAD THIS CLOSES (docs/05, `6139886`): «a `book_duplicate`
+ * discovered at CONFIRM time has no dupAck path — the override panel renders
+ * only pre-settle, so a row first refused at confirm can only be captured by
+ * re-photographing». The pre-settle panel answers the duplicate the client
+ * already knew about (`row.dupBook`, from the extraction). But the book moves
+ * between the extraction and the confirm — an SMS lands, a Shortcut fires — and
+ * the server checks again at write time. That second refusal is the one with no
+ * door, and it lands on the rows most likely to be real: the ones that looked
+ * clean.
+ *
+ * It builds through `toConfirmRows` rather than beside it, so §3.5's request
+ * shape has exactly ONE builder. A second wire builder is the two-normalizers
+ * hazard with money on it: the first one would have kept its `currency` and its
+ * `dateStr` and the copy would have quietly lost them, which is how €163 becomes
+ * 163 EGP.
+ *
+ * A refused row rides only if he OVERRODE it — absent an override this returns
+ * [], so the retry button cannot exist without a deliberate per-row tap. The
+ * override is his judgement, and an app that batches it away has made the
+ * judgement for him.
+ *
+ * ——— AND THE ROWS HE NEVER SENT RIDE TOO, which is a second dead control this
+ * closes. A row left unticked at confirm gets no answer, so it keeps its live
+ * checkbox after the settle — and until now the footer said only «back to the
+ * book», so ticking it did nothing at all. A tickable box on the screen that
+ * writes to his book, wired to nothing, is the dark dictation button again.
+ * What this returns is therefore exactly what `unsettledCount` calls waiting:
+ * refusals he has insisted on, plus rows he has now decided to keep.
+ *
+ * `written` and `duplicate` can never ride — both are in his book, and a
+ * second write is the one thing this screen must never make easy. An `error`
+ * row cannot ride either: nothing on this screen fixes a `bad_date`, and a
+ * button that cannot work is worse than no button. It still COUNTS as waiting
+ * and still says «not logged», because the honest report of an unfixable row is
+ * that it is unfixed, not that it is finished.
+ */
+export function retryRows(rows, settled, overridden, edits = {}, ticks = {}) {
+  const answers = outcomeMap(settled);
+  const send = {};
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const key = rowKey(row);
+    const answer = answers.get(key);
+    if (answer) {
+      if (isRetryable(answer) && overridden && overridden[key]) send[key] = true;
+      continue;
+    }
+    if (ticks && ticks[key] === true) send[key] = true;
+  }
+  return toConfirmRows(rows, send, edits, { overridden });
+}
+
+/**
  * RE-ATTACH HIS EDITS AFTER A RE-SNAP (CONTRACT-04 ②).
  *
  * When the six-hour extraction is gone the server answers `extraction_expired`
@@ -323,9 +586,45 @@ export function reattachEdits(oldEdits, oldRows, newRows) {
  * exactly what the count is for.
  */
 export function unsettledCount(draft) {
-  if (!draft || draft.settled) return 0;
+  if (!draft) return 0;
   const rows = Array.isArray(draft.rows) ? draft.rows : [];
-  return rows.filter((r) => isWritable(r && r.row_status)).length;
+  const waiting = rows.filter((r) => isWritable(r && r.row_status));
+  if (!draft.settled) return waiting.length;
+
+  /**
+   * ——— A SETTLED BATCH IS NOT AUTOMATICALLY A FINISHED ONE, and this is the
+   * SECOND RENDER SITE of the rule the first one already enforces.
+   *
+   * The review screen says per row what happened. This number is what he passes
+   * on the Book screen every day, and it used to return 0 the moment a confirm
+   * came back — so a batch where ten rows wrote and two were REFUSED read as
+   * «nothing waiting», with the two sitting in a draft he has no reason to
+   * reopen. That is «This week 0» exactly: a surface that looks complete while
+   * something real is absent from it, and it is the quieter of the two places,
+   * which is where this class always survives.
+   *
+   * It counts what the answers say is NOT in his book — a refusal, an error, and
+   * a row that was never sent because he left it unticked. `written` and
+   * `duplicate` are both in the book (the second by our own earlier write), so
+   * both are done.
+   *
+   * IT FAILS OPEN, deliberately, and that is the fail-direction rule (§6.0): this
+   * count protects CAPTURE, so when a refused row might be a real second purchase
+   * it is counted as waiting. Over-counting costs him one look at a screen that
+   * explains itself; under-counting loses the expense.
+   *
+   * BUT IT DOES NOT INVENT. A settled marker carrying no per-row answers — the
+   * degenerate shape, and the one the older suite pins — yields 0 rather than
+   * assuming the whole batch is outstanding: honest rendering cuts both ways, and
+   * fabricating N waiting expenses out of an absent answer is the same defect
+   * pointing the other direction.
+   */
+  const answers = outcomeMap(draft.settled);
+  if (!answers.size) return 0;
+  return waiting.filter((r) => {
+    const status = (answers.get(rowKey(r)) || {}).status;
+    return status !== 'written' && status !== 'duplicate';
+  }).length;
 }
 
 /* ——————————————————————— persistence ——————————————————————— */

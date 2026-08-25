@@ -27,7 +27,8 @@
     "check:accountability": "node scripts/test-accountability.mjs",
     "check:entry": "node scripts/test-entry.mjs",
     "check:dock": "node scripts/test-dock.mjs",
-    "check:receipt-dup": "node scripts/test-receipt-dup.mjs"
+    "check:receipt-dup": "node scripts/test-receipt-dup.mjs",
+    "check:priorities": "node scripts/test-priorities.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

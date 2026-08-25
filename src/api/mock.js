@@ -111,6 +111,64 @@ const MOCK_HAS_PREV_YEAR = false;
  */
 const MOCK_PREVLOG_NULL = false;
 
+/**
+ * THE V18 MONTH SHAPE IS THE DEFAULT NOW, AND THE FLAG THAT HID IT IS GONE.
+ *
+ * ⚠️ THIS FIXTURE WAS V17 ON A BELIEF THAT WAS ALREADY FALSE. It carried a
+ * top-5 category cut and NO `month.uncategorized`, under a comment asserting
+ * «that is what the serving backend returns today» — and the client gates two
+ * surfaces on that field's PRESENCE, so the mock was hiding the «إجمالي الشهر»
+ * line and the whole priorities lens from every dev and every suite.
+ *
+ * Planner 5 PROBED his book on 2026-08-24 and it answers
+ * `month.uncategorized: {count: 3, total: 0}`. The field is live. The belief
+ * was a cache with no invalidation, exactly as the batch seat's own note says,
+ * and mock parity cuts BOTH ways: a mock more PESSIMISTIC than the service
+ * hides a shipped feature from everyone who could have caught a defect in it.
+ * That is the fifth-occurrence lesson wearing its other face.
+ *
+ * ——— WHAT «RECONCILES» MEANS HERE, since two earlier attempts got it wrong.
+ *
+ * 06 §2.2's law: `sum(monthCats.now) + uncategorized.total` IS the month on
+ * display. The month's series is null-padded at Cairo today and therefore grows
+ * daily, so neither side may be a constant:
+ *   · a hard-coded ❓ total reconciled on the two days around the afternoon it
+ *     was chosen and lied on the other twenty-nine;
+ *   · deriving ONLY the ❓ bucket from a fixed category list held the identity
+ *     every day by handing ❓ a NEGATIVE total for the first twelve — a state
+ *     the real server cannot produce, since ❓ money is a sum of real rows.
+ * So both sides derive: the names take fixed SHARES of the month the mock
+ * actually generated, and ❓ takes the exact leftover. Whole pounds on both
+ * sides, so the identity is exact rather than true to within floating point —
+ * an identity a suite cannot assert is not an identity.
+ */
+const MOCK_UNDATED = { count: 2, Visa: 0, Cash: 175 };
+/**
+ * The month's categories. `share` is of the month's TRUE total, and the shares
+ * deliberately sum to less than one — what is left is the ❓ money, which his
+ * book really does carry (the Inbox exists for it).
+ *
+ * `prev` is last month's and is a genuine constant: a closed month does not
+ * grow. Only `now` has to move with the day.
+ *
+ * The six names span three of the priorities lens's groups — Essentials,
+ * Health (the clubs, placed there by the Owner 2026-08-25) and Joy — leaving
+ * Projects at a true zero, which is worth rendering too. The remainder line is
+ * exercised by the ❓ money rather than by an unplaced category, which is
+ * exactly the shape his own book is in: everything placed, a ❓ balance
+ * outstanding. (The map's one unplaced name, `Personal expenses`, has zero rows
+ * in his whole book, so putting spend on it here would be inventing a state the
+ * fixture is supposed to mirror.)
+ */
+const MOCK_MONTH_CATS = [
+  { name: 'Eating out', prev: 9120, share: 0.288 },
+  { name: 'Groceries', prev: 6480, share: 0.220 },
+  { name: 'Car', prev: 1890, share: 0.125 },
+  { name: 'Donations', prev: 4500, share: 0.088 },
+  { name: 'Internet', prev: 860, share: 0.039 },
+  { name: 'Madinety club', prev: 700, share: 0.032 },
+];
+
 export function mockSummary() {
   const today = cairoToday();
   const prev = prevMonthOf(today.y, today.m);
@@ -131,6 +189,26 @@ export function mockSummary() {
 
   const curMonth = monthSeries(today.y, today.m, today.d);
   const prevMonth = monthSeries(prev.y, prev.m, null);
+
+  /**
+   * THE MONTH, DERIVED ON BOTH SIDES so 06 §2.2's identity holds on EVERY day —
+   * `sum(monthCats.now) + uncategorized.total` is the figure the card shows.
+   * The reasoning, and the two wrong versions that preceded it, are at
+   * `MOCK_MONTH_CATS` above.
+   */
+  const monthTrueTotal = sum(curMonth.Visa) + sum(curMonth.Cash)
+    + MOCK_UNDATED.Visa + MOCK_UNDATED.Cash;
+  // WHOLE POUNDS on both sides. Two-decimal rounding left a float residue
+  // (17,868.370000000003 + 5,642.63 ≠ 23,511 by 4e-12) — invisible on screen,
+  // but an identity that is only true to within floating-point is not an
+  // identity a suite can assert, and this fixture exists to BE asserted. The
+  // month's own series are whole pounds, so nothing is lost.
+  const monthCats = MOCK_MONTH_CATS.map(({ share, ...c }) => ({
+    ...c, now: Math.round(monthTrueTotal * share),
+  }));
+  const mockUncategorized = {
+    count: 3, total: monthTrueTotal - sum(monthCats.map((c) => c.now)),
+  };
 
   // ——— year: null for months after this one; January is deliberately null to
   // stand in for "no tab exists yet", which is NOT the same as "spent nothing".
@@ -208,7 +286,12 @@ export function mockSummary() {
       prev: prevMonth,
       names: { cur: MONTH_NAMES[today.m - 1], prev: MONTH_NAMES[prev.m - 1] },
       // Two unreadable date cells this month — exercises the footnote.
-      undated: { count: 2, Visa: 0, Cash: 175 },
+      undated: MOCK_UNDATED,
+      // PRESENT, because his book's `summary` carries it (probed 2026-08-24).
+      // The client gates the total line and the priorities lens on this field's
+      // PRESENCE, never on its value — a clean month sends {count: 0, total: 0}
+      // and its arithmetic is perfectly sound.
+      uncategorized: mockUncategorized,
       // Rows he wrote down but never priced (the travel legs). The month total
       // is knowably short, and the UI must say so rather than look confident.
       unpriced: { count: 3 },
@@ -260,30 +343,31 @@ export function mockSummary() {
       prev: { Visa: prevYearVisa, Cash: prevYearCash },
     },
     /**
-     * V17 SHAPE, DELIBERATELY — a TOP-5 cut, and `month` above carries NO
-     * `uncategorized` key. That is what the serving backend returns today, and
-     * the parity law says the mock's default state is the real service's default
-     * state, never a nicer one. So this list does NOT add up to the month, and
-     * the Month screen correctly prints no «إجمالي الشهر» line under it: a total
-     * a visible list cannot account for is the exact reconciliation failure this
-     * app was built around (06 §2.2).
+     * SIX CATEGORIES, DERIVED — see `MOCK_MONTH_CATS` for the shares and for why
+     * both sides of the month have to move with the day. `sum(monthCats.now) +
+     * uncategorized.total` IS the month the card shows (06 §2.2's law), which is
+     * why the «إجمالي الشهر» line renders under this list rather than being
+     * withheld: the list can account for the total, so it states it.
      *
-     * WHEN V18 CYCLES TO PRODUCTION (every category here, plus
-     * `month.uncategorized: {count, total}` in the block above), this mock flips
-     * to that shape in the same rev — again by the parity law — and the total
-     * line starts rendering on its own, because the client gates on that field's
-     * PRESENCE. Whoever flips it: make the numbers reconcile, i.e. sum of these
-     * `now` figures + `uncategorized.total` = the month's true total (the series
-     * above plus `undated`), or the mock will be asserting a lie in the one
-     * place the screen shows its arithmetic.
+     * ⚠️ THIS COMMENT USED TO SAY THE OPPOSITE, AND IT SURVIVED THE EDIT THAT
+     * FALSIFIED IT. It read «V17 SHAPE, DELIBERATELY — a TOP-5 cut, and `month`
+     * above carries NO `uncategorized` key … that is what the serving backend
+     * returns today», and it closed by instructing whoever eventually flipped the
+     * mock to make the numbers reconcile. The flip happened; the instruction
+     * stayed; every clause inverted. The array beneath it was replaced and the
+     * prose above it was untouched CONTEXT in the diff, which is exactly how a
+     * comment outlives the code it describes.
+     *
+     * It is recorded rather than merely deleted because of WHAT it would have
+     * cost: a maintainer landing here — and this is the block you land on when
+     * you come to edit the categories — would have been told in the file's most
+     * authoritative register to re-gate `month.uncategorized`. That single change
+     * re-hides the month-total line AND the entire priorities lens from every dev
+     * and every suite, which is the defect this fixture was just repaired to end.
+     * A stale comment that merely misinforms is a nuisance; one that instructs
+     * the reversal of the fix above it is a trap.
      */
-    monthCats: [
-      { name: 'Eating out', now: 6840, prev: 9120 },
-      { name: 'Groceries', now: 5210, prev: 6480 },
-      { name: 'Car', now: 2960, prev: 1890 },
-      { name: 'Donations', now: 2100, prev: 4500 },
-      { name: 'Internet', now: 1010, prev: 860 },
-    ],
+    monthCats,
     today: { entries: todayEntries, totals: todayTotals },
     pending: [
       // `match` is the SAME row object shape as `today.entries` above — see the

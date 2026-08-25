@@ -17,7 +17,7 @@ import { openingTab, cairoHourOf } from './state/opening.js';
 import { remember } from './state/repeats.js';
 import { setBadge } from './state/badge.js';
 import {
-  loadDraft, saveDraft, clearDraft, mergeJobs, unsettledCount,
+  loadDraft, saveDraft, clearDraft, mergeJobs, unsettledCount, mergeOutcomes, outcomeMap,
 } from './state/batchDraft.js';
 import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY } from './state/travel.js';
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
@@ -129,10 +129,28 @@ export default function App() {
     setBatchExpired(false);
     setBatch((prev) => {
       const jobs = (prev.jobs || []).filter((j) => j.sourceHash !== job.sourceHash).concat(job);
-      // A NEW photo invalidates a settled result: the answers on screen describe
-      // rows that are no longer the whole list, and leaving them would label the
-      // new rows with the old batch's verdicts.
-      return saveDraft({ jobs, settled: null });
+      /**
+       * ⚠️ THIS DISCARDED EVERY ANSWER, AND IT NO LONGER HAS TO.
+       *
+       * The old comment — «leaving them would label the new rows with the old
+       * batch's verdicts» — described the PRE-MERGE positional shape, where an
+       * answer was identified by where it sat in an array. `mergeOutcomes` keys
+       * every outcome by `sourceHash#index`, so an answer can only ever find the
+       * row it was actually about. Throwing away a second photo's verdicts
+       * because a third arrived is how the Book comes to claim that rows already
+       * in his sheet are still waiting.
+       *
+       * The ONE case that genuinely invalidates: a re-read of the SAME photo.
+       * Same `sourceHash`, freshly extracted rows, and an old verdict at index 3
+       * would attach to whatever the new reading put at index 3. Those answers,
+       * and only those, are pruned.
+       */
+      const kept = {};
+      for (const [key, outcome] of outcomeMap(prev.settled)) {
+        if (!key.startsWith(`${job.sourceHash}#`)) kept[key] = outcome;
+      }
+      const settled = Object.keys(kept).length ? mergeOutcomes({ byKey: kept }, null, null) : null;
+      return saveDraft({ jobs, settled });
     });
     setEntryMode('batch');
   }, []);
@@ -179,7 +197,19 @@ export default function App() {
         showToast(res && res.error === 'batch_too_large' ? S.batchTooLarge : S.batchFailed);
         return;
       }
-      setBatch((prev) => saveDraft({ ...prev, settled: { ...res, sent: chosen } }));
+      /**
+       * OUTCOMES ACCUMULATE — they do not replace (see `mergeOutcomes`).
+       *
+       * A second confirm carries ONLY the rows he insisted on after a refusal,
+       * so replacing `settled` would leave every other row unanswered: a row
+       * WRITTEN a minute ago would re-render as a live, tickable candidate, and
+       * the next «اختار الكل» writes his statement into his book twice. Keyed
+       * by row, with the three counts recomputed from the map so a row that was
+       * refused and then written counts once, as written.
+       */
+      setBatch((prev) => saveDraft({
+        ...prev, settled: mergeOutcomes(prev.settled, res, chosen),
+      }));
       if (res.written) refresh();
     } catch {
       showToast(S.batchFailed);
@@ -187,6 +217,17 @@ export default function App() {
       setBatchBusy(false);
     }
   }, [batch.jobs]);
+
+  /**
+   * LEAVING IS NOT DISCARDING. The draft stays exactly as it is — including the
+   * rows the server refused and never wrote — so the Book's waiting count is
+   * answerable tomorrow and the override path is still there when he comes back.
+   * The settled screen's only exit used to be `discardBatch`, under the word
+   * «Done»; unwritten rows died with it.
+   */
+  const leaveBatch = useCallback(() => {
+    setEntryMode('keypad');
+  }, []);
 
   /** Settled or abandoned — the draft goes, and so does the screen. */
   const discardBatch = useCallback(() => {
@@ -196,10 +237,34 @@ export default function App() {
     setEntryMode('keypad');
   }, []);
 
-  /** The extraction expired; the PHOTO has not. One fresh read, edits intact. */
+  /**
+   * The extraction expired; the PHOTO has not. One fresh read, edits intact.
+   *
+   * ⚠️ IT USED TO CLEAR `settled`, AND AFTER THE SECOND-CONFIRM PATH LANDED THAT
+   * BECAME A FALSE NUMBER ON THE SCREEN HE PASSES DAILY.
+   *
+   * The sequence, and it is the DESIGNED flow rather than an edge: 14 rows, ten
+   * written and two refused as `book_duplicate`; he taps «سيبها دلوقتي»; more
+   * than six hours later the Book's waiting count sends him back; he overrides
+   * the two and confirms; the server's `rcpthash` cache has expired so BOTH come
+   * back `extraction_expired` — and `every()` is satisfied on a two-row list
+   * exactly as on a fourteen-row one, so `allExpired` fires and this screen
+   * replaces the settled one. Clearing `settled` here then erased the record
+   * that TEN of those rows are already in his sheet, and the Book went on to
+   * state «14 مصاريف لسه ما اتسجلوش» about a set of which ten were logged.
+   *
+   * Before this rev the settled screen's only exit was `onDiscard`, so a draft
+   * carrying answers could never reach here at all. The second confirm is what
+   * made it reachable, so the repair belongs with it.
+   *
+   * Keeping the answers is safe in a way it was NOT before `mergeOutcomes`:
+   * every outcome is keyed by `sourceHash#index`, and a re-snap is new bytes and
+   * therefore a new `sourceHash`, so the fresh extraction's rows cannot inherit
+   * a verdict addressed to the old ones. `takeBatchJob` prunes the one case that
+   * could — a re-read of the SAME photo.
+   */
   const resnapBatch = useCallback(() => {
     setBatchExpired(false);
-    setBatch((prev) => saveDraft({ ...prev, settled: null }));
     setEntryMode('receipt');
   }, []);
 
@@ -756,6 +821,7 @@ export default function App() {
                     onConfirm={confirmBatch}
                     onResnap={resnapBatch}
                     onDiscard={discardBatch}
+                    onLeave={leaveBatch}
                   />
                 )}
                 {tab === 'book' && (
