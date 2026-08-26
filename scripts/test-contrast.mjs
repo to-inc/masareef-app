@@ -156,7 +156,12 @@ check('white on harbor — primary button', C.onDark, C.harbor, 18.5, true);
 check('white on harbor — toast', C.onDark, C.harbor, 16.5);
 check('white on harbor — active metric value', C.onDark, C.harbor, 19, true);
 check('white on harbor — active metric label', C.onDark, C.harbor, 11.5, true);
-check('active tab label', C.harbor, C.card, 13.5, true);
+/**
+ * C2: the active tab's label reads in INK, applied by the stylesheet override
+ * in styles.css — the harbor version fails the 4.5 floor on the C1 worst-case
+ * composite below, where a negative control keeps that reason measured.
+ */
+check('active tab label (ink — the C2 override)', C.ink, C.card, 13.5, true);
 
 // ——————————————————————— the one warm action
 check('cash CTA label — amberInk on amber', C.amberInk, C.amber, 18.5, true);
@@ -206,6 +211,61 @@ checkUi('chart stroke — all', C.ink, C.card);
 checkUi('focus ring', C.harbor, C.shell);
 decorative('card border against the shell', C.line, C.shell, 'the white card fill against the darker shell');
 decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a background gradient behind ink text');
+
+/**
+ * ——————————————————————— C1: the floating bar, composited WORST-CASE.
+ *
+ * The bar's fill is C.card at BAR_ALPHA over whatever scrolled beneath it —
+ * so the honest pair is not «label on card» but «label on card-at-alpha OVER
+ * THE DARKEST PAINT IN THE PALETTE». Both halves are computed, never assumed:
+ *
+ *   · BAR_ALPHA is extracted from App.jsx — the constant the bar actually
+ *     renders with. A 0.92 copied here would go stale the day the bar moves
+ *     and keep certifying a fill that no longer exists.
+ *   · the darkest underlay is computed from the palette itself (minimum
+ *     luminance over every C token — today that is amberInk), so a future
+ *     darker token automatically TIGHTENS this floor instead of escaping it.
+ *
+ * Compositing is per-channel sRGB, which is what the browser does for an
+ * alpha fill. The blur is ignored deliberately: blurring can only AVERAGE the
+ * underlay with its lighter surroundings, so the unblurred composite is the
+ * true worst case — asserting it covers every blurred frame for free.
+ */
+{
+  const fs = await import('node:fs');
+  const appSrc = fs.readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  const m = /const BAR_ALPHA = (0\.\d+)/.exec(appSrc);
+  if (!m) {
+    failures.push('C1 worst case — App.jsx declares no BAR_ALPHA; a floating bar whose alpha this suite cannot read is unmeasurable glass');
+  } else {
+    pass++; // the alpha was found where the bar actually lives
+    const alpha = Number(m[1]);
+    const chan = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const compose = (top, a, under) => {
+      const [t, u] = [chan(top), chan(under)];
+      return `#${t.map((c, i) => Math.round(a * c + (1 - a) * u[i]).toString(16).padStart(2, '0')).join('')}`;
+    };
+    const darkest = Object.values(C).reduce((a, b) => (luminance(a) <= luminance(b) ? a : b));
+    const bar = compose(C.card, alpha, darkest);
+    // 13.5 is TabButton's real label size; active runs bold (700), inactive 500.
+    check(`C1 worst case — active nav label (ink) on the ${alpha} bar over ${darkest}`, C.ink, bar, 13.5, true);
+    check(`C1 worst case — inactive nav label (muted) on the ${alpha} bar over ${darkest}`, C.muted, bar, 13.5);
+    checkUi('C1 worst case — inactive nav icon glyph (muted) over the bar', C.muted, bar);
+    /**
+     * WHY THE ACTIVE LABEL IS INK AND NOT HARBOR, kept as arithmetic: harbor
+     * at 13.5 bold on this composite is ≈3.9:1, under the 4.5 normal-text
+     * floor. That number is the reason styles.css overrides the active tab's
+     * ink (C2) — this control keeps the reason measured, so nobody «restores»
+     * harbor without first meeting the floor it fails today.
+     */
+    if (ratio(C.harbor, bar) < 4.5) pass++;
+    else failures.push('negative control: harbor cleared 4.5:1 on the worst-case bar — the C2 ink override is no longer forced; re-derive it rather than keeping a rule whose reason expired');
+    decorative('C2 active-circle harbor tint over the bar', compose(C.harbor, 0.16, bar), bar,
+      'the ink glyph and label on it, the weight shift, and aria-current — the circle restates «you are here», it is never the sole carrier');
+    decorative('C1 the capsule\'s hairline against the shell', C.line, C.shell,
+      'the 0.92 card fill\'s luminance step over whatever lies beneath, and the labelled controls on the bar');
+  }
+}
 
 /**
  * ——————————————————————— THE ONE WARM ACTION, pinned.

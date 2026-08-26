@@ -3,6 +3,29 @@
    self-hosted Fraunces subset that used to live here was retired with the "Nile
    ledger" palette rather than re-pointed. */
 
+/* ═══ THE VOCABULARY, RESTATED ONCE FOR CSS (B2/C2) ═══
+   A stylesheet cannot import theme.js, so the tokens cross the wall exactly
+   once, here, as custom properties. These values are NOT free to edit: the
+   chunk oracles (test-chunk-b2.mjs, test-chunk-c2.mjs) hold every one of them
+   equal to the theme.js token it restates — MOTION.tap/move/page/draw, both
+   easings, TAP, RADIUS.capsule, C.ink, C.harbor. Change the theme first, or
+   the suites go red. Every animation below SPEAKS these vars; a raw duration
+   where a MOTION token exists is a defect (token law). */
+:root {
+  --dur-tap: 120ms;
+  --dur-move: 260ms;
+  --dur-page: 320ms;
+  --dur-draw: 700ms;
+  --ease-out: cubic-bezier(0.2,0,0,1);
+  --ease-settle: cubic-bezier(0.22,1,0.36,1);
+  --tap: 48px;
+  --radius-capsule: 999px;
+  --ink: #2C4356;
+  /* C.harbor's own rgb (62,124,166) at 0.16 — the C2 tint. The alpha is the
+     tint choice; the rgb is the token's, pinned equal by test-chunk-c2. */
+  --harbor-tint: rgba(62,124,166,0.16);
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -51,7 +74,8 @@ textarea {
 .catchip,
 .bigbtn,
 .quickchip {
-  transition: transform 0.08s ease, background 0.15s ease;
+  /* the press acknowledgment is a TAP — both properties ride the tap token */
+  transition: transform var(--dur-tap) var(--ease-out), background var(--dur-tap) var(--ease-out);
 }
 
 @keyframes slideup {
@@ -59,23 +83,88 @@ textarea {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pop {
-  0% { transform: scale(0.92); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.9s linear infinite; }
 
-.card-in { animation: slideup 0.28s ease both; }
-.toast-in { animation: pop 0.18s ease both; }
+/* a card sliding into place is a MOVE within the screen — it rides its own
+   token, nothing states a raw second. (The toast now enters as a SHEET —
+   B4's entrance in Primitives.jsx — so `.toast-in`/`pop` died with it.) */
+.card-in { animation: slideup var(--dur-move) var(--ease-settle) both; }
+
+/* ═══ B2 — THE VIEW-SWAP ENTRANCE (north-star §4.2, nav-F3/F12) ═══
+   A new screen fades in and rises 8px at MOTION.page. The 8px is the ruled
+   rise distance of chunk B2 itself — motion geometry with no SPACE role,
+   stated here once, by name. The shell applies .view-in keyed by tab
+   (App.jsx), so the entrance replays on a swap and never on a mere re-render.
+   The class deliberately carries NO opacity of its own: under the reduced-
+   motion collapse below, the view must render fully visible, instantly. */
+@keyframes viewin {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.view-in { animation: viewin var(--dur-page) var(--ease-settle) both; }
+
+/* ═══ B6 — THE DETAIL PUSH'S CROSS-FADE (View Transitions, where supported) ═══
+   Even the browser-drawn swap speaks the MOTION vocabulary. The reduced-motion
+   collapse lives in the media block below; the JS half (App.jsx pushDetail)
+   never starts a transition there at all — this is the belt on those braces. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-page);
+  animation-timing-function: var(--ease-out);
+}
+
+/* ═══ C2 — «YOU ARE HERE» (north-star §4.3) ═══
+   The active destination sits in a 48pt harbor-tinted circle. The tabs are
+   TabButton (Primitives — another leaf's file), so the circle is a stylesheet
+   consequence of the one honest hook TabButton already emits:
+   aria-current="page". The visual state and the announced state are one
+   attribute — they cannot disagree. A STATE, not a shadow (A2): the tint is a
+   fill the eye reads as location; nothing floats. */
+nav button {
+  /* items centre as columns, so a 48pt circle and a bare 21px icon sit on the
+     same optical line instead of both hanging from the bar's top edge */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* C2 clamp — geometry exemption (ruling 4): a 48pt box whose radius is bounded
+   by its own dimensions, deliberately a circle («you are here» IS the touch
+   floor); --radius-capsule restates RADIUS.capsule, pinned by test-chunk-c2. */
+nav button[aria-current="page"] > div:first-child {
+  border-radius: var(--radius-capsule);
+  width: var(--tap);
+  height: var(--tap);
+  background: var(--harbor-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+nav button[aria-current="page"] {
+  /* INK, not harbor — and !important because TabButton paints its state colour
+     inline. Over the C1 bar (0.92 fill composited over the darkest scrollable
+     paint) harbor at 13.5px bold measures ≈3.9:1, under the 4.5 floor, while
+     ink clears ≈8.9:1 — measured in test-contrast («C1 worst case»). Location
+     is carried by the circle, the weight and aria-current; the ink only reads.
+     The big ﹢ is untouched: its icon sets its own inline white-on-harbor. */
+  color: var(--ink) !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .card-in,
-  .toast-in,
+  .view-in,
   /* The spinner stops too — but the button stays disabled and aria-busy, so the
      in-flight state is still announced and still visible without motion. */
   .spin {
+    animation: none;
+  }
+  /* B6: the browser-drawn detail-push crossfade flattens with everything else —
+     the new screen appears in its final state instantly, never hidden. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
     animation: none;
   }
   .catchip,

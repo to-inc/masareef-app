@@ -192,7 +192,9 @@ export const MORNING_CROWN = `linear-gradient(180deg, ${C.mist} 0%, ${C.shell} 3
  * AFFORDANCE change, not a style. An inline radius without the named comment
  * is the drift A3's audit exists to catch.
  */
-export const RADIUS = { card: 20, row: 16, capsule: 999, inset: 8 };
+// `sheet: 24` — Planner ruling 2026-08-26 for B4: an advisory sheet slides in
+// OVER the page, so its lip sits one step softer than the card it covers.
+export const RADIUS = { card: 20, row: 16, capsule: 999, inset: 8, sheet: 24 };
 
 /**
  * Eight reading sizes (§3 + rulings 1–2). Line-height ≥ 1.3 governs PROSE —

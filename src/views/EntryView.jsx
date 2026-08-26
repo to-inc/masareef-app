@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, unitSize,
+  C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, SPACE, unitSize,
 } from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { repeatChips } from '../state/repeats.js';
@@ -25,32 +25,107 @@ import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx
  * up per option. The label is never the value — see state/entryPayload.js for
  * the column-swap that arrangement exists to make impossible.
  *
- * ——— UX REV, 2026-08-17 (findings S1–S5 of the design read).
+ * ——— UX REV, 2026-08-17 (findings S1–S5): the submit left the scroll and became
+ * `EntryDock`, pinned by the shell; the quick chips came up top; the keypad gave
+ * back 32px. All three were about one measured fact — at 375×812 the button that
+ * ends the task sat 200px below the fold on the five-second screen.
  *
- * MEASURED ON THE DEVICE, not guessed: at 375×812 the body is 658px. The old
- * order — title, method, 46px amount, a 248px keypad, then eight quick chips,
- * then twenty-seven categories, then the submit button — put «سجّل المصروف»
- * roughly 200px BELOW the fold. On the one screen in this app whose entire
- * subject is the five-second law, the button that ends the task could not be
- * seen without scrolling past everything else.
+ * ——— DECOMPRESSION REV, Wave 3 (north-star §4.1, the Owner's GAP 1: «all very
+ * cramped»). Three moves, each its own chunk:
  *
- * Three changes, and they are all about that one fact:
+ *  N3 — «زي قبل كده» IS A CARD NOW, not a chip. His most recent complete entry
+ *      (description + amount + category + method) stands at the top of the
+ *      screen as one RADIUS.card button; one tap re-fills all four and the
+ *      pinned dock still asks for the verb. When there is nothing to repeat —
+ *      fresh install, or travelling where every remembered chip is EGP by
+ *      construction — the card is ABSENT, never a dead control.
  *
- *  1. THE SUBMIT LEFT THE SCROLL. It is `EntryDock` now, rendered by the shell
- *     between <main> and the tab bar, so it is on screen from the first frame to
- *     the last. The missing step is still STATED rather than merely greyed —
- *     «اكتب المبلغ» → «اختار النوع» → «60 جنيه · أكل بره» — but since A9 it is
- *     stated on a quiet line BESIDE the button, never as the button's label:
- *     the button keeps one verb in every state (north-star §4.1).
+ *  N4 — THE TOP CHIP ROW DIED. Say-it / currency / receipt are input MODES, not
+ *      destinations, so they wait under the number as icon+word buttons. The
+ *      amount capsule is this screen's hero; everything else orbits it.
  *
- *  2. THE QUICK CHIPS CAME UP TOP. They set the description AND the category in
- *     one tap, which makes them the fastest path on the screen; they were under
- *     the keypad, where the fastest path is not.
- *
- *  3. THE KEYPAD GAVE BACK 32px (56 → 50 per row, still above the 48 floor) and
- *     the amount is no longer painted in the BORDER colour when empty. Together
- *     with (1) that is what lifts the category row into view.
+ *  N5 — THE SCREEN BREATHES IN SECTIONS. Two white RADIUS.card boxes on the
+ *      shell — the number (rail, capsule, modes, keypad) and the row's words
+ *      (method, category) — with SPACE-token gaps between them. The cramped
+ *      single column was each site being locally reasonable and no two of them
+ *      agreeing; the SPACE vocabulary is the agreement.
  */
+
+/**
+ * N3 — the repeat-last-entry action, as one complete card.
+ *
+ * IT DELEGATES THE FILL. The card and the rail chips must put the screen into
+ * the same state or the two paths drift (the entryDock lesson: readiness stated
+ * twice, in two dialects, disagreed on "0"). So this component carries no
+ * setters of its own — it hands the whole entry to the one `fill` below.
+ *
+ * A CONTROL, SO IT KEEPS ITS EDGE. Plain cards lost their borders (A2 —
+ * luminance carries elevation), but this card is a BUTTON, and theme.js's
+ * doctrine keeps `line` on tappable things by name (the PriorityLens
+ * precedent: a tappable disclosure stays bordered).
+ *
+ * THE AMOUNT IS PRINTED BEFORE IT IS TAPPED. Same honesty rule as the rail
+ * chips: a prefilled figure must be on screen before his thumb commits to it,
+ * and the unit is stated — every remembered entry is EGP by construction
+ * (state/repeats.js refuses anything else), so the unit is the pound, named.
+ */
+function LikeBeforeCard({ entry, onFill }) {
+  return (
+    <button
+      className="likecard catchip"
+      onClick={() => onFill(entry)}
+      style={{
+        display: 'block', width: '100%', textAlign: 'start',
+        minHeight: TAP, padding: SPACE.cardPad,
+        background: C.card, borderRadius: RADIUS.card,
+        border: `1px solid ${C.line}`, color: C.ink,
+      }}
+      dir="auto"
+    >
+      <span
+        style={{
+          display: 'block', fontSize: TYPE.label, fontWeight: 600,
+          color: C.muted, marginBottom: 4,
+        }}
+      >
+        {S.entryRepeats}
+      </span>
+      <span
+        style={{
+          display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap',
+          fontSize: TYPE.row, fontWeight: 700,
+        }}
+      >
+        {/* His own descriptions are Arabic; direction decided per run. */}
+        <span style={ISOLATE} dir="auto">{entry.description}</span>
+        <span style={{ whiteSpace: 'nowrap' }}>
+          <span style={{ ...LATIN, ...NUMERALS }}>{entry.amount}</span>
+          {' '}
+          <span style={{ color: C.muted, fontWeight: 500 }}>{S.currencyName('EGP')}</span>
+        </span>
+        {entry.category ? (
+          <span dir="auto" style={{ color: C.muted, fontWeight: 600 }}>
+            {'· '}{categoryLabel(entry.category)}
+          </span>
+        ) : null}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * N4 — one skin for the three mode buttons, stated once so the second and third
+ * cannot drift from the first. `flex: 1` shares the row evenly; TYPE.label
+ * keeps the words above the prose floor while staying visibly secondary to the
+ * TYPE.hero number they sit under; TAP is the senior touch floor — demoted is a
+ * place in the hierarchy, never a smaller target.
+ */
+const MODE_STYLE = {
+  flex: 1, minHeight: TAP, padding: '0 10px', borderRadius: RADIUS.row,
+  background: C.card, border: `1px solid ${C.line}`, color: C.ink,
+  fontSize: TYPE.label, fontWeight: 600, whiteSpace: 'nowrap',
+};
+
 export default function EntryView({
   amount, setAmount, desc, setDesc, cat, setCat, method, setMethod, onCamera,
   currency = HOME_CURRENCY, setCurrency, onDictate,
@@ -65,302 +140,271 @@ export default function EntryView({
    */
   const [allRepeats] = useState(() => repeatChips());
   /**
-   * THE REPEATS ROW IS HIDDEN WHILE HE IS TRAVELLING, and this is a correctness
-   * fix rather than a layout one — caught by putting the screen in EUR mode.
-   *
-   * Every remembered chip is EGP by construction (`remember` refuses anything
-   * else, because the keypad is a pound keypad). Offering «قهوة 60» in euro mode
-   * would prefill 60 into a field whose unit now reads «يورو» — writing a sixty
-   * EURO coffee into his book, with a ✓ over it. His Cairo habits are not his
-   * Stockholm habits, and the accelerator for one is a trap in the other.
-   *
-   * It also gives back the 55px the currency strip costs, which is what keeps
-   * the category chips above the fold abroad — the same fold S1 exists to fix.
+   * REPEATS ARE HIDDEN WHILE HE IS TRAVELLING — card and rail both. Every
+   * remembered entry is EGP by construction (`remember` refuses anything else,
+   * because the keypad is a pound keypad). Offering «قهوة 60» in euro mode
+   * would prefill 60 into a field whose unit now reads «يورو» — writing a
+   * sixty-EURO coffee into his book, with a ✓ over it.
    */
-  const repeats = isTravelling(currency) ? [] : allRepeats;
+  const offered = isTravelling(currency) ? [] : allRepeats;
+  /**
+   * N3 — the card is his most recent COMPLETE entry: his own, amount included.
+   * Presets (`repeatChips`'s fresh-install padding) carry `amount: null` by
+   * design, so they can never be the card — a card that fills half the screen's
+   * fields is the chip problem restated larger. The rail gets the rest, so one
+   * entry never appears twice.
+   */
+  const last = offered.length && offered[0].amount != null ? offered[0] : null;
+  const repeats = last ? offered.slice(1) : offered;
   // The keypad's rules live in state/entryDock.js so they can be stated once and
   // checked without a browser. `normalizeDigits` first: he may have an
   // Arabic-Indic keyboard, and the sheet only ever sees Western digits.
   const press = (k) => setAmount(pressKey(amount, normalizeDigits(k)));
   const methodLabel = (m) => (m === 'Visa' ? S.methodCard : S.methodCash);
+  /**
+   * THE ONE FILL, both callers (N3). The card and the rail chips put the screen
+   * into the same state through the same function — two inline copies is how
+   * the second quietly drifts (the readiness rule already paid for that once).
+   * It FILLS, it does not submit: the pinned dock still states the whole row
+   * and he still presses the verb.
+   */
+  const fill = (q) => {
+    setDesc(q.description);
+    if (q.category) setCat(q.category);
+    if (q.method) setMethod(q.method);
+    if (q.amount != null) setAmount(String(q.amount));
+  };
 
   return (
-    <div>
+    /**
+     * N5 — the screen is a column of boxed sections with ONE stated gap
+     * (SPACE.cardPad, the 16–20px the north star names), ending on a
+     * SPACE.section breath so the last chips never sit flush against the dock.
+     */
+    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.cardPad, paddingBottom: SPACE.section }}>
+      {/* N3 — the fastest complete action, first, when it honestly exists. */}
+      {last && <LikeBeforeCard entry={last} onFill={fill} />}
+
       {/**
-        * THE CAMERA LIVES HERE NOW (finding M1).
-        *
-        * «فاتورة» was one of five tabs and its entire content was one button on
-        * an otherwise empty screen. A receipt is not a PLACE in this app — it is
-        * a way of making an entry, exactly like the keypad below, so it belongs
-        * on the screen where entries are made.
-        *
-        * Secondary weight on purpose: the keypad is the path he takes daily and
-        * this is the one he takes holding a paper receipt. One obvious action per
-        * screen still holds — this is the deliberate second, not a peer.
+        * SECTION ONE — THE NUMBER. Rail of accelerators, the hero capsule, the
+        * input modes, the keypad: everything that produces the amount, in one
+        * white box (A2: no border, no shadow — luminance carries it).
         */}
-      {/**
-        * THE FASTEST PATH, FIRST. One tap fills the description and — where the
-        * mapping is genuinely unambiguous — the category too, leaving only the
-        * amount. `CASH_QUICK` deliberately leaves some categories null (D5: never
-        * a wrong guess), and those chips simply set the description.
-        *
-        * THE CAMERA SHARES THIS ROW, and that is a measurement rather than a
-        * preference: as a full-width button of its own it cost 62px and pushed
-        * the category chips back below the fold — undoing the thing S1 exists to
-        * fix, to serve a path he takes weekly rather than hourly. On the label's
-        * own line it costs nothing.
-        */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <SectionLabel>{repeats.length ? S.entryRepeats : S.entryTitleShort}</SectionLabel>
-        <span style={{ display: 'flex', gap: 7, marginBottom: 12, flex: '0 0 auto' }}>
-          {/**
-            * DICTATION (finding A5). Web Speech is verified broken in installed
-            * standalone apps; the iOS keyboard's OWN microphone is not, because
-            * keyboard dictation is just text input. This opens a plain field —
-            * he taps the mic on his keyboard and says «٥٠ جنيه قهوة», and the
-            * text goes to the same `voice` parser the Siri Shortcut has used
-            * since Phase 1.
-            */}
-          {onDictate && (
-            <button
-              className="catchip"
-              onClick={onDictate}
-              style={{
-                minHeight: 38, padding: '0 13px', borderRadius: RADIUS.capsule,
-                background: C.card, border: `1px solid ${C.line}`, color: C.ink,
-                fontSize: TYPE.label, fontWeight: 600, whiteSpace: 'nowrap',
-              }}
-            >
-              {S.dictateShort}
-            </button>
-          )}
-          {/**
-            * THE CURRENCY BUTTON (finding A4, revised at Tarek's request).
-            *
-            * ALWAYS VISIBLE, and that is a bug fix rather than a preference. The
-            * first version showed a currency strip only once he was already in a
-            * foreign currency — so there was no way to turn travel mode ON from
-            * the app at all. He asked for "a button that changes the entire
-            * thing", and this is it: pounds ⇄ euros, one tap, from the screen
-            * where the entry is made.
-            *
-            * It reads as the CURRENCY IT WILL SWITCH TO, not the one he is in —
-            * the same rule as the language toggle. He never has to read the
-            * state he is stuck in to find his way out of it.
-            */}
-          {setCurrency && (
-            <button
-              className="catchip"
-              onClick={() => setCurrency(toggleCurrency(currency))}
-              aria-pressed={isTravelling(currency)}
-              style={{
-                minHeight: 38, padding: '0 13px', borderRadius: RADIUS.capsule,
-                background: isTravelling(currency) ? C.harbor : C.card,
-                border: `1px solid ${isTravelling(currency) ? C.harbor : C.line}`,
-                color: isTravelling(currency) ? C.onDark : C.ink,
-                fontSize: TYPE.label, fontWeight: 600, whiteSpace: 'nowrap',
-              }}
-            >
-              {S.currencyIn(currency)}
-            </button>
-          )}
-          {onCamera && (
-            <button
-              className="catchip"
-              onClick={onCamera}
-              style={{
-                minHeight: 38, padding: '0 13px', borderRadius: RADIUS.capsule,
-                background: C.card, border: `1px solid ${C.line}`, color: C.ink,
-                fontSize: TYPE.label, fontWeight: 600, whiteSpace: 'nowrap',
-              }}
-            >
-              {S.receiptShort}
-            </button>
-          )}
-        </span>
-      </div>
-      {/**
-        * ONE ROW, scrolled sideways — not a wrap. Eight chips wrap to two rows and
-        * cost 103px of a 584px body, which is the difference between one row of
-        * categories clearing the fold and two. These are ACCELERATORS: the
-        * complete path (keypad + the grid below) is unaffected by what is off the
-        * right edge, and the same sideways pattern is already how he browses
-        * months in «الأخير».
-        */}
-      <Rail style={{ gap: 7, marginBottom: 14, paddingBottom: 2 }}>
+      <section style={{ background: C.card, borderRadius: RADIUS.card, padding: SPACE.cardPad }}>
         {/**
-          * HIS OWN LAST ENTRIES, WITH THEIR AMOUNTS (finding A3).
+          * The label only when the card is not already saying it: a second
+          * «زي قبل كده» four lines under the first is a heading talking to a
+          * heading. Travelling (no repeats at all) keeps the short title.
+          */}
+        {!last && (
+          <SectionLabel>{repeats.length ? S.entryRepeats : S.entryTitleShort}</SectionLabel>
+        )}
+        {/**
+          * ONE ROW, scrolled sideways — not a wrap (S2). These are ACCELERATORS:
+          * his own last entries with their amounts (finding A3), padded with the
+          * hand-written presets so a fresh install is never bare. A chip FILLS —
+          * through the same `fill` as the card — it does not submit.
+          */}
+        {repeats.length > 0 && (
+          <Rail style={{ gap: 7, marginBottom: SPACE.gap, paddingBottom: 2 }}>
+            {repeats.map((q) => (
+              <button
+                key={`${q.description}|${q.method}`}
+                className="quickchip"
+                onClick={() => fill(q)}
+                aria-pressed={desc === q.description}
+                style={{
+                  padding: '9px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
+                  flex: '0 0 auto', whiteSpace: 'nowrap',
+                  background: desc === q.description ? C.mist : C.card,
+                  border: `1px solid ${desc === q.description ? C.harbor : C.line}`,
+                  color: desc === q.description ? C.harbor : C.ink,
+                  fontWeight: 600,
+                }}
+                dir="auto"
+              >
+                {/* His own descriptions are Arabic and the presets are Latin, so
+                    the direction is decided per chip rather than forced. */}
+                <span style={ISOLATE} dir="auto">{q.description}</span>
+                {q.amount != null && (
+                  <>
+                    {' '}
+                    <span style={{ color: C.muted, fontWeight: 500, ...LATIN, ...NUMERALS }}>
+                      {q.amount}
+                    </span>
+                  </>
+                )}
+              </button>
+            ))}
+          </Rail>
+        )}
+
+        {/**
+          * THE EMPTY AMOUNT IS `muted`, NOT `line` (finding S2) — the number is
+          * this screen's one subject and must be visible before he types it.
+          * TYPE.hero with its unit at unitSize(TYPE.hero) — the §3 anatomy.
           *
-          * `repeatChips()` returns what he actually logged, most recent first,
-          * and pads with the hand-written presets so a fresh install is never
-          * bare. A remembered chip fills the amount too — but it FILLS, it does
-          * not submit: the pinned dock's status line reads «60 جنيه · أكل بره»
-          * and he still presses the verb. The amount is printed on the chip so
-          * the figure is on screen before he touches it.
+          * THE CAPSULE CONTAINER (A3's named pin, vis-F6): the number sits in a
+          * soft full-round surface — RADIUS.capsule. Inside a white section the
+          * luminance step INVERTS: the capsule is a shell-coloured well in the
+          * card, the same one-step elevation grammar read the other way up.
           */}
-        {repeats.map((q) => (
-          <button
-            key={`${q.description}|${q.method}`}
-            className="quickchip"
-            onClick={() => {
-              setDesc(q.description);
-              if (q.category) setCat(q.category);
-              if (q.method) setMethod(q.method);
-              if (q.amount != null) setAmount(String(q.amount));
-            }}
-            aria-pressed={desc === q.description}
-            style={{
-              padding: '9px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
-              flex: '0 0 auto', whiteSpace: 'nowrap',
-              background: desc === q.description ? C.mist : C.card,
-              border: `1px solid ${desc === q.description ? C.harbor : C.line}`,
-              color: desc === q.description ? C.harbor : C.ink,
-              fontWeight: 600,
-            }}
-            dir="auto"
-          >
-            {/* His own descriptions are Arabic and the presets are Latin, so
-                the direction is decided per chip rather than forced. */}
-            <span style={ISOLATE} dir="auto">{q.description}</span>
-            {q.amount != null && (
-              <>
-                {' '}
-                <span style={{ color: C.muted, fontWeight: 500, ...LATIN, ...NUMERALS }}>
-                  {q.amount}
-                </span>
-              </>
-            )}
-          </button>
-        ))}
-      </Rail>
+        <div
+          style={{
+            textAlign: 'center', fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: TYPE.hero, fontWeight: 650,
+            color: amount ? C.ink : C.muted, padding: '8px 16px',
+            background: C.shell, borderRadius: RADIUS.capsule,
+          }}
+          dir="ltr"
+        >
+          {amount || '0'} <span style={{ fontSize: unitSize(TYPE.hero), color: C.muted }}>{S.currencyName(currency)}</span>
+        </div>
 
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }} role="group" aria-label={S.entryMethod}>
-        {METHODS.map((m) => (
-          <button
-            key={m}
-            className="catchip"
-            onClick={() => setMethod(m)}
-            aria-pressed={method === m}
-            style={{
-              flex: 1, minHeight: TAP, padding: '12px 0', borderRadius: RADIUS.row,
-              fontSize: TYPE.row, fontWeight: 700,
-              background: method === m ? C.harbor : C.card,
-              color: method === m ? C.onDark : C.ink,
-              border: `1px solid ${method === m ? C.harbor : C.line}`,
-            }}
-          >
-            {methodLabel(m)}
-          </button>
-        ))}
-      </div>
-
-      {/**
-        * THE EMPTY AMOUNT IS `muted`, NOT `line` (finding S2). `C.line` is the
-        * CARD BORDER colour — painting the screen's one subject in it made the
-        * number effectively invisible until he had already typed it, on a screen
-        * he opens precisely because he has a number in his head.
-        */}
-      {/**
-        * TYPE.hero, and its unit at unitSize(TYPE.hero) — the §3 anatomy: serif
-        * value, unit at 0.55× floored at the prose floor, on the same line. The
-        * pre-token 46/18 pair is retired with the A9 rider; the number he is
-        * typing is this screen's hero and takes the hero's own leading rules.
-        */}
-      {/**
-        * THE CAPSULE CONTAINER (A3's named pin, vis-F6): the number he is
-        * typing sits in a soft full-round surface — RADIUS.capsule — filled
-        * like any plain card (A2: luminance, no border, no shadow).
-        */}
-      <div
-        style={{
-          textAlign: 'center', fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: TYPE.hero, fontWeight: 650,
-          color: amount ? C.ink : C.muted, padding: '8px 16px',
-          background: C.card, borderRadius: RADIUS.capsule,
-        }}
-        dir="ltr"
-      >
-        {amount || '0'} <span style={{ fontSize: unitSize(TYPE.hero), color: C.muted }}>{S.currencyName(currency)}</span>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, margin: '6px 0 14px' }} dir="ltr">
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((k) => (
-          <button
-            key={k}
-            className="catchip"
-            onClick={() => press(k)}
-            aria-label={k === '⌫' ? S.keypadBackspace : k}
-            style={{
-              padding: '12px 0', minHeight: 50, fontSize: TYPE.section, fontWeight: 600,
-              borderRadius: RADIUS.row, background: C.card, border: `1px solid ${C.line}`, color: C.ink,
-            }}
-          >
-            {k}
-          </button>
-        ))}
-      </div>
-
-      {/**
-        * SIX AND «أنواع تانية…», which is the shape the Inbox card already uses.
-        *
-        * It was `CATEGORIES.slice(0, 12)` — five rows, 272px, of which one row
-        * cleared the fold. Six is two rows, it fits above the pinned button, and
-        * the chosen one is always visible whichever list is showing. The full
-        * twenty-seven are one tap away and stay open once opened.
-        */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {(showAll ? CATEGORIES : SHORT_LIST).map((c) => (
-          <button
-            key={c}
-            className="catchip"
-            onClick={() => setCat(cat === c ? null : c)}
-            aria-pressed={cat === c}
-            style={{
-              padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
-              background: cat === c ? C.harbor : C.card,
-              color: cat === c ? C.onDark : C.ink,
-              border: `1px solid ${cat === c ? C.harbor : C.line}`,
-              ...LATIN,
-            }}
-            dir="auto"
-          >
-            {cat === c ? '✓ ' : ''}{categoryLabel(c)}
-          </button>
-        ))}
         {/**
-          * The chosen category must never be hidden by the list it is not in. A
-          * quick chip can set a category outside the six (Taqa → Elect. Recharge),
-          * and «النوع» disappearing the moment he picks it is the P1 bug from the
-          * receipt card, spelled on another screen.
+          * N4 — THE INPUT MODES, under the number they serve. Dictation (A5:
+          * the keyboard's own mic, since Web Speech is broken in standalone),
+          * the currency switch (A4: always visible, states the unit he is IN —
+          * the 2026-08-25 ruling), and the receipt camera (M1: a receipt is a
+          * way of making an entry, not a place). Icon PLUS word, each of them;
+          * each offered only where its handler exists — a dead control is
+          * worse here than none, because this row would make it look chosen.
           */}
-        {!showAll && cat && SHORT_LIST.indexOf(cat) === -1 && (
-          <button
-            className="catchip"
-            onClick={() => setCat(null)}
-            aria-pressed
-            style={{
-              padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
-              background: C.harbor, color: C.onDark, border: `1px solid ${C.harbor}`, ...LATIN,
-            }}
-            dir="auto"
-          >
-            ✓ {categoryLabel(cat)}
-          </button>
+        {(onDictate || setCurrency || onCamera) && (
+          <div style={{ display: 'flex', gap: SPACE.gap, marginTop: SPACE.gap }}>
+            {onDictate && (
+              <button className="catchip" onClick={onDictate} style={MODE_STYLE}>
+                {S.dictateShort}
+              </button>
+            )}
+            {setCurrency && (
+              <button
+                className="catchip"
+                onClick={() => setCurrency(toggleCurrency(currency))}
+                aria-pressed={isTravelling(currency)}
+                style={{
+                  ...MODE_STYLE,
+                  background: isTravelling(currency) ? C.harbor : C.card,
+                  border: `1px solid ${isTravelling(currency) ? C.harbor : C.line}`,
+                  color: isTravelling(currency) ? C.onDark : C.ink,
+                }}
+              >
+                <span aria-hidden="true">💱</span> {S.currencyIn(currency)}
+              </button>
+            )}
+            {onCamera && (
+              <button className="catchip" onClick={onCamera} style={MODE_STYLE}>
+                {S.receiptShort}
+              </button>
+            )}
+          </div>
         )}
-        {!showAll && (
-          <button
-            className="catchip"
-            onClick={() => setShowAll(true)}
-            style={{
-              padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
-              background: 'transparent', border: `1px dashed ${C.harbor}`,
-              color: C.harbor, fontWeight: 600,
-            }}
-          >
-            {S.more}
-          </button>
-        )}
-      </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: SPACE.gap }} dir="ltr">
+          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((k) => (
+            <button
+              key={k}
+              className="catchip"
+              onClick={() => press(k)}
+              aria-label={k === '⌫' ? S.keypadBackspace : k}
+              style={{
+                padding: '12px 0', minHeight: 50, fontSize: TYPE.section, fontWeight: 600,
+                borderRadius: RADIUS.row, background: C.card, border: `1px solid ${C.line}`, color: C.ink,
+              }}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/**
+        * SECTION TWO — THE ROW'S WORDS: how he paid, and what it was. The
+        * method chooser follows the number now (dockState asks for the amount
+        * first, so the screen agrees with the dock's own order).
+        */}
+      <section style={{ background: C.card, borderRadius: RADIUS.card, padding: SPACE.cardPad }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: SPACE.gap }} role="group" aria-label={S.entryMethod}>
+          {METHODS.map((m) => (
+            <button
+              key={m}
+              className="catchip"
+              onClick={() => setMethod(m)}
+              aria-pressed={method === m}
+              style={{
+                flex: 1, minHeight: TAP, padding: '12px 0', borderRadius: RADIUS.row,
+                fontSize: TYPE.row, fontWeight: 700,
+                background: method === m ? C.harbor : C.card,
+                color: method === m ? C.onDark : C.ink,
+                border: `1px solid ${method === m ? C.harbor : C.line}`,
+              }}
+            >
+              {methodLabel(m)}
+            </button>
+          ))}
+        </div>
+
+        {/**
+          * SIX AND «أنواع تانية…», which is the shape the Inbox card already uses.
+          *
+          * It was `CATEGORIES.slice(0, 12)` — five rows, 272px, of which one row
+          * cleared the fold. Six is two rows, it fits above the pinned button, and
+          * the chosen one is always visible whichever list is showing. The full
+          * twenty-seven are one tap away and stay open once opened.
+          */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {(showAll ? CATEGORIES : SHORT_LIST).map((c) => (
+            <button
+              key={c}
+              className="catchip"
+              onClick={() => setCat(cat === c ? null : c)}
+              aria-pressed={cat === c}
+              style={{
+                padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
+                background: cat === c ? C.harbor : C.card,
+                color: cat === c ? C.onDark : C.ink,
+                border: `1px solid ${cat === c ? C.harbor : C.line}`,
+                ...LATIN,
+              }}
+              dir="auto"
+            >
+              {cat === c ? '✓ ' : ''}{categoryLabel(c)}
+            </button>
+          ))}
+          {/**
+            * The chosen category must never be hidden by the list it is not in. A
+            * quick chip can set a category outside the six (Taqa → Elect. Recharge),
+            * and «النوع» disappearing the moment he picks it is the P1 bug from the
+            * receipt card, spelled on another screen.
+            */}
+          {!showAll && cat && SHORT_LIST.indexOf(cat) === -1 && (
+            <button
+              className="catchip"
+              onClick={() => setCat(null)}
+              aria-pressed
+              style={{
+                padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
+                background: C.harbor, color: C.onDark, border: `1px solid ${C.harbor}`, ...LATIN,
+              }}
+              dir="auto"
+            >
+              ✓ {categoryLabel(cat)}
+            </button>
+          )}
+          {!showAll && (
+            <button
+              className="catchip"
+              onClick={() => setShowAll(true)}
+              style={{
+                padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
+                background: 'transparent', border: `1px dashed ${C.harbor}`,
+                color: C.harbor, fontWeight: 600,
+              }}
+            >
+              {S.more}
+            </button>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

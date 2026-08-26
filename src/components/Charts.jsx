@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
 import { rollup } from '../lib/priorities.js';
 import { HOME_CURRENCY } from '../state/display.js';
-import { LATIN, SectionLabel } from './Primitives.jsx';
+import { LATIN, SectionLabel, NeutralDelta } from './Primitives.jsx';
 
 /**
  * Every chart here is ported verbatim from prototype/baba-expense-app.jsx.
@@ -18,45 +18,57 @@ import { LATIN, SectionLabel } from './Primitives.jsx';
  */
 
 /**
- * ═══ NEUTRAL DELTAS DOCTRINE (A5 — data-F8, assigned in the chunk ledger) ═══
- *
- * A comparison in a chart is a FACT, not a verdict. The chevron says which way
- * the figure moved; the colour must not say how to feel about it — spending
- * more than last month is not a conflict, spending less is not a settlement,
- * and painting ▲ red / ▼ green is a judgment the NO-NAGGING law forbids the
- * app from passing. So both directions render in the SAME ink: `inherit`, the
- * row's own colour — which is `muted` on a resting metric card, `onDark` on
- * the harbor-filled active one (where the old red-on-blue pill was the least
- * readable thing on the screen), and `ink` beside a category figure. Identical
- * up or down, every time.
- *
- * Conflict red never encodes spend direction. It stays reserved for genuine
- * conflict STATES — the ❓-money button below keeps `conflictInk`, and
- * rightly: unplaced money IS a conflict, whichever way it moved.
- *
- * Local to Charts on purpose: `Primitives.Delta` still wears the old
- * red/green skin for its other consumers until A5's book half lands; when
- * both halves are in, the Planner folds the two into one primitive.
+ * ═══ NEUTRAL DELTAS DOCTRINE (A5 — data-F8) ═══ now lives on the primitive
+ * itself: `NeutralDelta` in Primitives.jsx, folded there once both halves of
+ * the chunk landed. The doctrine text rides the definition; the ❓-money
+ * button below keeps `conflictInk` as the positive control — unplaced money
+ * IS a conflict, whichever way it moved.
  */
-function NeutralDelta({ now, prev }) {
-  // Same gates as the primitive it replaces: no previous figure means no
-  // comparison (absent is not zero), and a previous of 0 admits no honest
-  // percentage at all.
-  if (!prev) return null;
-  const pct = Math.round(((now - prev) / prev) * 100);
-  if (!isFinite(pct)) return null;
-  return (
-    <span
-      style={{
-        fontSize: 11.5, fontWeight: 700, color: 'inherit',
-        marginInlineStart: 6, verticalAlign: 'middle', whiteSpace: 'nowrap',
-        ...LATIN,
-      }}
-    >
-      {pct > 0 ? '▲' : '▼'} {Math.abs(pct)}%
-    </span>
-  );
+
+/**
+ * ═══ B3 — THE LINE DRAWS ITSELF, ONCE PER MOUNT (nav-F6; North Star §3) ═══
+ *
+ * The cumulative line strokes itself in over MOTION.draw when the chart
+ * mounts — the one piece of theatre the Owner's walkthrough opened with
+ * («the animation came up right away») — and never again until the next
+ * mount. theme.js already states the law this leans on: «`draw` is the chart
+ * drawing itself ONCE per mount — a redraw on data refresh is theatre, and
+ * theatre is banned.»
+ *
+ * HOW «ONCE PER MOUNT» IS ENFORCED RATHER THAN INTENDED. A CSS animation
+ * restarts only when its element is recreated or its animation-name changes.
+ * Both are pinned constant: the class below is a string literal and the path
+ * carries no `key`, so a data poke reconciles into the SAME element with a
+ * new `d` and the running (or long-finished) animation never notices. Mount
+ * identity, never data identity — putting a data-derived `key` on the live
+ * path is the exact defect the B3 oracle exists to catch.
+ *
+ * WHY THE HIDDEN STATE LIVES ONLY INSIDE @keyframes. The path's own markup
+ * carries no dash properties, so every render that does not run the
+ * animation — SSR, the suites' static markup, a phone with reduced motion —
+ * is already the COMPLETE line. Reduced motion does not «skip to the end»;
+ * it never leaves it: `animation: none`, and the natural state is the drawn
+ * line. Motion collapses to an instant state change; content is never
+ * hidden behind it (the MOTION LAW's floor), and honest rendering never
+ * waits on JavaScript.
+ *
+ * `pathLength={1}` normalises the geometry so `stroke-dasharray/dashoffset:
+ * 1 → 0` is correct for every data shape with nothing measured at runtime.
+ * Only the live line draws: the grey series is the backdrop the line draws
+ * AGAINST — animating the backdrop would make the comparison itself the
+ * theatre. And the animation lives in a <style> block rather than an inline
+ * style because inline is the one place the media guard could not reach it.
+ */
+const DRAW_CSS = `
+@keyframes chart-draw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
 }
+.chart-draw { animation: chart-draw ${MOTION.draw}ms ${MOTION.easeOut}; }
+@media (prefers-reduced-motion: reduce) {
+  .chart-draw { animation: none; }
+}
+`;
 
 // Cumulative race: colored line (this period) vs grey line (last period), with a
 // marker pair at "the same point in time" — an honest partial-period comparison.
@@ -152,12 +164,13 @@ export function CumulativeChart({ cur, prev, color, labelled = true, prevName = 
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }} aria-hidden="true">
+      <style>{DRAW_CSS}</style>
       {[0.25, 0.5, 0.75, 1].map((f) => (
         <line key={f} x1={P} x2={W - P} y1={y(max * f)} y2={y(max * f)} stroke={C.line} strokeWidth="0.6" strokeDasharray="3 4" />
       ))}
       <line x1={x(li)} x2={x(li)} y1={y(Math.max(cumC[li] || 0, prevAt))} y2={H - 2} stroke={C.muted} strokeWidth="0.8" />
       <path d={path(cumP, cumP.length - 1)} stroke={C.muted} strokeOpacity={PREV_SERIES_OPACITY} strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      <path d={path(cumC, li)} stroke={color} strokeWidth="3.2" fill="none" strokeLinecap="round" />
+      <path d={path(cumC, li)} stroke={color} strokeWidth="3.2" fill="none" strokeLinecap="round" pathLength={1} className="chart-draw" />
       {hasPrev && <circle cx={x(li)} cy={prevY} r="4" fill={C.muted} fillOpacity={PREV_SERIES_OPACITY} />}
       <circle cx={x(li)} cy={curY} r="5.5" fill={C.shell} stroke={color} strokeWidth="3" />
 

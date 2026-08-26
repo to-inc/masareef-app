@@ -103,6 +103,25 @@ const sum = (a) => a.reduce((s, v) => s + (v || 0), 0);
 const MOCK_HAS_PREV_YEAR = false;
 
 /**
+ * §2.2a home-denominated aggregates (`homeAgg`/`prevHomeAgg`) are built in
+ * 20260826-1531 and NOT DEPLOYED YET, so the honest default is the fields
+ * being ABSENT — absent is the 1463 server; `null` is 1531 with no home
+ * currency; an object is 1531 patched. The client is tri-state on this field
+ * and the mock must default to the state it will actually meet.
+ *
+ *   false → fields absent (the deployed server, TODAY)
+ *   ''    → fields present, null (1531 on Dad's unpatched book)
+ *   'EUR' → fields computed (1531 on Tarek's patched book)
+ *
+ * Boolean `false` on purpose: the priorities suite sweeps this file for
+ * `const MOCK_* = true|false;` and asserts every flag ships OFF. Flip to a
+ * string locally to review; flipping the DEFAULT is a deliberate act that
+ * happens only after the 1531 paste is live — and reddens a parity pin until
+ * someone means it.
+ */
+const MOCK_HOMEAGG_CURRENCY = false;
+
+/**
  * The other real state of `month.prevLog`: `null`, which the server returns for
  * a first month or one holding no readable entries. Populated is the DEFAULT
  * because that is what his book actually returns — he has months of history —
@@ -168,6 +187,70 @@ const MOCK_MONTH_CATS = [
   { name: 'Internet', prev: 860, share: 0.039 },
   { name: 'Madinety club', prev: 700, share: 0.032 },
 ];
+
+const round2 = (x) => Math.round(x * 100) / 100;
+
+/**
+ * TRANSCRIBED from Code.gs `foreignIn_` — never composed from memory (the
+ * batch-shape lesson). Every non-EGP row is COUNTED; an unpriced one is never
+ * summed («counted but not summed» is the honest answer). Exported so the
+ * parity suite can exercise the unpriced branch by DIRECT CALL — the
+ * `foreignIn_` precedent: the sheet path cannot produce it, a suite must.
+ */
+export function mockForeignIn(rows) {
+  let count = 0; const byCurrency = {};
+  for (const e of rows || []) {
+    if (!e || !e.currency || e.currency === 'EGP') continue;
+    count++;
+    if (e.amount == null) continue;          // counted, unpriced, never summed
+    byCurrency[e.currency] = round2((byCurrency[e.currency] || 0) + e.amount);
+  }
+  return { count, byCurrency };
+}
+
+/**
+ * TRANSCRIBED from Code.gs `homeAggIn_` (§2.2a). The partition is EXCLUSIVE —
+ * every row lands in exactly one of native/converted/unstamped/unpriced, and
+ * the parity suite asserts the identity. A stamp on a native row is surfaced
+ * in `strayStamps`, never absorbed; a converted row participates at its
+ * RECORDED home value, never re-derived; `unstamped.byCurrency` carries money
+ * sums with `total: null` because currencies do not add; an empty home
+ * currency returns NULL — absent feature, not a zero.
+ */
+export function mockHomeAggIn(rows, home) {
+  if (!home) return null;
+  const native = { count: 0, total: 0 };
+  const converted = { count: 0, total: 0 };
+  const unstamped = { count: 0, total: null, byCurrency: {} };
+  let unpriced = 0, strayStamps = 0;
+  for (const e of rows || []) {
+    if (!e) continue;
+    if (e.currency === home && e.amount != null) {
+      native.count++;
+      native.total += e.amount;
+      if (e.home != null) strayStamps++;
+    } else if (e.home != null) {
+      converted.count++;
+      converted.total += e.home;
+    } else if (e.amount != null) {
+      unstamped.count++;
+      unstamped.byCurrency[e.currency] = round2((unstamped.byCurrency[e.currency] || 0) + e.amount);
+    } else {
+      unpriced++;
+    }
+  }
+  native.total = round2(native.total);
+  converted.total = round2(converted.total);
+  return {
+    currency: home,
+    total: round2(native.total + converted.total),
+    native,
+    converted,
+    unstamped,
+    unpriced,
+    strayStamps,
+  };
+}
 
 export function mockSummary() {
   const today = cairoToday();
@@ -275,12 +358,40 @@ export function mockSummary() {
     { Visa: 0, Cash: 0 },
   );
 
+  /**
+   * ROW-DERIVED AGGREGATES, over the populations this fixture actually has.
+   *
+   * The mock materializes row objects only for TODAY, and today sits inside
+   * the current week, month and year — so every current side computes over
+   * `todayEntries` and every previous side over the empty population, which
+   * is this fixture's own story: its one foreign row is today's Café de
+   * Flore, its history is EGP-only. The aggregates therefore reconcile with
+   * the rows the fixture can show, and the §2.2a partition identity holds
+   * EXACTLY over each aggregate's own population — the identity a client may
+   * rely on. (The unstamped EGP sums deliberately under-run the generated
+   * series for the same reason: sums have no rows behind them here.)
+   *
+   * `foreign`/`prevForeign` are UNCONDITIONAL — the deployed server
+   * (20260825-1463) serves them on all three periods, and a mock more
+   * pessimistic than the service hides a shipped surface (the V17 lesson,
+   * which this file already paid for once). `homeAgg`/`prevHomeAgg` ride
+   * `MOCK_HOMEAGG_CURRENCY` — see the flag's own comment.
+   */
+  const rowAggs = {
+    foreign: mockForeignIn(todayEntries),
+    prevForeign: mockForeignIn([]),
+    ...(MOCK_HOMEAGG_CURRENCY === false ? {} : {
+      homeAgg: mockHomeAggIn(todayEntries, MOCK_HOMEAGG_CURRENCY),
+      prevHomeAgg: mockHomeAggIn([], MOCK_HOMEAGG_CURRENCY),
+    }),
+  };
+
   return {
     ok: true,
     v: 1,
     serverTime: new Date().toISOString(),
     today_cairo: today,
-    week: { cur: weekOf(0, true), prev: weekOf(-7, false) },
+    week: { cur: weekOf(0, true), prev: weekOf(-7, false), ...rowAggs },
     month: {
       cur: curMonth,
       prev: prevMonth,
@@ -295,6 +406,8 @@ export function mockSummary() {
       // Rows he wrote down but never priced (the travel legs). The month total
       // is knowably short, and the UI must say so rather than look confident.
       unpriced: { count: 3 },
+      // The row-derived aggregates — see `rowAggs` above for the population.
+      ...rowAggs,
       /**
        * W-6 «سجل القبطان» — the closed month (06 §2.2).
        *
@@ -341,6 +454,8 @@ export function mockSummary() {
     year: {
       cur: { Visa: yearVisa, Cash: yearCash },
       prev: { Visa: prevYearVisa, Cash: prevYearCash },
+      // The row-derived aggregates — see `rowAggs` above for the population.
+      ...rowAggs,
     },
     /**
      * SIX CATEGORIES, DERIVED — see `MOCK_MONTH_CATS` for the shares and for why

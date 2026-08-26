@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, unitSize } from '../theme.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, unitSize } from '../theme.js';
 import { S, SWITCH_TO, DIR } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
@@ -280,27 +280,31 @@ export function Chip({ kind, small, label }) {
   );
 }
 
-export function Delta({ now, prev }) {
+/**
+ * THE one delta (A5, folded here from Charts once both halves landed). A
+ * spending delta is a FIGURE, not a verdict: spending more than last month is
+ * not a conflict and spending less is not a settlement, so both directions
+ * render in the SAME ink — `inherit`, the row's own colour. The chevron says
+ * which way; the ink never editorializes. The old red/green Delta skin died
+ * with its last consumer; conflict red stays reserved for genuine conflict
+ * STATES (unplaced ❓ money), never for direction.
+ *
+ * Gates unchanged: no previous figure means no comparison (absent is not
+ * zero), and a previous of 0 admits no honest percentage at all.
+ */
+export function NeutralDelta({ now, prev }) {
   if (!prev) return null;
   const pct = Math.round(((now - prev) / prev) * 100);
   if (!isFinite(pct)) return null;
-  const up = pct > 0;
   return (
     <span
       style={{
-        fontSize: 11.5,
-        fontWeight: 700,
-        color: up ? C.conflictInk : C.settledInk,
-        background: up ? C.conflictBg : C.settledBg,
-        borderRadius: RADIUS.capsule,
-        padding: '1px 7px',
-        marginInlineStart: 6,
-        verticalAlign: 'middle',
-        whiteSpace: 'nowrap',
+        fontSize: 11.5, fontWeight: 700, color: 'inherit',
+        marginInlineStart: 6, verticalAlign: 'middle', whiteSpace: 'nowrap',
         ...LATIN,
       }}
     >
-      {up ? '▲' : '▼'} {Math.abs(pct)}%
+      {pct > 0 ? '▲' : '▼'} {Math.abs(pct)}%
     </span>
   );
 }
@@ -349,52 +353,127 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
   );
 }
 
+/**
+ * THE ADVISORY SHEET (B4, nav-F8) — how a surface that was not there a moment
+ * ago arrives.
+ *
+ * ——— THE ENTRANCE. A translateY rise at MOTION.page with MOTION.easeSettle:
+ * the surface comes up from below its settled place and eases to rest, which
+ * is the grammar of a sheet — something laid OVER the page — rather than the
+ * pop of something materializing in it. The rise distance is RADIUS.sheet, on
+ * purpose: the surface rises by the depth of its own lip, so the travel and
+ * the curve that ends it read as one gesture, and the distance can never
+ * drift apart from the lip it belongs to.
+ *
+ * ——— THE LIP. RADIUS.sheet (24 — Planner ruling 2026-08-26, first consumed
+ * here): one step softer than the RADIUS.card (20) content it covers. The lip
+ * is the sheet's identity, so a caller's style cannot override it.
+ *
+ * ——— WHY THE KEYFRAMES DEFINE ONLY `from`, which is the load-bearing choice.
+ * The settled state is the ELEMENT'S OWN style; the animation only supplies
+ * where it came from. Two laws fall out by construction rather than by
+ * discipline: a static render (every suite renders statically) shows the
+ * settled sheet, because keyframes do not exist on paper; and the
+ * prefers-reduced-motion guard's `animation: none` collapses the entrance to
+ * an INSTANT APPEARANCE — there is no keyframe state left that could hide or
+ * displace content.
+ *
+ * ——— WHY THE <style> RIDES THE COMPONENT. The other entrances live in
+ * styles.css, which is another leaf's file and still speaks raw seconds
+ * (`pop 0.18s`). The MOTION law says durations ride tokens, and a token is a
+ * JS value, so the CSS is authored here where MOTION is in scope. Both sheet
+ * surfaces can mount at once (offline + a confirm), so the tag may appear
+ * twice — identical rules are idempotent in CSS, and React 18 has no
+ * hoisting/dedupe to lean on.
+ */
+const SHEET_IN_CSS = `
+@keyframes sheet-in {
+  from { transform: translateY(${RADIUS.sheet}px); opacity: 0; }
+}
+.sheet-in { animation: sheet-in ${MOTION.page}ms ${MOTION.easeSettle} both; }
+@media (prefers-reduced-motion: reduce) {
+  .sheet-in { animation: none; }
+}
+`;
+
+/**
+ * One sheet, two advisory surfaces today (Toast, OfflineBanner) and every
+ * view-owned sand banner tomorrow — exported as the adoption path. Two
+ * hand-rolled entrances is how the second one drifts; this codebase has paid
+ * for that exact mistake more than any other (the Rail's own lesson, N2).
+ */
+export function Sheet({ children, style, ...rest }) {
+  return (
+    <>
+      <style>{SHEET_IN_CSS}</style>
+      {/* class and lip sit AFTER the spread — the sheet's identity is not a
+          default a caller can override, it is what makes the surface a sheet. */}
+      <div {...rest} className="sheet-in" style={{ ...style, borderRadius: RADIUS.sheet }}>
+        {children}
+      </div>
+    </>
+  );
+}
+
 export function Toast({ message }) {
   if (!message) return null;
   return (
+    /**
+     * The outer strip only POSITIONS — the sheet motion animates `transform`,
+     * so centering by translateX would be overwritten for the length of the
+     * entrance and the toast would enter from the wrong place. Flex centering
+     * keeps `transform` free for the motion. `pointerEvents: 'none'` because
+     * the strip spans the screen and the toast is not a control: a
+     * confirmation must never eat the tap he was already making.
+     */
     <div
-      className="toast-in"
-      role="status"
       style={{
         position: 'fixed',
         bottom: `calc(96px + env(safe-area-inset-bottom))`,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: C.harbor,
-        color: C.onDark,
-        padding: '13px 24px',
-        borderRadius: RADIUS.capsule,
-        fontSize: 16.5,
-        fontWeight: 600,
-        boxShadow: '0 8px 24px rgba(62,124,166,.38)',
-        whiteSpace: 'nowrap',
+        insetInline: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        pointerEvents: 'none',
         zIndex: 40,
       }}
     >
-      {message}
+      <Sheet
+        role="status"
+        style={{
+          background: C.harbor,
+          color: C.onDark,
+          padding: '13px 24px',
+          fontSize: 16.5,
+          fontWeight: 600,
+          boxShadow: '0 8px 24px rgba(62,124,166,.38)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {message}
+      </Sheet>
     </div>
   );
 }
 
 // Calm amber, never red, never a modal — losing signal in Cairo is normal and
-// his data is still on screen.
+// his data is still on screen. It KEEPS its line border under the sheet lip:
+// advisory surfaces stay bordered by name (theme.js's C.line doctrine, A2).
 export function OfflineBanner({ text }) {
   return (
-    <div
+    <Sheet
       style={{
         background: C.sand,
         color: C.ink,
         border: `1px solid ${C.line}`,
-        borderRadius: RADIUS.row,
         padding: '10px 14px',
         fontSize: 14.5,
         fontWeight: 600,
-        marginBottom: 12,
+        marginBottom: SPACE.gap,
         textAlign: 'center',
       }}
     >
       {text}
-    </div>
+    </Sheet>
   );
 }
 

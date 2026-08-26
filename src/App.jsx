@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN, RADIUS, TYPE } from './theme.js';
+/**
+ * B6: `flushSync` is load-bearing, not a convenience. `startViewTransition`
+ * snapshots the old frame, runs its callback, then snapshots the new — but
+ * React batches updates ASYNCHRONOUSLY, so without the flush the callback
+ * returns with the DOM unchanged and the browser animates old-to-old: a
+ * transition that looks broken only on the devices that support it.
+ */
+import { flushSync } from 'react-dom';
+import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN, RADIUS, SPACE, TYPE } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -34,6 +42,37 @@ import ReceiptView from './views/ReceiptView.jsx';
 import DictateView from './views/DictateView.jsx';
 import BookView from './views/BookView.jsx';
 import BatchReviewView from './views/BatchReviewView.jsx';
+
+/**
+ * ═══ C1 — THE FLOATING BAR'S GEOMETRY, declared once ═══
+ *
+ * `BAR_INSET` is the ruled 16 of north-star §4.3 («inset 16px, capsule
+ * radius») — CHROME geometry, deliberately not a SPACE role: `gutter` is a
+ * content margin and `cardPad` a card's inner breath, and casting either as
+ * «distance from the screen edge to the nav» would be a category error the
+ * next reader inherits. If a second floating chrome element ever appears,
+ * this graduates to a theme token (named in the C1 residuals).
+ *
+ * `BAR_ALPHA` is the Owner's ratified glass compromise (§4.3 adjudication,
+ * §6.5): true translucency makes contrast unmeasurable, and 0.92 is the most
+ * glass the suite can still assert. test-contrast.mjs reads THIS constant
+ * from THIS file and composites the darkest scrollable paint beneath it —
+ * change the number and the worst-case pairs re-measure themselves.
+ *
+ * `BAR_CLEARANCE` is what the scroll box (and the EntryDock's wrapper)
+ * reserves so the last row can rise clear of a bar that floats OVER content:
+ * the inset + the bar's height (~92 with C2's 48pt circle and the 13.5 label
+ * under it) + one sibling gap of breath.
+ */
+const BAR_INSET = 16;
+const BAR_ALPHA = 0.92;
+const BAR_CLEARANCE = BAR_INSET + 92 + SPACE.gap;
+
+/** A theme hex at an alpha — the token stays the single source of the rgb. */
+const withAlpha = (hex, a) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `rgba(${r},${g},${b},${a})`;
+};
 
 /**
  * The app shell.
@@ -127,6 +166,41 @@ export default function App() {
   const [entryBusy, setEntryBusy] = useState(false);
 
   /**
+   * B6 — THE DETAIL PUSH (north-star §4.2: «detail push via View Transitions
+   * where supported»). One helper, three worlds, and the state change fires
+   * exactly once in each — test-chunk-b6.mjs EXECUTES all three:
+   *   · supported: the browser cross-fades old→new at var(--dur-page)
+   *     (styles.css); `flushSync` is what puts the NEW frame under the
+   *     second snapshot — see the import note;
+   *   · unsupported (his iOS today does support it; older WebKit does not):
+   *     the nullish fallback applies the SAME state change directly —
+   *     absence degrades to instant, never to a dead tap or a half-state;
+   *   · reduced motion: the API has no opinion of its own (its crossfade
+   *     plays regardless), so the guard is ours — no transition starts at
+   *     all, and styles.css flattens the pseudos as the second layer.
+   * Tab swaps deliberately do NOT ride this: they are B2's keyed entrance,
+   * and two motion systems on one swap is theatre.
+   */
+  const pushDetail = useCallback((apply) => {
+    const reduced = typeof matchMedia === 'function'
+      && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || typeof document === 'undefined') { apply(); return; }
+    const transition = document.startViewTransition?.(() => flushSync(apply)) ?? apply();
+    /**
+     * A transition can be SKIPPED after the callback ran — page hidden at the
+     * moment of the tap, or a second push landing first. The state is already
+     * right; only the theatre was skipped. Per spec it is `ready` that
+     * rejects then (InvalidStateError — observed live 2026-08-26, and the
+     * first version of this catch covered only `finished` and kept logging).
+     * Unhandled, that rejection is console noise a real crash could hide
+     * behind. Skipped theatre is swallowed on BOTH promises; it is never an
+     * error.
+     */
+    transition?.ready?.catch?.(() => {});
+    transition?.finished?.catch?.(() => {});
+  }, []);
+
+  /**
    * A PHOTO TURNED OUT TO BE A TRANSACTION LIST — take its rows into the draft
    * and open the review surface.
    *
@@ -168,8 +242,8 @@ export default function App() {
       const settled = Object.keys(kept).length ? mergeOutcomes({ byKey: kept }, null, null) : null;
       return saveDraft({ jobs, settled });
     });
-    setEntryMode('batch');
-  }, []);
+    pushDetail(() => setEntryMode('batch'));
+  }, [pushDetail]);
 
   /**
    * WRITE THE ROWS HE TICKED. One call, per-row answers.
@@ -242,16 +316,18 @@ export default function App() {
    * «Done»; unwritten rows died with it.
    */
   const leaveBatch = useCallback(() => {
-    setEntryMode('keypad');
-  }, []);
+    pushDetail(() => setEntryMode('keypad'));
+  }, [pushDetail]);
 
   /** Settled or abandoned — the draft goes, and so does the screen. */
   const discardBatch = useCallback(() => {
     clearDraft();
-    setBatch({ jobs: [], settled: null });
-    setBatchExpired(false);
-    setEntryMode('keypad');
-  }, []);
+    pushDetail(() => {
+      setBatch({ jobs: [], settled: null });
+      setBatchExpired(false);
+      setEntryMode('keypad');
+    });
+  }, [pushDetail]);
 
   /**
    * The extraction expired; the PHOTO has not. One fresh read, edits intact.
@@ -280,9 +356,11 @@ export default function App() {
    * could — a re-read of the SAME photo.
    */
   const resnapBatch = useCallback(() => {
-    setBatchExpired(false);
-    setEntryMode('receipt');
-  }, []);
+    pushDetail(() => {
+      setBatchExpired(false);
+      setEntryMode('receipt');
+    });
+  }, [pushDetail]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -539,7 +617,7 @@ export default function App() {
     try {
       const res = await postVoice({ text, clientId: newClientId() });
       if (res && res.ok === true) {
-        setEntryMode('keypad');
+        pushDetail(() => setEntryMode('keypad'));
         showToast(S.saved);
         refresh();
       } else {
@@ -704,6 +782,17 @@ export default function App() {
 
   if (!booted) return null;
 
+  // One name for «the dock is on screen» — the scroll box's clearance, the
+  // dock's wrapper and the mount all read it, so the reserved space can never
+  // disagree with what is actually there (the badge's one-predicate rule,
+  // applied to layout).
+  const dockShown = !needsSetup && data && tab === 'entry' && entryMode === 'keypad';
+
+  // B5: the ground the header scrim dissolves into — the same condition the
+  // shell's own background reads four lines below, so the strip can never
+  // fade toward a colour the page is not actually painting.
+  const scrimGround = tab === 'book' && !needsSetup ? C.mist : C.shell;
+
   // The badge counts what is still HIS to do — same predicate the buttons and
   // the section header use, so the three can never disagree.
 
@@ -739,6 +828,11 @@ export default function App() {
           background: C.harbor, color: C.onDark,
           padding: `calc(12px + env(safe-area-inset-top)) 20px 12px`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
+          // B5: the anchor for the scrim below. The header never scrolls (a
+          // flexShrink:0 sibling of the scroll box), so a child hung from its
+          // hem is fixed-in-effect — without guessing a height that moves
+          // with the safe-area inset and the system font.
+          position: 'relative',
         }}
       >
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650 }}>{S.appName}</span>
@@ -750,10 +844,48 @@ export default function App() {
           )}
           {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} />}
         </span>
+        {/**
+          * B5 — THE HEADER SCRIM (nav-F5). A gradient strip under the
+          * header's hem, so content scrolling beneath dissolves into the
+          * page's own ground instead of guillotining against the harbor
+          * edge. FURNITURE, not a shadow (A2: nothing floats): it is the
+          * ground's colour breathing downward, drawn with the scrim's ground
+          * token at full and at zero alpha — never a dark laid over the page.
+          *
+          * `scrimGround` is tab-aware because the Book paints the morning
+          * crown (mist at the hem) where every other tab paints shell — a
+          * strip that always dissolved to shell would hang a cream veil over
+          * a blue-tinted morning. aria-hidden + pointerEvents:none: VoiceOver
+          * announces the heading, and no tap near the refresh button can land
+          * on furniture.
+          */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', top: '100%', insetInline: 0,
+            // one sibling gap of dissolve — deeper reads as a wash over his
+            // rows, shallower reads as a rendering seam
+            height: SPACE.gap,
+            background: `linear-gradient(180deg, ${scrimGround} 0%, ${withAlpha(scrimGround, 0)} 100%)`,
+            pointerEvents: 'none', zIndex: 10,
+          }}
+        />
       </header>
 
       {/* minHeight:0 lets a flex child actually shrink so overflow-y works */}
-      <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: 16 }}>
+      <main
+        style={{
+          flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+          // C1: the bar floats OVER this scroll box, so the box reserves
+          // BAR_CLEARANCE under its content — the last row must be able to
+          // rise clear of translucent chrome. Exactly when the bar is there:
+          // with the EntryDock up its wrapper carries the clearance instead,
+          // and the setup screen has no bar to clear at all.
+          padding: !needsSetup && !dockShown
+            ? `16px 16px calc(${BAR_CLEARANCE}px + env(safe-area-inset-bottom))`
+            : '16px',
+        }}
+      >
         {needsSetup ? (
           <SetupView onDone={() => { setNeedsSetup(false); refresh(); }} />
         ) : (
@@ -765,7 +897,15 @@ export default function App() {
             {!data ? (
               <Skeleton />
             ) : (
-              <>
+              /**
+                * B2 — the view-swap entrance. The KEY is what makes it real:
+                * a new tab remounts this wrapper, replaying the .view-in rise
+                * (styles.css, at MOTION.page with the reduced-motion floor).
+                * Mode changes within the ﹢ tab are B6's View-Transition
+                * territory and deliberately do not re-key — two entrance
+                * systems on one swap is theatre, which is banned.
+                */
+              <div key={tab} className="view-in">
                 {tab === 'inbox' && (
                   <InboxView
                     pending={data.pending} settled={settled}
@@ -788,7 +928,7 @@ export default function App() {
                     setCurrency={supportsCurrency(build, AWAY_CURRENCY)
                       ? (c) => setStoredCurrency(persistCurrency(c))
                       : undefined}
-                    onCamera={() => setEntryMode('receipt')}
+                    onCamera={() => pushDetail(() => setEntryMode('receipt'))}
                     /**
                       * SHOWN ONLY IF THE SERVER KNOWS THE VERB. Absent
                       * capability list ⇒ no button, which is the state of the
@@ -796,14 +936,14 @@ export default function App() {
                       * moment V20 publishes `voice`; there is no flag to flip.
                       */
                     onDictate={supportsAction(build, 'voice')
-                      ? () => setEntryMode('dictate')
+                      ? () => pushDetail(() => setEntryMode('dictate'))
                       : undefined}
                   />
                 )}
                 {tab === 'entry' && entryMode === 'dictate' && (
                   <DictateView
                     busy={entryBusy}
-                    onCancel={() => setEntryMode('keypad')}
+                    onCancel={() => pushDetail(() => setEntryMode('keypad'))}
                     onSend={sendDictated}
                   />
                 )}
@@ -825,7 +965,7 @@ export default function App() {
                     }}
                     // «أسجّلها بنفسي» is now a mode switch rather than a tab
                     // change — same screen, other half.
-                    onManual={() => setEntryMode('keypad')}
+                    onManual={() => pushDetail(() => setEntryMode('keypad'))}
                     onBatch={takeBatchJob}
                   />
                 )}
@@ -858,7 +998,7 @@ export default function App() {
                     unsettledBatch={unsettledCount({
                       rows: mergeJobs(batch.jobs), settled: batch.settled,
                     })}
-                    onOpenBatch={() => { setEntryMode('batch'); setTab('entry'); }}
+                    onOpenBatch={() => pushDetail(() => { setEntryMode('batch'); setTab('entry'); })}
                     onEdit={editRecent}
                     onGoToInbox={() => setTab('inbox')}
                     onBusyChange={(fn) => { recentLoader.current = fn; }}
@@ -916,7 +1056,7 @@ export default function App() {
                   />
                   <LangToggle subtle />
                 </footer>
-              </>
+              </div>
             )}
           </>
         )}
@@ -930,18 +1070,56 @@ export default function App() {
         * ~200px below the fold on the one screen the five-second law is about.
         * It is a sibling of the tab bar, so it is on screen from the first frame.
         */}
-      {!needsSetup && data && tab === 'entry' && entryMode === 'keypad' && (
-        <EntryDock
-          amount={entryAmount} cat={entryCat} currency={entryCurrency}
-          onSubmit={submitEntry} busy={entryBusy}
-        />
+      {dockShown && (
+        /**
+          * C1: the dock sits ABOVE the floating bar — its wrapper reserves
+          * BAR_CLEARANCE the way the scroll box does on every other screen,
+          * so the submit is never buried under translucent chrome. The gap
+          * beneath the strip is the shell showing through, with the capsule
+          * floating in it.
+          */
+        <div style={{ flexShrink: 0, paddingBottom: `calc(${BAR_CLEARANCE}px + env(safe-area-inset-bottom))` }}>
+          <EntryDock
+            amount={entryAmount} cat={entryCat} currency={entryCurrency}
+            onSubmit={submitEntry} busy={entryBusy}
+          />
+        </div>
       )}
 
       {!needsSetup && (
         <nav
           style={{
-            display: 'flex', borderTop: `1px solid ${C.line}`, background: C.card,
-            paddingBottom: 'env(safe-area-inset-bottom)', flexShrink: 0,
+            display: 'flex',
+            /**
+              * C1 — THE FLOATING CAPSULE (north-star §4.3, the Owner's glass
+              * moment). Fixed over the scroll box, inset BAR_INSET from every
+              * screen edge with the safe areas added on — hovering over
+              * content is what gives the 0.92 fill something to be
+              * translucent TO. Dad's install keeps a solid bar under the same
+              * ruling (per-install presentation, docs/09 §9); that cutover is
+              * his review's, not this file's.
+              */
+            position: 'fixed',
+            left: `calc(${BAR_INSET}px + env(safe-area-inset-left))`,
+            right: `calc(${BAR_INSET}px + env(safe-area-inset-right))`,
+            bottom: `calc(${BAR_INSET}px + env(safe-area-inset-bottom))`,
+            zIndex: 30,
+            borderRadius: RADIUS.capsule,
+            /**
+              * The ruled compromise: C.card at BAR_ALPHA plus blur — the
+              * glass FEELING bounded to a shift the contrast suite asserts
+              * worst-case (test-contrast reads BAR_ALPHA from this file and
+              * composites the darkest paint that can scroll beneath). True
+              * glass is OUT by law (north-star §6.5). The 14px blur radius is
+              * effect grain — no vocabulary token governs it.
+              */
+            background: withAlpha(C.card, BAR_ALPHA),
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            // A control cluster keeps its edge (theme.js: line borders MEAN —
+            // controls stay tappable-looking); the hairline also bounds the
+            // capsule in the moment nothing dark has scrolled beneath it.
+            border: `1px solid ${C.line}`,
           }}
         >
           {/**

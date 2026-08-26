@@ -423,6 +423,33 @@ export const EN = {
   }[key] || String(key)),
   lensRemainder: 'Everything else',
 
+  /**
+   * ——— N7: the priority chips over the Book list — the count is a sentence,
+   * never a naked badge. Takes the group name exactly as `lensGroup` says it;
+   * there is no second copy of those names.
+   */
+  priorityCount: (n, group) => `${n} ${n === 1 ? 'expense' : 'expenses'} in «${group}»`,
+  /**
+   * ——— N7: an emptied filter names its own zero («History: 0» style). The
+   * generic empty line would claim the PERIOD is empty — it is not; only the
+   * filter is. An empty list is a sentence, never a blank.
+   */
+  priorityEmpty: (group) => `«${group}»: 0 — no expenses of this kind in this period`,
+
+  /**
+   * ——— E3: the month's sentence names its window. The comparison is taken at
+   * the SAME POINT (prevAt), so «less than July» on the 24th really means
+   * «days 1–24 vs July 1–24» — the words now say what the arithmetic did.
+   * The second form covers a shorter previous month (February): its whole
+   * self is inside the window.
+   */
+  windowWords: (days, prev) => `days 1–${days} vs ${prev} 1–${days}`,
+  windowWordsWholePrev: (days, prev) => `days 1–${days} vs all of ${prev}`,
+
+  // ——— N6: the month picker sheet — the month heading became a door.
+  monthPickerTitle: 'Choose the month',
+  monthPickerClose: 'Close',
+
   // ——— the sheet itself, one tap away (A7). The whole promise is that his
   // book is untouched; this is what lets him check rather than take our word.
   openTheSheet: 'Open the sheet ↗',

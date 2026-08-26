@@ -102,14 +102,15 @@ for (const r of perFile) {
 
 // ——— the vocabulary stands, at the ruled values, with the exemption stated by name
 const theme = read('src/theme.js');
-ok(/export const RADIUS = \{ card: 20, row: 16, capsule: 999, inset: 8 \}/.test(theme),
-  'A3.V theme.js — RADIUS = { card: 20, row: 16, capsule: 999, inset: 8 } (§3 + ruling 4), verbatim');
+// `sheet: 24` joined by Planner ruling 2026-08-26 (B4: the advisory sheet's lip).
+ok(/export const RADIUS = \{ card: 20, row: 16, capsule: 999, inset: 8, sheet: 24 \}/.test(theme),
+  'A3.V theme.js — RADIUS = { card: 20, row: 16, capsule: 999, inset: 8, sheet: 24 } (§3 + rulings 4, B4), verbatim');
 ok(theme.includes('GEOMETRY EXEMPTION'),
   'A3.V theme.js — the GEOMETRY EXEMPTION doctrine is stated by name where the tokens live');
 
 // ——— every token consumed: the audit cannot be satisfied by deleting radii wholesale
 const allSrc = files.filter((f) => f !== 'src/theme.js').map(read).join('\n');
-for (const t of ['card', 'row', 'capsule', 'inset']) {
+for (const t of ['card', 'row', 'capsule', 'inset', 'sheet']) {
   const n = (allSrc.match(new RegExp(`RADIUS\\.${t}\\b`, 'g')) || []).length;
   ok(n >= 1, `A3.C consumers — RADIUS.${t} has ≥1 consumer outside theme.js (got ${n}); a vocabulary nobody speaks is not a vocabulary`);
 }

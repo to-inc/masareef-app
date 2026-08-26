@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, unitSize,
+  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize,
 } from '../theme.js';
-import { S, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS } from '../i18n/strings.js';
+import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, moneyRound, amountWithCurrency } from '../lib/format.js';
-import { periodTotals, comparisonOf } from '../lib/series.js';
+import { periodTotals, comparisonOf, seriesFor, lastIdxOf } from '../lib/series.js';
+import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
 import { fetchEntries } from '../api/index.js';
@@ -14,7 +15,7 @@ import { PeriodSummary, CategoryCompare, PriorityLens } from '../components/Char
 import { Chip, LATIN, ISOLATE, SectionLabel, Rail } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, needsHim } from '../state/inboxOutcomes.js';
-import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay } from '../state/recent.js';
+import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay, parseSheetDate } from '../state/recent.js';
 import { bookPeriods, rowsSource, travelOf, egpTotalOf, needsCategory } from '../state/book.js';
 import { getSheetUrl } from '../state/secret.js';
 import { lensOpen as loadLensOpen, setLensOpen } from '../state/lens.js';
@@ -53,9 +54,58 @@ import LogCard from '../components/LogCard.jsx';
  * row one tab over was one tap from fixed. Here a row without a category is a
  * button, on every period, using the same picker the Inbox uses.
  */
+/**
+ * B1 — THE MOTION LAW'S GUARD, AS A HOOK.
+ *
+ * styles.css guards its class-based transitions under the
+ * `prefers-reduced-motion` media query, but an INLINE transition outranks any
+ * class rule, so the guard for inline motion must live where the style does.
+ * The pill's transition collapses to an instant state change when the person
+ * asked the OS for less motion — the position still updates, the content is
+ * never hidden; only the travel between the two states is skipped.
+ *
+ * Subscribed, not merely read: flipping the OS setting mid-session takes
+ * effect on the next slide rather than on the next launch. Old WebKit exposes
+ * `addListener` only; there the guard degrades to its mount-time answer
+ * rather than crashing the Book.
+ */
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
+const prefersReducedMotion = () =>
+  typeof matchMedia !== 'undefined' && matchMedia(REDUCED_MOTION).matches;
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(prefersReducedMotion);
+  useEffect(() => {
+    if (typeof matchMedia === 'undefined') return undefined;
+    const mq = matchMedia(REDUCED_MOTION);
+    const onChange = () => setReduced(!!mq.matches);
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', onChange);
+      return () => mq.removeEventListener('change', onChange);
+    }
+    return undefined;
+  }, []);
+  return reduced;
+}
+
+/**
+ * N7 — the four groups' icons, beside their words and never instead of them
+ * (north-star §4.5: «icon PLUS word, never icon-only»). The WORDS come from
+ * `S.lensGroup` — the lens's own vocabulary, one copy — so a chip and the
+ * lens panel can never disagree about what a group is called. The icons are
+ * presentation constants, exactly like the map they decorate: re-drawable at
+ * any time, touching nothing stored.
+ */
+export const PRIORITY_ICONS = { essentials: '🏠', health: '🩺', joy: '🎈', projects: '🧰' };
+
 export default function BookView({
   data, settled = {}, onEdit, onGoToInbox, onBusyChange,
   unsettledBatch = 0, onOpenBatch,
+  /**
+   * N7 — the filter's seed, for the same reason PeriodBlock takes
+   * `policyOpen`: the chips live behind taps SSR cannot make, and a suite
+   * must render the FILTERED screen, not trust the event plumbing.
+   */
+  initialPriorityFilter = null,
   /**
    * The install's reading unit (D23). A PROP rather than a module read inside
    * `PeriodBlock`, so a suite can render the same week in either unit without a
@@ -65,6 +115,23 @@ export default function BookView({
   displayCurrency = getDisplayCurrency(),
 }) {
   const [period, setPeriod] = useState('today');
+  /**
+   * N7 — WHICH PRIORITY GROUP THE LIST IS READ THROUGH, or null for all of it.
+   * A lens over the rows, never a claim about them: the chips are always on
+   * screen stating which one is pressed, and the count line restates the
+   * result in words, so a filtered list can never pass for a complete one.
+   */
+  const [priorityFilter, setPriorityFilter] = useState(initialPriorityFilter);
+  /** N6 — whether the month sheet is up. The heading is its only opener. */
+  const [pickerOpen, setPickerOpen] = useState(false);
+  /**
+   * N6 — THE BROWSED MONTH'S ANSWER, whole: the chosen month's rows and the
+   * month-before's, kept WITH the ref they answer. The render gate compares
+   * this ref against `browsing` so a slower month's data can never dress the
+   * head of a faster tap — the same months-don't-match law the loading state
+   * enforces for the rows, applied to the figure above them.
+   */
+  const [browsed, setBrowsed] = useState(null);
   /**
    * THE PRIORITIES LENS'S OPEN STATE — read once, at the top, with every other
    * hook. Never below a branch: a `useEffect` under an early return is what took
@@ -103,6 +170,9 @@ export default function BookView({
   const [open, setOpen] = useState(null);
   // Read once — it cannot change while he is looking at the screen.
   const [sheetUrl] = useState(() => getSheetUrl());
+  // B1 — with every other hook, at the top, never below a branch (the same
+  // hook-order law the lens state above states in full).
+  const reducedMotion = useReducedMotion();
 
   const today = data.today_cairo;
   const liveWeekIndex = new Date(Date.UTC(today.y, today.m - 1, today.d)).getUTCDay();
@@ -143,7 +213,13 @@ export default function BookView({
     const cacheKey = (ref) => `${ref.y}_${ref.m}`;
     const isClosed = (ref) => !(ref.y === today.y && ref.m === today.m);
     try {
-      const months = browsing ? [browsing] : monthsFor(period === 'year' ? 'month' : period, today);
+      /**
+       * N6 — a browsed month is fetched WITH the month before it, because the
+       * chosen month is compared against ITS OWN predecessor — June against
+       * May, never against whatever the live screen happens to compare with.
+       * The cache makes the second read free on a revisit.
+       */
+      const months = browsing ? [browsing, monthBefore(browsing)] : monthsFor(period === 'year' ? 'month' : period, today);
       /**
        * LOADING IS A STATE THE SCREEN ADMITS TO. The old code kept the previous
        * rows on screen while the next month loaded — so a slow read left August
@@ -154,14 +230,28 @@ export default function BookView({
        */
       const allCached = months.every((ref) => monthCache.current.has(cacheKey(ref)));
       if (!allCached) setLoadingRows(true);
-      const answers = await Promise.all(months.map(async (ref) => {
+      const answers = await Promise.all(months.map(async (ref, i) => {
         const hit = monthCache.current.get(cacheKey(ref));
         if (hit) return hit;
-        const a = await fetchEntries(ref);
-        if (a && Array.isArray(a.entries) && isClosed(ref)) {
-          monthCache.current.set(cacheKey(ref), a);
+        try {
+          const a = await fetchEntries(ref);
+          if (a && Array.isArray(a.entries) && isClosed(ref)) {
+            monthCache.current.set(cacheKey(ref), a);
+          }
+          return a;
+        } catch (err) {
+          /**
+           * ONLY THE COMPARISON MONTH MAY FAIL QUIETLY (N6). The month HE
+           * CHOSE failing is the screen's failure and rethrows into the catch
+           * below; the month-before exists only to stand beside it, and
+           * refusing to show June because May was unreachable would punish
+           * the answer for the loss of its context. Its absence renders AS
+           * absence: null series, so the screen says «no comparison» in
+           * words rather than inventing a quiet month of zeros.
+           */
+          if (browsing && i === 1) return null;
+          throw err;
         }
-        return a;
       }));
       // A superseded answer is DROPPED, whole — rendering it would put the
       // slower month's rows under the faster tap's chip.
@@ -172,21 +262,41 @@ export default function BookView({
        * and flat-mapping it to [] rendered «no expenses this month» over a
        * month the server had just REFUSED to read: the honest-render law
        * violated for a whole month at once (verification finding). A refusal
-       * renders as a refusal.
+       * renders as a refusal. (The browsed comparison month is the one
+       * exception, same reasoning as its transport failure above.)
        */
-      if (answers.some((a) => a && a.ok === false)) {
-        setFetched([]); setFetchedTab(''); setUndated(0);
+      if (answers.some((a, i) => a && a.ok === false && !(browsing && i === 1))) {
+        setFetched([]); setFetchedTab(''); setUndated(0); setBrowsed(null);
         setLoadError(true); setLoadingRows(false);
         return false;
       }
       setLoadError(false);
+      if (browsing) {
+        const chosen = answers[0];
+        const rowsIn = chosen && Array.isArray(chosen.entries) ? chosen.entries : [];
+        const before = answers[1];
+        setFetched(sortForDisplay(rowsIn));
+        // The CHOSEN month's tab — the edit path posts against it, and the
+        // server requires date equality within the named tab.
+        setFetchedTab((chosen && chosen.tab) || '');
+        setBrowsed({
+          ref: browsing,
+          entries: rowsIn,
+          // A refused/unreachable comparison month is NULL — absence, never [].
+          prevEntries: before && before.ok !== false && Array.isArray(before.entries) ? before.entries : null,
+        });
+        setUndated(0);
+        setLoadingRows(false);
+        return true;
+      }
+      setBrowsed(null);
       const all = answers.flatMap((a) => (a && Array.isArray(a.entries) ? a.entries : []));
-      const shown = browsing ? all : filterEntries(all, period, today);
+      const shown = filterEntries(all, period, today);
       setFetched(sortForDisplay(shown));
       setFetchedTab(answers.length === 1 && answers[0] ? answers[0].tab || '' : '');
       // Counted from the rows ON SCREEN: a week spanning two months is assembled
       // from two responses and neither one's figure describes it.
-      setUndated(browsing || period === 'month' ? 0 : undatedIn(all));
+      setUndated(period === 'month' ? 0 : undatedIn(all));
       setLoadingRows(false);
       return true;
     } catch {
@@ -222,7 +332,7 @@ export default function BookView({
    * numbers — hiding it would be the quiet version of «This week 0»). Name:
    * locale compare, so Arabic descriptions sort as Arabic.
    */
-  const rows = sortBy === 'date' ? fetchedOrToday
+  const sorted = sortBy === 'date' ? fetchedOrToday
     : [...fetchedOrToday].sort(sortBy === 'amount'
       ? (a, b) => {
         const an = typeof a.amount === 'number' ? a.amount : null;
@@ -234,14 +344,36 @@ export default function BookView({
       }
       : (a, b) => String(a.description || '').localeCompare(String(b.description || ''), undefined, { sensitivity: 'base' }));
 
+  /**
+   * N7 — THE FILTER APPLIES AFTER THE SORT, so «largest first» means largest
+   * of what is shown. `groupOf` is the ratified map's own reader — a ❓ row
+   * and an unplaced category belong to NO group, so every filter drops them:
+   * a chip may not adopt money nobody has placed. Their door back is clearing
+   * the filter, which is always one tap and always visible.
+   */
+  const rows = priorityFilter
+    ? sorted.filter((r) => groupOf(r && r.category) === priorityFilter)
+    : sorted;
+
+  const periods = bookPeriods();
+  const activeIdx = Math.max(0, periods.indexOf(period));
+  /** N6 — the current month IS the live screen; any other month browses. */
+  const chooseMonth = (ref) => {
+    setPickerOpen(false);
+    setBrowsing(ref.y === today.y && ref.m === today.m ? null : ref);
+  };
+
   const seg = (key) => (
     <button
       key={key}
-      onClick={() => { setBrowsing(null); setPeriod(key); }}
+      onClick={() => { setBrowsing(null); setPickerOpen(false); setPeriod(key); }}
       aria-pressed={period === key}
       style={{
+        // The fill lives on the sliding pill behind this row (B1); a second
+        // fill here would ghost the pill mid-slide. `position: relative`
+        // paints the label above the pill.
         flex: 1, minHeight: TAP, padding: '11px 0', borderRadius: RADIUS.capsule,
-        background: period === key ? C.harbor : 'transparent',
+        background: 'transparent', position: 'relative',
         color: period === key ? C.onDark : C.ink,
         fontSize: TYPE.label, fontWeight: period === key ? 700 : 600,
       }}
@@ -255,10 +387,41 @@ export default function BookView({
       {/* The closed month, handed over on the first of the next one (W-6). */}
       <LogCard prevLog={data.month && data.month.prevLog} todayCairo={today} />
 
-      <div style={{ display: 'flex', background: C.card, border: `1px solid ${C.line}`, borderRadius: RADIUS.capsule, padding: 4, marginBottom: 14, gap: 2 }}>
-        {bookPeriods().map(seg)}
+      <div style={{ display: 'flex', position: 'relative', background: C.card, border: `1px solid ${C.line}`, borderRadius: RADIUS.capsule, padding: 4, marginBottom: 14, gap: 2 }}>
+        {/**
+          * B1 — THE SLIDING HARBOR PILL (north-star §4.2: the highest-leverage
+          * motion in the app — he switches periods constantly). ONE indicator
+          * that RELOCATES, so the eye carries the selection from the old
+          * period to the new instead of watching two fills swap. Decoration
+          * only (aria-hidden): the buttons' own aria-pressed stays the truth.
+          *
+          * The width is the control's inner quarter (padding 8, three 2px
+          * gaps); each step is one pill-width plus one gap. In RTL the first
+          * period sits at the RIGHT, so the step runs negative — the same
+          * physical-direction trap as the Rail's mask, answered the same way.
+          * MOTION.move/easeOut because this is a relocation within a screen;
+          * the reduced-motion guard collapses it to an instant jump.
+          */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', top: 4, bottom: 4, insetInlineStart: 4,
+            width: `calc((100% - ${8 + (periods.length - 1) * 2}px) / ${periods.length})`,
+            borderRadius: RADIUS.capsule, background: C.harbor,
+            transform: `translateX(calc(${(DIR === 'rtl' ? -1 : 1) * activeIdx} * (100% + 2px)))`,
+            transition: reducedMotion ? 'none' : `transform ${MOTION.move}ms ${MOTION.easeOut}`,
+          }}
+        />
+        {periods.map(seg)}
       </div>
 
+      {/**
+        * B2's PERIOD HALF (the shell leaf keys tab swaps; this keys period
+        * swaps): a new key remounts the period subtree, so the entrance
+        * plays — and the chart's once-per-mount draw correctly re-runs on a
+        * genuine period change (B3's documented dependency), never on a poke.
+        */}
+      <div key={browsing ? `${browsing.y}-${browsing.m}` : period} className="view-in">
       {period === 'today' && (
         <TodayHead
           totals={data.today.totals} entries={data.today.entries} onGoToInbox={onGoToInbox}
@@ -276,12 +439,39 @@ export default function BookView({
         />
       )}
 
-      {period === 'month' && (
+      {!browsing && period === 'month' && (
         <MonthScreen
           data={data} metric={metric} setMetric={setMetric} onGoToInbox={onGoToInbox}
           displayCurrency={displayCurrency}
           lensOpen={lensIsOpen}
           onToggleLens={() => setLensIsOpen((v) => setLensOpen(!v))}
+          onPickMonth={() => setPickerOpen(true)}
+        />
+      )}
+
+      {/**
+        * N6 — A BROWSED MONTH IS A WHOLE MONTH SCREEN, not rows under a live
+        * head. The old shape kept August's figure and chart above June's rows
+        * — the months-don't-match lie at the top of the screen while the
+        * loading state was killing it at the bottom. Now the live block
+        * stands down and the chosen month renders through the SAME
+        * MonthScreen, from `browsedMonthData` — sums of his own fetched rows
+        * — compared against the month before the CHOSEN one (May under June,
+        * never a hardwired July).
+        *
+        * Gated on the answer CARRYING the browsed ref: a slower month's data
+        * can never dress a faster tap's head, and before the answer lands
+        * the ⌛ below is the only claim on screen.
+        */}
+      {period === 'month' && browsing && !loadingRows && !loadError
+        && browsed && browsed.ref.y === browsing.y && browsed.ref.m === browsing.m && (
+        <MonthScreen
+          data={browsedMonthData(browsing, browsed.entries, browsed.prevEntries, today)}
+          metric={metric} setMetric={setMetric} onGoToInbox={onGoToInbox}
+          displayCurrency={displayCurrency}
+          lensOpen={lensIsOpen}
+          onToggleLens={() => setLensIsOpen((v) => setLensOpen(!v))}
+          onPickMonth={() => setPickerOpen(true)}
         />
       )}
 
@@ -293,6 +483,7 @@ export default function BookView({
           displayCurrency={displayCurrency}
         />
       )}
+      </div>
 
       {/**
         * THE MONTH BROWSER, under «الشهر» only — it is the control for choosing
@@ -346,6 +537,52 @@ export default function BookView({
         }}>
           {S.recentUndatedNote(undated)}
         </p>
+      )}
+
+      {/**
+        * N7 — PRIORITIES BECOME NAVIGATION (north-star §4.5, the Owner's GAP
+        * 4): the ratified lens's four groups as filter chips over the list.
+        * Icon PLUS word, at the senior tap floor, riding the shared Rail (the
+        * N2 affordance — no hand-rolled overflow). They render only where
+        * there are rows to filter: four filters over an empty day would be
+        * furniture claiming a job.
+        *
+        * The count line below them restates a FILTERED list in words — a
+        * lens that shows three rows says «3 expenses in Essentials», so a
+        * subset can never pass for the whole list. No filter, no count: a
+        * count of the unfiltered list would restate the list.
+        */}
+      {period !== 'year' && !loadingRows && !loadError && sorted.length > 0 && (
+        <Rail style={{ gap: 8, padding: '10px 0 4px' }}>
+          {PRIORITY_GROUPS.map((g) => {
+            const active = priorityFilter === g.key;
+            return (
+              <button
+                key={g.key}
+                className="catchip"
+                onClick={() => setPriorityFilter(active ? null : g.key)}
+                aria-pressed={active}
+                style={{
+                  minHeight: TAP, padding: '0 14px', borderRadius: RADIUS.capsule,
+                  whiteSpace: 'nowrap', flex: '0 0 auto',
+                  display: 'inline-flex', alignItems: 'center',
+                  background: active ? C.harbor : C.card,
+                  border: `1px solid ${active ? C.harbor : C.line}`,
+                  color: active ? C.onDark : C.ink,
+                  fontSize: TYPE.label, fontWeight: active ? 700 : 500,
+                }}
+              >
+                <span aria-hidden="true" style={{ marginInlineEnd: 6 }}>{PRIORITY_ICONS[g.key]}</span>
+                {S.lensGroup(g.key)}
+              </button>
+            );
+          })}
+        </Rail>
+      )}
+      {period !== 'year' && !loadingRows && !loadError && priorityFilter && sorted.length > 0 && rows.length > 0 && (
+        <div style={{ fontSize: TYPE.label, color: C.muted, margin: '2px 2px 0' }}>
+          {S.priorityCount(rows.length, S.lensGroup(priorityFilter))}
+        </div>
       )}
 
       {/**
@@ -421,8 +658,18 @@ export default function BookView({
             * thing distinguishing the rows, so it stays.
             */
           showDate={period !== 'today'}
-          emptyTitle={period === 'today' ? S.todayEmptyTitle : null}
-          emptyBody={period === 'today' ? S.todayEmptyBody : S.recentEmpty}
+          emptyTitle={period === 'today' && !priorityFilter ? S.todayEmptyTitle : null}
+          /**
+            * N7 — AN EMPTIED FILTER IS A SENTENCE NAMING ITS OWN ZERO
+            * («History: 0»). The generic empty line would claim the PERIOD is
+            * empty — it is not; only the chosen group is, and the sentence
+            * says which. A period that is GENUINELY empty keeps its ordinary
+            * words whatever chip is pressed, because there the plain claim is
+            * the true one.
+            */
+          emptyBody={priorityFilter && sorted.length > 0
+            ? S.priorityEmpty(S.lensGroup(priorityFilter))
+            : (period === 'today' ? S.todayEmptyBody : S.recentEmpty)}
         />
       )}
 
@@ -455,12 +702,210 @@ export default function BookView({
           {S.openTheSheet}
         </a>
       )}
+
+      {/* N6 — the month sheet, opened only by the month heading's own tap. */}
+      {pickerOpen && period === 'month' && (
+        <MonthSheet
+          today={today}
+          browsing={browsing}
+          onChoose={chooseMonth}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** N6 — which month a chosen month is compared against: its own predecessor. */
+export function monthBefore(ref) {
+  return ref.m === 1 ? { y: ref.y - 1, m: 12 } : { y: ref.y, m: ref.m - 1 };
+}
+
+// Calendar arithmetic only (day 0 of the next month), never "now" — the same
+// UTC-as-a-calendar rule state/recent.js runs on.
+const daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+// The server's English month names (they mirror his tab names) — the SAME
+// vocabulary `monthName` localizes, so a browsed month's head renders exactly
+// like a live one's.
+const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+  'August', 'September', 'October', 'November', 'December'];
+
+/**
+ * ONE MONTH'S ROWS, FOLDED INTO THE MONTH PAYLOAD'S OWN SHAPE (chunk N6).
+ *
+ * Every figure here is a SUM OF ROWS THAT ARRIVED — the browsed head may
+ * emphasize and arrange, never invent. The shape's honesty rules, restated at
+ * the site because each one has already been a shipped bug somewhere:
+ *
+ *  · a closed month's quiet day is a TRUE ZERO — the book says nothing was
+ *    spent, and that is data (rest-day grammar, north-star §5);
+ *  · the CURRENT month's future days are NULL — a day that has not happened
+ *    is an absence, and zeros there would drag the cumulative line flat
+ *    across the rest of the period;
+ *  · a foreign row's money NEVER joins an EGP sum (D8) — it rides the same
+ *    `{count, byCurrency}` shape the live month uses, so `mayCompare` and the
+ *    asides work unchanged on the browsed path;
+ *  · an unpriced row is a COUNT, not a zero; an undated row's money is
+ *    off-plot (in the total, not on the curve) exactly like the live month's;
+ *  · ❓ money is `uncategorized`, never a category — so the accountability
+ *    list reconciles: categories + ❓ = the month, by construction.
+ */
+function monthSums(rows, ref, todayCairo) {
+  const n = daysInMonth(ref.y, ref.m);
+  const isCurrent = !!todayCairo && ref.y === todayCairo.y && ref.m === todayCairo.m;
+  const live = isCurrent ? Math.min(todayCairo.d, n) : n;
+  const perDay = () => Array.from({ length: n }, (_, i) => (i < live ? 0 : null));
+  const cur = { Visa: perDay(), Cash: perDay() };
+  const undated = { count: 0, Visa: 0, Cash: 0 };
+  let unpriced = 0;
+  let foreignCount = 0;
+  const uncategorized = { count: 0, total: 0 };
+  const cats = new Map();
+  for (const e of Array.isArray(rows) ? rows : []) {
+    if (!e) continue;
+    if (e.currency && e.currency !== 'EGP') { foreignCount++; continue; }
+    if (e.amount == null || e.amount === '' || !isFinite(Number(e.amount))) { unpriced++; continue; }
+    const amt = Number(e.amount);
+    const method = e.method === 'Visa' ? 'Visa' : 'Cash';
+    const d = parseSheetDate(e.date);
+    if (d && d.y === ref.y && d.m === ref.m && d.d <= n) {
+      // `|| 0` here is GEOMETRY, not fabrication: a row dated on a slot the
+      // null-padding left open (a future day of the current month) makes that
+      // day real by carrying money into it.
+      cur[method][d.d - 1] = (cur[method][d.d - 1] || 0) + amt;
+    } else {
+      undated.count += 1;
+      undated[method] += amt;
+    }
+    if (needsCategory(e)) { uncategorized.count += 1; uncategorized.total += amt; }
+    else {
+      const k = String(e.category).trim();
+      cats.set(k, (cats.get(k) || 0) + amt);
+    }
+  }
+  return {
+    cur,
+    undated,
+    unpriced,
+    uncategorized,
+    cats,
+    foreign: {
+      count: foreignCount,
+      byCurrency: Object.fromEntries(travelOf(rows).map((t) => [t.currency, t.amount])),
+    },
+  };
+}
+
+/**
+ * THE BROWSED MONTH'S WHOLE PAYLOAD — the chosen month against the month
+ * BEFORE it (N6's «never always-July»). A comparison month we could not read
+ * arrives as `prevEntries: null` and renders as ABSENCE: all-null series, a
+ * null foreign shape — so the screen says «no comparison» in words rather
+ * than comparing against a confident month of zeros nobody fetched.
+ */
+export function browsedMonthData(ref, entries, prevEntries, todayCairo) {
+  const before = monthBefore(ref);
+  const c = monthSums(entries, ref, todayCairo);
+  const p = prevEntries ? monthSums(prevEntries, before, todayCairo) : null;
+  const nullMonth = () => {
+    const n = daysInMonth(before.y, before.m);
+    const mk = () => Array.from({ length: n }, () => null);
+    return { Visa: mk(), Cash: mk() };
+  };
+  const names = new Set([...c.cats.keys(), ...(p ? p.cats.keys() : [])]);
+  return {
+    month: {
+      cur: c.cur,
+      prev: p ? p.cur : nullMonth(),
+      names: { cur: MONTH_FULL[ref.m - 1], prev: MONTH_FULL[before.m - 1] },
+      undated: c.undated,
+      unpriced: { count: c.unpriced },
+      uncategorized: c.uncategorized,
+      foreign: c.foreign,
+      prevForeign: p ? p.foreign : null,
+      prevLog: null,
+    },
+    // Stable order; `prev` is null — absent, never 0 — when the comparison
+    // month itself is absent.
+    monthCats: [...names].sort().map((name) => ({
+      name,
+      now: c.cats.get(name) || 0,
+      prev: p ? (p.cats.get(name) || 0) : null,
+    })),
+  };
+}
+
+/**
+ * N6 — THE MONTH SHEET (north-star §4.4: «the month heading becomes a picker
+ * (serif month sheet)»; the Owner's GAP 3: «we can't go anyway back»).
+ *
+ * An ADVISORY surface, and it dresses like one: `line`-bordered, `RADIUS.sheet`
+ * lip — one step softer than the cards it slides over (TOKEN RULING 4b). The
+ * months are the CURRENT YEAR's, newest first (the monthStrip's own order —
+ * the month he stands in is the first under his thumb), and only months the
+ * year has reached: a future month has no data to open. Serif faces, because
+ * these are the display vocabulary's own month names.
+ *
+ * Choosing is the caller's business (`onChoose(ref)`), so this stays a dumb
+ * surface a suite can render alone. Entrance motion is B4's chunk, not this
+ * one — the sheet appears; how it ARRIVES is a separate ratified step.
+ */
+export function MonthSheet({ today, browsing, onChoose, onClose }) {
+  const months = [];
+  for (let m = today.m; m >= 1; m--) months.push({ y: today.y, m });
+  return (
+    <>
+      {/* The way out: the whole page behind the sheet, honestly labelled. */}
+      <button
+        onClick={onClose}
+        aria-label={S.monthPickerClose}
+        style={{ position: 'fixed', inset: 0, zIndex: 44, background: 'transparent', cursor: 'default' }}
+      />
+      <div
+        role="dialog"
+        aria-label={S.monthPickerTitle}
+        style={{
+          position: 'fixed', insetInline: 0, bottom: 0, zIndex: 45,
+          background: C.card, border: `1px solid ${C.line}`,
+          borderRadius: `${RADIUS.sheet}px ${RADIUS.sheet}px 0 0`,
+          padding: `6px ${SPACE.gutter}px calc(${SPACE.cardPad}px + env(safe-area-inset-bottom, 0px))`,
+          maxHeight: '70vh', overflowY: 'auto',
+          // The lift off the page — an ink-tinted veil, no new hue (§3).
+          boxShadow: '0 -12px 32px rgba(44, 67, 86, 0.18)',
+        }}
+      >
+        <div style={{ fontSize: TYPE.label, fontWeight: 700, color: C.muted, padding: '10px 0 6px' }}>
+          {S.monthPickerTitle}
+        </div>
+        {months.map((ref) => {
+          const active = browsing
+            ? (browsing.y === ref.y && browsing.m === ref.m)
+            : (ref.y === today.y && ref.m === today.m);
+          return (
+            <button
+              key={ref.m}
+              onClick={() => onChoose(ref)}
+              aria-pressed={active}
+              style={{
+                display: 'flex', width: '100%', minHeight: TAP, alignItems: 'center',
+                padding: '0 10px', borderRadius: RADIUS.row, textAlign: 'start',
+                background: active ? C.harbor : 'transparent',
+                color: active ? C.onDark : C.ink,
+                fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650,
+              }}
+            >
+              <span>{monthByTab(MONTH_ABBR[ref.m - 1])}</span>
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
 
 /**
  * TODAY'S ANSWER — the figure, and the two things that qualify it (finding S4).
@@ -711,6 +1156,17 @@ export function PeriodBlock({
    * pattern as CumulativeChart's `peekOpen`, for the same reason.
    */
   policyOpen = false,
+  /**
+   * N6 — when the Month screen wires this, the heading becomes the DOOR to
+   * the months sheet. Absent (weeks, years, suites that render the block
+   * alone), the heading stays a plain label claiming nothing it cannot do.
+   */
+  onPickMonth,
+  /**
+   * E3 — only the MONTH asks for its window in words; «days 1–24» is
+   * month-grammar and a week's sentence already names its whole self.
+   */
+  monthWindow = false,
 }) {
   const totals = periodTotals(data, METRICS, offPlot || {});
   const shown = totals[metric] || totals.all;
@@ -764,11 +1220,62 @@ export function PeriodBlock({
   const policySuppressed = hasForeign(foreign) || hasForeign(prevForeign) || !leadsHome;
   const [whyOpen, setWhyOpen] = useState(!!policyOpen);
 
+  /**
+   * E3 — THE WINDOW, IN WORDS, DERIVED FROM THE SAME ARRAYS THE MATHS USED.
+   *
+   * `prevAt` is the previous period at the SAME POINT — `cumsum(prev)` at
+   * `min(lastIdxOf(cur), prev.length - 1)` — and until now that fact lived
+   * only in series.js. «أقل من يوليو بـ12%» on the 24th reads as
+   * August-vs-all-of-July to anyone who has not read the arithmetic: a true
+   * figure under a wrong subject. So the window is restated in words, from
+   * the SAME derivation (`lastIdxOf`, the same clamp), which is what keeps
+   * the words and the percentage incapable of disagreeing.
+   *
+   * Three shapes, ruled: a clipped previous month → «days 1–24 vs July
+   * 1–24» (the clamp guarantees both windows are the same length); a WHOLE
+   * shorter previous month (the February case) → «days 1–30 vs all of
+   * February» — never «February 1–30», days February does not have; whole
+   * against whole → NO qualifier, because nothing about it is partial.
+   */
+  let windowLine = null;
+  if (monthWindow) {
+    const curAll = seriesFor(data.cur, 'all');
+    const prevAll = seriesFor(data.prev, 'all');
+    const li = lastIdxOf(curAll);
+    if (curAll[li] != null && prevAll.length > 0) {
+      const prevIdx = Math.min(li, prevAll.length - 1);
+      const curWhole = li === curAll.length - 1;
+      const prevWhole = prevIdx === prevAll.length - 1;
+      if (!prevWhole) windowLine = S.windowWords(li + 1, names.prev);
+      else if (!curWhole) windowLine = S.windowWordsWholePrev(li + 1, names.prev);
+    }
+  }
+
   return (
     <>
       <div style={{ textAlign: 'center', padding: '2px 0 12px' }}>
         {/* Stat anatomy (A4): the label above, muted, at the prose floor. */}
-        <div style={{ fontSize: TYPE.label, color: C.muted }}>{names.cur}</div>
+        {onPickMonth ? (
+          /**
+           * N6 — «August» IS THE DOOR to the months (GAP 3: «we can't go
+           * anyway back»). A real button at the senior floor; the chevron is
+           * ruling 2's caption grammar — it duplicates the affordance the
+           * button already is.
+           */
+          <button
+            onClick={onPickMonth}
+            aria-haspopup="dialog"
+            style={{
+              minHeight: TAP, background: 'transparent', padding: '0 12px',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <span style={{ fontSize: TYPE.label, color: C.muted }}>{names.cur}</span>
+            <span aria-hidden="true" style={{ fontSize: TYPE.caption, color: C.muted }}>▾</span>
+          </button>
+        ) : (
+          <div style={{ fontSize: TYPE.label, color: C.muted }}>{names.cur}</div>
+        )}
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
           {moneyRound(lead.amount)}
           {/**
@@ -861,6 +1368,16 @@ export function PeriodBlock({
                   <span style={{ color: C.muted, fontSize: TYPE.label }}> ({S.wasThen} <span style={LATIN}>{moneyRound(cmp.prevAt)}</span>)</span>
                 </>
               )}
+            {/**
+              * E3 — the qualifier renders ONLY under a sentence it qualifies:
+              * a suppressed or absent comparison has no percentage for these
+              * words to be about.
+              */}
+            {windowLine && (
+              <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 2, ...NUMERALS }}>
+                {windowLine}
+              </div>
+            )}
           </div>
         ) : policySuppressed ? null : (
           <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>{S.noComparison(names.prev)}</div>
@@ -892,7 +1409,7 @@ export function PeriodBlock({
  * mounted with the wrong props — the class a source regex cannot see. As a
  * component, `test-accountability.mjs` renders exactly what he sees.
  */
-export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens, displayCurrency }) {
+export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens, displayCurrency, onPickMonth }) {
   // Honest incompleteness (06 §2.2): a month we cannot fully account for must
   // never render as a confident number. `undated` rows are in the total but not
   // the chart; `unpriced` rows are in neither, so the total is knowably short.
@@ -951,6 +1468,8 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
         names={{ cur: monthName(data.month.names.cur), prev: monthName(data.month.names.prev) }}
         showBars={false}
         footnote={footnote}
+        onPickMonth={onPickMonth}
+        monthWindow
         /**
          * The undated rows ARE the month; they are simply not on the curve.
          * Handing them here makes the card show the true month total, which is
