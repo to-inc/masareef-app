@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { C, FONT_DISPLAY, FONT_UI, NUMERALS, PREV_SERIES_OPACITY, TAP } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel } from '../i18n/strings.js';
@@ -18,7 +19,9 @@ import { Delta, LATIN } from './Primitives.jsx';
 
 // Cumulative race: colored line (this period) vs grey line (last period), with a
 // marker pair at "the same point in time" — an honest partial-period comparison.
-export function CumulativeChart({ cur, prev, color, labelled = true }) {
+// `peekOpen` seeds the tap-label's state so a static renderer can reach the
+// open render — SSR cannot tap, and the suites assert both states (A6).
+export function CumulativeChart({ cur, prev, color, labelled = true, prevName = '', peekOpen = false }) {
   // 12px of headroom at the top so a label on a marker near the ceiling still
   // has somewhere to sit.
   const W = 320, H = 128, P = 8, TOP = 14;
@@ -69,6 +72,43 @@ export function CumulativeChart({ cur, prev, color, labelled = true }) {
   const collide = hasPrev && Math.abs(curY - prevY) < 13;
   const prevLabelY = collide ? (prevY <= curY ? prevY - 9 : prevY + 11) : prevY - 5;
 
+  /**
+   * ⚠️ THE MARKER EXPLAINS ITSELF ON TAP (A6 — North Star §5).
+   *
+   * This is where the deleted legend's cargo went: tapping the same-point
+   * marker reveals the compared period, the day, and the compared figure —
+   * on demand, dismissed by a second tap or a tap anywhere else. Closed, the
+   * chart carries nothing; the calm is the point, so there is no persistent
+   * chrome, no hint, no badge.
+   *
+   * GATED BY `labelled && hasPrev`, the same two gates the persistent labels
+   * obey and for the same reasons: no comparison data means there is nothing
+   * to explain (a peek would fabricate a «was 0» out of a file that is not
+   * connected), and a chart forbidden from stating totals — off-plot money
+   * has made its endpoint knowably short — must not whisper them on tap.
+   */
+  const [peek, setPeek] = useState(peekOpen);
+  const canPeek = labelled && hasPrev;
+  useEffect(() => {
+    if (!peek) return undefined;
+    // Outside-tap dismiss. The marker's own handler stops propagation, so a
+    // second tap on it toggles rather than closing-then-reopening.
+    const close = () => setPeek(false);
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [peek]);
+  /**
+   * The senior touch floor, in viewBox units. This svg renders at
+   * (card width − 56px) of its 320-unit viewBox; on the narrowest phone this
+   * app meets (320pt) that is a ~0.825 scale, so TAP real pixels need
+   * TAP / 0.8 units. The area is invisible — the floor is why it is not
+   * simply the marker's own 11-unit dot.
+   */
+  const HIT = Math.ceil(TAP / 0.8);
+  // Below the lower marker (the persistent labels own the space above),
+  // clamped so the second line's descenders stay inside the viewBox.
+  const peekTop = Math.min(Math.max(curY, prevY) + 16, H - 20);
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }} aria-hidden="true">
       {[0.25, 0.5, 0.75, 1].map((f) => (
@@ -103,6 +143,45 @@ export function CumulativeChart({ cur, prev, color, labelled = true }) {
         >
           {moneyRound(cumC[li] || 0)}
         </text>
+      )}
+
+      {/**
+        * The tap-label: what «● = same point» used to pre-answer, said only
+        * when asked. Grey on purpose — it describes the grey series. The day
+        * is the marker's own index in digits and the words are keys the app
+        * already owns (`wasThen`, the period name from the header row): A6
+        * adds no string key, because a new key here would be the legend
+        * growing back under another name.
+        */}
+      {canPeek && peek && (
+        <g>
+          <text
+            x={labelX} y={peekTop} textAnchor={anchor}
+            fontSize="12" fontWeight="600" fill={C.muted}
+            stroke={C.shell} strokeWidth="3" paintOrder="stroke"
+            style={{ fontFamily: FONT_UI }}
+          >
+            {prevName ? `${prevName} ${li + 1}` : String(li + 1)}
+          </text>
+          <text
+            x={labelX} y={peekTop + 13} textAnchor={anchor}
+            fontSize="12" fontWeight="700" fill={C.muted}
+            stroke={C.shell} strokeWidth="3" paintOrder="stroke"
+            style={{ fontFamily: FONT_UI, ...NUMERALS }}
+          >
+            {`${S.wasThen} ${moneyRound(prevAt)}`}
+          </text>
+        </g>
+      )}
+      {/* The invisible hit area — last, so it sits above everything it targets. */}
+      {canPeek && (
+        <rect
+          x={x(li) - HIT / 2} y={Math.min(curY, prevY) - HIT / 2}
+          width={HIT} height={Math.abs(curY - prevY) + HIT}
+          fill="transparent"
+          style={{ cursor: 'pointer' }}
+          onPointerDown={(e) => { e.stopPropagation(); setPeek((p) => !p); }}
+        />
       )}
     </svg>
   );
@@ -564,6 +643,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
           <CumulativeChart
             cur={cur} prev={prev} color={color}
             labelled={!((offPlot.Visa || 0) + (offPlot.Cash || 0))}
+            prevName={periodNames.prev}
           />
           {showBars && <PairedBars cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color} />}
         </div>

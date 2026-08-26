@@ -37,6 +37,7 @@ import {
 import { METRICS, UNKNOWN_CATEGORY } from '../src/lib/constants.js';
 import { batchable } from '../src/state/inboxOutcomes.js';
 import { AR, AR_LOCALE } from '../src/i18n/strings.ar.js';
+import { TYPE } from '../src/theme.js';
 
 // A row shows the category's LABEL (finding M2); the value is what the sheet
 // holds and what `fix_category` posts.
@@ -517,7 +518,15 @@ try {
    * number sits in it IS the claim.
    */
   const heroOf = (html) => {
-    const m = html.match(/font-size:42px[^"]*"[^>]*>([^<]*)</);
+    /**
+     * The hero is found by its SIZE, and the size it should be found by is
+     * `TYPE.hero` — the literal 42 is BookView's pre-token hero, still what
+     * renders until Wave 2 retokenizes that view. Both are accepted so this
+     * assertion cannot go red for the wrong reason (a size migration is not a
+     * wrong lead figure). Wave 2 is the collapse point: when BookView reads
+     * `TYPE.hero`, drop the `|42` and this line pins the token too.
+     */
+    const m = html.match(new RegExp(`font-size:(?:${TYPE.hero}|42)px[^"]*"[^>]*>([^<]*)<`));
     return m ? m[1] : null;
   };
   const hisWeek = { cur: { Visa: [0, null], Cash: [0, null] },

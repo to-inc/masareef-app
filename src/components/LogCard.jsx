@@ -42,7 +42,6 @@ export default function LogCard({ prevLog, todayCairo }) {
       style={{
         background: C.card, borderRadius: 18,
         padding: '18px 18px 14px', marginBottom: 16,
-        boxShadow: '0 2px 10px rgba(17,38,29,.05)',
       }}
     >
       <div style={{ fontSize: 15, fontWeight: 700, color: C.harbor }}>

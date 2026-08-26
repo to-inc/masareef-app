@@ -204,7 +204,7 @@ checkUi('chart stroke — Visa/primary', C.harbor, C.card);
 checkUi('chart stroke — Cash', C.muted, C.card);
 checkUi('chart stroke — all', C.ink, C.card);
 checkUi('focus ring', C.harbor, C.shell);
-decorative('card border against the shell', C.line, C.shell, 'the white card fill and its shadow');
+decorative('card border against the shell', C.line, C.shell, 'the white card fill against the darker shell');
 decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a background gradient behind ink text');
 
 /**

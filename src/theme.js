@@ -90,6 +90,21 @@ export const C = {
 };
 
 /**
+ * ═══ ANTI-DRIFT — role casting, not decoration (north-star §3; vis-F2) ═══
+ *
+ * NO NEW HUES. Every role the reference design plays with a colour, this
+ * palette plays with one it already has:
+ *   · harbor plays Gentler-green — data, navigation, selection;
+ *   · amber plays Gentler-orange-Add — the commit, nothing else;
+ *   · muted @ PREV_SERIES_OPACITY plays the previous series;
+ *   · line plays the gridlines.
+ * A screen that seems to need a fifth hue needs a new USE of these four. The
+ * drift this comment exists to stop arrives as a reasonable-sounding hex in a
+ * diff — teal for a new chart series, green for success — and each one breaks
+ * the contrast suite's closed world and the one-warm-action law at once.
+ */
+
+/**
  * DERIVED, not canonical — flagged for the Owner.
  *
  * The palette assigns no colour to the payment methods or to the three metric
@@ -134,6 +149,127 @@ export const NUMERALS = { fontVariantNumeric: 'tabular-nums' };
 export const MORNING_CROWN = `linear-gradient(180deg, ${C.mist} 0%, ${C.shell} 30%)`;
 
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THE NORTH STAR VOCABULARY (docs/design/north-star.md §3, ratified 2026-08-25)
+ *
+ * Phase A introduces ONE vocabulary per dimension — radius, type, spacing,
+ * motion. Before this the app carried 33 distinct font sizes between 10 and 52
+ * and 12 distinct radii — measured, not estimated, across 281 sites.
+ *
+ * ——— WHAT THESE VOCABULARIES DO **NOT** GOVERN, stated here because the survey
+ * that produced them found 100 of those 281 sites are not type at all.
+ *
+ * A `fontSize` is not automatically typography. `<div style={{fontSize: 52}}>🧾</div>`
+ * is a PICTURE sized in pixels; so is a 34px ⌛, a 21px tab icon, a 32px ﹢ in a
+ * 48px circle, and an SVG axis label whose units are viewBox user-space rather
+ * than CSS pixels. Mapping any of them onto a reading scale is a category error:
+ * it would resize every empty-state illustration in the app to the size of a
+ * headline, and it would do it in a single find-and-replace that looked tidy.
+ *
+ * Likewise a `borderRadius` is not automatically a surface. A 3.5px-wide bar
+ * cap, an 8×8 legend swatch and a 40×40 thumbnail are GEOMETRY: all three
+ * surface radii exceed half their width and would clamp them to circles.
+ *
+ * So the rule is a POSITIVE DECLARATION rather than an omission:
+ *   · text  → a TYPE token, always;
+ *   · pictures, icons, chart geometry and fixed-size media → `GLYPH`/`ICON`
+ *     below, or a raw px carrying an explicit `geometry` note — declared, never
+ *     merely surviving, so the next pass reads them as decided rather than as
+ *     stragglers it should tidy.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * Four surface radii, audited (§3) + ruling 4. Controls and geometry are NOT
+ * surfaces. `inset` is the small INNER surface — a swatch-sized panel sitting
+ * on a card, never the card itself.
+ *
+ * ═══ GEOMETRY EXEMPTION (ruling 4 — cite it by this name at the site) ═══
+ * Furniture whose radius is bounded by its own dimensions — bar caps,
+ * hairlines, thumbnails, ~30px controls — states its radius inline WITH A
+ * COMMENT NAMING THIS EXEMPTION. Mapping such a site onto a surface token
+ * clamps it to a circle, and a checkbox that becomes a circle is an
+ * AFFORDANCE change, not a style. An inline radius without the named comment
+ * is the drift A3's audit exists to catch.
+ */
+export const RADIUS = { card: 20, row: 16, capsule: 999, inset: 8 };
+
+/**
+ * Eight reading sizes (§3 + rulings 1–2). Line-height ≥ 1.3 governs PROSE —
+ * `section`, `row`, `body`, `label`. `hero` and `display` are single figures
+ * with no inter-line reading; their leading binds a wrapped amount into one
+ * object and runs ~1.05, which is how they are already set. (Flagged at three
+ * sites where a mechanical 1.3 would have added ~10px of dead space above and
+ * below the one number the Today screen exists to show.)
+ *
+ * `action` (ruling 1) — a NAMED ROLE, not a compositional rule. «primary =
+ * row + weight + fill» is three facts that must co-occur at every future
+ * site; a token is one fact. The Inbox one-tap guess — the most-used tap in
+ * the app — stays ≥ 19: senior-first is not negotiable downward.
+ *
+ * `caption` (ruling 2) — the ONE size below the `label` prose floor, legal
+ * ONLY for annotations that DUPLICATE information available elsewhere
+ * («auto», unit suffixes, chip years, row meta, badge counts). Nothing may be
+ * readable ONLY at 13. If a badge pill overflows at 13, the pill grows — the
+ * type does not shrink; come back with evidence if geometry genuinely breaks.
+ */
+export const TYPE = {
+  hero: 40, display: 34, section: 22, action: 19, row: 17, body: 16, label: 15,
+  caption: 13,
+};
+
+/**
+ * Four spacing roles (§3 — never-assigned before A1, assigned here). `gutter`
+ * is the screen's side margin, `gap` the space between siblings, `cardPad` a
+ * card's own inset, `section` the breath between one titled group and the
+ * next. This is the WHOLE spacing grammar: a margin chosen per-screen is how
+ * the New screen got «all very cramped» (GAP 1) — each site locally
+ * reasonable, no two of them in agreement.
+ */
+export const SPACE = { gutter: 20, gap: 12, cardPad: 16, section: 32 };
+
+/**
+ * Four durations and two easings (§3). `tap` acknowledges, `move` relocates
+ * within a screen, `page` swaps a screen, `draw` is the chart drawing itself
+ * ONCE per mount — a redraw on data refresh is theatre, and theatre is
+ * banned. What this file cannot enforce and every consumer owes: the
+ * `prefers-reduced-motion` floor (B2's media guard). A duration here is a
+ * ceiling, never a promise to animate.
+ */
+export const MOTION = {
+  tap: 120, move: 260, page: 320, draw: 700,
+  easeOut: 'cubic-bezier(0.2,0,0,1)',
+  easeSettle: 'cubic-bezier(0.22,1,0.36,1)',
+};
+
+/**
+ * NOT TYPE — pictures and icons, sized as geometry. Named so that "this is not
+ * a TYPE token" is something the code SAYS rather than something a reader has
+ * to infer from the absence of one.
+ */
+export const GLYPH = { illustration: 46, spot: 34 };
+export const ICON = { nav: 21, primary: 32, control: 17 };
+
+/**
+ * THE SENIOR FLOORS — one family, three members (CLAUDE.md: large type, big
+ * touch targets). `TAP` is the touch floor the way `TYPE.label` is the prose
+ * floor and `unitSize`'s clamp below is the unit floor: each one is the same
+ * law — nothing he must read or hit may shrink below what a 70-year-old can
+ * read or hit — expressed in that member's own dimension.
+ */
+export const TAP = 48;
+
+/**
+ * The unit beside a value runs at 0.55× the value's size (§3), floored at
+ * `TYPE.label` (ruling 5). A 12px unit in front of a 70-year-old is the ratio
+ * defeating the scale; the floor is senior-first law expressed as arithmetic.
+ * The floor binds to `TYPE.label` BY REFERENCE so it cannot detach from the
+ * prose floor if that floor ever moves.
+ */
+export const UNIT_RATIO = 0.55;
+export const unitSize = (valuePx) => Math.max(TYPE.label, Math.round(valuePx * UNIT_RATIO));
+
+/**
  * The section divider: `·— ———` in Morse, which is A O.
  *
  * The same two letters the icon carries structurally — the frame reads A, the
@@ -147,7 +283,9 @@ export const MORNING_CROWN = `linear-gradient(180deg, ${C.mist} 0%, ${C.shell} 3
  * he actually needs is the first thing announced.
  *
  * Built from `C.harbor` here rather than hard-coded so the divider cannot
- * survive a palette change that leaves it stranded in an old blue.
+ * survive a palette change that leaves it stranded in an old blue. It sits
+ * BELOW the vocabulary because it consumes it — `const` bindings put anything
+ * above SPACE outside SPACE's reach.
  */
 const MORSE_BEADS = (colour) => {
   /**
@@ -182,61 +320,8 @@ export const DIVIDER = {
    */
   backgroundPosition: DIR === 'rtl' ? 'bottom right' : 'bottom left',
   backgroundSize: '56px 4px',
-  paddingBottom: 12,
+  // The clearance under the beads IS the sibling gap — a divider that clears
+  // more than a sibling would claim a hierarchy the layout does not have.
+  paddingBottom: SPACE.gap,
   opacity: 0.9,
 };
-
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * THE NORTH STAR VOCABULARY (docs/design/north-star.md §3, ratified 2026-08-25)
- *
- * Phase A introduces ONE radius vocabulary and ONE type vocabulary. Before this
- * the app carried 33 distinct font sizes between 10 and 52 and 12 distinct
- * radii — measured, not estimated, across 281 sites.
- *
- * ——— WHAT THESE VOCABULARIES DO **NOT** GOVERN, stated here because the survey
- * that produced them found 100 of those 281 sites are not type at all.
- *
- * A `fontSize` is not automatically typography. `<div style={{fontSize: 52}}>🧾</div>`
- * is a PICTURE sized in pixels; so is a 34px ⌛, a 21px tab icon, a 32px ﹢ in a
- * 48px circle, and an SVG axis label whose units are viewBox user-space rather
- * than CSS pixels. Mapping any of them onto a reading scale is a category error:
- * it would resize every empty-state illustration in the app to the size of a
- * headline, and it would do it in a single find-and-replace that looked tidy.
- *
- * Likewise a `borderRadius` is not automatically a surface. A 3.5px-wide bar
- * cap, an 8×8 legend swatch and a 40×40 thumbnail are GEOMETRY: all three
- * surface radii exceed half their width and would clamp them to circles.
- *
- * So the rule is a POSITIVE DECLARATION rather than an omission:
- *   · text  → a TYPE token, always;
- *   · pictures, icons, chart geometry and fixed-size media → `GLYPH`/`ICON`
- *     below, or a raw px carrying an explicit `geometry` note — declared, never
- *     merely surviving, so the next pass reads them as decided rather than as
- *     stragglers it should tidy.
- * ═══════════════════════════════════════════════════════════════════════════
- */
-
-/** Three surface radii, audited (§3). Controls and geometry are NOT surfaces. */
-export const RADIUS = { card: 20, row: 16, capsule: 999 };
-
-/**
- * Six reading sizes (§3). Line-height ≥ 1.3 governs PROSE — `section`, `row`,
- * `body`, `label`. `hero` and `display` are single figures with no inter-line
- * reading; their leading binds a wrapped amount into one object and runs ~1.05,
- * which is how they are already set. (Flagged at three sites where a mechanical
- * 1.3 would have added ~10px of dead space above and below the one number the
- * Today screen exists to show.)
- */
-export const TYPE = { hero: 40, display: 34, section: 22, row: 17, body: 16, label: 15 };
-
-/**
- * NOT TYPE — pictures and icons, sized as geometry. Named so that "this is not
- * a TYPE token" is something the code SAYS rather than something a reader has
- * to infer from the absence of one.
- */
-export const GLYPH = { illustration: 46, spot: 34 };
-export const ICON = { nav: 21, primary: 32, control: 17 };
-
-// Senior-friendly floor. CLAUDE.md: large type, big touch targets.
-export const TAP = 48;
