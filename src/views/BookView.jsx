@@ -5,14 +5,14 @@ import {
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, moneyRound, amountWithCurrency } from '../lib/format.js';
-import { periodTotals, comparisonOf, seriesFor, lastIdxOf } from '../lib/series.js';
+import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
 import { fetchEntries } from '../api/index.js';
 import { findLookalikes, lookalikeCounts } from '../state/duplicates.js';
-import { PeriodSummary, CategoryCompare, PriorityLens } from '../components/Charts.jsx';
-import { Chip, LATIN, ISOLATE, SectionLabel, Rail } from '../components/Primitives.jsx';
+import { PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
+import { Chip, LATIN, ISOLATE, SectionLabel, Rail, Sheet } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, needsHim } from '../state/inboxOutcomes.js';
 import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay, parseSheetDate } from '../state/recent.js';
@@ -527,16 +527,21 @@ export default function BookView({
           months-don't-match lie the loading state was added to kill. */}
       {browsing && fetchedTab && !loadingRows && <SectionLabel>{monthByTab(fetchedTab)}</SectionLabel>}
 
+      {/**
+        * Real information at the prose floor — a caveat he must be able to
+        * read is never caption material. A SAND ADVISORY SURFACE, and it
+        * rides B4's Sheet (the Wave-3 residual, honored): the note is not on
+        * screen until the fetch answers, so it ARRIVES — lip and entrance are
+        * the primitive's, never a second hand-rolled copy, and it keeps its
+        * meaning border like every advisory surface (A2's doctrine).
+        */}
       {undated > 0 && !loadingRows && period !== 'year' && (
-        <p style={{
-          // Real information at the prose floor — a caveat he must be able to
-          // read is never caption material. The sand note is a small advisory
-          // panel: RADIUS.inset is its surface.
+        <Sheet style={{
           fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
-          borderRadius: RADIUS.inset, padding: '8px 12px', margin: '10px 0', lineHeight: 1.6, textAlign: 'center',
+          padding: '8px 12px', margin: '10px 0', lineHeight: 1.6, textAlign: 'center',
         }}>
           {S.recentUndatedNote(undated)}
-        </p>
+        </Sheet>
       )}
 
       {/**
@@ -821,7 +826,19 @@ export function browsedMonthData(ref, entries, prevEntries, todayCairo) {
     month: {
       cur: c.cur,
       prev: p ? p.cur : nullMonth(),
-      names: { cur: MONTH_FULL[ref.m - 1], prev: MONTH_FULL[before.m - 1] },
+      /**
+       * Q2 (Owner ruling 2026-08-27): the YEAR RIDES THE HEADING on a browsed
+       * month outside the current year. The year travels as its own field —
+       * appending it to the name here would break monthName()'s English→Arabic
+       * lookup at render — and it is present ONLY when it differs from today's
+       * year, so the live head and current-year browsing stay just «أغسطس».
+       */
+      names: {
+        cur: MONTH_FULL[ref.m - 1],
+        prev: MONTH_FULL[before.m - 1],
+        ...(ref.y !== todayCairo.y ? { curY: ref.y } : {}),
+        ...(before.y !== todayCairo.y ? { prevY: before.y } : {}),
+      },
       undated: c.undated,
       unpriced: { count: c.unpriced },
       uncategorized: c.uncategorized,
@@ -851,8 +868,9 @@ export function browsedMonthData(ref, entries, prevEntries, todayCairo) {
  * these are the display vocabulary's own month names.
  *
  * Choosing is the caller's business (`onChoose(ref)`), so this stays a dumb
- * surface a suite can render alone. Entrance motion is B4's chunk, not this
- * one — the sheet appears; how it ARRIVES is a separate ratified step.
+ * surface a suite can render alone. The ENTRANCE is B4's Sheet primitive —
+ * adopted in Wave 4 (the ledger's «Sheet adoption» residual): the surface,
+ * its lip and its arrival are the one pinned sheet, never a hand-rolled twin.
  */
 export function MonthSheet({ today, browsing, onChoose, onClose }) {
   const months = [];
@@ -865,14 +883,30 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
         aria-label={S.monthPickerClose}
         style={{ position: 'fixed', inset: 0, zIndex: 44, background: 'transparent', cursor: 'default' }}
       />
+      {/**
+        * The wrapper only POSITIONS AND CLIPS (the Toast's own pattern: the
+        * sheet motion animates `transform`, so positioning must not). A
+        * bottom sheet is flush with the screen's bottom edge by geometry, and
+        * this wrapper states that SILHOUETTE — RADIUS.sheet lip above, square
+        * below. The Sheet primitive's identity lip rounds all four corners,
+        * so the surface is let run one lip-depth past the wrapper's bottom
+        * (negative margin, matching extra padding) and the clip squares it —
+        * the lip shows exactly where a lip means something.
+        */}
       <div
+        style={{
+          position: 'fixed', insetInline: 0, bottom: 0, zIndex: 45,
+          borderRadius: `${RADIUS.sheet}px ${RADIUS.sheet}px 0 0`,
+          overflow: 'hidden',
+        }}
+      >
+      <Sheet
         role="dialog"
         aria-label={S.monthPickerTitle}
         style={{
-          position: 'fixed', insetInline: 0, bottom: 0, zIndex: 45,
           background: C.card, border: `1px solid ${C.line}`,
-          borderRadius: `${RADIUS.sheet}px ${RADIUS.sheet}px 0 0`,
-          padding: `6px ${SPACE.gutter}px calc(${SPACE.cardPad}px + env(safe-area-inset-bottom, 0px))`,
+          padding: `6px ${SPACE.gutter}px calc(${SPACE.cardPad}px + env(safe-area-inset-bottom, 0px) + ${RADIUS.sheet}px)`,
+          marginBottom: -RADIUS.sheet,
           maxHeight: '70vh', overflowY: 'auto',
           // The lift off the page — an ink-tinted veil, no new hue (§3).
           boxShadow: '0 -12px 32px rgba(44, 67, 86, 0.18)',
@@ -902,6 +936,7 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
             </button>
           );
         })}
+      </Sheet>
       </div>
     </>
   );
@@ -1134,6 +1169,32 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
 }
 
 /**
+ * E7 — THE WORD-FIRST HEADLINE'S BUILDER, and why it takes a `basis`.
+ *
+ * The head may lead with a factual sentence in WORDS («أخف من يوليو»,
+ * «Heavier than last week») — an OBSERVATION the NO-NAGGING law allows
+ * (north-star §6.2: state, never praise, blame or advise). But words are
+ * EARNED BY THE DATA: stage 1's only honest comparison is the last period at
+ * the same point, so `'last'` is the only basis this builder accepts. The
+ * «than your usual» sentence needs E6's typical band wired into the head —
+ * real P25–P75 history, not a phrase — and until that integration lands the
+ * `'typical'` basis returns null HERE, structurally, so no call site can buy
+ * the words early. The band case slots in as one more accepted basis; it is
+ * added by re-cutting the E7 oracle's refusal pin, never by loosening it.
+ *
+ * An UNNAMED basis is refused too: the call site must state what earned the
+ * sentence, or there is no sentence. Directions come from `comparisonOf` —
+ * anything it would not produce builds nothing.
+ */
+export function headlineWords(direction, prevName, basis) {
+  if (basis !== 'last') return null;
+  if (direction === 'down') return S.headLighter(prevName);
+  if (direction === 'up') return S.headHeavier(prevName);
+  if (direction === 'same') return S.sameAs(prevName);
+  return null;
+}
+
+/**
  * A CHARTED PERIOD, answer-first (finding M5).
  *
  * The figure and the sentence come from `periodTotals` — the SAME call the
@@ -1167,6 +1228,8 @@ export function PeriodBlock({
    * month-grammar and a week's sentence already names its whole self.
    */
   monthWindow = false,
+  // E5 — the Month screen's two-panel stack, threaded through to the summary.
+  stack = null,
 }) {
   const totals = periodTotals(data, METRICS, offPlot || {});
   const shown = totals[metric] || totals.all;
@@ -1219,6 +1282,17 @@ export function PeriodBlock({
    */
   const policySuppressed = hasForeign(foreign) || hasForeign(prevForeign) || !leadsHome;
   const [whyOpen, setWhyOpen] = useState(!!policyOpen);
+
+  /**
+   * E7 — THE WORDS THE HEAD LEADS WITH, built only where the comparison was
+   * honestly earned. `cmp` is already null wherever the comparison is refused
+   * (foreign money in either window, missing history — the mayCompare gate,
+   * CONSUMED and never re-derived), and a foreign lead has no history in its
+   * own unit — so the sentence rides `cmp && leadsHome`, the exact gate the
+   * percentage below rides. Same words in, same words out: there is no path
+   * on which the head observes what the arithmetic refused.
+   */
+  const headWords = cmp && leadsHome ? headlineWords(cmp.direction, names.prev, 'last') : null;
 
   /**
    * E3 — THE WINDOW, IN WORDS, DERIVED FROM THE SAME ARRAYS THE MATHS USED.
@@ -1275,6 +1349,20 @@ export function PeriodBlock({
           </button>
         ) : (
           <div style={{ fontSize: TYPE.label, color: C.muted }}>{names.cur}</div>
+        )}
+        {/**
+          * E7 — WORD-FIRST (data-F12; the Owner's Gentler grammar): where the
+          * comparison is honestly available, the head leads with the factual
+          * sentence IN WORDS — «أخف من يوليو» — and the figure stands beside
+          * it, one size down from the hero it introduces. An observation,
+          * never a judgment: the words state a direction the arithmetic
+          * already earned, and everywhere the comparison is refused this
+          * line simply does not exist — no sentence, not a hedged one.
+          */}
+        {headWords && (
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.ink, lineHeight: 1.3, marginTop: 2 }}>
+            {headWords}
+          </div>
         )}
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
           {moneyRound(lead.amount)}
@@ -1342,17 +1430,38 @@ export function PeriodBlock({
             {S.whyNoCompare}
           </button>
         )}
+        {/**
+          * The detail behind the door is one of theme.js's NAMED advisory
+          * surfaces («the foreign-money notes»), and it dresses as one: sand,
+          * with its meaning border. It was not on screen a moment ago — his
+          * tap raises it — so it arrives as B4's Sheet, the one pinned
+          * entrance (the Wave-3 Sheet-adoption residual, honored here). Ink,
+          * not muted: the prose floor's contrast is measured on sand for ink
+          * (test-contrast's «sand chip label» pair), and a sentence he asked
+          * to read is body information, not annotation.
+          */}
         {policySuppressed && whyOpen && (
-          <div style={{ fontSize: TYPE.label, color: C.muted, lineHeight: 1.7, marginTop: 2 }}>
+          <Sheet style={{
+            fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
+            padding: '8px 12px', lineHeight: 1.7, marginTop: 2,
+          }}>
             {(hasForeign(foreign) || hasForeign(prevForeign)) && <div>{S.foreignNoCompare}</div>}
             {!leadsHome && <div>{S.noCompareInUnit(lead.currency)}</div>}
-          </div>
+          </Sheet>
         )}
 
         {cmp && leadsHome ? (
+          /**
+           * The arithmetic detail under the words. Direction `same` states no
+           * percentage — its whole sentence is the head's word-first line now
+           * (E7), and repeating it here would be the same fact twice on one
+           * screen — so this block renders only what the words do NOT carry:
+           * the percentage with its «was» figure, and E3's window qualifier.
+           */
+          (cmp.direction !== 'same' || windowLine) && (
           <div style={{ fontSize: TYPE.body, marginTop: 6 }}>
             {cmp.direction === 'same'
-              ? S.sameAs(names.prev)
+              ? null
               : (
                 <>
                   {cmp.direction === 'down' ? S.lessThan(names.prev) : S.moreThan(names.prev)}{' '}
@@ -1379,6 +1488,7 @@ export function PeriodBlock({
               </div>
             )}
           </div>
+          )
         ) : policySuppressed ? null : (
           <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>{S.noComparison(names.prev)}</div>
         )}
@@ -1388,7 +1498,7 @@ export function PeriodBlock({
         data={data} labels={labels} liveIndex={liveIndex}
         metric={metric} setMetric={setMetric}
         periodNames={{ cur: names.cur, prev: names.prev }}
-        showBars={showBars} footnote={footnote} offPlot={offPlot}
+        showBars={showBars} footnote={footnote} offPlot={offPlot} stack={stack}
         /**
          * The cards carry percentages too. Gating only the headline left «▼100%»
          * on a period whose EGP figure is a subset — smaller type, same lie.
@@ -1459,13 +1569,49 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
     </p>
   ) : null;
 
+  /**
+   * E5/E6 — THE TWO-PANEL MONTH STACK, mounted (the charts leaf shipped it
+   * mount-ready; this is the Planner's one integration). The line rides the
+   * bars' own columns on ONE axis, and A12's every-5th-day thinning is live.
+   *
+   * · liveIndex: today's slot on the LIVE month; −1 on a browsed month — a
+   *   closed month has no «today».
+   * · band: typicalBand over the year's closed months (E6's pinned signature,
+   *   the caller's one derivation duty). The browsed screen carries no year
+   *   series in its payload, so the band honestly renders NOTHING there —
+   *   absence, never an invented distribution.
+   * · labelled mirrors PeriodSummary's own offPlot rule: undated money makes
+   *   the curve's endpoint knowably short, so the markers stay silent.
+   */
+  const today = data.today_cairo || null;
+  const dayLabels = Array.from(
+    { length: (data.month.cur.Visa || []).length }, (_, i) => String(i + 1),
+  );
+  const monthStack = (
+    <MonthStack
+      cur={seriesFor(data.month.cur, metric)}
+      prev={seriesFor(data.month.prev, metric)}
+      labels={dayLabels}
+      liveIndex={today ? today.d - 1 : -1}
+      color={(METRICS.find((x) => x.key === metric) || METRICS[0]).color}
+      prevName={monthName(data.month.names.prev)}
+      labelled={!((undated?.Visa || 0) + (undated?.Cash || 0))}
+      band={data.year ? typicalBand(comb(data.year.cur.Visa, data.year.cur.Cash), today ? today.m : 13) : null}
+    />
+  );
+
   return (
     <>
       <PeriodBlock
         data={data.month} labels={[]} liveIndex={-1}
         metric={metric} setMetric={setMetric}
+        stack={monthStack}
         displayCurrency={displayCurrency}
-        names={{ cur: monthName(data.month.names.cur), prev: monthName(data.month.names.prev) }}
+        names={{
+          // Q2: a browsed month outside the current year says its year.
+          cur: monthName(data.month.names.cur) + (data.month.names.curY ? ` ${data.month.names.curY}` : ''),
+          prev: monthName(data.month.names.prev) + (data.month.names.prevY ? ` ${data.month.names.prevY}` : ''),
+        }}
         showBars={false}
         footnote={footnote}
         onPickMonth={onPickMonth}

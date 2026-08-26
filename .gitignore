@@ -30,4 +30,3 @@ dist-ssr/
 .env.*.local
 *.secret
 secrets.json
-vite.config.js.timestamp-*.mjs

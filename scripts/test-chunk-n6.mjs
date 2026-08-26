@@ -205,6 +205,27 @@ try {
     ok(/80\s*EUR/.test(tTravel) || tTravel.includes('80'),
       'N6.39 …while the euros stay NAMED beside the figure — suppression hides policy prose, never money');
   }
+
+  // ═══ Q2 (Owner ruling 2026-08-27) — the year rides the heading outside the
+  // current year, and ONLY there. The year travels as its own field because
+  // appending it to the English month name would break monthName()'s lookup.
+  {
+    const todayCairo = { y: 2026, d: 15, m: 8 };
+    const prevYear = browsedMonthData({ y: 2025, m: 6 }, [], null, todayCairo);
+    ok(prevYear.month.names.curY === 2025,
+      'N6.40 a browsed month outside the current year carries its year as a field (curY)');
+    ok(prevYear.month.names.prevY === 2025,
+      'N6.41 …and so does its comparison month when IT sits outside the current year');
+    const sameYear = browsedMonthData({ y: 2026, m: 6 }, [], null, todayCairo);
+    ok(sameYear.month.names.curY === undefined,
+      'N6.42 a current-year browsed month carries NO year — the live head stays just the month');
+    const jan = browsedMonthData({ y: 2026, m: 1 }, [], null, todayCairo);
+    ok(jan.month.names.curY === undefined && jan.month.names.prevY === 2025,
+      'N6.43 browsing January: the head is bare, its December comparison names 2025 — each name rules for itself');
+    const headSrc = src('src/views/BookView.jsx');
+    ok(/names\.curY \? ` \$\{data\.month\.names\.curY\}` : ''/.test(headSrc),
+      'N6.44 MonthScreen renders the year AFTER monthName() maps the name — localization survives the ruling');
+  }
 } finally {
   await vite.close();
 }

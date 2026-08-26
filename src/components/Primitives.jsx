@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, unitSize } from '../theme.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize } from '../theme.js';
 import { S, SWITCH_TO, DIR } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
@@ -52,7 +52,13 @@ export function LangToggle({ subtle }) {
         background: 'transparent',
         border: `1px solid ${subtle ? C.line : 'rgba(255,255,255,.45)'}`,
         color: subtle ? C.ink : '#fff',
-        fontSize: 13, fontWeight: 700, opacity: subtle ? 1 : 0.9,
+        /**
+         * TYPE.label, NOT caption (A4b). Ruling 2 makes caption legal only for
+         * annotations that DUPLICATE information available elsewhere — and this
+         * word is the ONLY way out of a language he cannot read. Nothing about
+         * an escape hatch is a duplicate, so it sits on the prose floor.
+         */
+        fontSize: TYPE.label, fontWeight: 700, opacity: subtle ? 1 : 0.9,
       }}
     >
       {SWITCH_TO}
@@ -201,7 +207,9 @@ export function CurrencyToggle({ value, other, onFlip, subtle }) {
         background: 'transparent',
         border: `1px solid ${subtle ? C.line : 'rgba(255,255,255,.45)'}`,
         color: subtle ? C.ink : '#fff',
-        fontSize: 13, fontWeight: 700, opacity: subtle ? 1 : 0.9,
+        // TYPE.label (A4b) — the sibling control rides LangToggle's token by
+        // ROLE, not by copy: a unit he reads is prose, not a caption duplicate.
+        fontSize: TYPE.label, fontWeight: 700, opacity: subtle ? 1 : 0.9,
         ...LATIN,
       }}
     >
@@ -251,7 +259,9 @@ export function RefreshButton({ state, onPress }) {
 export function SectionLabel({ children }) {
   return (
     <div style={{
-      fontSize: 14, fontWeight: 600, color: C.muted, margin: '2px 2px 12px',
+      // TYPE.label (A4b) — a muted section heading is PROSE he reads to find
+      // his way; 14 was one drifted pixel under the senior prose floor.
+      fontSize: TYPE.label, fontWeight: 600, color: C.muted, margin: '2px 2px 12px',
       letterSpacing: '.01em', ...DIVIDER,
     }}>
       {children}
@@ -267,7 +277,11 @@ export function Chip({ kind, small, label }) {
         display: 'inline-block',
         padding: small ? '3px 9px' : '4px 12px',
         borderRadius: RADIUS.capsule,
-        fontSize: small ? 12 : 13,
+        // TYPE.caption BOTH variants (A4b — a chip is a chip): the method is
+        // ruling 2's row-meta case, restated by the row the chip annotates.
+        // `small` varies the PADDING, never the type — two chip sizes was the
+        // 12-vs-13 drift, not a design.
+        fontSize: TYPE.caption,
         fontWeight: 700,
         background: skin.bg,
         color: skin.fg,
@@ -299,7 +313,14 @@ export function NeutralDelta({ now, prev }) {
   return (
     <span
       style={{
-        fontSize: 11.5, fontWeight: 700, color: 'inherit',
+        /**
+         * TYPE.caption, NOT an exemption (A4b ruling, flagged to the Owner).
+         * The exemption is for furniture whose size its own geometry bounds;
+         * a delta is TEXT — a percentage restating two figures the screen
+         * already shows, which is exactly ruling 2's caption scope. Text
+         * takes a TYPE token, always (theme.js vocabulary law).
+         */
+        fontSize: TYPE.caption, fontWeight: 700, color: 'inherit',
         marginInlineStart: 6, verticalAlign: 'middle', whiteSpace: 'nowrap',
         ...LATIN,
       }}
@@ -337,12 +358,22 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
       >
         {icon}
       </div>
-      <div style={{ fontSize: 13.5, fontWeight: active ? 700 : 500 }}>{label}</div>
+      {/* TYPE.label (A4b): «icon PLUS word, never icon-only» makes this word
+          REQUIRED reading, so it may not sit under the prose floor — and
+          caption is illegal for it by ruling 2, because a word the icon needs
+          is not a duplicate of the icon. */}
+      <div style={{ fontSize: TYPE.label, fontWeight: active ? 700 : 500 }}>{label}</div>
       {badge ? (
         <span
           style={{
             position: 'absolute', top: 6, insetInlineEnd: '24%',
-            background: C.conflictInk, color: C.onDark, fontSize: 11, fontWeight: 700,
+            background: C.conflictInk, color: C.onDark,
+            // GEOMETRY EXEMPTION (ruling 4, applied to TYPE by A4b — Owner's
+            // veto open): a count pill riding the corner of the 50px circle,
+            // its size bounded by that geometry; at caption(13) the pill grows
+            // into the circle it annotates. The count is ruling 2's
+            // badge-count duplicate — the Inbox itself carries every item.
+            fontSize: 11, fontWeight: 700,
             borderRadius: RADIUS.capsule, padding: '1px 7px', ...LATIN,
           }}
         >
@@ -443,7 +474,9 @@ export function Toast({ message }) {
           background: C.harbor,
           color: C.onDark,
           padding: '13px 24px',
-          fontSize: 16.5,
+          // TYPE.body (A4b) — the confirmation is a body sentence; 16.5 was
+          // body prose off by half a pixel, restated nowhere else.
+          fontSize: TYPE.body,
           fontWeight: 600,
           boxShadow: '0 8px 24px rgba(62,124,166,.38)',
           whiteSpace: 'nowrap',
@@ -466,7 +499,9 @@ export function OfflineBanner({ text }) {
         color: C.ink,
         border: `1px solid ${C.line}`,
         padding: '10px 14px',
-        fontSize: 14.5,
+        // TYPE.label (A4b) — an advisory he must read sits ON the prose
+        // floor, not half a pixel under it.
+        fontSize: TYPE.label,
         fontWeight: 600,
         marginBottom: SPACE.gap,
         textAlign: 'center',

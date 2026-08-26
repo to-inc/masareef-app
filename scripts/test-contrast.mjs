@@ -29,7 +29,12 @@
  *                state, and each entry must name what carries that instead —
  *                which is what stops this from becoming a place to hide things.
  */
-import { C, METHOD } from '../src/theme.js';
+/**
+ * TYPE is imported so rows whose component speaks a TYPE token (A4b) declare
+ * the SAME token by reference — a declared size that cannot drift from the
+ * size the component actually renders.
+ */
+import { C, METHOD, TYPE } from '../src/theme.js';
 
 let pass = 0;
 const failures = [];
@@ -153,7 +158,7 @@ check('the "❓" uncategorised marker on shell', C.ink, C.shell, 15, true);
 canonical('harbor on shell — headings', C.harbor, C.shell, 23, true, 'reserved for large/bold per the brief; passes there');
 check('harbor on card — headings', C.harbor, C.card, 21, true);
 check('white on harbor — primary button', C.onDark, C.harbor, 18.5, true);
-check('white on harbor — toast', C.onDark, C.harbor, 16.5);
+check('white on harbor — toast', C.onDark, C.harbor, TYPE.body);
 check('white on harbor — active metric value', C.onDark, C.harbor, 19, true);
 check('white on harbor — active metric label', C.onDark, C.harbor, 11.5, true);
 /**
@@ -161,7 +166,7 @@ check('white on harbor — active metric label', C.onDark, C.harbor, 11.5, true)
  * in styles.css — the harbor version fails the 4.5 floor on the C1 worst-case
  * composite below, where a negative control keeps that reason measured.
  */
-check('active tab label (ink — the C2 override)', C.ink, C.card, 13.5, true);
+check('active tab label (ink — the C2 override)', C.ink, C.card, TYPE.label, true);
 
 // ——————————————————————— the one warm action
 check('cash CTA label — amberInk on amber', C.amberInk, C.amber, 18.5, true);
@@ -188,7 +193,7 @@ decorative('cash CTA fill against the shell', C.amber, C.shell,
 // ——————————————————————— tertiary and advisory surfaces
 check('category chip label', C.ink, C.shell, 15);
 check('sand chip label', C.ink, C.sand, 15);
-check('offline banner', C.ink, C.sand, 14.5, true);
+check('offline banner', C.ink, C.sand, TYPE.label, true);
 check('outbox card body', C.ink, C.sand, 14);
 
 // ——————————————————————— the two card states (WS3-C)
@@ -201,8 +206,8 @@ decorative('settled strip border', C.settledLine, C.card, 'the strip fill and it
 decorative('conflict strip border', C.conflictLine, C.card, 'the strip fill and its words');
 
 // ——————————————————————— method chips (DERIVED — mine, so they must PASS)
-check('Visa chip', METHOD.Visa.fg, METHOD.Visa.bg, 13, true);
-check('Cash chip', METHOD.Cash.fg, METHOD.Cash.bg, 13, true);
+check('Visa chip', METHOD.Visa.fg, METHOD.Visa.bg, TYPE.caption, true);
+check('Cash chip', METHOD.Cash.fg, METHOD.Cash.bg, TYPE.caption, true);
 
 // ——————————————————————— chart marks: graphics, 3:1 against their ground
 checkUi('chart stroke — Visa/primary', C.harbor, C.card);
@@ -247,9 +252,10 @@ decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a backg
     };
     const darkest = Object.values(C).reduce((a, b) => (luminance(a) <= luminance(b) ? a : b));
     const bar = compose(C.card, alpha, darkest);
-    // 13.5 is TabButton's real label size; active runs bold (700), inactive 500.
-    check(`C1 worst case — active nav label (ink) on the ${alpha} bar over ${darkest}`, C.ink, bar, 13.5, true);
-    check(`C1 worst case — inactive nav label (muted) on the ${alpha} bar over ${darkest}`, C.muted, bar, 13.5);
+    // TYPE.label is TabButton's real word size (A4b); active runs bold (700),
+    // inactive 500.
+    check(`C1 worst case — active nav label (ink) on the ${alpha} bar over ${darkest}`, C.ink, bar, TYPE.label, true);
+    check(`C1 worst case — inactive nav label (muted) on the ${alpha} bar over ${darkest}`, C.muted, bar, TYPE.label);
     checkUi('C1 worst case — inactive nav icon glyph (muted) over the bar', C.muted, bar);
     /**
      * WHY THE ACTIVE LABEL IS INK AND NOT HARBOR, kept as arithmetic: harbor

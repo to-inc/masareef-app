@@ -351,6 +351,18 @@ export const EN = {
   lessThan: (prev) => `Less than ${prev} by`,
   moreThan: (prev) => `More than ${prev} by`,
   sameAs: (prev) => `The same as ${prev}`,
+  /**
+   * ——— E7: the head's words — an observation, never a verdict. «Lighter than
+   * July» states what happened and stops: no praise, no blame, no advice
+   * (north-star §6.2: we may state «lighter than your usual week» as fact; we
+   * may never praise, blame, or advise). The template takes the name of the
+   * period the comparison was ACTUALLY computed against — and «than your
+   * usual» is deliberately absent: that phrasing is not earned until E6's
+   * typical band wires into the head, and BookView's builder refuses it
+   * until it is.
+   */
+  headLighter: (prev) => `Lighter than ${prev}`,
+  headHeavier: (prev) => `Heavier than ${prev}`,
   wasThen: 'was',
   /**
    * ——— A4: a method card's prev figure, IN WORDS. A naked «0» under the hero

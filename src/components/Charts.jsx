@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP } from '../theme.js';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP, TYPE } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
-import { S, categoryLabel } from '../i18n/strings.js';
+import { S, categoryLabel, monthByTab } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
-import { rollup } from '../lib/priorities.js';
+import { rollup, groupOf } from '../lib/priorities.js';
 import { HOME_CURRENCY } from '../state/display.js';
 import { LATIN, SectionLabel, NeutralDelta } from './Primitives.jsx';
 
@@ -70,19 +70,94 @@ const DRAW_CSS = `
 }
 `;
 
+/**
+ * ═══ E1 — THE YEAR'S MONTH LABELS ARE RANGE CONTROLS (data-F5; NS §4.4) ═══
+ *
+ * The tap arithmetic, as ONE pure exported value so the oracle asserts the
+ * rule itself rather than a closure's shadow: a first tap starts a one-month
+ * range; a tap outside the selection EXTENDS toward it, in either direction;
+ * a tap INSIDE the selection clears back to the full year — that is the
+ * chunk's «second tap pattern», and the one-month case (tap the only selected
+ * month again) is the same clause, not a special one.
+ *
+ * The state that consumes this lives in PeriodSummary — LOCAL to the chart
+ * components, per the chunk's own boundary. B2's period key remounts the
+ * subtree on a period swap, so a selection can never outlive the year screen
+ * it was made on.
+ */
+export const nextRange = (range, i) => {
+  if (!range) return { a: i, b: i };
+  if (i >= range.a && i <= range.b) return null;
+  return { a: Math.min(range.a, i), b: Math.max(range.b, i) };
+};
+
+/**
+ * The selection's words come from the app's own month vocabulary: slot i of
+ * the year axis IS calendar month i+1, and `monthByTab` already localizes the
+ * sheet's tab names in both locales — so «مارس–يونيو» / «March–June» costs no
+ * new i18n key. This list is the server's tab vocabulary (docs/02), the same
+ * constant BookView keeps for the month strip; it is data, not prose.
+ */
+const MONTH_TABS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const monthWord = (i) => monthByTab(MONTH_TABS[i]);
+
+/**
+ * ONE HUE, TWO VALUES (Gentler's rust trick, played in harbor). While a range
+ * is selected every current-series bar is `C.harbor`; the unselected months
+ * are the SAME harbor at this opacity — never a second colour, never a grey
+ * that reads as disabled, and never conflict red, which means conflict and
+ * nothing else. The value is named so the dimmed state is one fact, not a
+ * per-site opinion.
+ */
+const HARBOR_DIMMED = 0.35;
+
 // Cumulative race: colored line (this period) vs grey line (last period), with a
 // marker pair at "the same point in time" — an honest partial-period comparison.
 // `peekOpen` seeds the tap-label's state so a static renderer can reach the
 // open render — SSR cannot tap, and the suites assert both states (A6).
-export function CumulativeChart({ cur, prev, color, labelled = true, prevName = '', peekOpen = false }) {
+export function CumulativeChart({ cur, prev, color, labelled = true, prevName = '', peekOpen = false, columns = 0, band = null }) {
   // 12px of headroom at the top so a label on a marker near the ceiling still
   // has somewhere to sit.
   const W = 320, H = 128, P = 8, TOP = 14;
   const cumC = cumsum(cur), cumP = cumsum(prev);
   const li = lastIdxOf(cumC);
   const n = Math.max(cur.length, prev.length);
-  const max = Math.max(cumP[cumP.length - 1] || 0, cumC[li] || 0, 1);
-  const x = (i) => P + (i / (n - 1)) * (W - 2 * P);
+  /**
+   * ═══ E6 RENDER — THE TYPICAL BAND, RE-CHECKED AT THE DOOR (NS §5) ═══
+   *
+   * `band` is `typicalBand(...)`'s result or null, and the render half
+   * re-verifies the shape rather than trusting the caller: a poisoned number
+   * paints nothing, and a DEGENERATE band (p25 = p75) paints nothing either —
+   * a zero-height region could only be drawn as a line, and the one thing the
+   * band may never be is a line to beat. Null renders as honest absence.
+   */
+  const hasBand = !!band && Number.isFinite(band.p25) && Number.isFinite(band.p75)
+    && band.p75 > band.p25;
+  // The scale admits the band: typical months can sit above everything this
+  // month has done yet, and a band clipped off the ceiling would silently
+  // understate where his months usually land. Data alone when there is none.
+  const max = Math.max(cumP[cumP.length - 1] || 0, cumC[li] || 0, hasBand ? band.p75 : 0, 1);
+  /**
+   * ═══ E5 — THE SHARED AXIS, AS GEOMETRY (data-F4) ═══
+   *
+   * `columns > 0` means this line is the TOP PANEL of the Month stack and
+   * point i must sit on bar column i's CENTER, or «one shared axis» is a
+   * caption rather than a fact. The bars are flex columns with fixed pixel
+   * gaps, so their center fractions depend (weakly) on the rendered width;
+   * they are computed here at the NOMINAL inner width of the 375px screen —
+   * 311px, the same figure A12's collision proof is cut at — and scaled into
+   * the viewBox. Across this app's real range (320–430pt) the drift is under
+   * a third of a pixel, measured, which is inside the stroke itself.
+   *
+   * `0` keeps the classic edge-to-edge spread every standalone chart uses.
+   */
+  const x = columns > 0
+    ? (i) => {
+      const NW = 311, g = columns > 8 ? 3 : 6;
+      const cw = (NW - (columns - 1) * g) / columns;
+      return ((i * (cw + g) + cw / 2) / NW) * W;
+    }
+    : (i) => P + (i / (n - 1)) * (W - 2 * P);
   const y = (v) => H - P - (v / max) * (H - P - TOP - 8);
   const path = (arr, stop) => {
     let d = '';
@@ -165,6 +240,22 @@ export function CumulativeChart({ cur, prev, color, labelled = true, prevName = 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }} aria-hidden="true">
       <style>{DRAW_CSS}</style>
+      {/**
+        * E6 — the typical band: P25–P75 of his own closed months, in MIST,
+        * FIRST in paint order — behind the gridlines, behind both data lines.
+        * A fill with no stroke, no edge, no label, no class and no animation:
+        * it is ground, not figure; where he has BEEN, never a target. Static
+        * by construction, so reduced motion has nothing to reduce (the MOTION
+        * LAW's cheapest possible compliance: nothing moves).
+        */}
+      {hasBand && (
+        <rect
+          x={P} width={W - 2 * P}
+          y={y(band.p75).toFixed(1)}
+          height={(y(band.p25) - y(band.p75)).toFixed(1)}
+          fill={C.mist}
+        />
+      )}
       {[0.25, 0.5, 0.75, 1].map((f) => (
         <line key={f} x1={P} x2={W - P} y1={y(max * f)} y2={y(max * f)} stroke={C.line} strokeWidth="0.6" strokeDasharray="3 4" />
       ))}
@@ -241,12 +332,27 @@ export function CumulativeChart({ cur, prev, color, labelled = true, prevName = 
   );
 }
 
-export function PairedBars({ cur, prev, labels, liveIndex, color }) {
+export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, onRangeTap = null, rangeWords = null }) {
   const vals = cur.map((v) => v || 0);
   const max = Math.max(...vals, ...prev.map((v) => v || 0), 1);
-  // Average over slots that EXIST — averaging across null future days would
-  // drag the line down every morning and quietly flatter him.
-  const counted = cur.filter((v) => v != null);
+  /**
+   * ═══ E1/E2 — THE SELECTION, AS THIS COMPONENT SEES IT ═══
+   *
+   * `range` is PeriodSummary's {a, b} (inclusive slot indices) or null;
+   * `onRangeTap` arrives ONLY for the year axis, and its presence is what
+   * turns the columns into controls — a week's day names stay furniture.
+   * `rangeWords` is the selection said in the month vocabulary, handed down
+   * so the words beside this average and the words beside the re-scoped
+   * totals are one derivation and cannot disagree (E2).
+   */
+  const within = (i) => !!range && i >= range.a && i <= range.b;
+  /**
+   * E2 — the average rule RECOMPUTES PER SELECTION, and still only over slots
+   * that EXIST: a null month inside the range is a missing tab, and averaging
+   * it as zero would quietly flatter exactly the ranges that are hardest to
+   * read. No selection keeps the whole-period average, unchanged.
+   */
+  const counted = cur.filter((v, i) => v != null && (!range || within(i)));
   const avg = counted.length ? sumTo(counted) / counted.length : 0;
   /**
    * ═══ A12 — MONTH-AXIS FURNITURE: the axis speaks every 5th day ═══
@@ -275,12 +381,29 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
             fontSize: 10, fontWeight: 800, color, background: C.card, padding: '0 3px', zIndex: 2,
           }}
         >
-          {S.avg} <span style={LATIN}>{moneyRound(avg)}</span>
+          {/**
+            * E2 — under a selection the label names its scope IN WORDS, from
+            * the range's own months («متوسط مارس–يونيو 45»). S.avg is the
+            * existing key; the months are vocabulary, not prose — no new key.
+            * With no selection the words would claim a scope that is not in
+            * force, so they render only when the range does.
+            */}
+          {S.avg} {rangeWords ? `${rangeWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
         </span>
         {labels.map((lb, i) => {
           const isLive = i === liveIndex;
-          return (
-            <div key={lb + i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+          /**
+           * E1 — with `onRangeTap` the whole column is the control: the label
+           * is the visible affordance, but a 26px-wide glyph alone can never
+           * meet the senior floor across twelve columns, so the tappable area
+           * is the full column (~26×130px — more area than TAP², in the only
+           * geometry a twelve-column axis affords; the floor's own dimension
+           * cannot fit twelve 48pt squares in 311px). aria-pressed carries
+           * the selection for hands that cannot see the fill.
+           */
+          const colStyle = { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' };
+          const inner = (
+            <>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1.5, height: '100%', width: '100%', justifyContent: 'center' }}>
                 {/* GEOMETRY EXEMPTION (ruling 4): bar caps on a ~4px-wide bar.
                     The radius is bounded by the bar's own width — a surface
@@ -288,7 +411,22 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
                     feet on the baseline are the honest shape of a sum.
                     The geometry exemption covers BOTH caps below. */}
                 <div style={{ width: '38%', height: `${((prev[i] || 0) / max) * 100}%`, background: C.line, borderRadius: '4px 4px 0 0', minHeight: prev[i] ? 2 : 0 }} />
-                <div style={{ width: '38%', height: `${((cur[i] || 0) / max) * 100}%`, background: isLive ? C.harbor : color, borderRadius: '4px 4px 0 0', minHeight: cur[i] ? 2 : 0 }} />
+                {/**
+                  * E1 — one hue, two values: while a range is selected EVERY
+                  * current bar is harbor, and the unselected months are the
+                  * same harbor at HARBOR_DIMMED — opacity is the second
+                  * value, never a second colour. No selection keeps the
+                  * metric's own colour, with the live slot's harbor accent.
+                  */}
+                <div style={{
+                  width: '38%', height: `${((cur[i] || 0) / max) * 100}%`,
+                  background: range ? C.harbor : (isLive ? C.harbor : color),
+                  ...(range && !within(i) ? { opacity: HARBOR_DIMMED } : null),
+                  // GEOMETRY EXEMPTION (ruling 4): this bar's caps too — the
+                  // paragraph on the grey twin above covers both, restated
+                  // here because the E1 note pushed it past the audit's reach.
+                  borderRadius: '4px 4px 0 0', minHeight: cur[i] ? 2 : 0,
+                }} />
               </div>
               {/**
                 * ═══ GEOMETRY EXEMPTION (A12, extending ruling 4 to the TYPE
@@ -304,10 +442,26 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
                 * to `caption` would make every tick wider than its column
                 * and hand back the collisions the thinning just removed.
                 */}
-              <div style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: isLive ? 800 : 500, color: isLive ? C.harbor : C.muted }}>
+              <div style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: isLive || within(i) ? 800 : 500, color: isLive || within(i) ? C.harbor : C.muted }}>
                 {isLive ? '•' : speaks(i) ? lb : ''}
               </div>
-            </div>
+            </>
+          );
+          return onRangeTap ? (
+            <button
+              key={lb + i}
+              onClick={() => onRangeTap(i)}
+              aria-pressed={within(i)}
+              // The live column shows «•» instead of its letter, so the name a
+              // screen reader hears is stated explicitly — a control called
+              // «bullet» is a control with no name.
+              aria-label={lb}
+              style={{ ...colStyle, background: 'transparent', padding: 0, minWidth: 0 }}
+            >
+              {inner}
+            </button>
+          ) : (
+            <div key={lb + i} style={colStyle}>{inner}</div>
           );
         })}
       </div>
@@ -412,6 +566,34 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
 }
 
 /**
+ * ═══ E4 — THE LENS TILES DRIVE THE CATEGORY CHART (data-F9; NS §4.5) ═══
+ *
+ * ONE selection, TWO consumers: PriorityLens's tiles set it, CategoryCompare
+ * re-renders by it. They are siblings on the Month screen — MonthScreen
+ * mounts them either side of a section label, and MonthScreen is BookView's
+ * file, not this chunk's — so the wiring lives here instead: a store LOCAL TO
+ * THIS MODULE, which is as local as state shared by two siblings can be
+ * without touching their parent. It behaves like component state, enforced:
+ * the lens clears it when its panel closes and when it unmounts (a scoped
+ * chart under a controller nobody can see would be a filtered list passing
+ * for a whole one), and only one MonthScreen ever mounts at a time (the
+ * browsed month stands the live one down), so there is exactly one writer.
+ *
+ * SSR reads the SEED PROPS (`selectedGroup` / `group`), never this store —
+ * `useSyncExternalStore`'s server snapshot — which is what lets the suites
+ * render the selected screen the same way peekOpen/policyOpen reach theirs.
+ */
+let prioritySelection = null;
+const prioritySubs = new Set();
+const subscribePriority = (fn) => { prioritySubs.add(fn); return () => prioritySubs.delete(fn); };
+const readPrioritySelection = () => prioritySelection;
+const setPrioritySelection = (key) => {
+  if (key === prioritySelection) return;
+  prioritySelection = key;
+  for (const fn of [...prioritySubs]) fn();
+};
+
+/**
  * WHERE THE MONTH WENT — every category, the ❓ money, and the total (D16d).
  *
  * FIELD FINDING: he reconciled this screen against its own total and found
@@ -434,17 +616,52 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
  * inside D5 rather than against it: he is shown a gap he can tap, not a category
  * he never chose.
  */
-export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized }) {
-  const max = Math.max(...cats.map((c) => Math.max(c.now, c.prev)), 1);
+export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized, group = null }) {
+  /**
+   * E4 — the scope a pressed lens tile put on this chart, or null for the
+   * whole month. `group` is the SSR seed (suites; a static render cannot
+   * tap); live, the store above is the one truth the tiles write.
+   */
+  const selected = useSyncExternalStore(subscribePriority, readPrioritySelection, () => group);
+  const scoped = selected != null;
+  /**
+   * Scoped, the chart is per THAT group's categories — `groupOf` is the
+   * ratified map's own reader, the same one the Book's filter chips consult
+   * (N7), so the tile and the chip can never disagree about membership.
+   */
+  const shown = scoped ? (cats || []).filter((c) => groupOf(c && c.name) === selected) : cats;
+  const max = Math.max(...shown.map((c) => Math.max(c.now, c.prev)), 1);
   return (
     <div style={{ background: C.card, borderRadius: RADIUS.card, padding: 14, marginTop: 12 }}>
-      <div style={{ display: 'flex', gap: 14, fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 14, fontSize: 12.5, color: C.muted, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         {/* GEOMETRY EXEMPTION (ruling 4): 10×10 series swatches — a surface
             radius would clamp them to circles; the square is the mark. */}
         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.harbor, marginInlineEnd: 5, verticalAlign: '-1px' }} />{curName}</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.line, marginInlineEnd: 5, verticalAlign: '-1px' }} />{prevName}</span>
+        {/**
+          * E4 — a scoped chart NAMES its scope, on the chart itself: the
+          * pressed tile above says it too, but a filtered list that relies on
+          * chrome elsewhere to admit it is filtered is a subset passing for
+          * the whole. Harbor fill — selection's own colour, same as the tile.
+          * A statement, not a second control: releasing lives on the tile.
+          */}
+        {scoped && (
+          <span style={{ background: C.harbor, color: C.onDark, borderRadius: RADIUS.capsule, padding: '2px 10px', fontWeight: 700 }}>
+            {S.lensGroup(selected)}
+          </span>
+        )}
       </div>
-      {cats.map((c) => (
+      {/**
+        * E4 — an emptied scope states its zero in the app's own sentence
+        * (N7's key, reused): a silently empty card would claim a clean group
+        * the way «This week 0» claimed a clean week.
+        */}
+      {scoped && shown.length === 0 && (
+        <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '14px 4px' }}>
+          {S.priorityEmpty(S.lensGroup(selected))}
+        </p>
+      )}
+      {shown.map((c) => (
         <div key={c.name} style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
             {/* Category name is frozen-schema Latin — isolated so RTL cannot reorder it */}
@@ -467,7 +684,13 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
         * uncategorised money, and «0 غير مصنّف» would be a line of noise he has
         * to read past on a clean month.
         */}
-      {uncategorized && uncategorized.total > 0 && (
+      {/**
+        * E4 — and never under a group scope: ❓ money belongs to NO group (the
+        * rollup's own law — a chip may not adopt money nobody has placed), so
+        * a scoped chart neither shows nor hides-and-counts it. It returns,
+        * untouched, the moment the tile releases.
+        */}
+      {!scoped && uncategorized && uncategorized.total > 0 && (
         <button
           onClick={onUncategorized}
           style={{
@@ -500,7 +723,13 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
         * NOT start second-guessing that from `uncategorized`, which carries a
         * different question.
         */}
-      {total != null && (
+      {/**
+        * E4 — «إجمالي الشهر» never stands over a subset: scoped, the rows sum
+        * to the GROUP's figure, which the pressed tile above already states,
+        * and printing the month's total under four Joy rows would put two
+        * unreconcilable figures on one card — the exact D16d failure, rebuilt.
+        */}
+      {!scoped && total != null && (
         <div style={{
           display: 'flex', justifyContent: 'space-between', gap: 8,
           borderTop: `1px solid ${C.line}`, paddingTop: 10, marginTop: 2, fontSize: 15,
@@ -534,7 +763,23 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
  * one quiet line and no numbers he did not ask for. The header is the toggle;
  * the state persists, so he opens it once.
  */
-export function PriorityLens({ cats, uncategorized, open, onToggle }) {
+export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGroup = null }) {
+  /**
+   * E4 — which tile is pressed. The store above is the live truth (the chart
+   * below reads the same one); `selectedGroup` is the SSR seed. Hooks stand
+   * ABOVE the early return, always — a hook under a branch is the
+   * «rendered more hooks» crash that once took the whole app out on launch.
+   */
+  const selected = useSyncExternalStore(subscribePriority, readPrioritySelection, () => selectedGroup);
+  /**
+   * THE CONTROLLER NEVER OUTLIVES ITS VISIBILITY. A closed panel or an
+   * unmounted lens clears the selection — otherwise the chart below stays
+   * scoped under a pressed tile nobody can see, which is a filtered list
+   * passing for a whole one. (On a month swap the remount runs the cleanup
+   * first, so the next screen always opens unscoped.)
+   */
+  useEffect(() => () => setPrioritySelection(null), []);
+  useEffect(() => { if (!open) setPrioritySelection(null); }, [open]);
   const folded = rollup(cats, uncategorized);
   /**
    * A payload that cannot back the arithmetic renders NOTHING — not four
@@ -578,10 +823,43 @@ export function PriorityLens({ cats, uncategorized, open, onToggle }) {
             * and the fixed frame is the point of a lens. Hiding it would make
             * the shape of his month change with its contents, which is the one
             * thing a frame may not do.
+            *
+            * ═══ E4 — AND EACH ONE IS A TILE THAT DRIVES THE CHART ═══
+            * (NS §4.5: «the lens tiles double as chart controllers».) Pressed,
+            * a tile fills harbor — the palette's one selection colour — and
+            * `CategoryCompare` below re-renders per that group's categories;
+            * pressed again, it releases. The tile still STATES its word and
+            * its sum first (word + figure, never icon-only), in the map's
+            * fixed order: a controller is not a licence to rank, and the
+            * chart below is where comparison lawfully lives — this panel
+            * itself still carries no delta, no percentage, no sort.
             */}
-          {folded.groups.map((g) => (
-            <div key={g.key}>{row(S.lensGroup(g.key), g.total)}</div>
-          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '8px 0 4px' }}>
+            {folded.groups.map((g) => {
+              const active = selected === g.key;
+              return (
+                <button
+                  key={g.key}
+                  className="catchip"
+                  onClick={() => setPrioritySelection(active ? null : g.key)}
+                  aria-pressed={active}
+                  style={{
+                    minHeight: TAP, borderRadius: RADIUS.row, padding: '9px 12px', textAlign: 'start',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2,
+                    background: active ? C.harbor : C.card,
+                    border: `1px solid ${active ? C.harbor : C.line}`,
+                  }}
+                >
+                  <span style={{ fontSize: TYPE.label, fontWeight: active ? 700 : 600, color: active ? C.onDark : C.ink }}>
+                    {S.lensGroup(g.key)}
+                  </span>
+                  <span style={{ fontWeight: 700, color: active ? C.onDark : C.ink, fontFamily: FONT_DISPLAY, ...LATIN, ...NUMERALS }}>
+                    {moneyRound(g.total)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
           {/**
             * THE REMAINDER, AND IT NAMES ITSELF.
@@ -641,10 +919,32 @@ export function PriorityLens({ cats, uncategorized, open, onToggle }) {
   );
 }
 
-export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true }) {
+export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true, rangeSeed = null, stack = null }) {
   const color = METRICS.find((m) => m.key === metric).color;
   const cur = seriesFor(data.cur, metric);
   const prev = seriesFor(data.prev, metric);
+
+  /**
+   * ═══ E1 — THE YEAR'S SELECTED RANGE, LOCAL TO THIS COMPONENT ═══
+   *
+   * Only the YEAR axis grows range controls, recognised as THE twelve-slot
+   * axis — A12's own taxonomy (weeks have 7 slots, a month more than 12), so
+   * the test lives on the data's shape, not on a prop BookView would have to
+   * be taught to pass. `rangeSeed` is the SSR seam (peekOpen's pattern): a
+   * suite renders the selected screen; a person taps into it.
+   *
+   * A tap lands only on a month the year has REACHED (cur[i] != null): a
+   * range anchored on a month with no tab would headline a confident 0 for
+   * months that do not exist — absent is not zero, at the controls too.
+   */
+  const yearAxis = labels.length === 12;
+  const [range, setRange] = useState(yearAxis ? rangeSeed : null);
+  const onRangeTap = yearAxis
+    ? (i) => { if (cur[i] == null) return; setRange((r) => nextRange(r, i)); }
+    : null;
+  const rangeWords = range
+    ? (range.a === range.b ? monthWord(range.a) : `${monthWord(range.a)}–${monthWord(range.b)}`)
+    : null;
 
   /**
    * THE FIGURE IS THE WHOLE PERIOD, not the part that fits on the chart (D16d).
@@ -664,6 +964,35 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
   // figures these cards show, and two derivations of one number is how this
   // project has produced three of its bugs.
   const computed = periodTotals(data, METRICS, offPlot);
+
+  /**
+   * E1 — THE TOTALS RE-SCOPE TO THE SELECTION, with the same honesty the
+   * whole-period figures carry:
+   *
+   *  · `now` is the selected months' own sum. The year series is built from
+   *    month totals that already include undated money, so there is no
+   *    off-plot correction to miss here (weeks and months never grow range
+   *    controls at all).
+   *  · the year-ago figure exists ONLY when every selected month is CLOSED.
+   *    A selection reaching the month in flight would set a partial sum
+   *    against last year's finished months — the same-point lie the chart's
+   *    own grey marker exists to avoid, arriving through a control — so the
+   *    comparison is withheld (null → «—», the honest absence), never
+   *    approximated.
+   *  · a previous year the payload does not carry stays null, exactly as the
+   *    unscoped cards would say it.
+   */
+  let scoped = null;
+  if (range) {
+    scoped = {};
+    for (const m of METRICS) {
+      const c = seriesFor(data.cur, m.key).slice(range.a, range.b + 1);
+      const p = seriesFor(data.prev, m.key).slice(range.a, range.b + 1);
+      const closed = liveIndex < 0 || range.b < liveIndex;
+      const prevKnown = p.some((v) => v != null);
+      scoped[m.key] = { now: sumTo(c), prevAt: closed && prevKnown ? sumTo(p) : null };
+    }
+  }
 
   // No comparison data at all — e.g. the previous-year spreadsheet isn't
   // connected. Say so plainly rather than describing a chart that isn't there.
@@ -746,19 +1075,44 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
             * the card still names the gap; this simply stops the chart from
             * quietly disagreeing with the number beside it.
             */}
+          {/**
+            * E5 — the Month screen hands in the two-panel stack (line above
+            * per-day bars, one axis) and it REPLACES the lone line: two charts
+            * telling the same month would be the months-don't-match lie in a
+            * new coat. Every other period keeps the classic line.
+            */}
+          {stack || (
           <CumulativeChart
             cur={cur} prev={prev} color={color}
             labelled={!((offPlot.Visa || 0) + (offPlot.Cash || 0))}
             prevName={periodNames.prev}
           />
-          {showBars && <PairedBars cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color} />}
+          )}
+          {showBars && (
+            <PairedBars
+              cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color}
+              range={range} onRangeTap={onRangeTap} rangeWords={rangeWords}
+            />
+          )}
         </div>
         )}
       </div>
       {/* A7: the method cards sit under their own NAME — a section, not an
           inference the reader draws from three buttons. */}
       <SectionLabel>{S.sectionByMethod}</SectionLabel>
-      <MetricCards metric={metric} setMetric={setMetric} computed={computed} comparable={comparable} prevName={periodNames.prev} />
+      {/**
+        * E1 — the cards' scope, said in words while a range is selected. The
+        * line above them keeps telling the whole year's story (its marker
+        * figures stay year-scoped, deliberately — see the leaf report), so
+        * the one place two scopes share a screen, each is named: the chart
+        * card's header names the year, this line names the selection.
+        */}
+      {range && (
+        <div dir="auto" style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', margin: '6px 0 0' }}>
+          {rangeWords}
+        </div>
+      )}
+      <MetricCards metric={metric} setMetric={setMetric} computed={scoped || computed} comparable={comparable} prevName={periodNames.prev} />
       {footnote}
       {/**
         * THE THREE-LINE EXPLAINER IS GONE (finding S6).
@@ -780,6 +1134,49 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
           {S.noComparison(periodNames.prev)}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * ═══ E5 — THE TWO-PANEL MONTH STACK, ONE SHARED AXIS (data-F4; NS §5) ═══
+ *
+ * «Cumulative line above answers "how is the month going", per-day bars below
+ * answer "which days did it".» One component, mount-ready — MonthScreen
+ * mounting it is the Planner's one-line integration, deliberately not this
+ * chunk's edit — and BOTH panels are the existing charts, reused: the honest
+ * grammar this app has already paid for (S6's marker figures, A6's tap-peek,
+ * B3's once-per-mount draw, A12's thinned axis, the hasPrev and labelled
+ * gates) exists ONCE. A re-implementation here would be the two-derivations
+ * bug factory, panel-sized.
+ *
+ * ONE SHARED AXIS, mechanically: the bars' day axis is the ONLY axis (the
+ * line panel draws no day labels of its own — it never has), and
+ * `columns={labels.length}` makes the line's x geometry the COLUMN geometry,
+ * so «the 18th» is one vertical everywhere on the card. A12's every-5th-day
+ * thinning goes live on this mount: the Month screen has carried
+ * `showBars={false}` since the rule was cut, so this stack is where 31
+ * thinned labels first stand on a real screen.
+ *
+ * THE CALLER'S ONE DERIVATION DUTY: `band` is `typicalBand(...)`'s result or
+ * null — for the live month, `typicalBand(comb(year.cur.Visa, year.cur.Cash),
+ * todayCairo.m)`; the summing rule stays `comb`'s (series.js pins that
+ * signature) and this component only ever RENDERS what it was handed.
+ *
+ * A month with no shape (M7) renders NOTHING — the caller's existing words
+ * (`S.periodJustStarted`) say why; a stack that faked a dot over 31 grey
+ * bars would read as broken and be believed.
+ */
+export function MonthStack({ cur, prev, labels, liveIndex, color, band = null, prevName = '', labelled = true, peekOpen = false }) {
+  if (!hasShape(cur)) return null;
+  return (
+    <div dir="ltr">
+      <CumulativeChart
+        cur={cur} prev={prev} color={color} prevName={prevName}
+        labelled={labelled} peekOpen={peekOpen}
+        columns={labels.length} band={band}
+      />
+      <PairedBars cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color} />
     </div>
   );
 }

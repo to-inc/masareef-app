@@ -280,12 +280,25 @@ const at = (fn, label) => {
  * «where did the month go», and the day it grows a comparison it has started
  * telling him what to think about his own priorities. Every one of these would
  * arrive looking like an improvement.
+ *
+ * ═══ RE-CUT FOR E4 (the standing warning, honoured — never deleted) ═══
+ * Phase E gave the tiles behaviour: they are chart CONTROLLERS now, pressing
+ * harbor and scoping `CategoryCompare` per group. That changes NOTHING about
+ * what this panel's own figures may do. The four pins below now bind the
+ * tiles-and-rows shape: the lens still divides nothing, ranks nothing,
+ * renders no delta and no percentage, and never reads `prev` — the chart it
+ * DRIVES carries the lawful comparison, and it carries it outside this
+ * slice. One regex was genuinely re-cut rather than re-affirmed: the delta
+ * pin predated A5's fold that renamed the primitive to `NeutralDelta`, so as
+ * originally cut (`<Delta`) it could no longer catch the component the app
+ * actually renders — a pin that outlives its target's name is deleted in
+ * effect, which is exactly what the warning forbids.
  */
 {
   const src = await readFile(new URL('../src/components/Charts.jsx', import.meta.url), 'utf8');
   const lens = src.slice(src.indexOf('export function PriorityLens'), src.indexOf('export function PeriodSummary'));
   ok(lens.length > 400, 'the lens component was found in Charts.jsx — a slice that missed it would assert nothing');
-  ok(!/<Delta/.test(lens), 'the lens renders NO delta — a comparison is not a sum');
+  ok(!/<(Neutral)?Delta/.test(lens), 'the lens renders NO delta — a comparison is not a sum (re-cut to also catch the primitive under its post-A5 name)');
   /**
    * NO PERCENTAGE — and the first version of this line asserted the percent
    * SIGN, which `width: '100%'` fails. A guard that reddens on a CSS length
