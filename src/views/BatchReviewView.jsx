@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { C, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
+import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS } from '../theme.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, moneyRound } from '../lib/format.js';
@@ -159,7 +159,7 @@ export default function BatchReviewView({
             <button
               key={label} className="catchip" onClick={() => setAll(on)}
               style={{
-                flex: 1, minHeight: 42, borderRadius: 10, background: C.card,
+                flex: 1, minHeight: 42, borderRadius: RADIUS.row, background: C.card,
                 border: `1px solid ${C.line}`, color: C.ink, fontSize: 14.5, fontWeight: 600,
               }}
             >
@@ -202,7 +202,7 @@ export default function BatchReviewView({
       {truncated && (
         <p style={{
           fontSize: 12.5, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
-          borderRadius: 10, padding: '9px 12px', marginTop: 12, textAlign: 'center', lineHeight: 1.6,
+          borderRadius: RADIUS.row, padding: '9px 12px', marginTop: 12, textAlign: 'center', lineHeight: 1.6,
         }}>
           {S.batchTruncated(rows.length, totalSeen)}
         </p>
@@ -234,7 +234,7 @@ export default function BatchReviewView({
             : () => onConfirm(chosen)}
           disabled={busy || (!chosen.length && !settled) || chosen.length > BATCH_MAX_ROWS}
           style={{
-            width: '100%', minHeight: 58, borderRadius: 14, fontSize: 18, fontWeight: 700,
+            width: '100%', minHeight: 58, borderRadius: RADIUS.row, fontSize: 18, fontWeight: 700,
             /**
              * AMBER — this screen's primary action (ruled 2026-08-19).
              *
@@ -274,7 +274,7 @@ export default function BatchReviewView({
           <button
             className="catchip" onClick={onDiscard}
             style={{
-              marginTop: 10, width: '100%', minHeight: TAP, borderRadius: 12,
+              marginTop: 10, width: '100%', minHeight: TAP, borderRadius: RADIUS.row,
               background: 'transparent', border: `1px solid ${C.line}`,
               color: C.muted, fontSize: 14.5,
             }}
@@ -379,7 +379,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
     <div style={{
       background: bg,
       border: `1px solid ${(bookDup || row.twinOf) && !settled ? C.conflictLine : C.line}`,
-      borderRadius: 12, marginBottom: 7,
+      borderRadius: RADIUS.row, marginBottom: 7,
       opacity: settled && outcome.status !== 'written' ? 0.75 : 1,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', minHeight: 56 }}>
@@ -402,6 +402,9 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             aria-checked={ticked}
             aria-label={row.merchant_display || row.description || ''}
             style={{
+              // geometry exemption (ruling 4): a 30px checkbox — its radius is
+              // bounded by its own dimensions, and a surface token would clamp
+              // it toward a circle: an affordance change, not a style.
               flex: '0 0 30px', height: 30, borderRadius: 8,
               border: `2px ${ticked ? 'solid' : 'dashed'} ${ticked ? C.harbor : C.line}`,
               background: ticked ? C.harbor : 'transparent',
@@ -452,7 +455,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             )}
             {!settled && note && (
               <span style={{
-                padding: '2px 8px', borderRadius: 999, fontWeight: 700,
+                padding: '2px 8px', borderRadius: RADIUS.capsule, fontWeight: 700,
                 background: tone[note.tone].bg, color: tone[note.tone].fg,
               }}>{note.text}</span>
             )}
@@ -465,7 +468,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               */}
             {!settled && unchecked && <span>{S.batchDupUnchecked}</span>}
             {!settled && writable && !category && (
-              <span style={{ padding: '2px 8px', borderRadius: 999, background: C.mist, fontWeight: 700 }}>
+              <span style={{ padding: '2px 8px', borderRadius: RADIUS.capsule, background: C.mist, fontWeight: 700 }}>
                 {S.batchNeedCategory}
               </span>
             )}
@@ -507,7 +510,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                 <>
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.conflictInk }}>{S.batchDupBookIntro}</div>
                   <div style={{
-                    background: C.shell, border: `1px solid ${C.line}`, borderRadius: 9,
+                    background: C.shell, border: `1px solid ${C.line}`, borderRadius: RADIUS.inset,
                     padding: '9px 11px', fontSize: 13, marginTop: 6, lineHeight: 1.7, ...ISOLATE,
                   }} dir="auto">
                     <span style={LATIN}>{matchRow.date}</span> · {matchRow.description} ·{' '}
@@ -518,7 +521,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               <button
                 className="catchip" onClick={onOverride}
                 style={{
-                  marginTop: 9, minHeight: TAP, width: '100%', borderRadius: 12,
+                  marginTop: 9, minHeight: TAP, width: '100%', borderRadius: RADIUS.row,
                   background: C.card, border: `1px solid ${C.conflictLine}`,
                   color: C.conflictInk, fontSize: 15, fontWeight: 700,
                 }}
@@ -542,7 +545,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                 <button
                   key={c} className="catchip" onClick={() => onPick(c)}
                   style={{
-                    padding: '9px 13px', minHeight: 44, borderRadius: 999,
+                    padding: '9px 13px', minHeight: 44, borderRadius: RADIUS.capsule,
                     background: category === c ? C.harbor : C.shell,
                     color: category === c ? C.onDark : C.ink,
                     border: `1px solid ${category === c ? C.harbor : C.line}`,
@@ -557,7 +560,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                 <button
                   className="catchip" onClick={() => setCatsOpen(true)}
                   style={{
-                    padding: '9px 13px', minHeight: 44, borderRadius: 999,
+                    padding: '9px 13px', minHeight: 44, borderRadius: RADIUS.capsule,
                     background: 'transparent', color: C.harbor,
                     border: `1px dashed ${C.harbor}`, fontSize: 14, fontWeight: 600,
                   }}
@@ -592,7 +595,7 @@ function Expired({ onResnap, onDiscard, busy }) {
       <button
         className="bigbtn" onClick={onResnap} disabled={busy}
         style={{
-          width: '100%', minHeight: 56, borderRadius: 14, background: C.harbor,
+          width: '100%', minHeight: 56, borderRadius: RADIUS.row, background: C.harbor,
           color: C.onDark, fontSize: 17, fontWeight: 700,
         }}
       >
@@ -601,7 +604,7 @@ function Expired({ onResnap, onDiscard, busy }) {
       <button
         className="catchip" onClick={onDiscard}
         style={{
-          marginTop: 10, minHeight: TAP, padding: '0 16px', borderRadius: 12,
+          marginTop: 10, minHeight: TAP, padding: '0 16px', borderRadius: RADIUS.row,
           background: 'transparent', border: `1px solid ${C.line}`, color: C.muted, fontSize: 14.5,
         }}
       >

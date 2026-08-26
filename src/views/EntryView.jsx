@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
+import {
+  C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, unitSize,
+} from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { repeatChips } from '../state/repeats.js';
 import { isTravelling, toggleCurrency, HOME_CURRENCY } from '../state/travel.js';
@@ -36,9 +38,10 @@ import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx
  *
  *  1. THE SUBMIT LEFT THE SCROLL. It is `EntryDock` now, rendered by the shell
  *     between <main> and the tab bar, so it is on screen from the first frame to
- *     the last. It also STATES THE MISSING STEP rather than merely greying out —
- *     «اكتب المبلغ» → «اختار النوع» → «✓ سجّل 60 جنيه · Eating out» — so a
- *     disabled button is never a puzzle about which of two things is missing.
+ *     the last. The missing step is still STATED rather than merely greyed —
+ *     «اكتب المبلغ» → «اختار النوع» → «60 جنيه · أكل بره» — but since A9 it is
+ *     stated on a quiet line BESIDE the button, never as the button's label:
+ *     the button keeps one verb in every state (north-star §4.1).
  *
  *  2. THE QUICK CHIPS CAME UP TOP. They set the description AND the category in
  *     one tap, which makes them the fastest path on the screen; they were under
@@ -123,9 +126,9 @@ export default function EntryView({
               className="catchip"
               onClick={onDictate}
               style={{
-                minHeight: 38, padding: '0 13px', borderRadius: 999,
+                minHeight: 38, padding: '0 13px', borderRadius: RADIUS.capsule,
                 background: C.card, border: `1px solid ${C.line}`, color: C.ink,
-                fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
+                fontSize: TYPE.label, fontWeight: 600, whiteSpace: 'nowrap',
               }}
             >
               {S.dictateShort}
@@ -151,11 +154,11 @@ export default function EntryView({
               onClick={() => setCurrency(toggleCurrency(currency))}
               aria-pressed={isTravelling(currency)}
               style={{
-                minHeight: 38, padding: '0 13px', borderRadius: 999,
+                minHeight: 38, padding: '0 13px', borderRadius: RADIUS.capsule,
                 background: isTravelling(currency) ? C.harbor : C.card,
                 border: `1px solid ${isTravelling(currency) ? C.harbor : C.line}`,
                 color: isTravelling(currency) ? C.onDark : C.ink,
-                fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
+                fontSize: TYPE.label, fontWeight: 600, whiteSpace: 'nowrap',
               }}
             >
               {S.currencyIn(currency)}
@@ -166,9 +169,9 @@ export default function EntryView({
               className="catchip"
               onClick={onCamera}
               style={{
-                minHeight: 38, padding: '0 13px', borderRadius: 999,
+                minHeight: 38, padding: '0 13px', borderRadius: RADIUS.capsule,
                 background: C.card, border: `1px solid ${C.line}`, color: C.ink,
-                fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
+                fontSize: TYPE.label, fontWeight: 600, whiteSpace: 'nowrap',
               }}
             >
               {S.receiptShort}
@@ -191,9 +194,9 @@ export default function EntryView({
           * `repeatChips()` returns what he actually logged, most recent first,
           * and pads with the hand-written presets so a fresh install is never
           * bare. A remembered chip fills the amount too — but it FILLS, it does
-          * not submit: the pinned dock still reads «✓ سجّل 60 جنيه · أكل بره»
-          * and he still presses it. The amount is printed on the chip so the
-          * figure is on screen before he touches it.
+          * not submit: the pinned dock's status line reads «60 جنيه · أكل بره»
+          * and he still presses the verb. The amount is printed on the chip so
+          * the figure is on screen before he touches it.
           */}
         {repeats.map((q) => (
           <button
@@ -207,7 +210,7 @@ export default function EntryView({
             }}
             aria-pressed={desc === q.description}
             style={{
-              padding: '9px 14px', minHeight: TAP, borderRadius: 999, fontSize: 14.5,
+              padding: '9px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
               flex: '0 0 auto', whiteSpace: 'nowrap',
               background: desc === q.description ? C.mist : C.card,
               border: `1px solid ${desc === q.description ? C.harbor : C.line}`,
@@ -240,8 +243,8 @@ export default function EntryView({
             onClick={() => setMethod(m)}
             aria-pressed={method === m}
             style={{
-              flex: 1, minHeight: TAP, padding: '12px 0', borderRadius: 12,
-              fontSize: 16.5, fontWeight: 700,
+              flex: 1, minHeight: TAP, padding: '12px 0', borderRadius: RADIUS.row,
+              fontSize: TYPE.row, fontWeight: 700,
               background: method === m ? C.harbor : C.card,
               color: method === m ? C.onDark : C.ink,
               border: `1px solid ${method === m ? C.harbor : C.line}`,
@@ -258,14 +261,26 @@ export default function EntryView({
         * number effectively invisible until he had already typed it, on a screen
         * he opens precisely because he has a number in his head.
         */}
+      {/**
+        * TYPE.hero, and its unit at unitSize(TYPE.hero) — the §3 anatomy: serif
+        * value, unit at 0.55× floored at the prose floor, on the same line. The
+        * pre-token 46/18 pair is retired with the A9 rider; the number he is
+        * typing is this screen's hero and takes the hero's own leading rules.
+        */}
+      {/**
+        * THE CAPSULE CONTAINER (A3's named pin, vis-F6): the number he is
+        * typing sits in a soft full-round surface — RADIUS.capsule — filled
+        * like any plain card (A2: luminance, no border, no shadow).
+        */}
       <div
         style={{
-          textAlign: 'center', fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: 46, fontWeight: 650,
-          color: amount ? C.ink : C.muted, padding: '2px 0',
+          textAlign: 'center', fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: TYPE.hero, fontWeight: 650,
+          color: amount ? C.ink : C.muted, padding: '8px 16px',
+          background: C.card, borderRadius: RADIUS.capsule,
         }}
         dir="ltr"
       >
-        {amount || '0'} <span style={{ fontSize: 18, color: C.muted }}>{S.currencyName(currency)}</span>
+        {amount || '0'} <span style={{ fontSize: unitSize(TYPE.hero), color: C.muted }}>{S.currencyName(currency)}</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, margin: '6px 0 14px' }} dir="ltr">
@@ -274,10 +289,10 @@ export default function EntryView({
             key={k}
             className="catchip"
             onClick={() => press(k)}
-            aria-label={k === '⌫' ? 'مسح' : k}
+            aria-label={k === '⌫' ? S.keypadBackspace : k}
             style={{
-              padding: '12px 0', minHeight: 50, fontSize: 22, fontWeight: 600,
-              borderRadius: 12, background: C.card, border: `1px solid ${C.line}`, color: C.ink,
+              padding: '12px 0', minHeight: 50, fontSize: TYPE.section, fontWeight: 600,
+              borderRadius: RADIUS.row, background: C.card, border: `1px solid ${C.line}`, color: C.ink,
             }}
           >
             {k}
@@ -301,7 +316,7 @@ export default function EntryView({
             onClick={() => setCat(cat === c ? null : c)}
             aria-pressed={cat === c}
             style={{
-              padding: '11px 14px', minHeight: TAP, borderRadius: 999, fontSize: 15.5, fontWeight: 600,
+              padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
               background: cat === c ? C.harbor : C.card,
               color: cat === c ? C.onDark : C.ink,
               border: `1px solid ${cat === c ? C.harbor : C.line}`,
@@ -324,7 +339,7 @@ export default function EntryView({
             onClick={() => setCat(null)}
             aria-pressed
             style={{
-              padding: '11px 14px', minHeight: TAP, borderRadius: 999, fontSize: 15.5, fontWeight: 600,
+              padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
               background: C.harbor, color: C.onDark, border: `1px solid ${C.harbor}`, ...LATIN,
             }}
             dir="auto"
@@ -337,7 +352,7 @@ export default function EntryView({
             className="catchip"
             onClick={() => setShowAll(true)}
             style={{
-              padding: '11px 14px', minHeight: TAP, borderRadius: 999, fontSize: 15,
+              padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
               background: 'transparent', border: `1px dashed ${C.harbor}`,
               color: C.harbor, fontWeight: 600,
             }}
@@ -354,29 +369,37 @@ export default function EntryView({
  * THE PINNED SUBMIT (finding S1) — rendered by the shell, not by the scroll.
  *
  * It lives in THIS file rather than in App.jsx for a reason the suite enforces:
- * the warm accent token may be referenced exactly ONCE in the whole of `src/`,
- * and the reference below is that once (scripts/test-contrast.mjs counts them by
- * name, so this sentence deliberately does not spell it). The one warm action in
- * the app is the one that writes a row to his book; moving the button to another
- * file would have carried the accent with it and quietly relicensed it for
- * general use.
+ * the warm accent token is licensed at most ONCE PER VIEW FILE (Planner 4's
+ * per-screen reading), and the reference below is this screen's once
+ * (scripts/test-contrast.mjs counts them by name, so this sentence deliberately
+ * does not spell it). The one warm action on this screen is the one that writes
+ * a row to his book; moving the button to another file would have carried the
+ * accent with it and quietly relicensed it for general use.
  *
- * WHAT IT SAYS IS THE POINT, not that it is visible. `dockState` returns which of
- * the three states it is in, so the label names the step he is missing instead of
- * leaving him to work out why a grey button will not press. The whole entry is
- * legible on the button before it is committed — amount, currency and category —
- * which is also the last chance to notice a wrong category before it is a row.
+ * ONE VERB, BOTH STATES (A9, north-star §4.1). The button's label is `S.entryLog`
+ * and nothing else, in every state — resting, ready, even mid-save. A button that
+ * narrates its precondition is a system talking; what changes between states is
+ * the FILL and the INK (sand+muted resting → amber+rim ready), which is how a
+ * physical control says «not yet» without changing what it is for.
+ *
+ * WHAT IT SAYS STILL MATTERS — it moved, it did not die. `dockState` names the
+ * step he is missing and the STATUS LINE above the button states it («اكتب
+ * المبلغ» → «اختار النوع»), so a resting button is never a puzzle about which of
+ * two things is absent. When the entry is ready the same line echoes the whole
+ * row — amount, currency, category — the last chance to notice a wrong category
+ * before it is a row in his book. That line is where «جارٍ الحفظ…» lives too: a
+ * write in flight is a fact about the ENTRY, not a new name for the button.
  */
 export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENCY }) {
   const state = dockState({ amount, cat });
   const ready = entryReady({ amount, cat, busy });
 
-  const label = busy ? S.saving
+  const status = busy ? S.saving
     : state === 'needAmount' ? S.entryNeedAmount
       : state === 'needCategory' ? S.entryNeedCategory
         : (
           <>
-            ✓ {S.entryLog} · <span style={LATIN}>{amount}</span> {S.currencyName(currency)}
+            <span style={LATIN}>{amount}</span> {S.currencyName(currency)}
             {' · '}<span dir="auto">{categoryLabel(cat)}</span>
           </>
         );
@@ -384,28 +407,41 @@ export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENC
   return (
     <div
       style={{
-        flexShrink: 0, padding: '10px 16px 12px', background: C.shell,
+        flexShrink: 0, padding: '8px 16px 12px', background: C.shell,
         borderTop: `1px solid ${C.line}`,
       }}
     >
+      {/* The narration, beside the button — never on it. `aria-live` sits here
+          because this is the text that changes; the verb below never does. */}
+      <div
+        aria-live="polite"
+        style={{
+          textAlign: 'center', fontSize: TYPE.label, color: C.muted,
+          fontWeight: 600, marginBottom: 6, ...NUMERALS,
+        }}
+      >
+        {status}
+      </div>
       <button
         className="bigbtn"
         disabled={!ready}
         onClick={onSubmit}
-        aria-live="polite"
         style={{
-          width: '100%', minHeight: 58, padding: '16px 0', borderRadius: 14,
-          background: ready ? C.amber : C.line,
+          width: '100%', minHeight: 58, padding: '14px 0', borderRadius: RADIUS.row,
+          // Sand when resting — a control at rest, not furniture (`line` made
+          // it read as a dead bar); muted ink on it clears 4.10:1 at
+          // TYPE.action bold, above the 3:1 large-text floor.
+          background: ready ? C.amber : C.sand,
           // The rim, not a darker fill — see theme.js `amberRim`. Amber's edge
           // against the cream shell is 2.10:1; WCAG 1.4.11 asks 3:1 of the
           // control's BOUNDARY, which is what this supplies without restating
           // the Owner's ruled accent.
           border: `1px solid ${ready ? C.amberRim : C.line}`,
-          color: ready ? C.amberInk : C.ink,
-          fontSize: 18, fontWeight: 700,
+          color: ready ? C.amberInk : C.muted,
+          fontSize: TYPE.action, fontWeight: 700,
         }}
       >
-        {label}
+        {S.entryLog}
       </button>
     </div>
   );

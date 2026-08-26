@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { C, FONT_DISPLAY, FONT_UI } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, RADIUS, TYPE, GLYPH } from '../theme.js';
 import { S } from '../i18n/strings.js';
 
 /**
@@ -38,8 +38,8 @@ export default class ErrorBoundary extends Component {
           background: C.shell, fontFamily: FONT_UI, color: C.ink, padding: 28, textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 46 }}>🌿</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 650, color: C.harbor }}>
+        <div style={{ fontSize: GLYPH.illustration }}>🌿</div>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harbor }}>
           {S.crashTitle}
         </div>
         <p style={{ fontSize: 15.5, color: C.muted, lineHeight: 1.7, margin: 0, maxWidth: 300 }}>
@@ -49,7 +49,7 @@ export default class ErrorBoundary extends Component {
           className="bigbtn"
           onClick={() => window.location.reload()}
           style={{
-            marginTop: 6, minHeight: 56, padding: '16px 34px', borderRadius: 14,
+            marginTop: 6, minHeight: 56, padding: '16px 34px', borderRadius: RADIUS.row,
             background: C.harbor, color: C.onDark, fontSize: 17.5, fontWeight: 700,
           }}
         >

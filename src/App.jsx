@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN, RADIUS, TYPE } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -730,7 +730,8 @@ export default function App() {
         background: tab === 'book' && !needsSetup ? MORNING_CROWN : C.shell,
         fontFamily: FONT_UI,
         color: C.ink,
-        fontSize: 17,
+        // The shell's base reading size IS the row size — one prose vocabulary.
+        fontSize: TYPE.row,
       }}
     >
       <header
@@ -963,6 +964,8 @@ export default function App() {
       )}
 
       {USING_MOCK && (
+        // geometry exemption (ruling 4): dev-only chrome — a 6px corner on a
+        // ~16px badge Dad never sees; a surface token would clamp it to a pill.
         <div style={{ position: 'fixed', top: 0, insetInlineStart: 0, background: C.conflictInk, color: C.onDark, fontSize: 10, fontWeight: 700, padding: '2px 6px', borderEndEndRadius: 6, zIndex: 50 }}>
           MOCK
         </div>
@@ -979,7 +982,7 @@ function StaleQueueCard({ item, onSend, onDrop }) {
   return (
     <div
       style={{
-        background: C.sand, border: `1px solid ${C.line}`, borderRadius: 14,
+        background: C.sand, border: `1px solid ${C.line}`, borderRadius: RADIUS.card,
         padding: 14, marginBottom: 12,
       }}
     >
@@ -993,13 +996,13 @@ function StaleQueueCard({ item, onSend, onDrop }) {
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <button
           className="bigbtn" onClick={onSend}
-          style={{ flex: 1, minHeight: 48, borderRadius: 12, background: C.harbor, color: C.onDark, fontSize: 16, fontWeight: 700 }}
+          style={{ flex: 1, minHeight: 48, borderRadius: RADIUS.row, background: C.harbor, color: C.onDark, fontSize: 16, fontWeight: 700 }}
         >
           {S.outboxSend}
         </button>
         <button
           className="catchip" onClick={onDrop}
-          style={{ minHeight: 48, padding: '0 16px', borderRadius: 12, background: 'transparent', border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 600 }}
+          style={{ minHeight: 48, padding: '0 16px', borderRadius: RADIUS.row, background: 'transparent', border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 600 }}
         >
           {S.outboxDrop}
         </button>
@@ -1016,7 +1019,7 @@ function Skeleton() {
         <div
           key={i}
           style={{
-            background: C.card, borderRadius: 18,
+            background: C.card, borderRadius: RADIUS.card,
             height: 132, marginBottom: 14, opacity: 0.55,
           }}
         />

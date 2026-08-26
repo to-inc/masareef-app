@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
+import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE } from '../theme.js';
 import { S, monthByTab, categoryLabel, CAPTAIN_INITIALS } from '../i18n/strings.js';
 import { money } from '../lib/format.js';
 import { LATIN } from './Primitives.jsx';
@@ -40,18 +40,18 @@ export default function LogCard({ prevLog, todayCairo }) {
       className="card-in"
       aria-label={S.logTitle(monthByTab(prevLog.name))}
       style={{
-        background: C.card, borderRadius: 18,
+        background: C.card, borderRadius: RADIUS.card,
         padding: '18px 18px 14px', marginBottom: 16,
       }}
     >
-      <div style={{ fontSize: 15, fontWeight: 700, color: C.harbor }}>
+      <div style={{ fontSize: TYPE.label, fontWeight: 700, color: C.harbor }}>
         {S.logTitle(monthByTab(prevLog.name))}
       </div>
 
       {/* The figure the whole card exists to deliver. Serif, tabular, and the
           only thing on the screen at this size. */}
       <div style={{
-        fontFamily: FONT_DISPLAY, fontSize: 40, fontWeight: 650, color: C.ink,
+        fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, color: C.ink,
         marginTop: 6, ...LATIN, ...NUMERALS,
       }}>
         {money(prevLog.total)}
@@ -65,8 +65,8 @@ export default function LogCard({ prevLog, todayCairo }) {
       <div style={{ marginTop: 14 }}>
         {prevLog.top.map((c) => (
           <div key={c.name} style={line}>
-            <span style={{ fontSize: 16, color: C.ink }} dir="auto">{categoryLabel(c.name)}</span>
-            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
+            <span style={{ fontSize: TYPE.body, color: C.ink }} dir="auto">{categoryLabel(c.name)}</span>
+            <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.body, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
               {money(c.amount)}
             </span>
           </div>
@@ -128,7 +128,7 @@ export default function LogCard({ prevLog, todayCairo }) {
           className="catchip"
           onClick={() => { dismiss(todayCairo); setGone(true); }}
           style={{
-            minHeight: TAP, padding: '0 24px', borderRadius: 999,
+            minHeight: TAP, padding: '0 24px', borderRadius: RADIUS.capsule,
             background: 'transparent', border: `1px solid ${C.line}`,
             color: C.ink, fontSize: 15.5, fontWeight: 600,
           }}

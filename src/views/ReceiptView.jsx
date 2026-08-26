@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
+import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, GLYPH } from '../theme.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, normalizeDigits } from '../lib/format.js';
@@ -347,7 +347,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
   if (stage === 'working') {
     return (
       <Centered>
-        <div style={{ fontSize: 46 }}>🧾</div>
+        <div style={{ fontSize: GLYPH.illustration }}>🧾</div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
           {S.receiptReading}
         </div>
@@ -380,7 +380,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
      */
     return (
       <Centered>
-        <div style={{ fontSize: 46 }}>🤔</div>
+        <div style={{ fontSize: GLYPH.illustration }}>🤔</div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
           {S.receiptNotReceipt}
         </div>
@@ -422,7 +422,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
   if (stage === 'queued') {
     return (
       <Centered>
-        <div style={{ fontSize: 46 }}>📥</div>
+        <div style={{ fontSize: GLYPH.illustration }}>📥</div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
           {S.receiptQueuedTitle}
         </div>
@@ -437,7 +437,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
   if (stage === 'error') {
     return (
       <Centered>
-        <div style={{ fontSize: 46 }}>🌿</div>
+        <div style={{ fontSize: GLYPH.illustration }}>🌿</div>
         <p style={{ color: C.ink, fontSize: 16.5, marginTop: 12, lineHeight: 1.6, maxWidth: 300 }}>
           {errorMsg || S.receiptFailed}
         </p>
@@ -469,7 +469,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
         {debugOn() && shot && (
           <div style={{
             fontSize: 12, fontFamily: 'ui-monospace, monospace', direction: 'ltr',
-            padding: '6px 10px', borderRadius: 8, marginBottom: 10,
+            padding: '6px 10px', borderRadius: RADIUS.inset, marginBottom: 10,
             background: shot.landscape ? C.conflictBg : C.shell,
             color: shot.landscape ? C.conflictInk : C.muted,
             border: `1px solid ${shot.landscape ? C.conflictInk : C.line}`,
@@ -521,7 +521,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
           </div>
         )}
 
-        <div style={{ background: C.card, borderRadius: 18, padding: 16 }}>
+        <div style={{ background: C.card, borderRadius: RADIUS.card, padding: 16 }}>
           <Field label={S.receiptAmount} editable={lowAmount}>
             {lowAmount ? (
               <input
@@ -530,7 +530,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
                 style={inputStyle} autoFocus
               />
             ) : (
-              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 650, ...LATIN, ...NUMERALS }}>
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.display, fontWeight: 650, ...LATIN, ...NUMERALS }}>
                 {money(amount)} <span style={{ fontSize: 16, color: C.muted }}>{extraction.currency}</span>
               </div>
             )}
@@ -539,9 +539,11 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
           {/* The verbatim line the number came from — he can check our reading
               against the paper in his hand without trusting us. */}
           {extraction.raw_total_line && (
-            <div style={{ fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.7 }}>
+            /* caption (ruling 2): this line DUPLICATES the amount above it —
+               it is the verbatim source the number was read from */
+            <div style={{ fontSize: TYPE.caption, color: C.muted, marginTop: 2, lineHeight: 1.7 }}>
               {S.receiptSaw}{' '}
-              <span style={{ background: C.shell, borderRadius: 6, padding: '2px 6px' }} dir="auto">
+              <span style={{ background: C.shell, borderRadius: RADIUS.inset, padding: '2px 6px' }} dir="auto">
                 {extraction.raw_total_line}
               </span>
             </div>
@@ -602,7 +604,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
                 onClick={() => setMethod(m)}
                 aria-pressed={method === m}
                 style={{
-                  flex: 1, minHeight: TAP, borderRadius: 12, fontSize: 16, fontWeight: 700,
+                  flex: 1, minHeight: TAP, borderRadius: RADIUS.row, fontSize: 16, fontWeight: 700,
                   background: method === m ? METHOD[m].bg : C.shell,
                   color: method === m ? METHOD[m].fg : C.ink,
                   border: `1px solid ${method === m ? C.harbor : C.line}`,
@@ -662,7 +664,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
           <button
             className="bigbtn" disabled={!ready} onClick={save}
             style={{
-              marginTop: 16, width: '100%', minHeight: 58, padding: '16px 0', borderRadius: 14,
+              marginTop: 16, width: '100%', minHeight: 58, padding: '16px 0', borderRadius: RADIUS.row,
               background: ready ? C.harbor : C.line, color: ready ? C.onDark : C.ink,
               fontSize: 18.5, fontWeight: 700,
             }}
@@ -882,7 +884,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
     <div
       style={{
         background: C.card,
-        borderRadius: 12, padding: '10px 12px', marginBottom: 6,
+        borderRadius: RADIUS.row, padding: '10px 12px', marginBottom: 6,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -890,12 +892,16 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
             answers null where it cannot make one, and this simply renders the
             placeholder tile instead. */}
         {thumb ? (
+          // geometry exemption (ruling 4): a 40×40 thumbnail is GEOMETRY —
+          // theme.js names it; a surface token would clamp its media edge.
           <img
             src={thumb} alt={S.jobThumbAlt}
             style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, flexShrink: 0,
               border: `1px solid ${C.line}`, opacity: stage === 'dismissed' ? 0.5 : 1 }}
           />
         ) : (
+          // geometry exemption (ruling 4): the placeholder tile keeps the
+          // thumbnail's exact geometry so absence has the same shape as presence.
           <div style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0,
             background: C.shell, border: `1px solid ${C.line}`, display: 'flex',
             alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
@@ -930,7 +936,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
           onClick={() => onCancel(job)}
           aria-label={S.jobRemoveTitle}
           title={S.jobRemoveTitle}
-          style={{ minWidth: TAP, minHeight: TAP, borderRadius: 999, flexShrink: 0,
+          style={{ minWidth: TAP, minHeight: TAP, borderRadius: RADIUS.capsule, flexShrink: 0,
             background: 'transparent', border: `1px solid ${C.line}`,
             color: C.muted, fontSize: 16, fontWeight: 700, lineHeight: 1 }}
         >
@@ -947,7 +953,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
             <button
               key={a.key} className="catchip" onClick={a.onTap}
               style={{
-                padding: '8px 14px', minHeight: TAP, borderRadius: 999, fontSize: 13.5,
+                padding: '8px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: 13.5,
                 whiteSpace: 'nowrap',
                 background: a.primary ? C.harbor : C.shell,
                 color: a.primary ? C.onDark : C.ink,
@@ -996,7 +1002,7 @@ function Centered({ children }) {
  */
 export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride }) {
   const base = styleOverride || {
-    padding: '11px 15px', minHeight: TAP, borderRadius: 999, fontSize: 15,
+    padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: 15,
   };
   /**
    * SELECTED FIRST (P4a). His chosen category sits at position 1 so the card can
@@ -1057,7 +1063,7 @@ function Banner({ children }) {
   return (
     <div style={{
       background: C.sand, border: `1px solid ${C.line}`, color: C.ink,
-      borderRadius: 12, padding: '10px 14px', fontSize: 14.5, fontWeight: 600,
+      borderRadius: RADIUS.row, padding: '10px 14px', fontSize: 14.5, fontWeight: 600,
       marginBottom: 10, lineHeight: 1.6,
     }}>
       {children}
@@ -1066,20 +1072,20 @@ function Banner({ children }) {
 }
 
 const primaryBtn = {
-  marginTop: 14, minHeight: 58, padding: '16px 30px', borderRadius: 14,
+  marginTop: 14, minHeight: 58, padding: '16px 30px', borderRadius: RADIUS.row,
   background: C.harbor, color: C.onDark, fontSize: 18, fontWeight: 700,
 };
 const ghostBtn = {
-  marginTop: 10, minHeight: TAP, padding: '12px 20px', borderRadius: 12,
+  marginTop: 10, minHeight: TAP, padding: '12px 20px', borderRadius: RADIUS.row,
   background: 'transparent', border: `1px solid ${C.line}`, color: C.muted,
   fontSize: 15.5, fontWeight: 600,
 };
 const chipStyle = {
-  padding: '11px 15px', minHeight: TAP, borderRadius: 999,
+  padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,
   fontSize: 15, fontWeight: 500, color: C.ink, ...LATIN,
 };
 const inputStyle = {
-  width: '100%', padding: '12px 14px', borderRadius: 12, marginTop: 4,
+  width: '100%', padding: '12px 14px', borderRadius: RADIUS.row, marginTop: 4,
   border: `1.5px solid ${C.harbor}`, background: C.shell, color: C.ink,
   fontSize: 20, fontWeight: 600, outline: 'none',
 };

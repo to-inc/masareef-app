@@ -324,6 +324,23 @@ export const EN = {
   noCompareInUnit: (cur) => `No ${cur} history to compare against yet`,
   foreignNoCompare: 'This period has foreign spending — an EGP-only comparison would not be true',
   foreignUnsized: (n) => `and ${n} foreign ${n === 1 ? 'expense' : 'expenses'} with no price`,
+  /**
+   * ——— A7: the foreign-money essay, compressed to ONE line. Every rule that
+   * suppresses a comparison (foreign money in the period, a lead unit with no
+   * history) used to state its own sentence; this line replaces the stack and
+   * the full sentences render only behind its tap. It names neither rule on
+   * purpose — it is true under each, and the detail is one tap away.
+   */
+  whyNoCompare: 'No comparison here — see why',
+  /**
+   * ——— A7: sections carry NAMES instead of stacked prose (north-star §5:
+   * «This month», «By method», «Against July»). `sectionAgainst` takes the
+   * LOCALIZED period name it compares against; `sectionByMethod` heads the
+   * method cards. Consumers: BookView's Month screen (Against), Charts.jsx's
+   * PeriodSummary (By method).
+   */
+  sectionAgainst: (prev) => `Against ${prev}`,
+  sectionByMethod: 'By method',
   // A row with no category is a door wherever it appears (M6).
   rowNeedsCategory: '? tap to file',
   // A2: filed from the merchant memory — he never chose it.
@@ -335,6 +352,13 @@ export const EN = {
   moreThan: (prev) => `More than ${prev} by`,
   sameAs: (prev) => `The same as ${prev}`,
   wasThen: 'was',
+  /**
+   * ——— A4: a method card's prev figure, IN WORDS. A naked «0» under the hero
+   * reads as an answer about now; «was 0 — last week» reads as the fact it
+   * is. Takes the amount ALREADY FORMATTED (money/moneyRound — this template
+   * never invents digits) and the localized period name the header names.
+   */
+  prevWorded: (amount, prevName) => `was ${amount} — ${prevName}`,
   todayTitle: "Today's expenses — exactly as they sit in the sheet",
   todayEmptyTitle: 'Nothing logged today yet',
   todayEmptyBody: 'Confirm from the Inbox, or add a new expense.',
@@ -358,6 +382,8 @@ export const EN = {
 
   vs: 'vs',
   avg: 'average',
+  // Keypad backspace — an aria-label, spoken not seen (A9 residual).
+  keypadBackspace: 'Delete',
   noComparison: (prev) => `No data for ${prev} to compare against.`,
   // A period with one point has no shape to draw — the figure stands, the
   // chart waits (M7).

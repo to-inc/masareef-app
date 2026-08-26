@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, NUMERALS } from '../theme.js';
+import { C, FONT_DISPLAY, NUMERALS, RADIUS, TYPE } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { money } from '../lib/format.js';
 import { SectionLabel, Chip, LATIN } from '../components/Primitives.jsx';
@@ -89,7 +89,7 @@ export default function InboxView({ pending, settled = {}, onConfirm, onConfirmM
           className="bigbtn"
           onClick={() => onConfirmMany(batch.map((r) => r.item))}
           style={{
-            width: '100%', minHeight: 52, borderRadius: 14, marginBottom: 14,
+            width: '100%', minHeight: 52, borderRadius: RADIUS.row, marginBottom: 14,
             background: C.harbor, color: C.onDark, fontSize: 17, fontWeight: 700,
           }}
         >
@@ -113,7 +113,7 @@ function StaleGroup({ rows, onConfirm }) {
         className="catchip"
         onClick={() => setOpen(!open)}
         style={{
-          width: '100%', minHeight: 56, borderRadius: 14, padding: '12px 16px',
+          width: '100%', minHeight: 56, borderRadius: RADIUS.row, padding: '12px 16px',
           background: open ? C.mist : C.card, border: `1px dashed ${C.harbor}`,
           color: C.harbor, fontSize: 16, fontWeight: 700, textAlign: 'start',
         }}
@@ -149,7 +149,7 @@ function PendingCard({ item, outcome, onConfirm }) {
     <div
       className="card-in"
       style={{
-        background: C.card, borderRadius: 18, padding: 16, marginBottom: 14,
+        background: C.card, borderRadius: RADIUS.card, padding: 16, marginBottom: 14,
         opacity: inert ? 0.62 : 1,
         transition: 'opacity .2s ease',
       }}
@@ -177,11 +177,13 @@ function PendingCard({ item, outcome, onConfirm }) {
             counter exists to prevent. Show the absence instead. */}
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 650, color: C.ink, flexShrink: 0, ...LATIN, ...NUMERALS }}>
           {p.amount == null ? '—' : money(p.amount)}{' '}
-          {p.amount != null && <span style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}>{p.currency}</span>}
+          {/* caption (ruling 2): a unit suffix duplicates the amount beside it */}
+          {p.amount != null && <span style={{ fontSize: TYPE.caption, color: C.muted, fontWeight: 500 }}>{p.currency}</span>}
         </div>
       </div>
 
-      <div style={{ fontSize: 13, color: C.muted, marginTop: 5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* caption (ruling 2): row meta — method chip, date, travel flag — restates the row */}
+      <div style={{ fontSize: TYPE.caption, color: C.muted, marginTop: 5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <Chip kind={p.method} small label={p.method === 'Visa' ? S.metricVisa : S.metricCash} />
         <span style={LATIN}>{p.date}</span>
         {/* Only a REAL foreign currency is travel. An unpriced row has

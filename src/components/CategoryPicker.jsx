@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, TAP } from '../theme.js';
+import { C, TAP, RADIUS, TYPE } from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { LATIN } from './Primitives.jsx';
@@ -61,7 +61,7 @@ export function OutcomeNote({ outcome }) {
     <div
       aria-live="polite"
       style={{
-        marginTop: 12, minHeight: 44, borderRadius: 12, padding: '11px 14px',
+        marginTop: 12, minHeight: 44, borderRadius: RADIUS.row, padding: '11px 14px',
         background: skin.bg, color: skin.fg, border: `1px solid ${skin.line}`,
         fontSize: 15.5, fontWeight: 700,
         display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
@@ -113,8 +113,13 @@ export function CategoryActions({ guess, outcome, onPick }) {
           disabled={inert}
           style={{
             marginTop: 12, width: '100%', minHeight: 56, padding: '10px 0',
-            borderRadius: 14, background: C.harbor, color: C.onDark,
-            fontSize: 18.5, fontWeight: 700, opacity: inert ? 0.45 : 1,
+            borderRadius: RADIUS.row, background: C.harbor, color: C.onDark,
+            /**
+             * TYPE.action (ruling 1): THIS is the site the token was ruled
+             * for — the Inbox one-tap guess, the most-used tap in the app.
+             * It shipped at 18.5; «stays ≥19» is not negotiable downward.
+             */
+            fontSize: TYPE.action, fontWeight: 700, opacity: inert ? 0.45 : 1,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           }}
         >
@@ -137,9 +142,9 @@ export function CategoryActions({ guess, outcome, onPick }) {
               onClick={() => onPick(c)}
               disabled={inert}
               style={{
-                padding: '11px 15px', minHeight: TAP, borderRadius: 999,
+                padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,
                 background: C.shell, border: `1px solid ${C.line}`,
-                fontSize: 15, fontWeight: 500, color: C.ink, ...LATIN,
+                fontSize: TYPE.label, fontWeight: 500, color: C.ink, ...LATIN,
               }}
               dir="auto"
             >
@@ -152,9 +157,9 @@ export function CategoryActions({ guess, outcome, onPick }) {
             onClick={() => setShowAll(true)}
             disabled={inert}
             style={{
-              padding: '11px 15px', minHeight: TAP, borderRadius: 999,
+              padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,
               background: 'transparent', border: `1px dashed ${C.harbor}`,
-              fontSize: 15, color: C.harbor, fontWeight: 600,
+              fontSize: TYPE.label, color: C.harbor, fontWeight: 600,
             }}
           >
             {S.more}

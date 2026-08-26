@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, NUMERALS, PREV_SERIES_OPACITY, TAP } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
 import { rollup } from '../lib/priorities.js';
 import { HOME_CURRENCY } from '../state/display.js';
-import { Delta, LATIN } from './Primitives.jsx';
+import { LATIN, SectionLabel } from './Primitives.jsx';
 
 /**
  * Every chart here is ported verbatim from prototype/baba-expense-app.jsx.
@@ -16,6 +16,47 @@ import { Delta, LATIN } from './Primitives.jsx';
  * document's RTL would mirror the axes and put "today" on the left, which reads
  * as a different (and wrong) story.
  */
+
+/**
+ * ═══ NEUTRAL DELTAS DOCTRINE (A5 — data-F8, assigned in the chunk ledger) ═══
+ *
+ * A comparison in a chart is a FACT, not a verdict. The chevron says which way
+ * the figure moved; the colour must not say how to feel about it — spending
+ * more than last month is not a conflict, spending less is not a settlement,
+ * and painting ▲ red / ▼ green is a judgment the NO-NAGGING law forbids the
+ * app from passing. So both directions render in the SAME ink: `inherit`, the
+ * row's own colour — which is `muted` on a resting metric card, `onDark` on
+ * the harbor-filled active one (where the old red-on-blue pill was the least
+ * readable thing on the screen), and `ink` beside a category figure. Identical
+ * up or down, every time.
+ *
+ * Conflict red never encodes spend direction. It stays reserved for genuine
+ * conflict STATES — the ❓-money button below keeps `conflictInk`, and
+ * rightly: unplaced money IS a conflict, whichever way it moved.
+ *
+ * Local to Charts on purpose: `Primitives.Delta` still wears the old
+ * red/green skin for its other consumers until A5's book half lands; when
+ * both halves are in, the Planner folds the two into one primitive.
+ */
+function NeutralDelta({ now, prev }) {
+  // Same gates as the primitive it replaces: no previous figure means no
+  // comparison (absent is not zero), and a previous of 0 admits no honest
+  // percentage at all.
+  if (!prev) return null;
+  const pct = Math.round(((now - prev) / prev) * 100);
+  if (!isFinite(pct)) return null;
+  return (
+    <span
+      style={{
+        fontSize: 11.5, fontWeight: 700, color: 'inherit',
+        marginInlineStart: 6, verticalAlign: 'middle', whiteSpace: 'nowrap',
+        ...LATIN,
+      }}
+    >
+      {pct > 0 ? '▲' : '▼'} {Math.abs(pct)}%
+    </span>
+  );
+}
 
 // Cumulative race: colored line (this period) vs grey line (last period), with a
 // marker pair at "the same point in time" — an honest partial-period comparison.
@@ -194,6 +235,23 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
   // drag the line down every morning and quietly flatter him.
   const counted = cur.filter((v) => v != null);
   const avg = counted.length ? sumTo(counted) / counted.length : 0;
+  /**
+   * ═══ A12 — MONTH-AXIS FURNITURE: the axis speaks every 5th day ═══
+   *
+   * A slot-per-day axis is the only axis with more than 12 slots (weeks have
+   * 7, years 12), and it cannot afford a voice per slot: thirty-one labels
+   * across ~311px of card is ~10px per column against ~12px of two-digit
+   * text — every label collides with both neighbours, so "all of them" reads
+   * as none of them, twice over. Days divisible by 5 speak; the rest keep
+   * their bars and hold their tongues. Slot i is day i+1: the by-day series
+   * runs from the 1st by construction (lib/series), which is what lets the
+   * rule live on the index instead of parsing locale-shaped label text.
+   *
+   * The live day is not furniture and is not thinned — it keeps its • marker
+   * below, which outranks a day number whenever the two coincide.
+   */
+  const monthOfDays = labels.length > 12;
+  const speaks = (i) => !monthOfDays || (i + 1) % 5 === 0;
   return (
     <div style={{ position: 'relative', marginTop: 4 }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: labels.length > 8 ? 3 : 6, height: 110, position: 'relative' }}>
@@ -211,11 +269,30 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
           return (
             <div key={lb + i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1.5, height: '100%', width: '100%', justifyContent: 'center' }}>
+                {/* GEOMETRY EXEMPTION (ruling 4): bar caps on a ~4px-wide bar.
+                    The radius is bounded by the bar's own width — a surface
+                    token would clamp the bar into a lollipop, and the square
+                    feet on the baseline are the honest shape of a sum.
+                    The geometry exemption covers BOTH caps below. */}
                 <div style={{ width: '38%', height: `${((prev[i] || 0) / max) * 100}%`, background: C.line, borderRadius: '4px 4px 0 0', minHeight: prev[i] ? 2 : 0 }} />
                 <div style={{ width: '38%', height: `${((cur[i] || 0) / max) * 100}%`, background: isLive ? C.harbor : color, borderRadius: '4px 4px 0 0', minHeight: cur[i] ? 2 : 0 }} />
               </div>
+              {/**
+                * ═══ GEOMETRY EXEMPTION (A12, extending ruling 4 to the TYPE
+                * floor — cite it by this name) ═══
+                *
+                * Axis text is chart FURNITURE, not prose: it is measured
+                * against the plot the way a bar cap is measured against its
+                * bar, and theme.js already rules that an axis label is a
+                * PICTURE, not type. So it is exempt from the TYPE floor by
+                * the same named exemption — nothing is readable ONLY here
+                * (the figures live on the marker labels and the metric
+                * cards; these digits are a ruler's ticks), and raising them
+                * to `caption` would make every tick wider than its column
+                * and hand back the collisions the thinning just removed.
+                */}
               <div style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: isLive ? 800 : 500, color: isLive ? C.harbor : C.muted }}>
-                {isLive ? '•' : lb}
+                {isLive ? '•' : speaks(i) ? lb : ''}
               </div>
             </div>
           );
@@ -234,7 +311,7 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
  * subset. Same rule, second render path — and the cards are the smaller type, so
  * it would have survived a visual check.
  */
-export function MetricCards({ metric, setMetric, computed, comparable = true }) {
+export function MetricCards({ metric, setMetric, computed, comparable = true, prevName = '' }) {
   return (
     <div>
       {/**
@@ -287,10 +364,15 @@ export function MetricCards({ metric, setMetric, computed, comparable = true }) 
                */
               background: active ? C.harbor : C.card,
               border: `1px solid ${active ? C.harbor : C.line}`,
-              borderRadius: 16, padding: '10px 11px', minWidth: 0,
+              // A tappable card-scale CONTROL, not a plain card: `row` is the
+              // control-and-row radius the vocabulary assigns it.
+              borderRadius: RADIUS.row, padding: '10px 11px', minWidth: 0,
             }}
           >
             <div style={{ fontSize: 11.5, fontWeight: 700, color: active ? C.onDark : C.muted, letterSpacing: '.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {/* GEOMETRY EXEMPTION (ruling 4): an 8×8 series swatch — any
+                  surface radius exceeds half its width and would clamp the
+                  square to a circle, erasing the "swatch = series" shape. */}
               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: active ? C.onDark : m.color, marginInlineEnd: 5 }} />
               {S[m.labelKey]}
             </div>
@@ -298,9 +380,15 @@ export function MetricCards({ metric, setMetric, computed, comparable = true }) 
               {moneyRound(now)}
             </div>
             <div style={{ fontSize: 12, color: active ? C.onDark : C.muted }}>
-              {/* No comparison data ≠ a comparison of zero */}
-              <span style={LATIN}>{prevAt == null ? '—' : moneyRound(prevAt)}</span>
-              {comparable && <Delta now={now} prev={prevAt} />}
+              {/* No comparison data ≠ a comparison of zero — and a TRUE zero
+                  is worded (A4): «كان 0 — الأسبوع اللي فات», never a naked 0
+                  the reader must diagnose. Prose, so no LATIN isolate. */}
+              {prevAt == null
+                ? <span style={LATIN}>—</span>
+                : prevAt === 0 && prevName
+                  ? <span>{S.prevWorded(moneyRound(0), prevName)}</span>
+                  : <span style={LATIN}>{moneyRound(prevAt)}</span>}
+              {comparable && <NeutralDelta now={now} prev={prevAt} />}
             </div>
           </button>
         );
@@ -336,8 +424,10 @@ export function MetricCards({ metric, setMetric, computed, comparable = true }) 
 export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized }) {
   const max = Math.max(...cats.map((c) => Math.max(c.now, c.prev)), 1);
   return (
-    <div style={{ background: C.card, borderRadius: 16, padding: 14, marginTop: 12 }}>
+    <div style={{ background: C.card, borderRadius: RADIUS.card, padding: 14, marginTop: 12 }}>
       <div style={{ display: 'flex', gap: 14, fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
+        {/* GEOMETRY EXEMPTION (ruling 4): 10×10 series swatches — a surface
+            radius would clamp them to circles; the square is the mark. */}
         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.harbor, marginInlineEnd: 5, verticalAlign: '-1px' }} />{curName}</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.line, marginInlineEnd: 5, verticalAlign: '-1px' }} />{prevName}</span>
       </div>
@@ -348,12 +438,12 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
             <span style={{ fontWeight: 600 }} dir="auto">{categoryLabel(c.name)}</span>
             <span style={{ fontWeight: 700, fontFamily: FONT_DISPLAY }}>
               <span style={LATIN}>{money(c.now)}</span>
-              <Delta now={c.now} prev={c.prev} />
+              <NeutralDelta now={c.now} prev={c.prev} />
             </span>
           </div>
-          <div style={{ height: 9, background: C.shell, borderRadius: 999, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${(c.prev / max) * 100}%`, background: C.line, borderRadius: 999 }} />
-            <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${(c.now / max) * 100}%`, background: C.harbor, borderRadius: 999 }} />
+          <div style={{ height: 9, background: C.shell, borderRadius: RADIUS.capsule, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${(c.prev / max) * 100}%`, background: C.line, borderRadius: RADIUS.capsule }} />
+            <div style={{ position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: `${(c.now / max) * 100}%`, background: C.harbor, borderRadius: RADIUS.capsule }} />
           </div>
         </div>
       ))}
@@ -368,7 +458,10 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
         <button
           onClick={onUncategorized}
           style={{
-            width: '100%', minHeight: TAP, marginBottom: 12, borderRadius: 12,
+            // A row-scale tappable control; its old ad-hoc 12 retokenizes to
+            // `row` — the control radius — rather than surviving as a 13th
+            // distinct radius in the app.
+            width: '100%', minHeight: TAP, marginBottom: 12, borderRadius: RADIUS.row,
             padding: '10px 12px', textAlign: 'start',
             background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
           }}
@@ -451,7 +544,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle }) {
   );
 
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: '4px 14px 10px', marginTop: 12 }}>
+    <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: RADIUS.card, padding: '4px 14px 10px', marginTop: 12 }}>
       <button
         onClick={onToggle}
         aria-expanded={open}
@@ -572,7 +665,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
 
   return (
     <div>
-      <div style={{ background: C.card, borderRadius: 16, padding: '14px 12px 10px' }}>
+      <div style={{ background: C.card, borderRadius: RADIUS.card, padding: '14px 12px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px 8px', gap: 8 }}>
           <span style={{ fontSize: 13.5, fontWeight: 700, color }}>
             {periodNames.cur} <span style={{ color: C.muted, fontWeight: 500 }}>{S.vs} {periodNames.prev}</span>
@@ -649,7 +742,10 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
         </div>
         )}
       </div>
-      <MetricCards metric={metric} setMetric={setMetric} computed={computed} comparable={comparable} />
+      {/* A7: the method cards sit under their own NAME — a section, not an
+          inference the reader draws from three buttons. */}
+      <SectionLabel>{S.sectionByMethod}</SectionLabel>
+      <MetricCards metric={metric} setMetric={setMetric} computed={computed} comparable={comparable} prevName={periodNames.prev} />
       {footnote}
       {/**
         * THE THREE-LINE EXPLAINER IS GONE (finding S6).

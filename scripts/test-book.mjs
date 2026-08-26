@@ -495,7 +495,15 @@ try {
   });
   const withF = text(renderToStaticMarkup(createElement(PeriodBlock, { data: week({ count: 2, byCurrency: { EUR: 200 } }) })));
   ok(withF.includes('200'), 'the foreign money is NAMED beside the pounds figure…');
-  ok(withF.includes(AR.foreignNoCompare), '…and the screen says why no percentage is shown');
+  /**
+   * A7 compressed the policy prose: the default screen carries the ONE muted
+   * line (a door), and the full `foreignNoCompare` sentence renders behind its
+   * tap — `test-chunk-a7.mjs` pins both halves of that. What this suite keeps
+   * asserting is the part that must survive any compression: the screen SAYS
+   * why no percentage is shown, rather than falling silent.
+   */
+  ok(typeof AR.whyNoCompare === 'string' && withF.includes(AR.whyNoCompare),
+    '…and the screen says why no percentage is shown — the one-line door (A7)');
   ok(!/[▲▼]/.test(withF), 'NO percentage marker at all — not a suppressed one, an absent one');
   ok(!withF.includes(AR.noComparison('')) , 'and it does not claim there is no data to compare — there is; it is incomparable');
 
@@ -519,14 +527,12 @@ try {
    */
   const heroOf = (html) => {
     /**
-     * The hero is found by its SIZE, and the size it should be found by is
-     * `TYPE.hero` — the literal 42 is BookView's pre-token hero, still what
-     * renders until Wave 2 retokenizes that view. Both are accepted so this
-     * assertion cannot go red for the wrong reason (a size migration is not a
-     * wrong lead figure). Wave 2 is the collapse point: when BookView reads
-     * `TYPE.hero`, drop the `|42` and this line pins the token too.
+     * The hero is found by its SIZE, and the size is `TYPE.hero` — EXACTLY.
+     * The pre-token literal 42 was accepted here until Wave 2's A4 landed the
+     * retokenization; now the pin is collapsed onto the token, so a hero that
+     * drifts off the vocabulary and a wrong lead figure both go red here.
      */
-    const m = html.match(new RegExp(`font-size:(?:${TYPE.hero}|42)px[^"]*"[^>]*>([^<]*)<`));
+    const m = html.match(new RegExp(`font-size:${TYPE.hero}px[^"]*"[^>]*>([^<]*)<`));
     return m ? m[1] : null;
   };
   const hisWeek = { cur: { Visa: [0, null], Cash: [0, null] },

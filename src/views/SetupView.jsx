@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { LangToggle } from '../components/Primitives.jsx';
 import { probe } from '../api/client.js';
@@ -52,7 +52,7 @@ export default function SetupView({ onDone }) {
   };
 
   const field = {
-    width: '100%', padding: '14px 14px', borderRadius: 12,
+    width: '100%', padding: '14px 14px', borderRadius: RADIUS.row,
     border: `1.5px solid ${C.line}`, background: C.card, color: C.ink,
     fontSize: 16, outline: 'none', marginTop: 6,
   };
@@ -130,7 +130,7 @@ export default function SetupView({ onDone }) {
         onClick={test}
         disabled={state === 'testing'}
         style={{
-          marginTop: 18, width: '100%', minHeight: 56, padding: '16px 0', borderRadius: 14,
+          marginTop: 18, width: '100%', minHeight: 56, padding: '16px 0', borderRadius: RADIUS.row,
           background: state === 'testing' ? C.line : C.harbor,
           color: state === 'testing' ? C.muted : C.onDark,
           fontSize: 17.5, fontWeight: 700,

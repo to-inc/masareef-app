@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { C, METHOD, DIVIDER, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, unitSize } from '../theme.js';
 import { S, SWITCH_TO, DIR } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
@@ -48,7 +48,7 @@ export function LangToggle({ subtle }) {
       onClick={flip}
       lang={otherLang(getLang())}
       style={{
-        minHeight: 32, padding: '4px 12px', borderRadius: 999,
+        minHeight: 32, padding: '4px 12px', borderRadius: RADIUS.capsule,
         background: 'transparent',
         border: `1px solid ${subtle ? C.line : 'rgba(255,255,255,.45)'}`,
         color: subtle ? C.ink : '#fff',
@@ -197,7 +197,7 @@ export function CurrencyToggle({ value, other, onFlip, subtle }) {
       onClick={onFlip}
       aria-label={S.readInUnit(other)}
       style={{
-        minHeight: 32, padding: '4px 12px', borderRadius: 999,
+        minHeight: 32, padding: '4px 12px', borderRadius: RADIUS.capsule,
         background: 'transparent',
         border: `1px solid ${subtle ? C.line : 'rgba(255,255,255,.45)'}`,
         color: subtle ? C.ink : '#fff',
@@ -233,11 +233,11 @@ export function RefreshButton({ state, onPress }) {
       aria-label={busy ? S.refreshing : S.refresh}
       aria-busy={busy ? 'true' : undefined}
       style={{
-        minHeight: TAP, minWidth: TAP, borderRadius: 999,
+        minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: 'transparent',
         border: `1px solid ${failed ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.45)'}`,
-        color: '#fff', fontSize: 17, fontWeight: 700,
+        color: '#fff', fontSize: ICON.control, fontWeight: 700,
         opacity: busy ? 0.6 : 1,
       }}
     >
@@ -266,7 +266,7 @@ export function Chip({ kind, small, label }) {
       style={{
         display: 'inline-block',
         padding: small ? '3px 9px' : '4px 12px',
-        borderRadius: 999,
+        borderRadius: RADIUS.capsule,
         fontSize: small ? 12 : 13,
         fontWeight: 700,
         background: skin.bg,
@@ -292,7 +292,7 @@ export function Delta({ now, prev }) {
         fontWeight: 700,
         color: up ? C.conflictInk : C.settledInk,
         background: up ? C.conflictBg : C.settledBg,
-        borderRadius: 999,
+        borderRadius: RADIUS.capsule,
         padding: '1px 7px',
         marginInlineStart: 6,
         verticalAlign: 'middle',
@@ -324,11 +324,11 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
         style={
           big
             ? {
-                width: 50, height: 50, margin: '-18px auto 2px', borderRadius: 999,
-                background: C.harbor, color: C.onDark, fontSize: 32, lineHeight: '48px',
+                width: 50, height: 50, margin: '-18px auto 2px', borderRadius: RADIUS.capsule,
+                background: C.harbor, color: C.onDark, fontSize: ICON.primary, lineHeight: '48px',
                 fontWeight: 600, boxShadow: '0 6px 16px rgba(62,124,166,.42)',
               }
-            : { fontSize: 21, marginBottom: 2 }
+            : { fontSize: ICON.nav, marginBottom: 2 }
         }
       >
         {icon}
@@ -339,7 +339,7 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
           style={{
             position: 'absolute', top: 6, insetInlineEnd: '24%',
             background: C.conflictInk, color: C.onDark, fontSize: 11, fontWeight: 700,
-            borderRadius: 999, padding: '1px 7px', ...LATIN,
+            borderRadius: RADIUS.capsule, padding: '1px 7px', ...LATIN,
           }}
         >
           {badge}
@@ -363,7 +363,7 @@ export function Toast({ message }) {
         background: C.harbor,
         color: C.onDark,
         padding: '13px 24px',
-        borderRadius: 999,
+        borderRadius: RADIUS.capsule,
         fontSize: 16.5,
         fontWeight: 600,
         boxShadow: '0 8px 24px rgba(62,124,166,.38)',
@@ -385,7 +385,7 @@ export function OfflineBanner({ text }) {
         background: C.sand,
         color: C.ink,
         border: `1px solid ${C.line}`,
-        borderRadius: 12,
+        borderRadius: RADIUS.row,
         padding: '10px 14px',
         fontSize: 14.5,
         fontWeight: 600,
@@ -399,10 +399,12 @@ export function OfflineBanner({ text }) {
 }
 
 export function BigAmount({ amount, currency, size = 30 }) {
+  // §3 stat anatomy (A4): serif value, NON-serif unit at unitSize() —
+  // 0.55× floored at the prose floor, never a bare size * 0.5.
   return (
     <div style={{ fontFamily: FONT_DISPLAY, fontSize: size, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
       {amount}
-      {currency ? <span style={{ fontSize: size * 0.5, color: C.muted, fontWeight: 500 }}> {currency}</span> : null}
+      {currency ? <span style={{ fontSize: unitSize(size), fontFamily: FONT_UI, color: C.muted, fontWeight: 500 }}> {currency}</span> : null}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { C, TAP } from '../theme.js';
+import { C, TAP, RADIUS } from '../theme.js';
 import { S } from '../i18n/strings.js';
 
 /**
@@ -60,7 +60,7 @@ export default function DictateView({ onSend, onCancel, busy }) {
         dir="auto"
         style={{
           width: '100%', fontSize: 19, lineHeight: 1.6, padding: '14px 16px',
-          borderRadius: 14, border: `1px solid ${C.line}`, background: C.card,
+          borderRadius: RADIUS.row, border: `1px solid ${C.line}`, background: C.card,
           color: C.ink, fontFamily: 'inherit', resize: 'none',
         }}
       />
@@ -76,7 +76,7 @@ export default function DictateView({ onSend, onCancel, busy }) {
           onClick={() => onSend(text.trim())}
           disabled={!ready || busy}
           style={{
-            flex: 2, minHeight: 56, borderRadius: 14,
+            flex: 2, minHeight: 56, borderRadius: RADIUS.row,
             /**
              * HARBOUR, NOT AMBER. The warm accent is used exactly ONCE in this
              * app — on the entry dock's confirm — and `test-contrast.mjs`
@@ -94,7 +94,7 @@ export default function DictateView({ onSend, onCancel, busy }) {
           className="catchip"
           onClick={onCancel}
           style={{
-            flex: 1, minHeight: TAP, borderRadius: 14, background: C.card,
+            flex: 1, minHeight: TAP, borderRadius: RADIUS.row, background: C.card,
             border: `1px solid ${C.line}`, color: C.ink, fontSize: 16, fontWeight: 600,
           }}
         >

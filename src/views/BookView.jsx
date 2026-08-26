@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
+import {
+  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, unitSize,
+} from '../theme.js';
 import { S, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, moneyRound, amountWithCurrency } from '../lib/format.js';
@@ -238,10 +240,10 @@ export default function BookView({
       onClick={() => { setBrowsing(null); setPeriod(key); }}
       aria-pressed={period === key}
       style={{
-        flex: 1, minHeight: TAP, padding: '11px 0', borderRadius: 999,
+        flex: 1, minHeight: TAP, padding: '11px 0', borderRadius: RADIUS.capsule,
         background: period === key ? C.harbor : 'transparent',
         color: period === key ? C.onDark : C.ink,
-        fontSize: 15, fontWeight: period === key ? 700 : 600,
+        fontSize: TYPE.label, fontWeight: period === key ? 700 : 600,
       }}
     >
       {S[`period${key[0].toUpperCase()}${key.slice(1)}`]}
@@ -253,7 +255,7 @@ export default function BookView({
       {/* The closed month, handed over on the first of the next one (W-6). */}
       <LogCard prevLog={data.month && data.month.prevLog} todayCairo={today} />
 
-      <div style={{ display: 'flex', background: C.card, border: `1px solid ${C.line}`, borderRadius: 999, padding: 4, marginBottom: 14, gap: 2 }}>
+      <div style={{ display: 'flex', background: C.card, border: `1px solid ${C.line}`, borderRadius: RADIUS.capsule, padding: 4, marginBottom: 14, gap: 2 }}>
         {bookPeriods().map(seg)}
       </div>
 
@@ -299,7 +301,7 @@ export default function BookView({
         */}
       {period === 'month' && (
         <Rail style={{ gap: 8, padding: '14px 0 10px' }}>
-          <span style={{ fontSize: 13, color: C.muted, alignSelf: 'center', whiteSpace: 'nowrap', marginInlineEnd: 4 }}>
+          <span style={{ fontSize: TYPE.label, color: C.muted, alignSelf: 'center', whiteSpace: 'nowrap', marginInlineEnd: 4 }}>
             {S.recentMonths}
           </span>
           {monthStrip(today).map((ref) => {
@@ -311,15 +313,17 @@ export default function BookView({
                 onClick={() => setBrowsing(active ? null : ref)}
                 aria-pressed={!!active}
                 style={{
-                  minHeight: TAP, padding: '0 14px', borderRadius: 999, whiteSpace: 'nowrap', flex: '0 0 auto',
+                  minHeight: TAP, padding: '0 14px', borderRadius: RADIUS.capsule, whiteSpace: 'nowrap', flex: '0 0 auto',
                   background: active ? C.harbor : C.card,
                   border: `1px solid ${active ? C.harbor : C.line}`,
-                  color: active ? C.onDark : C.ink, fontSize: 15, fontWeight: active ? 700 : 500,
+                  color: active ? C.onDark : C.ink, fontSize: TYPE.label, fontWeight: active ? 700 : 500,
                 }}
               >
                 {monthByTab(MONTH_ABBR[ref.m - 1])}
                 {ref.y !== today.y && (
-                  <span style={{ fontSize: 11.5, opacity: 0.7, marginInlineStart: 5, ...LATIN }}>{ref.y}</span>
+                  // Chip years are one of ruling 2's NAMED caption sites — the
+                  // year duplicates what the strip's position already says.
+                  <span style={{ fontSize: TYPE.caption, opacity: 0.7, marginInlineStart: 5, ...LATIN }}>{ref.y}</span>
                 )}
               </button>
             );
@@ -334,8 +338,11 @@ export default function BookView({
 
       {undated > 0 && !loadingRows && period !== 'year' && (
         <p style={{
-          fontSize: 12.5, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
-          borderRadius: 10, padding: '8px 12px', margin: '10px 0', lineHeight: 1.6, textAlign: 'center',
+          // Real information at the prose floor — a caveat he must be able to
+          // read is never caption material. The sand note is a small advisory
+          // panel: RADIUS.inset is its surface.
+          fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
+          borderRadius: RADIUS.inset, padding: '8px 12px', margin: '10px 0', lineHeight: 1.6, textAlign: 'center',
         }}>
           {S.recentUndatedNote(undated)}
         </p>
@@ -353,12 +360,12 @@ export default function BookView({
         */}
       {period !== 'year' && !loadingRows && !loadError && rows.length > 2 && (
         <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 12 }}>
-          <span style={{ color: C.muted, fontSize: 12.5, fontWeight: 700 }}>{S.sortLabel}</span>
+          <span style={{ color: C.muted, fontSize: TYPE.label, fontWeight: 700 }}>{S.sortLabel}</span>
           {['date', 'amount', 'name'].map((k) => (
             <button
               key={k} onClick={() => setSortBy(k)} aria-pressed={sortBy === k}
               style={{
-                minHeight: 34, padding: '4px 12px', borderRadius: 999, fontSize: 13,
+                minHeight: 34, padding: '4px 12px', borderRadius: RADIUS.capsule, fontSize: TYPE.label,
                 fontWeight: 600,
                 background: sortBy === k ? C.harbor : C.card,
                 color: sortBy === k ? C.onDark : C.ink,
@@ -377,14 +384,15 @@ export default function BookView({
         */}
       {period !== 'year' && loadingRows && (
         <div style={{ textAlign: 'center', paddingTop: 48, color: C.muted }}>
-          <div style={{ fontSize: 34 }}>⌛</div>
-          <div style={{ fontSize: 15.5, marginTop: 8 }}>{S.rowsLoading}</div>
+          {/* A picture sized as geometry (GLYPH), not a headline (theme.js). */}
+          <div style={{ fontSize: GLYPH.spot }}>⌛</div>
+          <div style={{ fontSize: TYPE.body, marginTop: 8 }}>{S.rowsLoading}</div>
         </div>
       )}
       {period !== 'year' && !loadingRows && loadError && (
         <div style={{ textAlign: 'center', paddingTop: 48, color: C.muted }}>
-          <div style={{ fontSize: 34 }}>🌫</div>
-          <div style={{ fontSize: 15.5, marginTop: 8 }}>{S.rowsLoadFailed}</div>
+          <div style={{ fontSize: GLYPH.spot }}>🌫</div>
+          <div style={{ fontSize: TYPE.body, marginTop: 8 }}>{S.rowsLoadFailed}</div>
         </div>
       )}
       {period !== 'year' && !loadingRows && !loadError && (
@@ -440,8 +448,8 @@ export default function BookView({
           rel="noopener noreferrer"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            minHeight: TAP, marginTop: 16, borderRadius: 12,
-            color: C.harbor, fontSize: 14.5, fontWeight: 600, textDecoration: 'none',
+            minHeight: TAP, marginTop: 16, borderRadius: RADIUS.row,
+            color: C.harbor, fontSize: TYPE.label, fontWeight: 600, textDecoration: 'none',
           }}
         >
           {S.openTheSheet}
@@ -497,34 +505,36 @@ function Lookalikes({ rows, sheetUrl }) {
 
   return (
     <div style={{
-      marginTop: 14, padding: '13px 15px', borderRadius: 14,
+      marginTop: 14, padding: '13px 15px', borderRadius: RADIUS.row,
       background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
     }}>
-      <div style={{ color: C.conflictInk, fontSize: 15, fontWeight: 700 }}>
+      <div style={{ color: C.conflictInk, fontSize: TYPE.label, fontWeight: 700 }}>
         {S.dupTitle(counts.rows)}
       </div>
-      <div style={{ color: C.ink, fontSize: 14, marginTop: 4, lineHeight: 1.55 }}>
+      <div style={{ color: C.ink, fontSize: TYPE.label, marginTop: 4, lineHeight: 1.55 }}>
         {S.dupBody}
       </div>
 
       {report.groups.map((g) => (
         <div key={g.key} style={{
-          marginTop: 10, padding: '9px 11px', borderRadius: 10,
+          // A small inner panel sitting on the conflict card — RADIUS.inset's
+          // own definition.
+          marginTop: 10, padding: '9px 11px', borderRadius: RADIUS.inset,
           background: C.card,
         }}>
           {/* The tier is stated in words — a percentage would invite him to
               trust a number this has no basis to produce. */}
-          <div style={{ color: C.muted, fontSize: 12.5, fontWeight: 700 }}>
+          <div style={{ color: C.muted, fontSize: TYPE.label, fontWeight: 700 }}>
             {S.dupTier(g.tier)}
           </div>
           {g.rows.map((r, i) => (
             <div key={`${g.key}#${i}`} style={{
               display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 5,
             }}>
-              <span style={{ color: C.ink, fontSize: 14.5, ...ISOLATE }}>
+              <span style={{ color: C.ink, fontSize: TYPE.label, ...ISOLATE }}>
                 {r.description || S.dupNoDescription}
               </span>
-              <span style={{ color: C.ink, fontSize: 14.5, fontWeight: 700, ...NUMERALS, ...LATIN }}>
+              <span style={{ color: C.ink, fontSize: TYPE.label, fontWeight: 700, ...NUMERALS, ...LATIN }}>
                 {amountWithCurrency(r.amount, r.currency)}
               </span>
             </div>
@@ -538,7 +548,7 @@ function Lookalikes({ rows, sheetUrl }) {
         * of its population would be a check that cannot fail on what it dropped.
         */}
       {report.unpriced > 0 && (
-        <div style={{ color: C.muted, fontSize: 12.5, marginTop: 9 }}>
+        <div style={{ color: C.muted, fontSize: TYPE.label, marginTop: 9 }}>
           {S.dupUnpriced(report.unpriced)}
         </div>
       )}
@@ -550,7 +560,7 @@ function Lookalikes({ rows, sheetUrl }) {
           href={sheetUrl} target="_blank" rel="noreferrer"
           style={{
             display: 'inline-block', marginTop: 11, minHeight: TAP, lineHeight: '30px',
-            color: C.harbor, fontSize: 14, fontWeight: 700, textDecoration: 'underline',
+            color: C.harbor, fontSize: TYPE.label, fontWeight: 700, textDecoration: 'underline',
           }}
         >
           {S.dupOpenSheet}
@@ -565,25 +575,80 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
   const travel = travelOf(entries);
   const unknown = (entries || []).filter((e) => needsCategory(e)).length;
 
+  /**
+   * A10 — WHEN THE NUMBER WOULD MISLEAD, THE TRUE SENTENCE LEADS (§8b,
+   * RATIFIED 2026-08-25).
+   *
+   * A day spent entirely abroad has an EGP total of 0, and «0» in the largest
+   * type on the screen tells a retired man he spent nothing on a day he sat in
+   * a café in Nice — the «This week 0» defect (D23) arriving on the Today
+   * head's own data path (per-row `travel`, not the server's `foreign`).
+   *
+   * The selection is `leadAndAsides`, CONSUMED rather than reimplemented: it
+   * can only reorder sums that already exist — each currency summed over its
+   * OWN rows by `travelOf` — and it cannot express a rate, which is what keeps
+   * Boundary 8 (no synthetic conversion) structurally unreachable from here.
+   *
+   * The rule fires ONLY when the EGP figure is zero AND sized foreign money
+   * exists. A day with real EGP money leads EGP exactly as before — the number
+   * does not mislead — and a genuinely empty day leads its TRUE zero: a zero
+   * he really spent is a fact, not a fabrication. (An unpriced foreign row
+   * cannot trigger the lead either — there is no figure to headline — but it
+   * never restores a bare «0» here because there is no bare 0: the zero always
+   * stands beside whatever the day carried.)
+   */
+  const misleads = egp === 0 && travel.length > 0;
+  const { lead, asides } = leadAndAsides(
+    egp,
+    { count: travel.length, byCurrency: Object.fromEntries(travel.map((t) => [t.currency, t.amount])) },
+    misleads ? travel[0].currency : HOME_CURRENCY,
+  );
+  const leadsHome = lead.currency === HOME_CURRENCY;
+
   return (
     <div style={{ textAlign: 'center', padding: '2px 0 16px' }}>
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 42, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
-        {money(egp)}
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
+        {money(lead.amount)}
+        {/**
+          * A4 — the unit rides the figure: inline, NON-serif, muted, at the
+          * floored ratio (`unitSize`, ruling 5). It used to sit on the meta
+          * line below, which is «on its own line» — the exact arrangement §3
+          * forbids. EGP keeps its word («جنيه»/EGP, `S.currency`); a foreign
+          * lead keeps its code, exactly as his sheet writes it (D8).
+          */}
+        <span style={{ fontSize: unitSize(TYPE.hero), fontFamily: FONT_UI, fontWeight: 600, color: C.muted }}>
+          {' '}{leadsHome ? S.currency : lead.currency}
+        </span>
       </div>
-      <div style={{ fontSize: 13.5, color: C.muted, marginTop: 3 }}>
-        {S.currency} · {S.todayCount((entries || []).length)}
+      <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 3 }}>
+        {S.todayCount((entries || []).length)}
       </div>
-      <div style={{ fontSize: 13.5, color: C.muted, marginTop: 7, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+      <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 7, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
         <span>{S.metricVisa} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(totals.Visa)}</b></span>
         <span>{S.metricCash} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(totals.Cash)}</b></span>
       </div>
       {/* Only when there IS one. A day with no foreign spending says nothing
           about foreign spending — the silence is the ordinary case. */}
-      {travel.length > 0 && (
-        <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>
+      {leadsHome && travel.length > 0 && (
+        <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
           {S.travel} {travel.map((t) => (
             <span key={t.currency} style={{ ...LATIN, marginInlineStart: 4 }}>{money(t.amount)} {t.currency}</span>
           ))} — {S.travelApart}
+        </div>
+      )}
+      {/**
+        * A FOREIGN LEAD NEVER STANDS ALONE (N1b's law, arriving here): every
+        * other currency the day touched — the true EGP zero included — is
+        * stated beside it, and «لوحدها» still rides the foreign money, which
+        * is excluded from every EGP sum whichever line it leads.
+        */}
+      {!leadsHome && (
+        <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
+          {S.travelApart} · {asides.map((a) => (
+            <span key={a.currency} style={{ marginInlineStart: 4 }}>
+              {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{money(a.amount)} {a.currency}</b>
+            </span>
+          ))}
         </div>
       )}
       {/**
@@ -598,9 +663,9 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
         <button
           onClick={onOpenBatch}
           style={{
-            marginTop: 12, minHeight: TAP, borderRadius: 12, padding: '9px 16px',
+            marginTop: 12, minHeight: TAP, borderRadius: RADIUS.row, padding: '9px 16px',
             background: C.sand, border: `1px solid ${C.line}`,
-            color: C.amberInk, fontSize: 14.5, fontWeight: 700,
+            color: C.amberInk, fontSize: TYPE.label, fontWeight: 700,
           }}
         >
           {S.batchWaiting(unsettledBatch)}
@@ -611,9 +676,9 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
         <button
           onClick={onGoToInbox}
           style={{
-            marginTop: 12, minHeight: TAP, borderRadius: 12, padding: '9px 16px',
+            marginTop: 12, minHeight: TAP, borderRadius: RADIUS.row, padding: '9px 16px',
             background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
-            color: C.conflictInk, fontSize: 14.5, fontWeight: 700,
+            color: C.conflictInk, fontSize: TYPE.label, fontWeight: 700,
           }}
         >
           {S.todayNeedCategory(unknown)}
@@ -640,6 +705,12 @@ export function PeriodBlock({
   data, labels = [], liveIndex = -1, metric = 'all', setMetric = () => {},
   names = { cur: '', prev: '' }, showBars = false, offPlot, footnote,
   displayCurrency = HOME_CURRENCY,
+  /**
+   * A7 — seeds the policy disclosure open so a static renderer can reach the
+   * detail behind the one-line compression. SSR cannot tap; this is the same
+   * pattern as CumulativeChart's `peekOpen`, for the same reason.
+   */
+  policyOpen = false,
 }) {
   const totals = periodTotals(data, METRICS, offPlot || {});
   const shown = totals[metric] || totals.all;
@@ -679,17 +750,38 @@ export function PeriodBlock({
    * line saying why, rather than silence or a number about the wrong thing.
    */
   const leadsHome = lead.currency === HOME_CURRENCY;
+  /**
+   * A7 — THE FOREIGN-MONEY ESSAY IS ONE MUTED LINE, ITS DETAIL ONE TAP AWAY.
+   *
+   * Two rules can suppress the comparison here — foreign money in either
+   * period, a lead unit with no history — and each used to state its own
+   * sentence, stacked, on the screen he opens for reassurance. The rules are
+   * unchanged; only their PROSE compresses: one line (`S.whyNoCompare`) that
+   * is true under every suppression, with the full sentences behind its tap.
+   * The FIGURES never compress — asides and the unsized count are money, not
+   * policy, and folding money away would spend honesty to buy calm.
+   */
+  const policySuppressed = hasForeign(foreign) || hasForeign(prevForeign) || !leadsHome;
+  const [whyOpen, setWhyOpen] = useState(!!policyOpen);
 
   return (
     <>
       <div style={{ textAlign: 'center', padding: '2px 0 12px' }}>
-        <div style={{ fontSize: 13.5, color: C.muted }}>{names.cur}</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 42, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
+        {/* Stat anatomy (A4): the label above, muted, at the prose floor. */}
+        <div style={{ fontSize: TYPE.label, color: C.muted }}>{names.cur}</div>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
           {moneyRound(lead.amount)}
-          {/* The unit rides the figure whenever it is not the book's own. A bare
-              80 where euros are meant is §6.0's hazard reaching through the
-              human instead of through the wire. */}
-          {!leadsHome && <span style={{ fontSize: 22, fontWeight: 600 }}> {lead.currency}</span>}
+          {/**
+            * A4 — the unit ALWAYS rides the figure now: inline, NON-serif,
+            * muted, at the floored ratio (`unitSize`, ruling 5). A bare 80
+            * where euros are meant is §6.0's hazard reaching through the human
+            * instead of through the wire — and a bare 350 where pounds are
+            * meant was the same hazard's quiet twin. EGP keeps its word
+            * (`S.currency`); a foreign lead keeps its code, as the sheet does.
+            */}
+          <span style={{ fontSize: unitSize(TYPE.hero), fontFamily: FONT_UI, fontWeight: 600, color: C.muted }}>
+            {' '}{leadsHome ? S.currency : lead.currency}
+          </span>
         </div>
         {/**
           * ONE SENTENCE, and it is not drawn when it cannot be earned.
@@ -703,8 +795,8 @@ export function PeriodBlock({
           * PART of the period, and may only appear accompanied by what it
           * excludes — one line per currency, never summed across them.
           */}
-        {asides.length > 0 && (
-          <div style={{ fontSize: 14.5, color: C.muted, marginTop: 6, lineHeight: 1.7 }}>
+        {(asides.length > 0 || unsized > 0) && (
+          <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6, lineHeight: 1.7 }}>
             {/**
               * EVERY CURRENCY THE PERIOD TOUCHED, MINUS THE ONE LEADING. This
               * used to be «the foreign lines», which was the same list only
@@ -719,32 +811,59 @@ export function PeriodBlock({
                 {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {l.currency}</b>
               </span>
             ))}
-            {/* Money we know is there and cannot size — said, not implied. */}
-            {unsized > 0 && <div style={{ fontSize: 13 }}>{S.foreignUnsized(unsized)}</div>}
-            <div style={{ fontSize: 13, marginTop: 2 }}>{S.foreignNoCompare}</div>
+            {/* Money we know is there and cannot size — said, not implied, and
+                NOT behind the tap: a count of money is a figure, not policy. */}
+            {unsized > 0 && <div style={{ fontSize: TYPE.label }}>{S.foreignUnsized(unsized)}</div>}
           </div>
         )}
 
-        {!leadsHome && (
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
-            {S.noCompareInUnit(lead.currency)}
+        {/**
+          * A7 — the ONE policy line a screen may state, and it is a DOOR. The
+          * full sentences (which rule refused the comparison, and why that is
+          * the honest refusal) live behind it; the tap toggles them the way
+          * the same-point marker explains itself on tap (A6).
+          */}
+        {policySuppressed && (
+          <button
+            onClick={() => setWhyOpen((v) => !v)}
+            aria-expanded={whyOpen}
+            style={{
+              minHeight: TAP, padding: '0 12px', marginTop: 2,
+              background: 'transparent', color: C.muted, fontSize: TYPE.label,
+            }}
+          >
+            {S.whyNoCompare}
+          </button>
+        )}
+        {policySuppressed && whyOpen && (
+          <div style={{ fontSize: TYPE.label, color: C.muted, lineHeight: 1.7, marginTop: 2 }}>
+            {(hasForeign(foreign) || hasForeign(prevForeign)) && <div>{S.foreignNoCompare}</div>}
+            {!leadsHome && <div>{S.noCompareInUnit(lead.currency)}</div>}
           </div>
         )}
 
         {cmp && leadsHome ? (
-          <div style={{ fontSize: 16, marginTop: 6 }}>
+          <div style={{ fontSize: TYPE.body, marginTop: 6 }}>
             {cmp.direction === 'same'
               ? S.sameAs(names.prev)
               : (
                 <>
                   {cmp.direction === 'down' ? S.lessThan(names.prev) : S.moreThan(names.prev)}{' '}
-                  <b style={{ color: cmp.direction === 'down' ? C.settledInk : C.conflictInk, ...LATIN }}>{cmp.pct}%</b>
-                  <span style={{ color: C.muted, fontSize: 14 }}> ({S.wasThen} <span style={LATIN}>{moneyRound(cmp.prevAt)}</span>)</span>
+                  {/**
+                    * A5 — NEUTRAL DELTAS (north-star §5: «deltas carry no
+                    * moral color»; boundary 4). This bold used to turn
+                    * settled-green going down and conflict-red going up, which
+                    * is a VERDICT on his own spending: red meaning spent-more
+                    * makes information into sin, and the words already carry
+                    * the direction. Body ink, both directions, always.
+                    */}
+                  <b style={{ color: C.ink, ...LATIN }}>{cmp.pct}%</b>
+                  <span style={{ color: C.muted, fontSize: TYPE.label }}> ({S.wasThen} <span style={LATIN}>{moneyRound(cmp.prevAt)}</span>)</span>
                 </>
               )}
           </div>
-        ) : hasForeign(foreign) || hasForeign(prevForeign) || !leadsHome ? null : (
-          <div style={{ fontSize: 13.5, color: C.muted, marginTop: 6 }}>{S.noComparison(names.prev)}</div>
+        ) : policySuppressed ? null : (
+          <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>{S.noComparison(names.prev)}</div>
         )}
       </div>
 
@@ -814,8 +933,10 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
   if (undated && undated.count > 0) caveats.push(S.undatedNote(undated.count));
   const footnote = caveats.length ? (
     <p style={{
-      fontSize: 12.5, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
-      borderRadius: 10, padding: '8px 12px', margin: '10px 0 0', lineHeight: 1.6, textAlign: 'center',
+      // A caveat is real information: prose floor, never caption. The sand
+      // note is a small advisory panel — RADIUS.inset is its surface.
+      fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
+      borderRadius: RADIUS.inset, padding: '8px 12px', margin: '10px 0 0', lineHeight: 1.6, textAlign: 'center',
     }}>
       {caveats.join(' · ')}
     </p>
@@ -851,6 +972,17 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
         open={lensOpen}
         onToggle={onToggleLens}
       />
+      {/**
+        * A7 — the category list sits under a NAME («مقابل يوليو» / «Against
+        * July»), not under an inference from its legend chips. The name
+        * carries the comparison subject because that is the question the list
+        * answers: how each line moved against the month it is read against.
+        */}
+      {/* SPACE.section IS this gap's definition: the breath between one
+          titled group and the next. */}
+      <div style={{ marginTop: SPACE.section }}>
+        <SectionLabel>{S.sectionAgainst(monthName(data.month.names.prev))}</SectionLabel>
+      </div>
       <CategoryCompare
         cats={data.monthCats}
         curName={monthName(data.month.names.cur)}
@@ -877,13 +1009,14 @@ function RowList({ rows, settled, onEdit, open, setOpen, tabName, showDate, empt
       <div style={{ textAlign: 'center', paddingTop: 60 }}>
         {emptyTitle && (
           <>
-            <div style={{ fontSize: 46 }}>🌙</div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 8 }}>
+            {/* A picture sized as geometry (GLYPH), not a headline (theme.js). */}
+            <div style={{ fontSize: GLYPH.illustration }}>🌙</div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harbor, marginTop: 8 }}>
               {emptyTitle}
             </div>
           </>
         )}
-        <div style={{ color: C.muted, fontSize: 15.5, marginTop: 8 }}>{emptyBody}</div>
+        <div style={{ color: C.muted, fontSize: TYPE.body, marginTop: 8 }}>{emptyBody}</div>
       </div>
     );
   }
@@ -913,7 +1046,7 @@ function RowList({ rows, settled, onEdit, open, setOpen, tabName, showDate, empt
             key={key}
             style={{
               background: gap ? C.shell : C.card, border: `1px solid ${gap ? C.conflictLine : C.line}`,
-              borderRadius: 14, marginBottom: 8, opacity: inert ? 0.62 : 1, transition: 'opacity .2s ease',
+              borderRadius: RADIUS.row, marginBottom: 8, opacity: inert ? 0.62 : 1, transition: 'opacity .2s ease',
             }}
           >
             <button
@@ -926,14 +1059,18 @@ function RowList({ rows, settled, onEdit, open, setOpen, tabName, showDate, empt
               }}
             >
               <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
-                <span style={{ fontSize: 16, fontWeight: 600, ...LATIN, overflow: 'hidden', textOverflow: 'ellipsis' }} dir="auto">
+                <span style={{ fontSize: TYPE.body, fontWeight: 600, ...LATIN, overflow: 'hidden', textOverflow: 'ellipsis' }} dir="auto">
                   {row.description}
                 </span>
-                <span style={{ fontSize: 12.5, color: C.muted, display: 'flex', gap: 8, alignItems: 'center' }}>
+                {/* Row meta — one of ruling 2's NAMED caption sites: the date,
+                    chip and category annotate the description above them. */}
+                <span style={{ fontSize: TYPE.caption, color: C.muted, display: 'flex', gap: 8, alignItems: 'center' }}>
                   {showDate && <span style={LATIN}>{row.date}</span>}
                   <Chip kind={row.method} small label={row.method === 'Visa' ? S.metricVisa : S.metricCash} />
                   {gap
-                    ? <span style={{ color: C.harbor, fontWeight: 700 }}>{S.rowNeedsCategory}</span>
+                    // The door's PROMPT is an action he must read, not meta —
+                    // it stays at the prose floor even inside the caption row.
+                    ? <span style={{ color: C.harbor, fontWeight: 700, fontSize: TYPE.label }}>{S.rowNeedsCategory}</span>
                     : <span style={{ color: C.ink }} dir="auto">{categoryLabel(row.category)}</span>}
                   {/**
                     * HE NEVER CHOSE THIS ONE (finding A2, re-scoped).
@@ -952,17 +1089,21 @@ function RowList({ rows, settled, onEdit, open, setOpen, tabName, showDate, empt
                     * into a screen full of alerts.
                     */}
                   {row.auto && !gap && (
-                    <span style={{ color: C.muted, fontSize: 12 }} title={S.rowAutoTitle}>
+                    // «auto» is ruling 2's first named caption case.
+                    <span style={{ color: C.muted, fontSize: TYPE.caption }} title={S.rowAutoTitle}>
                       {S.rowAuto}
                     </span>
                   )}
                 </span>
               </span>
               {/* An unpriced row renders —, never 0: a figure he never wrote. */}
-              <span style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
+              <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
                 {row.amount == null ? '—' : money(row.amount)}
+                {/* The currency is a UNIT beside a value, not an annotation —
+                    it is the only place saying EUR, so ruling 5's floor
+                    (unitSize) governs it, and it is non-serif (A4). */}
                 {row.amount != null && row.currency && row.currency !== 'EGP'
-                  ? <span style={{ fontSize: 12, color: C.muted }}> {row.currency}</span> : null}
+                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, color: C.muted }}> {row.currency}</span> : null}
               </span>
             </button>
 
