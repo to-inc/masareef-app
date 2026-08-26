@@ -5,10 +5,11 @@ import { METRICS } from '../lib/constants.js';
 import { money, moneyRound, amountWithCurrency } from '../lib/format.js';
 import { periodTotals, comparisonOf } from '../lib/series.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
+import { leadAndAsides, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
 import { fetchEntries } from '../api/index.js';
 import { findLookalikes, lookalikeCounts } from '../state/duplicates.js';
 import { PeriodSummary, CategoryCompare, PriorityLens } from '../components/Charts.jsx';
-import { Chip, LATIN, ISOLATE, SectionLabel } from '../components/Primitives.jsx';
+import { Chip, LATIN, ISOLATE, SectionLabel, Rail } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, needsHim } from '../state/inboxOutcomes.js';
 import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay } from '../state/recent.js';
@@ -53,6 +54,13 @@ import LogCard from '../components/LogCard.jsx';
 export default function BookView({
   data, settled = {}, onEdit, onGoToInbox, onBusyChange,
   unsettledBatch = 0, onOpenBatch,
+  /**
+   * The install's reading unit (D23). A PROP rather than a module read inside
+   * `PeriodBlock`, so a suite can render the same week in either unit without a
+   * storage shim — and so there is exactly one place the choice enters the
+   * screen. Defaults to the book's own unit: Dad's install is unmoved.
+   */
+  displayCurrency = getDisplayCurrency(),
 }) {
   const [period, setPeriod] = useState('today');
   /**
@@ -262,12 +270,14 @@ export default function BookView({
           data={data.week} labels={WEEK_DAYS} liveIndex={liveWeekIndex}
           metric={metric} setMetric={setMetric}
           names={{ cur: S.thisWeek, prev: S.lastWeek }} showBars
+          displayCurrency={displayCurrency}
         />
       )}
 
       {period === 'month' && (
         <MonthScreen
           data={data} metric={metric} setMetric={setMetric} onGoToInbox={onGoToInbox}
+          displayCurrency={displayCurrency}
           lensOpen={lensIsOpen}
           onToggleLens={() => setLensIsOpen((v) => setLensOpen(!v))}
         />
@@ -278,6 +288,7 @@ export default function BookView({
           data={data.year} labels={MONTH_LABELS} liveIndex={today.m - 1}
           metric={metric} setMetric={setMetric}
           names={{ cur: String(today.y), prev: String(today.y - 1) }} showBars
+          displayCurrency={displayCurrency}
         />
       )}
 
@@ -287,7 +298,7 @@ export default function BookView({
         * year. Reverse-chronological since S9.
         */}
       {period === 'month' && (
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '14px 0 10px' }}>
+        <Rail style={{ gap: 8, padding: '14px 0 10px' }}>
           <span style={{ fontSize: 13, color: C.muted, alignSelf: 'center', whiteSpace: 'nowrap', marginInlineEnd: 4 }}>
             {S.recentMonths}
           </span>
@@ -313,7 +324,7 @@ export default function BookView({
               </button>
             );
           })}
-        </div>
+        </Rail>
       )}
 
       {/* Gated on !loadingRows with everything else: during a cold July read
@@ -499,7 +510,7 @@ function Lookalikes({ rows, sheetUrl }) {
       {report.groups.map((g) => (
         <div key={g.key} style={{
           marginTop: 10, padding: '9px 11px', borderRadius: 10,
-          background: C.card, border: `1px solid ${C.line}`,
+          background: C.card,
         }}>
           {/* The tier is stated in words — a percentage would invite him to
               trust a number this has no basis to produce. */}
@@ -628,6 +639,7 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
 export function PeriodBlock({
   data, labels = [], liveIndex = -1, metric = 'all', setMetric = () => {},
   names = { cur: '', prev: '' }, showBars = false, offPlot, footnote,
+  displayCurrency = HOME_CURRENCY,
 }) {
   const totals = periodTotals(data, METRICS, offPlot || {});
   const shown = totals[metric] || totals.all;
@@ -646,12 +658,38 @@ export function PeriodBlock({
   const unsized = unsizedForeign(foreign);
   const cmp = mayCompare(foreign, prevForeign) ? comparisonOf(shown.now, shown.prevAt) : null;
 
+  /**
+   * WHICH UNIT LEADS (D23, chunk N1b).
+   *
+   * «This week 0» over a real 80 EUR week was every figure true and the subject
+   * wrong. The headline's unit now follows his LIFE rather than the ledger's
+   * history — and this is a REORDERING of two sums the server already computed,
+   * each over its own rows. Nothing here converts; `leadAndAsides` cannot even
+   * express a rate, and the suite pins that the only figures on screen are the
+   * ones the payload carried.
+   */
+  const { lead, asides } = leadAndAsides(shown.now, foreign, displayCurrency);
+  /**
+   * A PERCENTAGE MUST DESCRIBE THE NUMBER ABOVE IT.
+   *
+   * The comparison is computed from the EGP series, so under a EUR headline it
+   * would be a confident statement about the ASIDE — read, inevitably, as being
+   * about the figure it sits under. There is no euro history to compare against
+   * until D23's backend half lands, so the honest output is no percentage and a
+   * line saying why, rather than silence or a number about the wrong thing.
+   */
+  const leadsHome = lead.currency === HOME_CURRENCY;
+
   return (
     <>
       <div style={{ textAlign: 'center', padding: '2px 0 12px' }}>
         <div style={{ fontSize: 13.5, color: C.muted }}>{names.cur}</div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 42, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
-          {moneyRound(shown.now)}
+          {moneyRound(lead.amount)}
+          {/* The unit rides the figure whenever it is not the book's own. A bare
+              80 where euros are meant is §6.0's hazard reaching through the
+              human instead of through the wire. */}
+          {!leadsHome && <span style={{ fontSize: 22, fontWeight: 600 }}> {lead.currency}</span>}
         </div>
         {/**
           * ONE SENTENCE, and it is not drawn when it cannot be earned.
@@ -665,9 +703,18 @@ export function PeriodBlock({
           * PART of the period, and may only appear accompanied by what it
           * excludes — one line per currency, never summed across them.
           */}
-        {hasForeign(foreign) && (
+        {asides.length > 0 && (
           <div style={{ fontSize: 14.5, color: C.muted, marginTop: 6, lineHeight: 1.7 }}>
-            {lines.map((l) => (
+            {/**
+              * EVERY CURRENCY THE PERIOD TOUCHED, MINUS THE ONE LEADING. This
+              * used to be «the foreign lines», which was the same list only
+              * while EGP always led. Now that the lead can move, the aside is
+              * whatever the lead is not — including the POUNDS, which is what
+              * keeps a «0 EUR» headline honest. D23's own worked example is
+              * «80 EUR · and with it 0 EGP»: the zero was never the defect, a
+              * zero standing ALONE was.
+              */}
+            {asides.map((l) => (
               <span key={l.currency} style={{ marginInlineEnd: 10 }}>
                 {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {l.currency}</b>
               </span>
@@ -678,7 +725,13 @@ export function PeriodBlock({
           </div>
         )}
 
-        {cmp ? (
+        {!leadsHome && (
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
+            {S.noCompareInUnit(lead.currency)}
+          </div>
+        )}
+
+        {cmp && leadsHome ? (
           <div style={{ fontSize: 16, marginTop: 6 }}>
             {cmp.direction === 'same'
               ? S.sameAs(names.prev)
@@ -690,7 +743,7 @@ export function PeriodBlock({
                 </>
               )}
           </div>
-        ) : hasForeign(foreign) || hasForeign(prevForeign) ? null : (
+        ) : hasForeign(foreign) || hasForeign(prevForeign) || !leadsHome ? null : (
           <div style={{ fontSize: 13.5, color: C.muted, marginTop: 6 }}>{S.noComparison(names.prev)}</div>
         )}
       </div>
@@ -720,7 +773,7 @@ export function PeriodBlock({
  * mounted with the wrong props — the class a source regex cannot see. As a
  * component, `test-accountability.mjs` renders exactly what he sees.
  */
-export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens }) {
+export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens, displayCurrency }) {
   // Honest incompleteness (06 §2.2): a month we cannot fully account for must
   // never render as a confident number. `undated` rows are in the total but not
   // the chart; `unpriced` rows are in neither, so the total is knowably short.
@@ -773,6 +826,7 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
       <PeriodBlock
         data={data.month} labels={[]} liveIndex={-1}
         metric={metric} setMetric={setMetric}
+        displayCurrency={displayCurrency}
         names={{ cur: monthName(data.month.names.cur), prev: monthName(data.month.names.prev) }}
         showBars={false}
         footnote={footnote}

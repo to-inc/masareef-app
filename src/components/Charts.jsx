@@ -4,6 +4,7 @@ import { S, categoryLabel } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
 import { rollup } from '../lib/priorities.js';
+import { HOME_CURRENCY } from '../state/display.js';
 import { Delta, LATIN } from './Primitives.jsx';
 
 /**
@@ -156,7 +157,30 @@ export function PairedBars({ cur, prev, labels, liveIndex, color }) {
  */
 export function MetricCards({ metric, setMetric, computed, comparable = true }) {
   return (
-    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+    <div>
+      {/**
+        * THE UNIT THIS ROW IS DENOMINATED IN (D23 stage 1).
+        *
+        * ⚠️ FOUND BY OPENING IT. With the headline correctly reading «0 EUR»
+        * these cards went on printing «الكل 2,139 ▲93%» — bare figures and
+        * percentages, in smaller type, under a euro hero. Nothing on them said
+        * pounds, so a reader converts them himself, which is Boundary 8's
+        * synthetic conversion arriving through the person instead of the code.
+        *
+        * That is this file's OWN comment, four lines up, coming true a second
+        * time: «Same rule, second render path — and the cards are the smaller
+        * type, so it would have survived a visual check.» It did survive one.
+        * It did not survive a device.
+        *
+        * LABELLED, NOT BLANKED. `comparable={false}` exists here and would have
+        * hidden the deltas, but «2,139 EGP ▲93%» is a true and complete
+        * sentence — suppressing it would delete real information to solve an
+        * ambiguity that one word fixes.
+        */}
+      <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, textAlign: 'center', ...LATIN }}>
+        {S.chartUnit(HOME_CURRENCY)}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
       {METRICS.map((m) => {
         const active = metric === m.key;
         const { now, prevAt } = computed[m.key];
@@ -202,6 +226,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true }) 
           </button>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -232,7 +257,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true }) 
 export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized }) {
   const max = Math.max(...cats.map((c) => Math.max(c.now, c.prev)), 1);
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginTop: 12 }}>
+    <div style={{ background: C.card, borderRadius: 16, padding: 14, marginTop: 12 }}>
       <div style={{ display: 'flex', gap: 14, fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.harbor, marginInlineEnd: 5, verticalAlign: '-1px' }} />{curName}</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.line, marginInlineEnd: 5, verticalAlign: '-1px' }} />{prevName}</span>
@@ -468,12 +493,49 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
 
   return (
     <div>
-      <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: '14px 12px 10px' }}>
+      <div style={{ background: C.card, borderRadius: 16, padding: '14px 12px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px 8px', gap: 8 }}>
           <span style={{ fontSize: 13.5, fontWeight: 700, color }}>
             {periodNames.cur} <span style={{ color: C.muted, fontWeight: 500 }}>{S.vs} {periodNames.prev}</span>
           </span>
-          <span style={{ fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>{S.cumulativeNote}</span>
+          {/**
+            * THE UNIT THE CHART IS ACTUALLY DRAWN IN (D23 stage 1).
+            *
+            * The series is EGP and only EGP — there is no euro history to plot
+            * until the backend half derives home-denominated aggregates from
+            * D21's stamped rates. So under a EUR headline this chart is in a
+            * DIFFERENT unit from the number above it, which is fine only while
+            * it says so. An unlabelled axis beneath a euro hero gets read as
+            * euros, and that is a synthetic conversion performed by the reader
+            * instead of by the code — Boundary 8 reached through the human, the
+            * same route the keypad's contradictory toggle took.
+            *
+            * It sits in the slot the legend vacated: the caption that pre-
+            * answered a question the chart answers on contact is gone, and what
+            * stands here instead is a fact the chart cannot show on its own.
+            */}
+          <span style={{ fontSize: 11.5, color: C.muted, whiteSpace: 'nowrap', ...LATIN }}>
+            {S.chartUnit(HOME_CURRENCY)}
+          </span>
+          {/**
+            * ⚠️ THE LEGEND LINE WAS DELETED HERE (North Star §5, Phase A).
+            *
+            * It read «cumulative · ● = same point» at 11px — the smallest text
+            * in the app, `nowrap`, competing for the same row as the heading it
+            * explained. §5: «the legend line is deleted; color does the work;
+            * the marker explains itself on tap.»
+            *
+            * The two facts it carried are not lost. The line IS cumulative and
+            * the shape of the curve says so; the ● marker already has its own
+            * tap affordance below. What is gone is a permanent caption spending
+            * a whole row, every render, to pre-answer a question the chart
+            * answers on contact — and spending it at a size the senior-first
+            * law would not permit anywhere else.
+            *
+            * `S.cumulativeNote` was removed from BOTH locales in the same
+            * change; a key left behind is the next reader's evidence that the
+            * caption should exist.
+            */}
         </div>
         {/* Time axes stay left→right regardless of the RTL document */}
         {!plottable ? (

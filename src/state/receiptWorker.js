@@ -85,6 +85,26 @@ export function createWorker({ queue, extract, onChange }) {
           // failed attempt would let a later render show fields from a call the
           // server refused.
           extraction: outcome.stage === 'ready' ? res : null,
+          /**
+           * THE REASON SURVIVES THE REFUSAL (chunk N1).
+           *
+           * The rule above stands — the refused BODY is still dropped. This is
+           * one published enum value (06 §6 `not_expense_reason`), stored so the
+           * queue row can say WHY rather than only «not a receipt», which is
+           * true of a pending authorization, a balance screen, an incoming
+           * transfer and a menu alike and therefore answers none of them.
+           *
+           * Persisting it here rather than reading it at render time is what
+           * makes the label REACHABLE: the row renders from the stored job long
+           * after `res` is gone, so a label fix alone would have been a string
+           * that never fires in the field.
+           *
+           * `null` when the server named no reason — an older deployment, or
+           * `other`, which means "no more specific reason" and is exactly when
+           * the generic label is the honest one.
+           */
+          notExpenseReason: (outcome.stage === 'notReceipt'
+            && res && res.extraction && res.extraction.not_expense_reason) || null,
         });
         processed += 1;
         onChange?.();

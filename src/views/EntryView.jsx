@@ -7,7 +7,7 @@ import { METHODS } from '../state/entryPayload.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { normalizeDigits } from '../lib/format.js';
 import { entryReady, dockState, pressKey } from '../state/entryDock.js';
-import { SectionLabel, LATIN, ISOLATE } from '../components/Primitives.jsx';
+import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx';
 
 /**
  * The manual entry screen (was CashView).
@@ -184,12 +184,7 @@ export default function EntryView({
         * right edge, and the same sideways pattern is already how he browses
         * months in «الأخير».
         */}
-      <div
-        style={{
-          display: 'flex', gap: 7, overflowX: 'auto', marginBottom: 14,
-          paddingBottom: 2, WebkitOverflowScrolling: 'touch',
-        }}
-      >
+      <Rail style={{ gap: 7, marginBottom: 14, paddingBottom: 2 }}>
         {/**
           * HIS OWN LAST ENTRIES, WITH THEIR AMOUNTS (finding A3).
           *
@@ -234,7 +229,7 @@ export default function EntryView({
             )}
           </button>
         ))}
-      </div>
+      </Rail>
 
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }} role="group" aria-label={S.entryMethod}>

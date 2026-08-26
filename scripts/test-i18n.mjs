@@ -137,6 +137,16 @@ const NULLABLE_LOOKUPS = {
     named: ['balance_screen', 'pending_or_declined', 'incoming', 'menu_or_pricelist'],
     nulls: ['other', 'a_reason_invented_next_year', undefined, null, ''],
   },
+  /**
+   * The queue row's short form of the same enum (N1). Registered here rather
+   * than exempted: the row label falls back to the generic «مش فاتورة» on null
+   * exactly as the detail body falls back to its generic paragraph, so the null
+   * is load-bearing in both and is checked in both.
+   */
+  jobNotExpense: {
+    named: ['balance_screen', 'pending_or_declined', 'incoming', 'menu_or_pricelist'],
+    nulls: ['other', 'a_reason_invented_next_year', undefined, null, ''],
+  },
 };
 for (const [name, loc] of [['ar', AR_LOCALE], ['en', EN_LOCALE]]) {
   for (const k of Object.keys(loc.S)) {

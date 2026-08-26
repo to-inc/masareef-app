@@ -120,6 +120,17 @@ export const AR = {
   jobReady: 'جاهز — راجعه',
   // حكم، مش كارت تأكيد. قبل كده كان بيقول «جاهز — راجعه» ومفيش حاجة تتراجع
   // (R-receipts 4).
+  /**
+   * The refusal row's way INTO the full explanation (N1).
+   *
+   * This button used to be labelled with the verdict itself — the row said
+   * «مش فاتورة» and then offered a button saying «مش فاتورة», which restated the status as
+   * though it were an action and spent the card's one affordance saying nothing
+   * new. Now that the status line carries the REASON, the button carries what
+   * the status cannot fit: the paragraph on the detail screen that says what to
+   * do about it.
+   */
+  jobWhy: 'اعرف ليه',
   jobReadAgain: 'اقرأها تاني',
   notExpenseReason: (r) => ({
     balance_screen: 'دي شاشة رصيد مش عملية شرا. الرصيد مش مصروف — صوّر الفاتورة أو تأكيد الدفع.',
@@ -129,6 +140,28 @@ export const AR = {
     other: null,
   }[r] || null),
   jobNotReceipt: 'مش فاتورة',
+  /**
+   * THE SAME ENUM, AT ROW LENGTH (chunk N1).
+   *
+   * `notExpenseReason` above is the DETAIL screen's paragraph. This is the queue
+   * ROW's version of the same fact: he scans the list, and «مش فاتورة» is true of a
+   * pending authorization, a balance screen, an incoming transfer and a menu
+   * alike — so it distinguishes none of them and answers none of the questions
+   * he actually has. For a pending payment the answer is that there is nothing
+   * to record YET, which is a different instruction from every other member of
+   * that set.
+   *
+   * Same null convention as its long twin: an unnamed reason returns null and
+   * the caller keeps the generic label, because a refusal we cannot explain must
+   * not be dressed in an explanation we invented.
+   */
+  jobNotExpense: (r) => ({
+    balance_screen: 'ده رصيد — مش مصروف',
+    pending_or_declined: 'لسه ما اتخصمتش',
+    incoming: 'فلوس داخلة — مش مصروف',
+    menu_or_pricelist: 'قائمة أسعار — مش فاتورة',
+    other: null,
+  }[r] || null),
   jobDismissed: 'اتقفلت',
   jobFailed: 'محصلش — جرّب تاني',
   jobCapped: 'وصلنا حد النهاردة — هيكمل بكرة',
@@ -287,6 +320,16 @@ export const AR = {
 
   // ——— فلوس بعملة تانية جوه الفترة: الرقم بالجنيه مش كل الفترة.
   andAlso: 'ومعاهم',
+  /**
+   * No comparison exists for a unit we have no history in (D23, chunk N1b).
+   * The percentage is computed from the EGP series; under a euro headline it
+   * would be a confident claim about the ASIDE, read as being about the figure
+   * it sits beneath. Said rather than silently dropped — a suppressed
+   * comparison that explains itself is the house rule.
+   */
+  chartUnit: (cur) => `بالـ${cur}`,
+  readInUnit: (cur) => `اقرا بالـ${cur}`,
+  noCompareInUnit: (cur) => `لسه مفيش تاريخ بالـ${cur} نقارن بيه`,
   foreignNoCompare: 'فيه مصاريف بعملة تانية — المقارنة بالجنيه لوحدها مش هتكون صح',
   foreignUnsized: (n) => `و${n} ${n === 1 ? 'مصروف' : 'مصاريف'} بعملة تانية من غير تمن`,
   // السطر اللي من غير نوع بقى زرار في كل مكان بيظهر فيه (M6).
@@ -321,7 +364,6 @@ export const AR = {
   metricCash: 'كاش',
 
   vs: 'مقابل',
-  cumulativeNote: 'تراكمي · ● = نفس النقطة',
   avg: 'متوسط',
   // Shown when there is nothing to compare against — better than describing a
   // grey line he cannot see.

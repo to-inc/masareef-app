@@ -211,6 +211,9 @@ try {
    * this project keeps finding. A machine must be able to tell the difference.
    */
   const { JobsList } = await vite.ssrLoadModule('/src/views/ReceiptView.jsx');
+  // The Arabic locale, by name. Asserting against the STRING rather than a copy
+  // of it keeps the check honest if the wording is ever revised.
+  const { AR } = await vite.ssrLoadModule('/src/i18n/strings.ar.js');
   /**
    * A RENDER THAT THROWS IS REPORTED, NOT PROPAGATED.
    *
@@ -277,6 +280,44 @@ try {
   const settled = rowText([{ id: 'd', stage: 'dismissed', queuedAt: 9, extraction: notReceipt }]);
   ok(settled.includes('اتقفلت'), 'and once he has read it, the row says so');
   ok(!settled.includes('مش فاتورة'), 'without still presenting the verdict as news');
+
+  /**
+   * ═══ CHUNK N1 — THE ROW SAYS *WHY*, NOT JUST *NO* ═══
+   *
+   * The Owner's field question, 2026-08-25. «مش فاتورة» is true of a pending
+   * authorization, a balance screen, an incoming transfer and a menu alike — so
+   * it answers none of them. It tells him the app declined without telling him
+   * whether he must do something about it, and for a PENDING payment the answer
+   * is that there is nothing to record YET, which is a different instruction
+   * from every other member of that set.
+   *
+   * `not_expense_reason` has been on the wire since August. The detail screen
+   * reads it; the queue row — the surface he actually scans — never has.
+   *
+   * The generic label stays for a refusal with NO reason: an older server, or a
+   * reason the enum does not name, must not be dressed in a specific sentence
+   * we invented. Two cases, two renderings, exactly as «we could not check»
+   * stays apart from «we checked and it is clean».
+   */
+  const pending = rowText([{ id: 'p', stage: 'notReceipt', queuedAt: 9,
+    notExpenseReason: 'pending_or_declined' }]);
+  ok(!pending.includes('مش فاتورة'),
+    'a PENDING authorization does not get the generic refusal…');
+  /**
+   * A THROW IS A NAMED FAILURE, NOT A DEAD PROCESS — and this assertion proved
+   * it on itself. Written as a bare `AR.jobNotExpense(...)` it did not go red
+   * while the key was missing: it threw `is not a function` and killed the run,
+   * so the three assertions after it never spoke. A red test that dies is not a
+   * red test; it is a suite with no verdict.
+   */
+  const reasonWords = typeof AR.jobNotExpense === 'function'
+    ? AR.jobNotExpense('pending_or_declined') : null;
+  ok(reasonWords && pending.includes(reasonWords),
+    '…it says why, on the row, in the words the reason names');
+
+  const reasonless = rowText([{ id: 'n', stage: 'notReceipt', queuedAt: 9 }]);
+  ok(reasonless.includes('مش فاتورة'),
+    'and a refusal with NO reason keeps the generic label — an unnamed reason is not a licence to invent one');
 
   /**
    * ——— EVERY ROW CAN BE REMOVED (R-receipts 3), including the one being read:

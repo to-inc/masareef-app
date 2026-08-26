@@ -258,6 +258,48 @@ function fakeQueue(initial) {
 
 {
   /**
+   * ═══ CHUNK N1 — A REFUSAL MUST CARRY ITS REASON OFF THE WIRE ═══
+   *
+   * The Owner's field question, 2026-08-25: a pending-authorization screenshot
+   * is refused and the queue row says «مش فاتورة» / «Not a receipt» — which is
+   * true and useless. The server has sent `not_expense_reason` since August and
+   * the DETAIL screen reads it; the queue row never has.
+   *
+   * THIS HALF IS THE ONE THAT MAKES THE LABEL REACHABLE, and it is asserted
+   * first for that reason. The worker stores `extraction: stage === 'ready' ?
+   * res : null`, so a refused job today carries NOTHING to render a reason
+   * from. A label fix alone would be a string that cannot fire in the field —
+   * a tested, unreachable feature, which is the exact class this rev was spent
+   * on.
+   *
+   * The REASON is persisted, not the body. The worker's existing rule stands
+   * («storing the body of a failed attempt would let a later render show fields
+   * from a call the server refused») — one enum value the server explicitly
+   * published to be shown is not that body.
+   */
+  const q = fakeQueue([job('r', 'queued', 1, { clientHash: 'h', base64: 'A', snapDate: '2026-08-01' })]);
+  const worker = createWorker({
+    queue: q,
+    extract: async () => okRes({ is_receipt: false, merchant_display: null,
+      not_expense_reason: 'pending_or_declined' }),
+  });
+  await worker.pump();
+  const stored = q.snapshot()[0];
+  eq(stored.stage, 'notReceipt', 'a refused photo is still a refusal…');
+  eq(stored.notExpenseReason, 'pending_or_declined',
+    '…and the REASON survives onto the job, which is what makes the row able to say why');
+  eq(stored.extraction, null,
+    'while the refused BODY is still not stored — the reason is one published enum value, not the payload');
+
+  // An older server sends no reason. The field must be absent, never invented.
+  const q2 = fakeQueue([job('r2', 'queued', 1, { clientHash: 'h', base64: 'A', snapDate: '2026-08-01' })]);
+  await createWorker({ queue: q2, extract: async () => notReceiptRes() }).pump();
+  eq(q2.snapshot()[0].notExpenseReason, null,
+    'and a server that sends no reason leaves it null rather than guessing one');
+}
+
+{
+  /**
    * THE `reading` STAGE MUST ACTUALLY BE WRITTEN, mid-flight.
    *
    * The serial test above watches the worker's own lock, which is internal — so

@@ -31,6 +31,9 @@ import {
 } from '../src/state/book.js';
 import { periodTotals, comparisonOf, hasShape } from '../src/lib/series.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../src/state/foreign.js';
+import {
+  DISPLAY_CURRENCIES, getDisplayCurrency, setDisplayCurrency, otherDisplayCurrency, leadAndAsides,
+} from '../src/state/display.js';
 import { METRICS, UNKNOWN_CATEGORY } from '../src/lib/constants.js';
 import { batchable } from '../src/state/inboxOutcomes.js';
 import { AR, AR_LOCALE } from '../src/i18n/strings.ar.js';
@@ -283,6 +286,79 @@ eq(unsizedForeign({ count: 1, byCurrency: { EUR: 200 } }), 0, 'and a fully-sized
  * checked too — with a payload whose right and wrong answers are different
  * numbers.
  */
+/**
+ * ═══════════ CHUNK N1b — D23: THE HEADLINE LEADS WITH HIS UNIT ═══════════
+ *
+ * The field report that ruled it: «This week 0» over a real 80 EUR week —
+ * "this is unacceptable". The EGP figure was true and it was the wrong subject.
+ *
+ * ⚠️ WHAT THIS IS, AND THE LINE IT MUST NOT CROSS. D23: «emphasis, never
+ * arithmetic». «80 EUR · and with it 0 EGP» is TWO TRUE SUMS with the lead
+ * swapped — each currency summed only over its own rows, by the SERVER, in the
+ * payload we already receive. Converting one into the other at render time is
+ * Boundary 8 (no synthetic conversion in summaries) and it is forbidden until
+ * D21's stamped `Home` values make a real rate available. This function
+ * therefore only ever SELECTS and ORDERS figures that arrived; it may not
+ * produce a number that was not in the payload.
+ */
+{
+  const foreign = { count: 2, byCurrency: { EUR: 80 } };
+
+  const led = leadAndAsides(1000, foreign, 'EUR');
+  eq(led.lead.currency, 'EUR', 'his unit leads…');
+  eq(led.lead.amount, 80, '…carrying the SERVER\'s own sum of his EUR rows');
+  ok(led.asides.some((a) => a.currency === 'EGP' && a.amount === 1000),
+    'and the pounds become the aside rather than disappearing');
+
+  const home = leadAndAsides(1000, foreign, 'EGP');
+  eq(home.lead.currency, 'EGP', 'the home unit leads when that is the choice…');
+  eq(home.lead.amount, 1000, '…with its own figure');
+  ok(home.asides.some((a) => a.currency === 'EUR' && a.amount === 80),
+    'and the euros are the aside — the same two facts, reordered');
+
+  /**
+   * THE NO-ARITHMETIC ASSERTION, and it is the one worth having.
+   *
+   * Every number this returns must be a number that ARRIVED. A conversion —
+   * at any rate, in either direction — necessarily introduces a third value,
+   * so comparing the produced set against the payload's set catches it without
+   * needing to know what rate a future mistake might use.
+   */
+  const produced = [led.lead.amount, ...led.asides.map((a) => a.amount)].sort((a, b) => a - b);
+  eq(produced.join(','), '80,1000',
+    'the ONLY figures on screen are the ones the payload carried — a conversion would add a third');
+
+  /**
+   * A ZERO LEAD IS HONEST **ONLY** BESIDE ITS ASIDE — and D23's own worked
+   * example contains one («80 EUR · and with it 0 EGP»). The original defect
+   * was never the zero; it was a zero standing ALONE while real money sat
+   * outside it. So a period with no rows in the chosen unit still leads with
+   * that unit's true zero, and the aside carrying the money is mandatory.
+   */
+  const noneInUnit = leadAndAsides(3000, { count: 0, byCurrency: {} }, 'EUR');
+  eq(noneInUnit.lead.amount, 0, 'a period with nothing in his unit leads with a true zero…');
+  ok(noneInUnit.asides.some((a) => a.currency === 'EGP' && a.amount === 3000),
+    '…and NEVER alone — the aside carrying the real money is what makes the zero honest');
+
+  eq(DISPLAY_CURRENCIES.join(','), 'EGP,EUR', 'two display units, the book\'s and his');
+  eq(otherDisplayCurrency('EGP'), 'EUR', 'the toggle names where it goes…');
+  eq(otherDisplayCurrency('EUR'), 'EGP', '…in both directions');
+
+  /**
+   * PERSISTED PER INSTALL, AND **NOT** COUPLED TO ANYTHING ELSE — the Owner's
+   * own refinement (D23: «a sibling of the language toggle, NOT coupled to
+   * it»). It must also stay clear of TRAVEL mode, which is a WRITE concern: the
+   * keypad's currency decides what is recorded in his book. A display choice
+   * that reached it would turn a reading preference into a wrong row.
+   */
+  const store = (v) => ({ getItem: () => v, setItem(_, x) { v = x; }, get value() { return v; } });
+  const st = store(null);
+  eq(getDisplayCurrency(st), 'EGP', 'the default is the BOOK\'s unit — his install opts in');
+  setDisplayCurrency('EUR', st);
+  eq(getDisplayCurrency(st), 'EUR', 'and the choice survives');
+  eq(getDisplayCurrency(store('nonsense')), 'EGP', 'a corrupted value falls back rather than rendering itself');
+}
+
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 try {
   const mod = await vite.ssrLoadModule('/src/views/BookView.jsx');
@@ -421,6 +497,103 @@ try {
   ok(withF.includes(AR.foreignNoCompare), '…and the screen says why no percentage is shown');
   ok(!/[▲▼]/.test(withF), 'NO percentage marker at all — not a suppressed one, an absent one');
   ok(!withF.includes(AR.noComparison('')) , 'and it does not claim there is no data to compare — there is; it is incomparable');
+
+  /**
+   * ——— D23 ON THE SCREEN (chunk N1b): «THIS WEEK 0» OVER A REAL 80 EUR WEEK.
+   *
+   * The fixture is his week, reduced: nothing in pounds, real money in euros.
+   * Today the headline is the EGP figure and the euros are the aside — every
+   * number true, and the subject wrong. Reading in EUR, the SAME two figures
+   * render with the lead swapped, and nothing is converted.
+   *
+   * ⚠️ THE FIRST VERSION OF THIS TEST COULD NOT FAIL, and it passed against the
+   * unbuilt feature, which is how it was caught. It asserted that «80» appeared
+   * in the first 220 characters of the block's TEXT — but the aside «ومعاهم 80
+   * EUR» is already inside that window, so the assertion was satisfied by the
+   * defect it was written to detect. A prefix of a screen is not a headline.
+   *
+   * So it reads the HERO ELEMENT itself. That is the one thing that actually
+   * moves: the 42px display figure is the subject of the screen, and which
+   * number sits in it IS the claim.
+   */
+  const heroOf = (html) => {
+    const m = html.match(/font-size:42px[^"]*"[^>]*>([^<]*)</);
+    return m ? m[1] : null;
+  };
+  const hisWeek = { cur: { Visa: [0, null], Cash: [0, null] },
+    prev: { Visa: [500, 500], Cash: [0, 0] },
+    foreign: { count: 2, byCurrency: { EUR: 80 } } };
+
+  const eurHtml = renderToStaticMarkup(createElement(PeriodBlock,
+    { data: hisWeek, displayCurrency: 'EUR' }));
+  eq(heroOf(eurHtml), '80',
+    'reading in EUR, the WEEK ITSELF leads with the 80 he actually spent');
+  const eurText = text(eurHtml);
+  ok(/80\s*EUR/.test(eurText),
+    'and the lead names its unit — a bare 80 where euros are meant is the §6.0 hazard through the human');
+  ok(eurText.includes(AR.andAlso),
+    'the pounds remain as the aside — a lead is a reordering, never a deletion');
+  /**
+   * THE LINE THIS CHUNK MUST NOT CROSS. No rate exists on the client, so the
+   * screen may show no figure the payload did not carry. 80 and 0 are the whole
+   * of it; any conversion of one into the other lands somewhere else entirely.
+   */
+  ok(!/[1-9]\d{2,}/.test(heroOf(eurHtml) || ''),
+    'and NOTHING is converted into the lead — a euro week dressed as pounds is Boundary 8');
+
+  const egpHtml = renderToStaticMarkup(createElement(PeriodBlock,
+    { data: hisWeek, displayCurrency: 'EGP' }));
+  eq(heroOf(egpHtml), '0',
+    'reading in EGP the same week leads with its true zero…');
+  ok(text(egpHtml).includes('80'),
+    '…and the euros are named beside it, which is the whole difference between this and the defect');
+
+  eq(heroOf(renderToStaticMarkup(createElement(PeriodBlock, { data: hisWeek }))), '0',
+    'and with no choice expressed at all the book\'s own unit leads — Dad\'s install is unmoved');
+
+  /**
+   * ——— THE CHART STAYS HONEST ABOUT ITS OWN UNIT (D23 stage 1).
+   *
+   * The series is EGP and only EGP; there is no euro history to plot until the
+   * backend half derives home-denominated aggregates from D21's stamped rates.
+   * So under a EUR headline the chart beneath is drawn in a DIFFERENT unit from
+   * the number above it — which is fine, and is only fine while it says so.
+   * An unlabelled axis under a euro hero is read as euros, and that is a
+   * synthetic conversion performed by the reader instead of by the code.
+   */
+  /**
+   * Guarded, because a red test that DIES is not a red test. Asserting against
+   * a locale key before it exists throws «is not a function» at module scope
+   * and takes the whole suite with it — the second time this pattern bit in one
+   * afternoon. The dereference is made safe so the absence reports itself.
+   */
+  const chartUnitWords = typeof AR.chartUnit === 'function' ? AR.chartUnit('EGP') : null;
+  ok(chartUnitWords && text(eurHtml).includes(chartUnitWords),
+    'the chart names its own unit — it plots pounds under a euro headline and must say which');
+
+  /**
+   * ——— AND SO DO THE METRIC CARDS. THIS IS THE SECOND RENDER SITE, AGAIN.
+   *
+   * Found by OPENING IT, not by the suite: with the headline correctly reading
+   * «0 EUR», the cards below went on printing «الكل 2,139 ▲93%» — bare figures
+   * and percentages, in smaller type, directly under a euro hero. A reader
+   * converts those to euros because nothing says otherwise, which is the
+   * synthetic conversion of Boundary 8 performed by the person instead of by
+   * the code.
+   *
+   * It is this rev's own catalogued find, repeating on the same component: «the
+   * «This week 0» gate suppressed the headline percentage correctly, and the
+   * metric cards went on printing their own «▼100%» via `<Delta>` — in smaller
+   * type, which is where it would have survived a visual check». Same `Delta`,
+   * same quieter place, caught the same way — by looking at a device.
+   *
+   * The cards are LABELLED rather than blanked: «2,139 EGP ▲93%» is a true and
+   * complete statement, and suppressing it would delete real information to
+   * solve an ambiguity that a unit fixes.
+   */
+  const unitMentions = (t) => t.split(chartUnitWords).length - 1;
+  ok(unitMentions(text(eurHtml)) >= 2,
+    'the metric cards name their unit too — one labelled region does not label the one below it');
 
   const clean = text(renderToStaticMarkup(createElement(PeriodBlock, { data: week(null) })));
   ok(/[▲▼]/.test(clean), 'while an ordinary period DOES compare — the gate can be satisfied');

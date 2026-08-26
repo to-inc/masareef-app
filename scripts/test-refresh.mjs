@@ -20,6 +20,7 @@ import { createServer } from 'vite';
 import {
   REFRESH_STATES, isRefreshState, nextOnPress, resultState, stampAfter, createRefresher,
 } from '../src/state/refresh.js';
+import { readFile } from 'node:fs/promises';
 
 let pass = 0;
 const failures = [];
@@ -203,6 +204,94 @@ try {
   ok(toggleHtml.includes('<button'), 'the language toggle renders as a button as well');
 } finally {
   await vite.close();
+}
+
+/**
+ * ═══════════ CHUNK N2 — THE CHIP RAILS SAY THEY CONTINUE ═══════════
+ *
+ * GAP 2, from the Owner's own walkthrough. A horizontal rail whose last chip
+ * happens to land flush at the edge reads as a complete list, so the four
+ * categories past the fold are not "hard to reach" — they do not exist as far
+ * as the screen is concerned. The fix is an affordance, not a scrollbar: the
+ * last visible chip is CLIPPED and the edge fades into the shell, which is a
+ * picture of "there is more this way".
+ *
+ * ⚠️ PINNED ON ONE PRIMITIVE, NOT ON THE TWO CALL SITES. There are exactly two
+ * rails today — the month browser and the repeat chips — and three properties
+ * that must agree between them. Two copies is how they drift; this project has
+ * paid for the second quieter implementation more times than any other single
+ * mistake. So the rail is a component, and what the suite pins is that NOBODY
+ * hand-rolls a second one.
+ */
+{
+  const railSrc = await readFile(new URL('../src/components/Primitives.jsx', import.meta.url), 'utf8');
+  ok(/export function Rail\(/.test(railSrc),
+    'there is ONE rail, and it is a component rather than a style copied twice');
+  ok(/scrollSnapType/.test(railSrc),
+    'it snaps, so a flick lands on a chip rather than between two');
+  /**
+   * PROXIMITY, NOT MANDATORY — and this is the one that fights the feature.
+   * `mandatory` pulls the nearest chip flush to the edge, which deletes the
+   * peek the whole chunk exists to create: the rail would snap itself back into
+   * looking like a complete list. Pinned by name so a later "stronger snapping
+   * feels better" cannot quietly undo the affordance.
+   */
+  ok(/scrollSnapType: *'x proximity'/.test(railSrc),
+    'and it snaps by PROXIMITY — mandatory would pull the last chip flush and delete the peek');
+  ok(/maskImage|WebkitMaskImage/.test(railSrc),
+    'the trailing edge fades into the shell rather than ending in a hard cut');
+  /**
+   * DIRECTION-AWARE. `background-position` and mask gradients have no logical
+   * keyword, so the physical side must be chosen from the active locale — the
+   * same trap the Morse divider hit, where a hardcoded `bottom right` was
+   * correct in Arabic and hung off the end of the line in English.
+   */
+  ok(/DIR ===? 'rtl'/.test(railSrc),
+    'and it fades on the side the content actually continues towards, in both directions');
+
+  /**
+   * ——— AND THE FADE IS A CLAIM, SO IT ONLY APPEARS WHEN IT IS TRUE.
+   *
+   * A mask applied unconditionally fades the trailing edge of a rail that does
+   * not scroll — telling him there is more when there is nothing, and making a
+   * real, fully-reachable chip look disabled on its way out. That is the
+   * honest-render law arriving at an affordance instead of a number: the
+   * dissolve MEANS «continues», so it may not be drawn where nothing does.
+   *
+   * CSS cannot see overflow, so this is measured — on mount and on resize,
+   * because a rail that fits in portrait may not fit when the keyboard closes
+   * or the locale changes the label widths.
+   */
+  ok(/scrollWidth/.test(railSrc),
+    'the rail MEASURES whether it actually overflows…');
+  ok(/ResizeObserver|addEventListener\('resize'/.test(railSrc),
+    '…and re-measures when the box changes, since a rail that fits today may not next paint');
+  ok(/overflows \?|overflowing \?|canScroll \?/.test(railSrc),
+    '…and the fade is conditional on that answer — an unconditional dissolve lies about a short rail');
+  /**
+   * ⚠️ THE THREE PINS ABOVE ALL PASSED WHILE THE FEATURE WAS DEAD. The measuring
+   * effect was written, the ResizeObserver was written, the conditional was
+   * written — and `ref` was never attached to the element, so `ref.current` was
+   * permanently null, `overflows` permanently false, and the mask never
+   * rendered at all. Every string the suite was looking for was present.
+   *
+   * That is what a source-pin is worth on its own: it proves the CODE SAYS the
+   * thing, never that the thing happens. Kept, because they still catch a
+   * deletion — with this one line added, which is the only part a dead
+   * implementation cannot fake.
+   */
+  ok(/<div\s+ref=\{ref\}/.test(railSrc),
+    'and the measuring ref is actually ATTACHED — the pins above all passed once while it was not');
+
+  const usesRail = async (file) => {
+    const src = await readFile(new URL(`../src/views/${file}`, import.meta.url), 'utf8');
+    return { rail: /<Rail\b/.test(src), raw: /overflowX: *'auto'/.test(src) };
+  };
+  for (const file of ['BookView.jsx', 'EntryView.jsx']) {
+    const u = await usesRail(file);
+    ok(u.rail, `${file} scrolls its chips through the shared Rail…`);
+    ok(!u.raw, `…and carries no hand-rolled \`overflowX: 'auto'\` of its own`);
+  }
 }
 
 const report = failures.length

@@ -150,7 +150,7 @@ function PendingCard({ item, outcome, onConfirm }) {
       className="card-in"
       style={{
         background: C.card, borderRadius: 18, padding: 16, marginBottom: 14,
-        border: `1px solid ${C.line}`, boxShadow: '0 2px 10px rgba(17,38,29,.05)',
+        boxShadow: '0 2px 10px rgba(17,38,29,.05)',
         opacity: inert ? 0.62 : 1,
         transition: 'opacity .2s ease',
       }}

@@ -521,7 +521,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
           </div>
         )}
 
-        <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: 16 }}>
+        <div style={{ background: C.card, borderRadius: 18, padding: 16 }}>
           <Field label={S.receiptAmount} editable={lowAmount}>
             {lowAmount ? (
               <input
@@ -770,6 +770,28 @@ const JOB_LABEL = () => ({
 });
 
 /**
+ * WHAT THE ROW SAYS, AND WHY A REFUSAL IS THE ONE STAGE THAT ARGUES (N1).
+ *
+ * Every other stage has one honest word. `notReceipt` does not: the same label
+ * covers a pending authorization, an account balance, an incoming transfer and
+ * a menu, and only one of those means «there is nothing to record YET». The
+ * Owner asked for the difference on the CARD, where he scans, not two taps in.
+ *
+ * The specific label is preferred WHEN THE SERVER NAMED A REASON and the
+ * generic one is kept when it did not — an older deployment, or `other`, which
+ * means "no more specific reason". Dressing an unexplained refusal in an
+ * explanation would be the app inventing a diagnosis, which is the same defect
+ * as «we could not check» rendering as «we checked and it is clean».
+ */
+function jobLabel(job, stage) {
+  if (stage === 'notReceipt') {
+    const why = S.jobNotExpense(job && job.notExpenseReason);
+    if (why) return why;
+  }
+  return JOB_LABEL()[stage];
+}
+
+/**
  * One job, and it now says WHICH job it is (R-receipts 2).
  *
  * It used to render a stage label and nothing else, so a queue of five photos
@@ -817,7 +839,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
   const merchant = jobMerchant(job);
   const at = Number.isFinite(job.queuedAt) ? cairoClock(job.queuedAt) : null;
   const name = merchant || (at ? S.jobPhotoAt(at) : S.jobPhoto);
-  const label = JOB_LABEL()[stage];
+  const label = jobLabel(job, stage);
 
   /**
    * TWO LINES, NOT ONE — restructured on a field screenshot (Tarek, 2026-08-24).
@@ -840,7 +862,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
     actions.push({ key: 'review', primary: true, label: S.jobReady, onTap: () => onReview(job) });
   }
   if (stage === 'notReceipt') {
-    actions.push({ key: 'verdict', primary: false, label: S.jobNotReceipt, onTap: () => onReview(job) });
+    actions.push({ key: 'verdict', primary: false, label: S.jobWhy, onTap: () => onReview(job) });
     /**
      * READ IT AGAIN — the way forward a not-a-receipt job never had.
      * Nearly free: `receipt_extract` is cached by `rcpthash_<clientHash>` for
@@ -859,7 +881,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
   return (
     <div
       style={{
-        background: C.card, border: `1px solid ${C.line}`,
+        background: C.card,
         borderRadius: 12, padding: '10px 12px', marginBottom: 6,
       }}
     >

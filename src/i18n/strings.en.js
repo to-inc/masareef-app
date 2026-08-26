@@ -115,6 +115,17 @@ export const EN = {
   // A verdict, not a card to confirm. It used to say "Ready — check it" and
   // there was nothing to check (R-receipts 4).
   jobNotReceipt: 'Not a receipt',
+  /**
+   * The refusal row's way INTO the full explanation (N1).
+   *
+   * This button used to be labelled with the verdict itself — the row said
+   * «Not a receipt» and then offered a button saying «Not a receipt», which restated the status as
+   * though it were an action and spent the card's one affordance saying nothing
+   * new. Now that the status line carries the REASON, the button carries what
+   * the status cannot fit: the paragraph on the detail screen that says what to
+   * do about it.
+   */
+  jobWhy: 'See why',
   jobReadAgain: 'Read it again',
   /**
    * WHY A REFUSAL WAS A REFUSAL (06 §6 `not_expense_reason`). Returns null for
@@ -127,6 +138,28 @@ export const EN = {
     pending_or_declined: 'This payment has not gone through yet, or it was declined. Nothing has left your account, so there is nothing to record.',
     incoming: 'This is money coming IN. This book records what you spent, so incoming transfers and refunds are left out on purpose.',
     menu_or_pricelist: 'This looks like a menu or a price list rather than a bill you paid.',
+    other: null,
+  }[r] || null),
+  /**
+   * THE SAME ENUM, AT ROW LENGTH (chunk N1).
+   *
+   * `notExpenseReason` above is the DETAIL screen's paragraph. This is the queue
+   * ROW's version of the same fact: he scans the list, and «Not a receipt» is true of a
+   * pending authorization, a balance screen, an incoming transfer and a menu
+   * alike — so it distinguishes none of them and answers none of the questions
+   * he actually has. For a pending payment the answer is that there is nothing
+   * to record YET, which is a different instruction from every other member of
+   * that set.
+   *
+   * Same null convention as its long twin: an unnamed reason returns null and
+   * the caller keeps the generic label, because a refusal we cannot explain must
+   * not be dressed in an explanation we invented.
+   */
+  jobNotExpense: (r) => ({
+    balance_screen: 'A balance, not a purchase',
+    pending_or_declined: 'Pending — not yet money',
+    incoming: 'Money in, not an expense',
+    menu_or_pricelist: 'A price list, not a bill',
     other: null,
   }[r] || null),
   jobDismissed: 'Closed',
@@ -279,6 +312,16 @@ export const EN = {
 
   // ——— foreign money inside a period: the EGP figure is not the whole period.
   andAlso: 'and with them',
+  /**
+   * No comparison exists for a unit we have no history in (D23, chunk N1b).
+   * The percentage is computed from the EGP series; under a euro headline it
+   * would be a confident claim about the ASIDE, read as being about the figure
+   * it sits beneath. Said rather than silently dropped — a suppressed
+   * comparison that explains itself is the house rule.
+   */
+  chartUnit: (cur) => `in ${cur}`,
+  readInUnit: (cur) => `Read in ${cur}`,
+  noCompareInUnit: (cur) => `No ${cur} history to compare against yet`,
   foreignNoCompare: 'This period has foreign spending — an EGP-only comparison would not be true',
   foreignUnsized: (n) => `and ${n} foreign ${n === 1 ? 'expense' : 'expenses'} with no price`,
   // A row with no category is a door wherever it appears (M6).
@@ -314,7 +357,6 @@ export const EN = {
   metricCash: 'Cash',
 
   vs: 'vs',
-  cumulativeNote: 'cumulative · ● = same point',
   avg: 'average',
   noComparison: (prev) => `No data for ${prev} to compare against.`,
   // A period with one point has no shape to draw — the figure stands, the

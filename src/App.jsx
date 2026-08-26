@@ -20,10 +20,13 @@ import {
   loadDraft, saveDraft, clearDraft, mergeJobs, unsettledCount, mergeOutcomes, outcomeMap,
 } from './state/batchDraft.js';
 import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY } from './state/travel.js';
+import {
+  getDisplayCurrency, setDisplayCurrency, otherDisplayCurrency,
+} from './state/display.js';
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner, LangToggle, RefreshButton } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, LangToggle, CurrencyToggle, RefreshButton } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
@@ -76,6 +79,19 @@ export default function App() {
   const [savedAt, setSavedAt] = useState(null);
   const [offline, setOffline] = useState(false);
   const [toast, setToast] = useState(null);
+  /**
+   * THE INSTALL'S READING UNIT (D23). Read once at mount and held as state, so
+   * flipping it re-renders in place — unlike the language switch, which must
+   * reload to re-import its locale module.
+   *
+   * A READ preference. It is deliberately not `state/travel.js`, which decides
+   * what the keypad WRITES into his book; the two share a list of currencies
+   * and nothing else.
+   */
+  const [displayCurrency, setDisplayCurrencyState] = useState(() => getDisplayCurrency());
+  const flipDisplayCurrency = useCallback(() => {
+    setDisplayCurrencyState((cur) => setDisplayCurrency(otherDisplayCurrency(cur)));
+  }, []);
   const [staleQueue, setStaleQueue] = useState([]);
   // What became of each card he confirmed, keyed by `cardKey`. This is the
   // record whose absence let a refetch resurrect a card he had already done.
@@ -837,6 +853,7 @@ export default function App() {
                       * screen that looks complete while something real is absent
                       * from it. Tapping it returns him to the review.
                       */
+                    displayCurrency={displayCurrency}
                     unsettledBatch={unsettledCount({
                       rows: mergeJobs(batch.jobs), settled: batch.settled,
                     })}
@@ -883,6 +900,19 @@ export default function App() {
                       {S.lastUpdated} <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{cairoClock(savedAt)}</span>
                     </span>
                   )}
+                  {/**
+                    * TWO SIBLINGS, INDEPENDENT (D23). The language switch and
+                    * the display unit sit together and neither implies the
+                    * other — an Arabic reader may read in euros, and an English
+                    * one in pounds. Coupling them would have been the tidy
+                    * assumption; the Owner ruled against it explicitly.
+                    */}
+                  <CurrencyToggle
+                    value={displayCurrency}
+                    other={otherDisplayCurrency(displayCurrency)}
+                    onFlip={flipDisplayCurrency}
+                    subtle
+                  />
                   <LangToggle subtle />
                 </footer>
               </>
@@ -986,7 +1016,7 @@ function Skeleton() {
         <div
           key={i}
           style={{
-            background: C.card, border: `1px solid ${C.line}`, borderRadius: 18,
+            background: C.card, borderRadius: 18,
             height: 132, marginBottom: 14, opacity: 0.55,
           }}
         />

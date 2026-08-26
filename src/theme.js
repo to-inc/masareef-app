@@ -25,7 +25,23 @@ export const C = {
   shell: '#FAF7F1',     // the page
   mist: '#DCE9F0',      // secondary surface / the morning sky
   card: '#FFFFFF',
-  line: '#E3DDCE',      // card borders, quiet fills
+  /**
+   * `line` — quiet fills, and BORDERS THAT MEAN SOMETHING.
+   *
+   * North Star §3, Phase A: plain cards lost their border; the shell→card
+   * luminance step carries elevation on its own. What still takes a `line`
+   * border does so because the border is doing WORK:
+   *   · CONTROLS — buttons, chips, the textarea, the period segmented control.
+   *     A tappable thing with no edge stops looking tappable, and §3 says
+   *     «plain cards», not «all borders». Removing these would buy calm by
+   *     spending affordance, which the five-second capture law will not pay.
+   *   · ADVISORY surfaces — the sand banners (offline, outbox, truncation, the
+   *     foreign-money notes). §3 keeps conflict/settled/advisory bordered by
+   *     name.
+   *   · MEDIA edges — a 40×40 thumbnail needs a boundary against a white card.
+   * A plain content card taking this border again is the drift to catch.
+   */
+  line: '#E3DDCE',
 
   // ——— canonical: ink
   ink: '#2C4356',       // body text
@@ -169,6 +185,58 @@ export const DIVIDER = {
   paddingBottom: 12,
   opacity: 0.9,
 };
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THE NORTH STAR VOCABULARY (docs/design/north-star.md §3, ratified 2026-08-25)
+ *
+ * Phase A introduces ONE radius vocabulary and ONE type vocabulary. Before this
+ * the app carried 33 distinct font sizes between 10 and 52 and 12 distinct
+ * radii — measured, not estimated, across 281 sites.
+ *
+ * ——— WHAT THESE VOCABULARIES DO **NOT** GOVERN, stated here because the survey
+ * that produced them found 100 of those 281 sites are not type at all.
+ *
+ * A `fontSize` is not automatically typography. `<div style={{fontSize: 52}}>🧾</div>`
+ * is a PICTURE sized in pixels; so is a 34px ⌛, a 21px tab icon, a 32px ﹢ in a
+ * 48px circle, and an SVG axis label whose units are viewBox user-space rather
+ * than CSS pixels. Mapping any of them onto a reading scale is a category error:
+ * it would resize every empty-state illustration in the app to the size of a
+ * headline, and it would do it in a single find-and-replace that looked tidy.
+ *
+ * Likewise a `borderRadius` is not automatically a surface. A 3.5px-wide bar
+ * cap, an 8×8 legend swatch and a 40×40 thumbnail are GEOMETRY: all three
+ * surface radii exceed half their width and would clamp them to circles.
+ *
+ * So the rule is a POSITIVE DECLARATION rather than an omission:
+ *   · text  → a TYPE token, always;
+ *   · pictures, icons, chart geometry and fixed-size media → `GLYPH`/`ICON`
+ *     below, or a raw px carrying an explicit `geometry` note — declared, never
+ *     merely surviving, so the next pass reads them as decided rather than as
+ *     stragglers it should tidy.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/** Three surface radii, audited (§3). Controls and geometry are NOT surfaces. */
+export const RADIUS = { card: 20, row: 16, capsule: 999 };
+
+/**
+ * Six reading sizes (§3). Line-height ≥ 1.3 governs PROSE — `section`, `row`,
+ * `body`, `label`. `hero` and `display` are single figures with no inter-line
+ * reading; their leading binds a wrapped amount into one object and runs ~1.05,
+ * which is how they are already set. (Flagged at three sites where a mechanical
+ * 1.3 would have added ~10px of dead space above and below the one number the
+ * Today screen exists to show.)
+ */
+export const TYPE = { hero: 40, display: 34, section: 22, row: 17, body: 16, label: 15 };
+
+/**
+ * NOT TYPE — pictures and icons, sized as geometry. Named so that "this is not
+ * a TYPE token" is something the code SAYS rather than something a reader has
+ * to infer from the absence of one.
+ */
+export const GLYPH = { illustration: 46, spot: 34 };
+export const ICON = { nav: 21, primary: 32, control: 17 };
 
 // Senior-friendly floor. CLAUDE.md: large type, big touch targets.
 export const TAP = 48;

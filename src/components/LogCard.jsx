@@ -40,7 +40,7 @@ export default function LogCard({ prevLog, todayCairo }) {
       className="card-in"
       aria-label={S.logTitle(monthByTab(prevLog.name))}
       style={{
-        background: C.card, border: `1px solid ${C.line}`, borderRadius: 18,
+        background: C.card, borderRadius: 18,
         padding: '18px 18px 14px', marginBottom: 16,
         boxShadow: '0 2px 10px rgba(17,38,29,.05)',
       }}

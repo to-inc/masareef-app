@@ -1,5 +1,6 @@
+import { useState, useEffect, useRef } from 'react';
 import { C, METHOD, DIVIDER, FONT_DISPLAY, NUMERALS, TAP } from '../theme.js';
-import { S, SWITCH_TO } from '../i18n/strings.js';
+import { S, SWITCH_TO, DIR } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
 /**
@@ -55,6 +56,156 @@ export function LangToggle({ subtle }) {
       }}
     >
       {SWITCH_TO}
+    </button>
+  );
+}
+
+/**
+ * A CHIP RAIL THAT SAYS IT CONTINUES (North Star §7 «peek affordance + edge
+ * fade»; the Owner's GAP 2).
+ *
+ * ——— THE FAILURE IT FIXES. A horizontal rail whose last chip happens to land
+ * flush at the edge is indistinguishable from a complete list. The categories
+ * past the fold are then not merely hard to reach — as far as the screen is
+ * concerned they do not exist, and he has no reason to try. Nothing about a
+ * scrollbar helps: mobile hides it until you already scrolled.
+ *
+ * So the affordance is the content itself. The last visible chip is CLIPPED and
+ * the edge dissolves into the shell, which is a picture of "there is more this
+ * way" that needs no learning and no gesture hint.
+ *
+ * ——— THREE PROPERTIES THAT MUST AGREE, WHICH IS WHY THIS IS A COMPONENT.
+ *
+ * There are two rails today (the month browser, the repeat chips) and there
+ * will be more. Copying snap + mask + direction into each is how the second one
+ * quietly drifts from the first — the single most expensive recurring mistake
+ * in this codebase. One rail, pinned by the suite, and the call sites carry no
+ * `overflowX` of their own.
+ *
+ * ——— WHY `proximity` AND NOT `mandatory`, WHICH IS THE INTERESTING ONE.
+ *
+ * `mandatory` snapping pulls the nearest chip flush to the edge after every
+ * flick — which is precisely the state this chunk exists to prevent. The rail
+ * would keep re-tidying itself back into looking like a complete list, undoing
+ * the peek between one scroll and the next. `proximity` snaps when he lands
+ * near a chip and leaves a deliberate half-chip alone.
+ *
+ * ——— DIRECTION-AWARE, and the mask has no logical keyword to lean on.
+ *
+ * Content continues toward the inline END: the right edge in English, the LEFT
+ * in Arabic. `mask-image` takes a physical direction, so it is chosen from the
+ * active locale — the same trap the Morse divider hit, where a hardcoded
+ * `bottom right` was correct in Arabic and hung off the end of the line in
+ * English. Caught there by looking at the English screen; avoided here by
+ * remembering that.
+ */
+export function Rail({ children, style, ...rest }) {
+  /**
+   * ——— THE FADE IS A CLAIM, SO IT IS DRAWN ONLY WHERE IT IS TRUE.
+   *
+   * An unconditional mask dissolves the trailing edge of a rail that does not
+   * scroll: it tells him there is more when there is nothing, and it makes a
+   * real, fully-reachable chip look disabled on its way out. That is the
+   * honest-render law arriving at an AFFORDANCE rather than at a number — the
+   * dissolve means «continues», so it may not appear where nothing does.
+   *
+   * CSS cannot ask whether a box overflows, so it is measured. On mount, and
+   * again on resize: a rail that fits in Arabic may not fit in English, and one
+   * that fits with the keyboard up may not with it down.
+   */
+  const ref = useRef(null);
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => setOverflows(el.scrollWidth > el.clientWidth + 1);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    // Observes the rail AND its content: chips arrive asynchronously (his last
+    // entries come from storage), so a mount-time measurement alone would
+    // answer for an empty rail and never correct itself.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const child of el.children) ro.observe(child);
+    return () => ro.disconnect();
+  }, [children]);
+
+  const fadeTo = DIR === 'rtl' ? 'left' : 'right';
+  /**
+   * 48px, and the width was MEASURED rather than chosen. At 28 the fade landed
+   * almost entirely on the 7px inter-chip gap and the chip's rounded corner —
+   * a region with nothing in it to dissolve — so the rail still read as a
+   * complete list of four on a 375pt screen. The gradient has to bite into a
+   * LABEL to say anything, because a word half-gone is the thing a person
+   * recognises as "continues"; faded empty space is just empty space.
+   */
+  const fade = `linear-gradient(to ${fadeTo}, #000 calc(100% - 48px), transparent 100%)`;
+  return (
+    <div
+      ref={ref}
+      {...rest}
+      style={{
+        display: 'flex', overflowX: 'auto',
+        scrollSnapType: 'x proximity',
+        WebkitOverflowScrolling: 'touch',
+        maskImage: overflows ? fade : undefined,
+        WebkitMaskImage: overflows ? fade : undefined,
+        /**
+         * The fade eats 28px of the trailing edge, so the rail is padded by the
+         * same amount on that side. Without it the last chip's own label
+         * dissolves rather than the empty space after it, and a faded WORD
+         * reads as disabled rather than as continuing.
+         */
+        paddingInlineEnd: overflows ? 48 : 0,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * THE DISPLAY-UNIT SWITCH (D23) — a sibling of the language toggle, and
+ * deliberately NOT coupled to it (the Owner's own refinement).
+ *
+ * ——— WHICH WAY IT IS LABELLED, AND WHY IT IS NOT THE LANGUAGE CONVENTION.
+ *
+ * `LangToggle` is labelled with the language it switches TO, because a man
+ * stuck in a language he cannot read must not have to read it to escape. That
+ * reasoning does not transfer: he can read both «EGP» and «EUR» whichever unit
+ * he is in, so the escape-hatch argument buys nothing here.
+ *
+ * What DOES transfer is the ruling of 2026-08-25 on the keypad's currency
+ * control, which had been labelled with its destination while looking pressed:
+ * «a filled, pressed-looking button reading "In EGP" directly above an amount
+ * reading "0 EUR"». Ruled: **a currency control states what he is IN.** This is
+ * a currency control. Two of them in one app under opposite conventions is the
+ * confusion that ruling exists to prevent, so this one states the unit he is
+ * READING in, and the accessible name carries the action.
+ *
+ * It does NOT reload. The language switch must, because `S` is resolved once at
+ * module load; the display unit is ordinary state and re-renders in place.
+ *
+ * ⚠️ It is a READ preference and touches nothing that is written. The keypad's
+ * currency lives in `state/travel.js` and decides what goes into his book;
+ * these two must never learn about each other.
+ */
+export function CurrencyToggle({ value, other, onFlip, subtle }) {
+  return (
+    <button
+      onClick={onFlip}
+      aria-label={S.readInUnit(other)}
+      style={{
+        minHeight: 32, padding: '4px 12px', borderRadius: 999,
+        background: 'transparent',
+        border: `1px solid ${subtle ? C.line : 'rgba(255,255,255,.45)'}`,
+        color: subtle ? C.ink : '#fff',
+        fontSize: 13, fontWeight: 700, opacity: subtle ? 1 : 0.9,
+        ...LATIN,
+      }}
+    >
+      {value}
     </button>
   );
 }
