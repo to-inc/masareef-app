@@ -12,7 +12,7 @@ import { createWorker } from '../state/receiptWorker.js';
 import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
-import { SectionLabel, LATIN } from '../components/Primitives.jsx';
+import { SectionLabel, LATIN, Sheet } from '../components/Primitives.jsx';
 
 /**
  * Two-phase receipt capture (contract §3.3–§3.4).
@@ -1059,15 +1059,32 @@ function Field({ label, editable, children }) {
   );
 }
 
-function Banner({ children }) {
+/**
+ * B4b VERDICT: ARRIVES — so it rides the ONE Sheet (B4).
+ *
+ * The ruled test: does the surface appear over/into an already-painted flow
+ * on a state change, or does it render WITH its content? This one ARRIVES:
+ * the dup.book instance mounts MID-FLOW when the server refuses the confirm
+ * (D18a's designed race — an SMS lands between extract and confirm), over a
+ * review card he is already reading. The extract-time instances paint with
+ * the card, but splitting one surface into an arriving twin and a static
+ * twin is exactly the two-hand-rolled-entrances drift B4 exists to kill —
+ * one component, one dress. Lip and entrance are the primitive's; the sand
+ * fill and the meaning border (A2's doctrine: advisory surfaces stay
+ * bordered BY NAME) are this site's.
+ *
+ * Exported for test-chunk-b4b's render half — the CategoryChips precedent:
+ * a surface a suite cannot render alone is one nobody re-verifies.
+ */
+export function Banner({ children }) {
   return (
-    <div style={{
+    <Sheet style={{
       background: C.sand, border: `1px solid ${C.line}`, color: C.ink,
-      borderRadius: RADIUS.row, padding: '10px 14px', fontSize: 14.5, fontWeight: 600,
+      padding: '10px 14px', fontSize: 14.5, fontWeight: 600,
       marginBottom: 10, lineHeight: 1.6,
     }}>
       {children}
-    </div>
+    </Sheet>
   );
 }
 

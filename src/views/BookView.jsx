@@ -113,8 +113,17 @@ export default function BookView({
    * screen. Defaults to the book's own unit: Dad's install is unmoved.
    */
   displayCurrency = getDisplayCurrency(),
+  /**
+   * A13 — the period's seed, in `initialPriorityFilter`'s exact pattern and
+   * for its exact reason: the year screen lives behind a tab press SSR
+   * cannot make, and the axis's accessible names are a fact about the
+   * RENDERED screen, not about event plumbing — three of this project's bugs
+   * were correct components mounted with the wrong props. Defaults to the
+   * screen he opens; nothing about the live app moves.
+   */
+  initialPeriod = 'today',
 }) {
-  const [period, setPeriod] = useState('today');
+  const [period, setPeriod] = useState(initialPeriod);
   /**
    * N7 — WHICH PRIORITY GROUP THE LIST IS READ THROUGH, or null for all of it.
    * A lens over the rows, never a claim about them: the chips are always on
@@ -481,6 +490,15 @@ export default function BookView({
           metric={metric} setMetric={setMetric}
           names={{ cur: String(today.y), prev: String(today.y - 1) }} showBars
           displayCurrency={displayCurrency}
+          /**
+           * A13 — the axis SPOKEN in full. The visible initials stay (A12's
+           * thinning is visual law), but as accessible names they collide —
+           * Arabic ي×3, أ×3, م×2 — and E1 made these twelve labels the one
+           * axis whose labels are CONTROLS, so a reader hears three
+           * indistinguishable «ي» buttons. The week keeps no ariaLabels:
+           * its day names are furniture, not controls.
+           */
+          ariaLabels={MONTH_WORDS}
         />
       )}
       </div>
@@ -723,6 +741,16 @@ export default function BookView({
 
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * A13 — the year axis's SPOKEN vocabulary: the same twelve slots said in full
+ * through the app's existing month words (`monthByTab` — no new i18n key, the
+ * same lookup the months rail rides). Built once at module scope: the locale
+ * binds at load, so these words cannot drift from the language of the screen
+ * they name. Handed to PairedBars as accessible names only — the VISUAL
+ * initials are `MONTH_LABELS`'s and do not change.
+ */
+const MONTH_WORDS = MONTH_ABBR.map((t) => monthByTab(t));
 
 /** N6 — which month a chosen month is compared against: its own predecessor. */
 export function monthBefore(ref) {
@@ -1230,6 +1258,9 @@ export function PeriodBlock({
   monthWindow = false,
   // E5 — the Month screen's two-panel stack, threaded through to the summary.
   stack = null,
+  // A13 — the axis's spoken layer (full words, index-aligned with `labels`),
+  // threaded untouched to PeriodSummary. Only the year call site passes it.
+  ariaLabels = null,
 }) {
   const totals = periodTotals(data, METRICS, offPlot || {});
   const shown = totals[metric] || totals.all;
@@ -1499,6 +1530,7 @@ export function PeriodBlock({
         metric={metric} setMetric={setMetric}
         periodNames={{ cur: names.cur, prev: names.prev }}
         showBars={showBars} footnote={footnote} offPlot={offPlot} stack={stack}
+        ariaLabels={ariaLabels}
         /**
          * The cards carry percentages too. Gating only the headline left «▼100%»
          * on a period whose EGP figure is a subset — smaller type, same lie.

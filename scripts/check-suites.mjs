@@ -44,7 +44,7 @@ import { dirname, join } from 'node:path';
  * If you are here because the run went red: the number below is a claim about
  * the suite, and one of the two is wrong. Neither is automatically the number.
  */
-const EXPECTED_ASSERTIONS = 4772;
+const EXPECTED_ASSERTIONS = 4831;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -102,6 +102,8 @@ const SUITES = [
   'test-chunk-e6.mjs',
   'test-chunk-e7.mjs',
   'test-chunk-a4b.mjs',
+  'test-chunk-b4b.mjs',
+  'test-chunk-a13.mjs',
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -124,7 +126,7 @@ for (const suite of SUITES) {
    * account for, and it says so rather than lowering the total in silence.
    */
   const m = /✅ all ([\d,]+) /.exec(run.stdout || '')
-    || /✅ CHUNK-[A-Z0-9]+-GREEN · ([\d,]+) checks/.exec(run.stdout || '');
+    || /✅ CHUNK-[A-Za-z0-9]+-GREEN · ([\d,]+) checks/.exec(run.stdout || '');
   if (!m) { unreadable.push(suite); continue; }
   total += Number(m[1].replace(/,/g, ''));
 }

@@ -34,7 +34,7 @@ import {
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner, LangToggle, CurrencyToggle, RefreshButton } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, LangToggle, CurrencyToggle, RefreshButton, Sheet } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
@@ -1155,12 +1155,25 @@ export default function App() {
 /**
  * A queued write that has outlived the server's 6 h dedupe window. Sending it
  * again COULD double-write, so it never flushes on its own — he decides.
+ *
+ * B4b VERDICT: ARRIVES — so it rides the ONE Sheet (B4).
+ *
+ * The ruled test: over/into an already-painted flow on a state change, or
+ * rendered WITH its content? `staleQueue` is recomputed after every outbox
+ * flush (boot, reconnect, visibilitychange), so this card can appear ABOVE
+ * whatever he is reading the moment an entry crosses the 6 h window —
+ * OfflineBanner's sibling in position and in grammar, and that banner
+ * already rides the Sheet. RADIUS.card is retired on this surface: the lip
+ * and the entrance are the primitive's; the sand fill and the meaning
+ * border stay this site's (A2: advisory surfaces are bordered by name).
+ *
+ * Exported for test-chunk-b4b's render half.
  */
-function StaleQueueCard({ item, onSend, onDrop }) {
+export function StaleQueueCard({ item, onSend, onDrop }) {
   return (
-    <div
+    <Sheet
       style={{
-        background: C.sand, border: `1px solid ${C.line}`, borderRadius: RADIUS.card,
+        background: C.sand, border: `1px solid ${C.line}`,
         padding: 14, marginBottom: 12,
       }}
     >
@@ -1185,7 +1198,7 @@ function StaleQueueCard({ item, onSend, onDrop }) {
           {S.outboxDrop}
         </button>
       </div>
-    </div>
+    </Sheet>
   );
 }
 

@@ -198,6 +198,15 @@ export default function BatchReviewView({
         * SILENT TRUNCATION IS FORBIDDEN. `entries_total` above what arrived means
         * half his screenshot is missing, and the list would otherwise read as
         * complete. It says so, and says what to do about it.
+        *
+        * B4b VERDICT: STATIC — exempt from the Sheet by the ruled test, the
+        * same one that ruled the MonthScreen caveat footnote static.
+        * `truncated` derives from the jobs prop, which is settled before this
+        * view mounts (jobs change only from ReceiptView, which REPLACES this
+        * screen), so the note renders WITH the list on its first paint and
+        * can never appear into the flow later. A static surface must not
+        * pretend to arrive — an entrance on it would claim a change that did
+        * not happen.
         */}
       {truncated && (
         <p style={{

@@ -332,7 +332,18 @@ export function CumulativeChart({ cur, prev, color, labelled = true, prevName = 
   );
 }
 
-export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, onRangeTap = null, rangeWords = null }) {
+/**
+ * ═══ A13 — THE AXIS'S SPOKEN LAYER (charts leaf residual 8) ═══
+ *
+ * `ariaLabels` is the axis said in FULL WORDS, index-aligned with `labels`,
+ * for the buttons' accessible names only. The visual initials are A12's
+ * thinning law and never change — but as NAMES they collide: in Arabic
+ * MONTH_LABELS runs ي×3, أ×3, م×2 (English J×3, A×2, M×2), so a screen
+ * reader hears three indistinguishable «ي» buttons on the one axis whose
+ * labels are controls (E1). Optional, with the visible label as fallback:
+ * an axis handed no vocabulary keeps exactly the pre-A13 contract.
+ */
+export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, onRangeTap = null, rangeWords = null, ariaLabels = null }) {
   const vals = cur.map((v) => v || 0);
   const max = Math.max(...vals, ...prev.map((v) => v || 0), 1);
   /**
@@ -454,8 +465,11 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
               aria-pressed={within(i)}
               // The live column shows «•» instead of its letter, so the name a
               // screen reader hears is stated explicitly — a control called
-              // «bullet» is a control with no name.
-              aria-label={lb}
+              // «bullet» is a control with no name. A13: when the caller hands
+              // full words, the SPOKEN name is the word (the initials collide
+              // as names — ي×3 on this very axis); the VISUAL text below is
+              // untouched, because A12's thinning is visual law, not spoken.
+              aria-label={(ariaLabels && ariaLabels[i]) || lb}
               style={{ ...colStyle, background: 'transparent', padding: 0, minWidth: 0 }}
             >
               {inner}
@@ -919,7 +933,9 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
   );
 }
 
-export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true, rangeSeed = null, stack = null }) {
+// A13 — `ariaLabels`: the axis's spoken layer (full words, index-aligned),
+// threaded untouched to PairedBars; see the doctrine on the component itself.
+export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null }) {
   const color = METRICS.find((m) => m.key === metric).color;
   const cur = seriesFor(data.cur, metric);
   const prev = seriesFor(data.prev, metric);
@@ -1092,6 +1108,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
             <PairedBars
               cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color}
               range={range} onRangeTap={onRangeTap} rangeWords={rangeWords}
+              ariaLabels={ariaLabels}
             />
           )}
         </div>
