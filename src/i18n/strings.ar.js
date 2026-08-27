@@ -399,6 +399,8 @@ export const AR = {
   avg: 'متوسط',
   // زرار المسح في اللوحة — بيتنطق مش بيتشاف (A9).
   keypadBackspace: 'مسح',
+  // W1 — الرسمة مترسمش صفر مش صحيح: الجملة الصادقة مكان الخط (لازم تحتوي chartUnit حرفيًا).
+  chartHomeZero: (cur) => `مفيش مصاريف بالـ${cur} في الفترة دي — الرسم بيتحسب بالـ${cur} بس`,
   // Shown when there is nothing to compare against — better than describing a
   // grey line he cannot see.
   noComparison: (prev) => `مفيش بيانات لـ${prev} للمقارنة.`,
@@ -480,6 +482,20 @@ export const AR = {
   refresh: 'حدّث',
   refreshing: 'بيحدّث…',
   refreshFailed: 'مانفعش يحدّث — جرّب تاني',
+
+  /**
+   * ——— S1: شاشة الإعدادات ورا الترس (حكم صاحب البيت 2026-08-27).
+   * `settingsTitle` هو اسم الترس واسم الشاشة في نفس الوقت — مفهوم واحد،
+   * جملة واحدة (قانون A8). والسطر الهادي تحت زرار العملة بيقول بالبلدي
+   * الزرار ده بيعمل إيه — من غير أي كلمة تقنية، لأن ده المكان الوحيد اللي
+   * المعنى متقول فيه.
+   */
+  settingsTitle: 'الإعدادات',
+  settingsClose: 'إقفل',
+  settingsLangCurrency: 'العملة واللغة',
+  settingsLanguage: 'اللغة',
+  settingsCurrency: 'العملة',
+  settingsCurrencyNote: 'بتحدد أنهي عملة تيجي الأول في أرقام الدفتر — مفيش أي تحويل، كل عملة بأرقامها زي ما هي.',
 
   offline: 'مفيش نت — دي آخر بيانات محفوظة',
   lastUpdated: 'آخر تحديث',

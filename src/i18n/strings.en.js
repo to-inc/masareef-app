@@ -396,6 +396,8 @@ export const EN = {
   avg: 'average',
   // Keypad backspace — an aria-label, spoken not seen (A9 residual).
   keypadBackspace: 'Delete',
+  // W1 — the chart never draws a zero it does not mean: the true sentence in its place (must contain chartUnit verbatim).
+  chartHomeZero: (cur) => `Nothing in ${cur} this period — this chart counts in ${cur} only`,
   noComparison: (prev) => `No data for ${prev} to compare against.`,
   // A period with one point has no shape to draw — the figure stands, the
   // chart waits (M7).
@@ -475,6 +477,19 @@ export const EN = {
   refresh: 'Refresh',
   refreshing: 'Refreshing…',
   refreshFailed: 'Could not refresh — try again',
+
+  /**
+   * ——— S1: the settings sheet behind the cog (Owner ruling 2026-08-27).
+   * `settingsTitle` names the cog AND the sheet — one concept, one string
+   * (A8's law). The quiet note under the currency control says plainly what
+   * the control does, because this is the only place its meaning is stated.
+   */
+  settingsTitle: 'Settings',
+  settingsClose: 'Close',
+  settingsLangCurrency: 'Currency & language',
+  settingsLanguage: 'Language',
+  settingsCurrency: 'Currency',
+  settingsCurrencyNote: "Chooses which unit leads the Book's figures — nothing is converted; each currency keeps its own numbers.",
 
   offline: 'No network — this is the last saved data',
   lastUpdated: 'Last updated',

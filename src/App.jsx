@@ -34,7 +34,7 @@ import {
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner, LangToggle, CurrencyToggle, RefreshButton, Sheet } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
@@ -42,6 +42,7 @@ import ReceiptView from './views/ReceiptView.jsx';
 import DictateView from './views/DictateView.jsx';
 import BookView from './views/BookView.jsx';
 import BatchReviewView from './views/BatchReviewView.jsx';
+import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
 
 /**
  * ═══ C1 — THE FLOATING BAR'S GEOMETRY, declared once ═══
@@ -131,6 +132,13 @@ export default function App() {
   const flipDisplayCurrency = useCallback(() => {
     setDisplayCurrencyState((cur) => setDisplayCurrency(otherDisplayCurrency(cur)));
   }, []);
+  /**
+   * THE SETTINGS SHEET (S1, Owner ruling 2026-08-27) — open or not, and
+   * nothing else: everything inside it (language, display currency) already
+   * has its own state and its own persistence. Opening a sheet must never
+   * become a second owner of either.
+   */
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [staleQueue, setStaleQueue] = useState([]);
   // What became of each card he confirmed, keyed by `cardKey`. This is the
   // record whose absence let a refetch resurrect a card he had already done.
@@ -842,6 +850,16 @@ export default function App() {
               {`${data.today_cairo.d}/${data.today_cairo.m}/${data.today_cairo.y}`}
             </span>
           )}
+          {/**
+            * S1 — date · cog · refresh, and that is the WHOLE header now.
+            * The cog is the door to the once-in-a-while controls (language,
+            * display currency) that used to ride the footer of every tab;
+            * it is quiet chrome in RefreshButton's exact dress, never amber.
+            * In the header because the header renders on every tab — the
+            * same every-screen requirement that placed the toggles here
+            * once, now costing one quiet button instead of two controls.
+            */}
+          {!needsSetup && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
           {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} />}
         </span>
         {/**
@@ -1018,18 +1036,16 @@ export default function App() {
                   * untouched, which is the whole rule (state/refresh.js).
                   */}
                 {/**
-                  * THE FOOTER — the timestamp, and now the language switch (S8).
+                  * THE FOOTER — the timestamp, and ONLY the timestamp now (S1).
                   *
-                  * The toggle used to sit in the header, where it was the second
-                  * most prominent control on every screen in the app, for a
-                  * setting Dad will change exactly zero times: he reads Arabic,
-                  * and Arabic is the default. It cost prime real estate on all
-                  * five tabs to serve Tarek's own install once.
-                  *
-                  * It is still reachable from EVERY screen — this footer renders
-                  * under every tab's content — which is the requirement that put
-                  * it in the header in the first place (SetupView is unreachable
-                  * once the app is set up). It is just no longer shouting.
+                  * The toggles' journey, so the next mover inherits the map:
+                  * header (D16b) → footer (S8, out of prime real estate) →
+                  * the Settings sheet (S1, Owner ruling 2026-08-27) — behind
+                  * the header's cog, which renders on every tab. The
+                  * every-screen requirement that justified each earlier mount
+                  * is still honored; it just costs one quiet button now.
+                  * The two controls stay independent siblings there (D23),
+                  * exactly as they were here.
                   */}
                 <footer style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1041,20 +1057,6 @@ export default function App() {
                       {S.lastUpdated} <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{cairoClock(savedAt)}</span>
                     </span>
                   )}
-                  {/**
-                    * TWO SIBLINGS, INDEPENDENT (D23). The language switch and
-                    * the display unit sit together and neither implies the
-                    * other — an Arabic reader may read in euros, and an English
-                    * one in pounds. Coupling them would have been the tidy
-                    * assumption; the Owner ruled against it explicitly.
-                    */}
-                  <CurrencyToggle
-                    value={displayCurrency}
-                    other={otherDisplayCurrency(displayCurrency)}
-                    onFlip={flipDisplayCurrency}
-                    subtle
-                  />
-                  <LangToggle subtle />
                 </footer>
               </div>
             )}
@@ -1063,6 +1065,21 @@ export default function App() {
       </main>
 
       <Toast message={toast} />
+
+      {/**
+        * S1 — the Settings sheet, mounted at the SHELL so it opens over any
+        * tab (a cog on every screen that only worked on some would be a lie
+        * told in chrome). Everything inside already owns its state: the flip
+        * passed down is the SAME `flipDisplayCurrency` the footer toggle
+        * carried — N1b's no-reload law moved house with it, unchanged.
+        */}
+      {settingsOpen && !needsSetup && (
+        <SettingsSheet
+          displayCurrency={displayCurrency}
+          onFlipCurrency={flipDisplayCurrency}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       {/**
         * THE PINNED SUBMIT (S1). Outside <main> on purpose: inside it, it scrolls

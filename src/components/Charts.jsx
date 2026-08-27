@@ -935,7 +935,12 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
 
 // A13 — `ariaLabels`: the axis's spoken layer (full words, index-aligned),
 // threaded untouched to PairedBars; see the doctrine on the component itself.
-export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null }) {
+// W1 — `homeZeroMisleads`: PeriodBlock's verdict (derived beside the head,
+// from the head's own machinery) that this period is FOREIGN-LED with an EGP
+// total of 0, so an EGP chart flat at zero would tell a foreign week as
+// «nothing happened». This component only ever RENDERS that verdict — the
+// doctrine lives where the inputs do, in views/BookView.jsx.
+export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads = false }) {
   const color = METRICS.find((m) => m.key === metric).color;
   const cur = seriesFor(data.cur, metric);
   const prev = seriesFor(data.prev, metric);
@@ -1044,9 +1049,18 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
             * answered a question the chart answers on contact is gone, and what
             * stands here instead is a fact the chart cannot show on its own.
             */}
+          {/**
+            * W1 — the caption renders only while the chart it captions does.
+            * «in EGP» standing over the quiet sentence would caption an
+            * absence — and the sentence below names the unit itself, so the
+            * caption's one fact survives the caption (the Owner's screenshot
+            * quoted this exact caption as part of the lie).
+            */}
+          {!homeZeroMisleads && (
           <span style={{ fontSize: 11.5, color: C.muted, whiteSpace: 'nowrap', ...LATIN }}>
             {S.chartUnit(HOME_CURRENCY)}
           </span>
+          )}
           {/**
             * ⚠️ THE LEGEND LINE WAS DELETED HERE (North Star §5, Phase A).
             *
@@ -1068,7 +1082,41 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
             */}
         </div>
         {/* Time axes stay left→right regardless of the RTL document */}
-        {!plottable ? (
+        {homeZeroMisleads ? (
+          /**
+           * ═══ W1 — THE CHART NEVER DRAWS A ZERO IT DOES NOT MEAN ═══
+           *
+           * A foreign-led period with an EGP total of 0 (the verdict arrives
+           * from PeriodBlock — see the doctrine there): no EGP line, no zero
+           * marker, no bars of the same zero, no draw animation over an
+           * absent line (B3's law has nothing to animate). In their place,
+           * ONE quiet true sentence, in periodJustStarted's own voice.
+           *
+           * AND IT OUTRANKS M7's just-started sentence, deliberately: on day
+           * one of a foreign-led zero week, «the chart appears after another
+           * day» is a promise this period cannot keep — no EGP money means
+           * no chart tomorrow either. The truer sentence wins.
+           *
+           * THE WORDS ARE A GUARDED LOOKUP. The clean key (`chartHomeZero`)
+           * is proposed to the i18n owner — this leaf may not add keys — and
+           * until it lands the sentence is composed from two strings the app
+           * already owns: N7's emptied-scope grammar («X»: 0 — nothing of
+           * this kind this period) scoped to the chart's own unit. E4
+           * already reuses `priorityEmpty` for an emptied chart scope; the
+           * EGP lens over a euro week is the same shape. Either wording
+           * NAMES the unit, which is the caption's fact surviving the
+           * caption (and test-book's two-unit-mentions pin rides on it).
+           *
+           * NOT drawn instead: a EUR line — there is no by-day home-unit
+           * series in the payload (D23 stage 2), and faking one from the
+           * aggregate would be fabrication in the chart's own hand.
+           */
+          <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '18px 8px 10px' }}>
+            {typeof S.chartHomeZero === 'function'
+              ? S.chartHomeZero(HOME_CURRENCY)
+              : S.priorityEmpty(S.chartUnit(HOME_CURRENCY))}
+          </p>
+        ) : !plottable ? (
           <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '18px 8px 10px' }}>
             {S.periodJustStarted(periodNames.cur)}
           </p>

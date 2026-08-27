@@ -1301,6 +1301,40 @@ export function PeriodBlock({
    */
   const leadsHome = lead.currency === HOME_CURRENCY;
   /**
+   * ═══ W1 — THE CHART NEVER DRAWS A ZERO IT DOES NOT MEAN (Owner field
+   * ruling 2026-08-27: «This week vs Last week · in EGP», live line flat on
+   * the baseline, marker «0», under a 160 EUR week). ═══
+   *
+   * The head above tells that week truthfully — «160 EUR», aside «0 EGP» —
+   * and the chart below then RE-told it as «nothing happened». Every figure
+   * true, the picture a lie: the «This week 0» class (A10/N1b) arriving
+   * through geometry instead of type, on the screen he opens for reassurance.
+   *
+   * THE VERDICT IS DERIVED, NEVER RE-DERIVED. `leadsHome` is the same
+   * `leadAndAsides` selection the head just consumed (foreign-led means the
+   * lead is not the book's unit), `hasForeign` is the same gate that already
+   * refused the comparison, and `totals.all.now` is the same figure the head
+   * and the cards print — including off-plot (undated) money, because
+   * `periodTotals` already carries it. A period is foreign-led with a zero
+   * EGP total exactly when the head says so; a second derivation over the
+   * series is how the two would drift apart.
+   *
+   * BOTH DIRECTIONS ARE LAW. The moment the period has ANY EGP money the
+   * chart returns exactly as it is today — a mixed week's EGP story is real.
+   * And under an EGP lead the flat zero STAYS DRAWN: it matches the «0» the
+   * headline states beside the euros, so card and chart agree (Dad's install
+   * is unmoved). `hasForeign` is part of «foreign-led»'s meaning, not an
+   * extra condition: a truly empty period read in EUR is not led anywhere —
+   * its zero is meant, and honest absence is not this rule's business.
+   *
+   * What renders instead is PeriodSummary's one quiet sentence, inside the
+   * same chart card — the doctrine at that site. A EUR line is NOT drawn in
+   * its place: by-day home-unit data does not exist in the payload (D23
+   * stage 2, deferred behind the supervised backfill), and a euro curve
+   * faked from the aggregate is Boundary 8 wearing a chart.
+   */
+  const homeZeroMisleads = !leadsHome && hasForeign(foreign) && totals.all.now === 0;
+  /**
    * A7 — THE FOREIGN-MONEY ESSAY IS ONE MUTED LINE, ITS DETAIL ONE TAP AWAY.
    *
    * Two rules can suppress the comparison here — foreign money in either
@@ -1531,6 +1565,9 @@ export function PeriodBlock({
         periodNames={{ cur: names.cur, prev: names.prev }}
         showBars={showBars} footnote={footnote} offPlot={offPlot} stack={stack}
         ariaLabels={ariaLabels}
+        // W1 — the card renders a verdict reached HERE, beside the head that
+        // shares its inputs; it never re-decides from data it half-sees.
+        homeZeroMisleads={homeZeroMisleads}
         /**
          * The cards carry percentages too. Gating only the headline left «▼100%»
          * on a period whose EGP figure is a subset — smaller type, same lie.

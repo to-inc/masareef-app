@@ -192,33 +192,34 @@ ok(!ARABIC.test(AR_LOCALE.switchTo), 'and English in the Arabic one — it alway
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * WHERE THE TOGGLE LIVES (finding S8).
+ * WHERE THE TOGGLE LIVES (finding S8 — mount RE-CUT by S1, never deleted).
  *
- * It sat in the header, which made it the second most prominent control on
- * every screen in the app — for a setting Dad will change exactly zero times.
- * He reads Arabic and Arabic is the default; English exists because Tarek runs
- * the same build against his own book.
+ * The journey: header (D16b) → footer (S8: the second most prominent control
+ * on every screen, for a setting Dad changes exactly zero times) → the
+ * Settings sheet behind the header's cog (S1, Owner ruling 2026-08-27).
  *
- * The requirement that put it in the header is real and still holds: SetupView
- * only renders when there are NO stored credentials, so a toggle living there
- * alone is unreachable from the moment the app is set up — which is every
- * moment that matters. So this asserts the requirement, not the position: it is
- * out of the header, and it is somewhere that renders on every tab.
+ * The REQUIREMENT is unchanged and is still what this block asserts: out of
+ * the header, and reachable from every tab (SetupView only renders when there
+ * are NO stored credentials, so its own toggle covers setup alone). What
+ * changed is the position that satisfies it: the toggle lives in the sheet,
+ * and the WAY IN — the cog — is the thing that must ride every screen.
  */
 {
   const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  let sheet = '';
+  try { sheet = await readFile(new URL('../src/views/SettingsSheet.jsx', import.meta.url), 'utf8'); } catch { /* absent reads as '': the asserts below name it */ }
   const header = app.slice(app.indexOf('<header'), app.indexOf('</header>'));
   ok(header.length > 0, 'the header is findable in the source');
   ok(!/<LangToggle/.test(header), 'the language switch is NOT in the header any more');
-  ok(/<LangToggle/.test(app), 'but it is still somewhere in the shell…');
-  const footer = app.slice(app.indexOf('<footer'), app.indexOf('</footer>'));
-  ok(/<LangToggle/.test(footer), '…specifically the footer, which renders under every tab');
+  ok(/<LangToggle/.test(sheet), 'it lives in the Settings sheet now (S1) — behind the cog, not on every screen\'s footer');
+  ok(!/<LangToggle|<CurrencyToggle/.test(app), 'and the shell mounts no stray toggle of its own — the declutter is real');
   /**
-   * NOT behind a tab test. `{tab === 'summary' && <LangToggle/>}` would satisfy
-   * every assertion above and strand him on the Inbox with no way to switch.
+   * The WAY IN rides the header, which renders on every tab — and is NOT
+   * behind a tab test: `{tab === 'summary' && <SettingsCog/>}` would satisfy
+   * the line above and strand him on the Inbox with no way to switch.
    */
-  ok(!/tab === '[a-z]+' && <LangToggle/.test(app),
-    'and it is not gated on one tab — that would strand him wherever he happens to be');
+  ok(/<SettingsCog/.test(header) && !/tab === '[a-z]+' &&\s*<SettingsCog/.test(app),
+    'the cog is in the header and not gated on one tab — that would strand him wherever he happens to be');
 }
 
 // ——————————————————————— the locale envelope
