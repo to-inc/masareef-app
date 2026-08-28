@@ -20,7 +20,17 @@ export const AR = {
   appName: 'مصاريف',
 
   // ——— tabs
-  tabInbox: 'الوارد',
+  /**
+   * «للمراجعة», not the old label — the approved glass redesign, 2026-08-28.
+   * The rename is not cosmetic: the old word named where things ARRIVE, and
+   * this screen is where he DECIDES. The tab was already a review queue; the
+   * label had never said so.
+   * ⚠️ NOT A FIND-AND-REPLACE. «التحويلات الواردة» further down this file is the
+   * ADJECTIVE «incoming» describing transfers, and renaming it would turn a
+   * true sentence about money coming in into nonsense. Two different words that
+   * merely share a stem.
+   */
+  tabInbox: 'للمراجعة',
   // مش «كاش» تاني — الشاشة اللي وراه بتاخد كاش أو فيزا (R-receipts 1).
   tabEntry: 'جديد',
   tabReceipt: 'فاتورة',
@@ -74,6 +84,25 @@ export const AR = {
   methodCash: 'كاش',
   methodCard: 'فيزا',
   currency: 'جنيه',
+  /**
+   * THE INLINE UNIT — «ج.م», beside a row-scale figure.
+   *
+   * `currency` above is the HERO form and stays: the design file uses the full
+   * word beside 34–40px figures and the abbreviation beside 17–22px ones, and
+   * it does so 21 times out of 21 with no exception. That size-class rule is
+   * REAL but UNSTATED — HANDOFF gives only «AR ج.م · EN E£», which read
+   * literally would put the abbreviation on the hero, something the design file
+   * (the higher authority) never does. Both forms are needed; neither replaces
+   * the other.
+   *
+   * ⚠️ The SIZE this renders at is still the app's, not the design's. The design
+   * sets inline units at 13px; `unitSize()` floors at `TYPE.label` (15) under
+   * ruling 5 — «a 12px unit in front of a 70-year-old is the ratio defeating
+   * the scale». Hero and display units already match the design exactly (22 and
+   * 19); only the floored sizes differ. Lowering a senior floor is an Owner
+   * ruling, not an implementation detail, so it is NOT taken here.
+   */
+  currencyShort: 'ج.م',
   // ——— وضع السفر (A4): العملة بتتقال بالاسم في زرار التسجيل.
   // Always a STRING — an unmapped code renders as itself rather than as
   // whatever type it arrived as. A currency chip is a button he has to read.
@@ -268,7 +297,7 @@ export const AR = {
   dupUnpriced: (n) => `${n} ${n === 1 ? 'صف' : 'صفوف'} من غير مبلغ، فما اتقارنوش.`,
   dupNoDescription: '(من غير وصف)',
   dupOpenSheet: 'افتح الشيت وراجعهم',
-  // ═══ U4 — أزواج التكرار في الوارد (٠٦ §3.9، حكم المالك 2026-08-27) ═══
+  // ═══ U4 — أزواج التكرار في «للمراجعة» (٠٦ §3.9، حكم المالك 2026-08-27) ═══
   // «سيب واحد وشيل واحد؛ اللي تشيله يروح لتبويب Removed — والتاني بيفضل.»
   // القرار قرار واحد للزوج كله، والجُمل بتقول ده بالنص — مش بالتلميح.
   dupPairTitle: 'متسجلين مرتين؟',
@@ -411,7 +440,7 @@ export const AR = {
   prevWorded: (amount, prevName) => `كان ${amount} — ${prevName}`,
   todayTitle: 'مصاريف النهاردة — زي ما هي في الشيت بالظبط',
   todayEmptyTitle: 'لسه مفيش حاجة اتسجلت النهاردة',
-  todayEmptyBody: 'أكّد العمليات من الوارد، أو سجّل مصروف جديد.',
+  todayEmptyBody: 'أكّد العمليات من «للمراجعة»، أو سجّل مصروف جديد.',
   colDate: 'التاريخ',
   colDesc: 'البيان',
   colMethod: 'كاش/فيزا',

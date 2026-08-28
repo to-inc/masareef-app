@@ -103,8 +103,12 @@ for (const r of perFile) {
 // ——— the vocabulary stands, at the ruled values, with the exemption stated by name
 const theme = read('src/theme.js');
 // `sheet: 24` joined by Planner ruling 2026-08-26 (B4: the advisory sheet's lip).
-ok(/export const RADIUS = \{ card: 20, row: 16, capsule: 999, inset: 8, sheet: 24 \}/.test(theme),
-  'A3.V theme.js — RADIUS = { card: 20, row: 16, capsule: 999, inset: 8, sheet: 24 } (§3 + rulings 4, B4), verbatim');
+// ⚠️ MOVED 2026-08-28 with the approved glass redesign: card 20→26, row 16→20
+// («Card — 26r», «Row — 20r» in the design file). `sheet` already equalled the
+// advisory radius and did not move. The pin moves WITH the ruling and never
+// ahead of it — that is what makes it a pin rather than a comment.
+ok(/export const RADIUS = \{ card: 26, row: 20, capsule: 999, inset: 8, sheet: 24 \}/.test(theme),
+  'A3.V theme.js — RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24 } (§3 + rulings 4, B4; glass scale 2026-08-28), verbatim');
 ok(theme.includes('GEOMETRY EXEMPTION'),
   'A3.V theme.js — the GEOMETRY EXEMPTION doctrine is stated by name where the tokens live');
 

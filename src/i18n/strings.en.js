@@ -20,7 +20,13 @@ export const EN = {
   appName: 'Masareef',
 
   // ——— tabs
-  tabInbox: 'Inbox',
+  /**
+   * «To review», matching the AR rename (glass redesign, 2026-08-28). The
+   * design file specifies the ARABIC label six times and NO English one
+   * anywhere, so this is HANDOFF.md's own gloss — «الوارد» → «للمراجعة»
+   * (to review) — applied rather than invented. One word to veto.
+   */
+  tabInbox: 'To review',
   // Not "Cash" any more — the screen behind it takes either method (R-receipts 1).
   tabEntry: 'New',
   tabReceipt: 'Receipt',
@@ -69,6 +75,25 @@ export const EN = {
   methodCash: 'Cash',
   methodCard: 'Card',
   currency: 'EGP',
+  /**
+   * THE INLINE UNIT — «E£», beside a row-scale figure.
+   *
+   * `currency` above is the HERO form and stays: the design file uses the full
+   * word beside 34–40px figures and the abbreviation beside 17–22px ones, and
+   * it does so 21 times out of 21 with no exception. That size-class rule is
+   * REAL but UNSTATED — HANDOFF gives only «AR ج.م · EN E£», which read
+   * literally would put the abbreviation on the hero, something the design file
+   * (the higher authority) never does. Both forms are needed; neither replaces
+   * the other.
+   *
+   * ⚠️ The SIZE this renders at is still the app's, not the design's. The design
+   * sets inline units at 13px; `unitSize()` floors at `TYPE.label` (15) under
+   * ruling 5 — «a 12px unit in front of a 70-year-old is the ratio defeating
+   * the scale». Hero and display units already match the design exactly (22 and
+   * 19); only the floored sizes differ. Lowering a senior floor is an Owner
+   * ruling, not an implementation detail, so it is NOT taken here.
+   */
+  currencyShort: 'E£',
   // ——— travel mode (A4): the currency is named in the log button.
   // Always a STRING, for the same reason as the Arabic: an unmapped code
   // renders as itself rather than as whatever type it arrived as.

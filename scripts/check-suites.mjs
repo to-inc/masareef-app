@@ -44,7 +44,25 @@ import { dirname, join } from 'node:path';
  * If you are here because the run went red: the number below is a claim about
  * the suite, and one of the two is wrong. Neither is automatically the number.
  */
-const EXPECTED_ASSERTIONS = 5572;
+/**
+ * 5573 since 2026-08-28 (glass redesign, foundation step). RECONCILED
+ * LINE-BY-LINE, not estimated: the single new assertion is A3's, and it is
+ * A3 doing its job rather than a test being added. A3 asserts once per file
+ * that CONTAINS radius sites; `theme.js` contained none until the glass
+ * recipes moved into it, and now contains five — all riding RADIUS tokens,
+ * all clean. Measured both ways: with the glass block A3 runs 32 checks,
+ * with it removed it runs 31.
+ *
+ * 5581 the same day: `currencyShort` («ج.م» / «E£») entered both locales, and
+ * the i18n suite charges 8 checks for one key — parity in both directions,
+ * type, arity and template safety, across two locales. RECONCILED THE SAME
+ * WAY: test-i18n runs 2429 with the key and 2421 with it removed in a scratch
+ * copy, and it is the ONLY suite whose count moved. The key exists because the
+ * design uses the full word beside hero figures and the abbreviation beside
+ * row-scale ones — 21 sites out of 21, no exception — and the app had only the
+ * hero form.
+ */
+const EXPECTED_ASSERTIONS = 5581;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

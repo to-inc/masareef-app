@@ -59,8 +59,12 @@ const pin = (re, label) => ok(src !== null && re.test(src), label);
 /**
  * ——— 1. RADIUS — three surfaces plus the inset (ruling 4).
  */
-eq(RADIUS?.card, 20, 'RADIUS.card — the card surface');
-eq(RADIUS?.row, 16, 'RADIUS.row — the row surface');
+// ⚠️ MOVED 2026-08-28 with the approved glass redesign — «Card — 26r» and
+// «Row — 20r» in the design file. Two pins in two suites held this scale
+// (A1 by value, A3.V by verbatim line); both move together with the ruling,
+// which is the point of having had two.
+eq(RADIUS?.card, 26, 'RADIUS.card — the card surface (glass 26r)');
+eq(RADIUS?.row, 20, 'RADIUS.row — the row surface (glass 20r)');
 eq(RADIUS?.capsule, 999, 'RADIUS.capsule — the pill');
 eq(RADIUS?.inset, 8, 'RADIUS.inset — ruling 4: the small inner surface, 8');
 pin(/GEOMETRY EXEMPTION/, 'the GEOMETRY EXEMPTION is named in theme.js — inline radii cite it by this name, so the name must exist to cite');
@@ -102,7 +106,9 @@ eq(MOTION?.easeSettle, 'cubic-bezier(0.22,1,0.36,1)', 'MOTION.easeSettle');
  */
 eq(GLYPH?.illustration, 46, 'GLYPH.illustration');
 eq(GLYPH?.spot, 34, 'GLYPH.spot');
-eq(ICON?.nav, 21, 'ICON.nav');
+// ⚠️ 21→20 with the glass redesign (2026-08-28): the nav glyph is 20 at rest
+// and 26 pressed (NAV.iconActive), because icon scale became a state signal.
+eq(ICON?.nav, 20, 'ICON.nav — the glyph at REST (NAV.iconActive is the pressed size)');
 eq(ICON?.primary, 32, 'ICON.primary');
 eq(ICON?.control, 17, 'ICON.control');
 

@@ -15,8 +15,10 @@
  * because nothing it is attached to can. That anchoring argument is what this
  * oracle pins, clause by clause.
  *
- * WHY THE GROUND IS TAB-AWARE. The Book tab paints the MORNING_CROWN (mist →
- * shell) behind <main>; every other tab paints shell. A scrim that always
+ * WHY THE GROUND IS TAB-AWARE. The Book tab paints GROUND.dawn, New paints
+ * GROUND.tide and the rest paint GROUND.haze (glass redesign, 2026-08-28;
+ * MORNING_CROWN is retired). The scrim dissolves into GROUND_CROWN — the top
+ * colour of whichever ground is painted. A scrim that always
  * dissolved to shell would hang a cream veil over a blue-tinted morning — the
  * strip must dissolve INTO the ground it sits on, or it stops being furniture
  * and starts being paint.
@@ -57,7 +59,7 @@ ok(/position: 'absolute'/.test(scrim) && /top: '100%'/.test(scrim),
   'B5.5 it hangs at top:100% — the strip is UNDER the header, riding its real height (safe-area included) instead of guessing it');
 ok(/linear-gradient\(180deg/.test(scrim) && /withAlpha\(/.test(scrim),
   'B5.6 it is a GRADIENT dissolving to the transparent form of its own ground token — never a second opaque bar');
-ok(/const scrimGround = tab === 'book' && !needsSetup \? C\.mist : C\.shell;/.test(app)
+ok(/const scrimGround = needsSetup \? GROUND_CROWN\.haze : tab === 'book' \? GROUND_CROWN\.dawn : tab === 'entry' \? GROUND_CROWN\.tide : GROUND_CROWN\.haze;/.test(app)
   && scrim.includes('scrimGround'),
   'B5.7 the ground is tab-aware: mist over the Book\'s morning crown, shell everywhere else — it dissolves into what is actually there');
 ok(/pointerEvents: 'none'/.test(scrim),

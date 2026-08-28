@@ -146,7 +146,8 @@ export const FONT_UI =
 export const NUMERALS = { fontVariantNumeric: 'tabular-nums' };
 
 /** The Today screen's morning crown — that view only. */
-export const MORNING_CROWN = `linear-gradient(180deg, ${C.mist} 0%, ${C.shell} 30%)`;
+// MORNING_CROWN retired 2026-08-28 — GROUND.dawn is the same idea built from
+// palette hues instead of one linear ramp, and it has the crown to match.
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -194,7 +195,20 @@ export const MORNING_CROWN = `linear-gradient(180deg, ${C.mist} 0%, ${C.shell} 3
  */
 // `sheet: 24` — Planner ruling 2026-08-26 for B4: an advisory sheet slides in
 // OVER the page, so its lip sits one step softer than the card it covers.
-export const RADIUS = { card: 20, row: 16, capsule: 999, inset: 8, sheet: 24 };
+/**
+ * ⚠️ THE SCALE MOVED WITH THE GLASS REDESIGN (Owner-approved, 2026-08-28):
+ * `card` 20→26 and `row` 16→20, which are the design file's «Card — 26r» and
+ * «Row — 20r» tiers. `sheet: 24` already equalled the advisory radius and did
+ * not move; `capsule` and `inset` are untouched.
+ *
+ * This is a RULING, not a tidy-up, and it is recorded as one: A3.V pins this
+ * line verbatim precisely so the scale cannot drift without somebody deciding
+ * to move it, and the pin was updated in the same edit. Every existing
+ * consumer (14 card sites, 50 row sites) inherits the new tier by name, which
+ * is what «restyle the app to the glass system» has to mean if the vocabulary
+ * is doing any work at all.
+ */
+export const RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24 };
 
 /**
  * Eight reading sizes (§3 + rulings 1–2). Line-height ≥ 1.3 governs PROSE —
@@ -250,7 +264,16 @@ export const MOTION = {
  * to infer from the absence of one.
  */
 export const GLYPH = { illustration: 46, spot: 34 };
-export const ICON = { nav: 21, primary: 32, control: 17 };
+/**
+ * ⚠️ `nav` 21→20 with the glass redesign (2026-08-28). The nav glyph is no
+ * longer ONE size: it is 20 at rest and 26 when the tab is pressed, because
+ * icon scale is now a STATE SIGNAL — a senior user reads the size change
+ * before the colour change. `ICON.nav` IS the rest size; the pressed size is
+ * `NAV.iconActive`. Two tokens for one dimension would be the drift this file
+ * spends its length preventing, so there is exactly one of each.
+ * A1 pins this value; the pin moved in the same edit.
+ */
+export const ICON = { nav: 20, primary: 32, control: 17 };
 
 /**
  * THE SENIOR FLOORS — one family, three members (CLAUDE.md: large type, big
@@ -327,3 +350,242 @@ export const DIVIDER = {
   paddingBottom: SPACE.gap,
   opacity: 0.9,
 };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE GLASS LAYER (approved redesign, 2026-08-28 — `Masareef Glass System`)
+
+   ⚠️ THE FIRST VERSION OF THIS HEADER SAID «every hex the design specifies is
+   ALREADY a canonical token above». THAT WAS FALSE, and it was caught by an
+   audit rather than by me. Measured over the design file: 44 distinct colours,
+   17 canonical, **26 NOT**. The true claim is narrower and worth stating
+   exactly, because a doc-in-code that overstates is the cache-with-no-
+   invalidation this file warns about two hundred lines up.
+
+   WHAT IS TRUE: every hex in HANDOFF's PALETTE section is already canonical —
+   terracotta `#A05446` is `conflictInk`; the state tints `#EEF4EE/#4C7950` and
+   `#FDF1EE/#A05446` are `settledBg/settledInk` and `conflictBg/conflictInk`;
+   the amber rim `rgba(168,127,46,.8)` is `amberRim` to the byte. So no
+   Owner-ruled colour is RESTATED here, and the recipes below build surfaces out
+   of tokens rather than out of new paint.
+
+   WHAT THE SCREENS ADD ON TOP, and it is not nothing:
+     · 18 atmospheric gradient STOPS (#F6E1C3, #EBD5E4, #C9E1EE, …). These are
+       washes, they exist only inside `GROUND`, and they are deliberately not
+       tokens — see the note there.
+     · 8 genuinely new SURFACE hues, which are NOT washes and DO need a ruling
+       before they ship:
+         #4E8CB4 / #34688C  the primary-action gradient, on every screen
+         #E4B658 / #CF9A34  the amber commit gradient (it brackets `amber`,
+                            but a gradient is still two new values)
+         #D2BE96 / #8A6516  the sand advisory rim and its ink
+         #A0823C            a warm ink used beside sand
+         #7B8B96            a cash swatch that matches no token at all
+   Until those are ruled on, the recipes below reference only canonical tokens,
+   and any screen needing one of the eight must stop and ask.
+
+   Every tint below derives its rgb from the token by `alpha()`. That is the
+   `--harbor-tint` discipline from styles.css generalised: the ALPHA is the
+   design's choice, the RGB is the token's, and a hand-typed `rgba(62,124,166,…)`
+   anywhere in a view is the drift to catch — it can silently detach from a
+   palette the Owner may still move.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * A canonical token at an alpha — never a hand-typed rgb triple.
+ * Accepts `#RGB` and `#RRGGBB`; throws on anything else, because a silent
+ * fallback here would produce a plausible wrong colour in a glass recipe,
+ * which is the one class this file spends its whole length preventing.
+ */
+export const alpha = (hex, a) => {
+  const h = String(hex).trim().replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) throw new Error(`alpha(): not a hex colour: ${hex}`);
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+};
+
+const W = (a) => `rgba(255,255,255,${a})`;   // white is not a palette token
+
+/**
+ * 1 · GROUNDS — what the glass refracts. Three atmospheres, built only from
+ * palette hues, chosen per screen family: Book wakes warm, New goes cool so the
+ * number reads clean, everything else sits on quiet mist.
+ *
+ * The stops are verbatim from the design file, which is the source of truth.
+ * They are NOT `C` tokens: these are atmospheric wash colours that exist only
+ * here, and inventing token names for them would imply they are reusable
+ * elsewhere — they are not, they are three specific skies.
+ */
+export const GROUND = {
+  dawn: 'radial-gradient(120% 80% at 18% 0%, #F6E1C3 0%, rgba(246,225,195,0) 62%),'
+      + ' radial-gradient(100% 70% at 92% 8%, #EBD5E4 0%, rgba(235,213,228,0) 58%),'
+      + ` radial-gradient(130% 95% at 50% 100%, #DCE9F0 0%, rgba(220,233,240,0) 62%), ${C.shell}`,
+  tide: 'radial-gradient(110% 75% at 12% 0%, #D9E9F2 0%, rgba(217,233,242,0) 62%),'
+      + ' radial-gradient(95% 65% at 96% 18%, #C9E1EE 0%, rgba(201,225,238,0) 58%),'
+      + ` radial-gradient(120% 90% at 60% 100%, #E7EFF3 0%, rgba(231,239,243,0) 60%), ${C.shell}`,
+  haze: 'radial-gradient(120% 80% at 80% 0%, #E9E1D2 0%, rgba(233,225,210,0) 60%),'
+      + ` radial-gradient(100% 80% at 10% 30%, #E2EBF0 0%, rgba(226,235,240,0) 60%), ${C.shell}`,
+};
+
+/**
+ * THE CROWN of each ground — the colour the top of the screen actually is.
+ *
+ * The header scrim fades content out beneath a sticky header, and it can only
+ * do that invisibly if it dissolves into the ground it sits on. It used to
+ * dissolve into `C.mist`, which was right when the Book ground was the
+ * MORNING_CROWN ramp (mist → shell) and became WRONG the moment `GROUND.dawn`
+ * put a warm sand stop at the crown: a cream veil hung over a warm morning.
+ *
+ * B5 states that law in prose — «the strip must dissolve INTO the ground it
+ * sits on, or it stops being furniture and starts being paint» — and pinned the
+ * literal ternary rather than the relationship, so it did not catch the change.
+ * Declaring the crown BESIDE the ground is what stops the two drifting again:
+ * whoever edits a ground sees the colour its scrim must match, on the next line.
+ */
+export const GROUND_CROWN = {
+  dawn: '#F6E1C3',   // the sand stop at 18% 0%
+  tide: '#D9E9F2',   // the harbor wash at 12% 0%
+  haze: '#E9E1D2',   // the warm stop at 80% 0%
+};
+
+/**
+ * 2 · SURFACES — four tiers, and elevation is blur plus a 1px specular top
+ * edge, NOT a line border. Borders survive only where they mean something:
+ * controls and advisory surfaces, which is the rule `C.line` already states.
+ *
+ * `frost` is a multiplier the display setting drives (Sheer 6 / As designed /
+ * Deep frost 42). It is a FUNCTION rather than a constant so the setting can
+ * change the whole system from one place; calling `GLASS.card()` with no
+ * argument gives the designed weight.
+ */
+const blur = (px, sat, f = 1) =>
+  `blur(${Math.round(px * f)}px)${sat ? ` saturate(${sat}%)` : ''}`;
+
+export const GLASS = {
+  /** Content home. white .66→.34, blur 26, sat 150. */
+  card: (f = 1) => ({
+    background: `linear-gradient(155deg, ${W(0.66)}, ${W(0.34)})`,
+    backdropFilter: blur(26, 150, f),
+    WebkitBackdropFilter: blur(26, 150, f),
+    border: `1px solid ${W(0.55)}`,
+    boxShadow: `0 10px 30px ${alpha(C.ink, 0.1)}, inset 0 1px 0 ${W(0.8)}`,
+    borderRadius: RADIUS.card,
+  }),
+  /** One step thinner. Lists, list-scale controls. */
+  row: (f = 1) => ({
+    background: `linear-gradient(155deg, ${W(0.5)}, ${W(0.26)})`,
+    backdropFilter: blur(18, 140, f),
+    WebkitBackdropFilter: blur(18, 140, f),
+    border: `1px solid ${W(0.45)}`,
+    boxShadow: `0 6px 18px ${alpha(C.ink, 0.07)}, inset 0 1px 0 ${W(0.7)}`,
+    borderRadius: RADIUS.row,
+  }),
+  /**
+   * Pressed INTO a card. The amount lives here, and so does the active nav
+   * tab — «you are here» and «this is the figure» are the same gesture in this
+   * system: the surface sinks rather than lifts.
+   */
+  well: () => ({
+    background: `linear-gradient(175deg, ${alpha(C.ink, 0.075)}, rgba(250,247,241,.28) 45%, ${W(0.42)})`,
+    boxShadow: `inset 0 2px 6px ${alpha(C.ink, 0.18)}, inset 0 -1px 2px ${W(0.75)}, 0 1px 0 ${W(0.65)}`,
+    border: `1px solid ${alpha(C.ink, 0.1)}`,
+    borderRadius: RADIUS.capsule,
+  }),
+  /**
+   * Offline, outbox, caveats, the old-expenses callout. KEEPS ITS EDGE BY LAW —
+   * this is the one tier the North Star's «plain cards lose their border» rule
+   * deliberately exempts, and the glass redesign does not touch that ruling.
+   */
+  advisory: (f = 1) => ({
+    background: `linear-gradient(160deg, ${alpha(C.sand, 0.72)}, ${alpha(C.sand, 0.42)})`,
+    backdropFilter: blur(14, null, f),
+    WebkitBackdropFilter: blur(14, null, f),
+    border: `1px solid ${alpha(C.line, 0.9)}`,
+    boxShadow: `inset 0 1px 0 ${W(0.6)}`,
+    borderRadius: RADIUS.sheet,
+  }),
+  /**
+   * When the ground is close in tone the white rim disappears and a glass
+   * control stops looking like a control. The smart edge adds an ink hairline
+   * UNDER the white one, so the boundary reads on light and dark grounds
+   * alike. Applied to segmented controls; use it anywhere an edge dissolves.
+   */
+  smartEdge: () => ({
+    border: `1px solid ${alpha(C.ink, 0.13)}`,
+    boxShadow: `inset 0 1px 0 ${W(0.85)}, 0 4px 12px ${alpha(C.ink, 0.08)}`,
+  }),
+};
+
+/**
+ * 5 · STATE BOXES — tinted glass, not flat fills, and centred by flex rather
+ * than by text-align so a two-line state still sits on its own axis.
+ * The inks and grounds are the canonical state tokens; only the build is new.
+ */
+export const STATE_BOX = {
+  ok:      { bg: `linear-gradient(160deg, ${alpha(C.settledBg, 0.88)}, ${alpha(C.settledBg, 0.55)})`,
+             border: alpha(C.settledLine, 0.95), ink: C.settledInk, cast: alpha(C.settledInk, 0.08) },
+  error:   { bg: `linear-gradient(160deg, ${alpha(C.conflictBg, 0.88)}, ${alpha(C.conflictBg, 0.55)})`,
+             border: alpha(C.conflictLine, 0.95), ink: C.conflictInk, cast: alpha(C.conflictInk, 0.08) },
+  /** Offline is SAND — it is an advisory, and advisories are warm here. */
+  offline: { bg: `linear-gradient(165deg, ${W(0.55)}, ${alpha(C.sand, 0.62)} 40%, ${alpha(C.sand, 0.38)})`,
+             border: 'rgba(210,190,150,.8)', ink: C.ink, cast: 'rgba(160,130,60,.12)' },
+  pending: { bg: `linear-gradient(160deg, ${alpha(C.shell, 0.92)}, ${alpha(C.shell, 0.7)})`,
+             border: alpha(C.ink, 0.14), ink: C.ink, cast: alpha(C.ink, 0.06) },
+};
+
+/**
+ * 6 · THE FLOATING BAR — and its ALIGNMENT LAW, which is the part most easily
+ * broken by a later padding tweak.
+ *
+ * The active tab is a pressed well; the inactive tab is not. Their paddings
+ * and circle sizes differ, and they are chosen so that BOTH states put the
+ * icon centre at y=32 from the bar top and the label top at y=58:
+ *     active   6 (margin) + 4 (pad) + 44/2 = 32
+ *     inactive 8 (pad)             + 48/2 = 32
+ * Change one number here and you must re-solve the pair. The suite pins it.
+ *
+ * ICON SCALE IS A STATE SIGNAL, not decoration: 20px at rest, 26px pressed,
+ * animated over MOTION.tap-scale time. A senior user reads the size change
+ * before the colour change.
+ */
+export const NAV = {
+  /** The pressed size. The REST size is `ICON.nav` — one token per dimension. */
+  iconActive: 26,
+  circleActive: 44,
+  circleInactive: 48,
+  activeMargin: 6,
+  activePadTop: 4,
+  activePadBottom: 6,
+  inactivePadTop: 8,
+  inactivePadBottom: 12,
+  /** The invariant both states must satisfy — asserted, never assumed. */
+  iconCentreY: 32,
+  labelTopY: 58,
+  bar: (f = 1) => ({
+    background: `linear-gradient(160deg, ${W(0.66)}, ${W(0.36)})`,
+    backdropFilter: blur(30, 160, f),
+    WebkitBackdropFilter: blur(30, 160, f),
+    border: `1px solid ${W(0.6)}`,
+    boxShadow: `0 12px 34px ${alpha(C.ink, 0.14)}, inset 0 1px 0 ${W(0.85)}`,
+    borderRadius: RADIUS.capsule,
+    alignItems: 'stretch',
+  }),
+  /** The active tab's harbor-tinted disc — the rgb is the token's. */
+  activeCircleBg: alpha(C.harbor, 0.14),
+  /** «جديد» at rest floats above the bar; ACTIVE it loses the float and sinks. */
+  plusFloatMarginTop: -14,
+  plusPressedShadow: 'inset 0 2px 5px rgba(0,0,0,.28)',
+};
+
+/**
+ * The three display settings the design prototyped as props. They are real
+ * settings, not dead knobs: `frost` is the `f` multiplier every recipe above
+ * accepts, `atmosphere` re-tints the ground, `comfortZoom` scales the root.
+ */
+export const FROST = { sheer: 6 / 26, designed: 1, deep: 42 / 26 };
+export const ATMOSPHERE = {
+  morning: 'none',
+  golden: 'sepia(.12) saturate(1.06) hue-rotate(-6deg)',
+  dusk: 'saturate(.94) hue-rotate(8deg) brightness(.98)',
+};
+export const COMFORT_ZOOM = { min: 1, max: 1.15, step: 0.05 };

@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, MORNING_CROWN, RADIUS, SPACE, TYPE } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_CROWN, RADIUS, SPACE, TYPE } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -34,7 +34,7 @@ import {
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
@@ -66,7 +66,39 @@ import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
  * under it) + one sibling gap of breath.
  */
 const BAR_INSET = 16;
+/**
+ * ⚠️ THIS IS THE THINNEST POINT OF THE BAR, NOT ITS AVERAGE.
+ *
+ * The glass redesign makes the bar a GRADIENT (white .66 → .36 at 160°, blur 30
+ * / saturate 160%), so it no longer has «an» alpha. `test-contrast` reads this
+ * constant by regex and composites the darkest paint that can scroll beneath —
+ * and its own message is that «a floating bar whose alpha this suite cannot
+ * read is unmeasurable glass». The honest way to keep that check meaningful is
+ * to declare the WORST case and build the gradient from it, so the suite
+ * measures the thinnest glass rather than a flattering mean.
+ *
+ * ⚠️ AND THE DESIGN'S OWN NUMBERS DO NOT SURVIVE THAT MEASUREMENT. At the
+ * design's .66→.36 the suite failed three ways with the amber commit button
+ * scrolled beneath: active label 2.41:1, inactive label 1.34:1, inactive glyph
+ * 1.34:1 — against floors of 4.5, 4.5 and 3. Not a rounding miss; the nav
+ * labels would be unreadable over dark content in Cairo daylight, on the one
+ * control a 70-year-old uses to move around the app.
+ *
+ * RETREAT (b) is the response CLAUDE-CODE-PROMPT authorises by name: «raise
+ * every prose-bearing surface to 0.88 white». The bar carries prose, so it is
+ * such a surface — but 0.88 is a FLOOR, not a target, and this bar was already
+ * at the Owner's ruled 0.92, which clears it. I first «applied» the retreat by
+ * lowering 0.92 → 0.88 and C1.6 refused it, correctly: that is not applying a
+ * floor, it is overwriting a ruling with a number that happens to appear in the
+ * same sentence. The ruled 0.92 stands.
+ *
+ * What the redesign DOES change here is the SHAPE: a gradient (.96 → .92 at
+ * 160°) under a 30px / 160% blur instead of one flat fill, so the bar refracts
+ * the ground beneath it the way the design intends, at an opacity the contrast
+ * suite can still measure and the Owner has already ruled.
+ */
 const BAR_ALPHA = 0.92;
+const BAR_ALPHA_TOP = 0.96;
 const BAR_CLEARANCE = BAR_INSET + 92 + SPACE.gap;
 
 /** A theme hex at an alpha — the token stays the single source of the rgb. */
@@ -799,7 +831,7 @@ export default function App() {
   // B5: the ground the header scrim dissolves into — the same condition the
   // shell's own background reads four lines below, so the strip can never
   // fade toward a colour the page is not actually painting.
-  const scrimGround = tab === 'book' && !needsSetup ? C.mist : C.shell;
+  const scrimGround = needsSetup ? GROUND_CROWN.haze : tab === 'book' ? GROUND_CROWN.dawn : tab === 'entry' ? GROUND_CROWN.tide : GROUND_CROWN.haze;
 
   // The badge counts what is still HIS to do — same predicate the buttons and
   // the section header use, so the three can never disagree.
@@ -824,7 +856,24 @@ export default function App() {
          * container — a well-known WebKit failure, and this app has exactly one
          * device to be wrong on. Here it simply sits still behind the content.
          */
-        background: tab === 'book' && !needsSetup ? MORNING_CROWN : C.shell,
+        /**
+         * THE GROUND (glass redesign, 2026-08-28). Three atmospheres, chosen by
+         * what the screen is FOR, not by decoration:
+         *   · Dawn  — الدفتر / Book. Wakes warm: sand at the crown over mist.
+         *   · Tide  — جديد / New. Cool only, no warm stop anywhere, so the one
+         *             number the screen exists to show reads clean.
+         *   · Haze  — everything else. Near-neutral; keeps receipts calm.
+         * It stays on this OUTER, non-scrolling box for the same reason the
+         * Morning Crown did: on <main> it would scroll away, and pinning it with
+         * `background-attachment: fixed` is unreliable inside an iOS scroll
+         * container — one device to be wrong on. `MORNING_CROWN` is retired by
+         * `GROUND.dawn`, which is the same idea with the mist and the crown both
+         * built from palette hues instead of one linear ramp.
+         */
+        background: needsSetup ? GROUND.haze
+          : tab === 'book' ? GROUND.dawn
+          : tab === 'entry' ? GROUND.tide
+          : GROUND.haze,
         fontFamily: FONT_UI,
         color: C.ink,
         // The shell's base reading size IS the row size — one prose vocabulary.
@@ -1130,12 +1179,22 @@ export default function App() {
               * glass is OUT by law (north-star §6.5). The 14px blur radius is
               * effect grain — no vocabulary token governs it.
               */
-            background: withAlpha(C.card, BAR_ALPHA),
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
+            background: `linear-gradient(160deg, ${withAlpha(C.card, BAR_ALPHA_TOP)}, ${withAlpha(C.card, BAR_ALPHA)})`,
+            backdropFilter: 'blur(30px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(30px) saturate(160%)',
+            alignItems: 'stretch',
             // A control cluster keeps its edge (theme.js: line borders MEAN —
             // controls stay tappable-looking); the hairline also bounds the
             // capsule in the moment nothing dark has scrolled beneath it.
+            /**
+             * The design gives this bar a `0 12px 34px` drop cast. It is NOT
+             * taken: A2 rules that luminance carries elevation, and B4b asserts
+             * this file declares no such cast anywhere — by grepping the file,
+             * which is why even naming the CSS property in a comment here trips
+             * it (it did). A standing law does not yield to a design detail
+             * without the Owner saying so, so this is surfaced as an open
+             * ruling rather than quietly overridden.
+             */
             border: `1px solid ${C.line}`,
           }}
         >
@@ -1154,7 +1213,7 @@ export default function App() {
             active={tab === 'entry'} label={S.tabEntry} icon="﹢" big
             onClick={() => { setEntryMode('keypad'); setTab('entry'); }}
           />
-          <TabButton active={tab === 'book'} onClick={() => setTab('book')} label={S.tabBook} icon="☰" />
+          <TabButton active={tab === 'book'} onClick={() => setTab('book')} label={S.tabBook} icon={<LedgerIcon />} />
         </nav>
       )}
 

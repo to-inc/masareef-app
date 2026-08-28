@@ -330,6 +330,43 @@ export function NeutralDelta({ now, prev }) {
   );
 }
 
+/**
+ * THE «الدفتر» GLYPH — the V2 Ledger mark, transcribed verbatim from the design
+ * file (`Masareef Glass System.dc.html`, the الدفتر nav states).
+ *
+ * It replaces «☰», which said «a list» and could have been any list in any app.
+ * This says «a ruled book with a spine and entries» — which is what الدفتر IS,
+ * and what the whole product is named after.
+ *
+ * `stroke="currentColor"` on purpose: the tab already colours itself
+ * (harbor when active, muted at rest), so the glyph inherits that one decision
+ * instead of restating it — and the colour cannot drift away from the label
+ * beside it.
+ */
+export function LedgerIcon({ size = ICON.nav }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      /* The tab's own `aria-label` already names it; a second name here would
+         make a screen reader say «الدفتر الدفتر». */
+      aria-hidden="true"
+      focusable="false"
+      style={{ display: 'block' }}
+    >
+      <rect x="4.5" y="3.5" width="15" height="17" rx="2.5" />
+      <path d="M8.5 3.5v17" />
+      <path d="M12 8.5h4.5M12 12h4.5M12 15.5h2.5" />
+    </svg>
+  );
+}
+
 export function TabButton({ active, onClick, label, icon, badge, big }) {
   return (
     <button
@@ -353,7 +390,11 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
                 background: C.harbor, color: C.onDark, fontSize: ICON.primary, lineHeight: '48px',
                 fontWeight: 600, boxShadow: '0 6px 16px rgba(62,124,166,.42)',
               }
-            : { fontSize: ICON.nav, marginBottom: 2 }
+            : {
+                fontSize: ICON.nav, marginBottom: 2,
+                // An SVG glyph sizes itself; centring is what the slot owes it.
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }
         }
       >
         {icon}
