@@ -825,8 +825,16 @@ const MOCK_MONTH_ROWS = (y, m, today, pendingToday, todayEntries) => {
 export function mockEntries({ y, m }) {
   const today = cairoToday();
   const base = mockSummary();
-  const rows = MOCK_MONTH_ROWS(Number(y), Number(m), today, null, base.today.entries);
   const MONTH_ABBR_ = MONTH_ABBR[Number(m) - 1] || String(m);
+  /**
+   * U1/U4 — the list reflects this session's mock edits and removals (the
+   * overlay is a no-op until a mock write happens): on the real server the
+   * editor and the list read the ONE month blob, and a mock whose list
+   * reverts what its editor just confirmed would certify a refetch that
+   * un-edits rows — the pending/today disjointness bug wearing new clothes.
+   */
+  const rows = mockLiveRows_(MONTH_ABBR_,
+    MOCK_MONTH_ROWS(Number(y), Number(m), today, null, base.today.entries)).filter(Boolean);
   return new Promise((resolve) => setTimeout(() => resolve({
     ok: true,
     v: 1,
@@ -930,3 +938,294 @@ export function mockVoice({ text, clientId } = {}) {
 
 /** Test seam — a suite must be able to replay a clientId from a clean slate. */
 export function _resetMockVoice() { mockVoiceSeen.clear(); }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * U1/U4 — `edit_entry` (deployed) and `remove_entry` (not yet), and the
+ * mock-parity law applied to BOTH directions at once.
+ *
+ * The deployed 20260825-1463 DISPATCHES AND ADVERTISES `edit_entry` (its
+ * dispatch table carries the key, and `build.actions` is that table's own key
+ * list) — so the mock serves it DEFAULT ON, transcribed from Code.gs §3.7.
+ * A mock without it would model the service as LESS capable than it is: the
+ * V17 class, the same hole that once hid travel mode entirely.
+ *
+ * `remove_entry` is DESIGN RATIFIED-PENDING-BUILD (06 §3.9, D26). The
+ * deployed server answers `{ok:false, error:'unknown_action'}` — so that is
+ * exactly what the wired mock door answers while MOCK_HAS_REMOVE_ENTRY ships
+ * false, and the §3.9 transcription behind it is exercised by DIRECT import
+ * (the mockHomeAggIn pattern). Flipping the default is a deliberate act that
+ * happens only after D26 is live on his book, and it reddens the priorities
+ * suite's flag census until someone means it.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * The SERVER's currency vocabulary (Code.gs `MANUAL_CURRENCIES`, verbatim).
+ * Deliberately NOT travel.js's two-currency list: that one is the KEYPAD's
+ * ruled subset («let's keep it in euros»), while the edit boundary tests raw
+ * membership against what the server itself accepts — two different questions,
+ * and folding them would re-run the two-normalisers hazard at a new seam.
+ */
+const MOCK_MANUAL_CURRENCIES = ['EGP', 'EUR', 'USD', 'GBP', 'SEK', 'NOK', 'SAR', 'AED'];
+
+const round2_ = (n) => Math.round(n * 100) / 100;
+
+/**
+ * `editRowMatches_` transcribed: compare a row against `match` on a CHOSEN
+ * subset of fields. Amount and currency are ONE cell, so the amount test
+ * carries the currency with it; null-vs-null is equality, null-vs-number is
+ * not; numbers meet at the server's own 0.005 tolerance.
+ */
+function editSnapshotEq_(row, match, fields) {
+  const trim = (v) => String(v == null ? '' : v).trim();
+  const cur = (v) => (v == null ? null : v);
+  for (const f of fields) {
+    if (f === 'date' && trim(row.date) !== trim(match.date)) return false;
+    if (f === 'description' && trim(row.description) !== trim(match.description)) return false;
+    if (f === 'method' && (row.method === 'Visa' ? 'Visa' : 'Cash') !== (match.method === 'Visa' ? 'Visa' : 'Cash')) return false;
+    if (f === 'category' && trim(row.category) !== trim(match.category)) return false;
+    if (f === 'amount') {
+      if (cur(row.currency) !== cur(match.currency)) return false;
+      if (row.amount == null || match.amount == null) { if (row.amount !== match.amount) return false; }
+      else if (Math.abs(row.amount - Number(match.amount)) >= 0.005) return false;
+    }
+  }
+  return true;
+}
+
+const EDIT_ALL_FIELDS = ['date', 'description', 'method', 'amount', 'category'];
+
+/**
+ * `editLocate_` transcribed, three stages and REFUSE rather than guess:
+ * rowHint fast path (all fields) → any full match (twins are interchangeable
+ * only while byte-identical) → relaxed scan over the fields the edit does not
+ * retire, where EXACTLY ONE candidate answers `row_changed` and anything else
+ * is `row_not_found` — repricing an arbitrary twin is a confident wrong number.
+ */
+function editLocateOn_(rows, match, edited, rowHint) {
+  const hint = Number(rowHint);
+  if (isFinite(hint) && hint >= 2 && hint <= rows.length + 1 && rows[hint - 2]
+      && editSnapshotEq_(rows[hint - 2], match, EDIT_ALL_FIELDS)) return { at: hint - 2, exact: true };
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i] && editSnapshotEq_(rows[i], match, EDIT_ALL_FIELDS)) return { at: i, exact: true };
+  }
+  const fields = [];
+  for (const f of EDIT_ALL_FIELDS) {
+    if (f === 'amount') { if (!edited.amount && !edited.currency) fields.push(f); continue; }
+    if (!edited[f]) fields.push(f);
+  }
+  if (fields.length < 2) return { at: -1, exact: false };   // a scan that thin hands back strangers
+  const cands = [];
+  for (let j = 0; j < rows.length; j++) if (rows[j] && editSnapshotEq_(rows[j], match, fields)) cands.push(j);
+  return cands.length === 1 ? { at: cands[0], exact: false } : { at: -1, exact: false };
+}
+
+/** `editValidate_` transcribed — every refusal fails CLOSED, nothing coerces. */
+function editValidateOn_(edits, clean, ym, today) {
+  const EDITABLE = ['method', 'amount', 'currency', 'description', 'date'];
+  const keys = Object.keys(edits);
+  if (!keys.length) return 'bad_edit';                       // an edit that edits nothing is a client bug surfaced
+  for (const k of keys) if (EDITABLE.indexOf(k) === -1) return 'bad_edit';
+  if (Object.prototype.hasOwnProperty.call(edits, 'method')) {
+    const m = String(edits.method == null ? '' : edits.method).trim().toLowerCase();
+    if (m !== 'cash' && m !== 'visa') return 'bad_edit';     // raw membership — capture coerces, an edit refuses
+    clean.method = m === 'visa' ? 'Visa' : 'Cash';
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'amount')) {
+    const a = Number(mockNormalizeDigits(String(edits.amount == null ? '' : edits.amount)).trim());
+    if (!isFinite(a) || a <= 0 || a >= 1000000) return 'bad_edit';
+    clean.amount = round2_(a);
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'currency')) {
+    const c = String(edits.currency == null ? '' : edits.currency).trim().toUpperCase();
+    if (MOCK_MANUAL_CURRENCIES.indexOf(c) === -1) return 'bad_edit';   // never fall back to EGP
+    clean.currency = c;
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'description')) {
+    const d = String(edits.description == null ? '' : edits.description).trim();
+    if (!d) return 'bad_edit';                               // a blank row is unaddressable forever
+    if (d.charAt(0) === '=') return 'bad_edit';              // a live formula in real Sheets
+    clean.description = d;
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'date')) {
+    const m = /^\s*(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})\s*$/.exec(
+      mockNormalizeDigits(String(edits.date == null ? '' : edits.date)));
+    if (!m) return 'bad_edit';
+    const dd = Number(m[1]), mm = Number(m[2]), yy = Number(m[3]);
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return 'bad_edit';
+    // −60…+2 d Cairo (CONFIG.SLIP_DATE_BACK_DAYS), then the leaves-tab refusal:
+    // a move is append + delete, and the backend has no delete (docs/09 §4).
+    const days = (Date.UTC(yy, mm - 1, dd) - Date.UTC(today.y, today.m - 1, today.d)) / 86400000;
+    if (days < -60 || days > 2) return 'bad_edit';
+    if (yy !== ym.y || mm !== ym.m) return 'bad_edit';
+    clean.dateStr = `${dd}/${mm}/${yy}`;
+  }
+  return null;
+}
+
+/**
+ * §3.7 transcribed, over a given row list — exported for direct call so the
+ * refusal branches are exercised without a browser (the mockHomeAggIn pattern).
+ * NOT transcribed, by name: D21's Rate/Home recompute (these mock rows carry
+ * no such columns — his book's, not Dad's), the `"By euro "` foreign-column
+ * refusal (same reason), and the post-write re-read guard (no concurrent
+ * writer exists inside a mock). Each lives in Code.gs and in the backend
+ * battery; a mock copy would assert nothing the fixture can reach.
+ */
+export function mockEditEntryOn(rows, body, ym, today = cairoToday()) {
+  const edits = body && body.edits;
+  const match = (body && body.match) || {};
+  if (!edits || typeof edits !== 'object') return { ok: false, error: 'bad_edit' };
+  const edited = {};
+  for (const k of Object.keys(edits)) edited[k] = true;
+  // A key in `edits` whose `match` counterpart is absent is not "don't care" —
+  // it is a claim the client did not make (Code.gs handleEditEntry_).
+  for (const k of Object.keys(edited)) {
+    if (!Object.prototype.hasOwnProperty.call(match, k)) return { ok: false, error: 'bad_edit' };
+  }
+  const clean = {};
+  const vErr = editValidateOn_(edits, clean, ym, today);
+  if (vErr) return { ok: false, error: vErr };
+
+  const found = editLocateOn_(rows, match, edited, body && body.rowHint);
+  if (found.at === -1) return { ok: false, error: 'row_not_found' };
+  const row = rows[found.at];
+  if (!found.exact) return { ok: false, error: 'row_changed', current: { ...row } };
+
+  // GUARD THE VALUE THAT WILL BE WRITTEN: amount and currency are one cell,
+  // and either arriving alone on an unpriced row writes a lie («null SEK», or
+  // a bare number that is silently EGP inside his dashboard totals).
+  const wantAmount = edited.amount ? clean.amount : row.amount;
+  const wantCurrency = edited.currency ? clean.currency : row.currency;
+  if ((edited.amount || edited.currency) && (wantAmount == null || wantCurrency == null)) {
+    return { ok: false, error: 'bad_edit' };
+  }
+  const entry = { ...row };
+  if (edited.method) entry.method = clean.method;
+  if (edited.description) entry.description = clean.description;
+  if (edited.date) entry.date = clean.dateStr;
+  if (edited.amount || edited.currency) { entry.amount = wantAmount; entry.currency = wantCurrency; }
+  return { ok: true, tab: body && body.tab, row: found.at + 2, entry };
+}
+
+/**
+ * The wired book behind the edit/remove doors: the SAME rows `mockEntries`
+ * serves (one population — a mock whose editor sees rows its list does not is
+ * the pending/today disjointness bug wearing new clothes), with this session's
+ * edits applied and removed rows dropped, so optimistic concurrency is real:
+ * a replayed claim meets the sheet it already changed.
+ */
+const mockEditedRows = new Map();   // `${tab}#${index}` → post-edit row
+const mockRemovedIdx = new Set();   // `${tab}#${index}` — dropped from the served book
+
+function mockBookFor_(tab) {
+  const today = cairoToday();
+  const mi = MONTH_ABBR.indexOf(String(tab == null ? '' : tab).trim());
+  if (mi === -1) return null;
+  const base = mockSummary();
+  return {
+    rows: MOCK_MONTH_ROWS(today.y, mi + 1, today, null, base.today.entries),
+    ym: { y: today.y, m: mi + 1 },
+    today,
+  };
+}
+
+function mockLiveRows_(tab, rows) {
+  return rows.map((r, i) => (mockRemovedIdx.has(`${tab}#${i}`) ? null : (mockEditedRows.get(`${tab}#${i}`) || r)));
+}
+
+export function mockEditEntry(body) {
+  const book = mockBookFor_(body && body.tab);
+  if (!book) return new Promise((resolve) => setTimeout(() => resolve({ ok: false, v: 1, error: 'row_not_found' }), 120));
+  const out = mockEditEntryOn(mockLiveRows_(body.tab, book.rows), body, book.ym, book.today);
+  if (out.ok) mockEditedRows.set(`${body.tab}#${out.row - 2}`, out.entry);
+  // Same latency shape as the other write doors, so saving states are real.
+  return new Promise((resolve) => setTimeout(() => resolve({ v: 1, ...out }), 240));
+}
+
+/** Test seam. */
+export function _resetMockEdits() { mockEditedRows.clear(); }
+
+/**
+ * remove_entry is NOT deployed (06 §3.9 is ratified-pending-build, D26).
+ * `false` = the wired door answers `unknown_action`, the deployed doPost's
+ * exact sentence. Boolean on purpose: the priorities suite's file-wide census
+ * asserts every `const MOCK_* = true|false;` ships false.
+ */
+const MOCK_HAS_REMOVE_ENTRY = false;
+
+/**
+ * What the mock's ping must advertise BEYOND capabilities.js's SERVER_ACTIONS:
+ * that list still reads «the nine plus voice» and is another leaf's file this
+ * wave — while the deployed 1463's dispatch table (and therefore its
+ * `build.actions`) carries `edit_entry`. The advertisement and the answer stay
+ * one fact: `remove_entry` joins only with its flag. Dedup-safe by
+ * construction, so the day SERVER_ACTIONS itself learns `edit_entry`, nothing
+ * doubles (api/index.js filters).
+ */
+export const MOCK_EXTRA_ACTIONS = ['edit_entry'].concat(MOCK_HAS_REMOVE_ENTRY ? ['remove_entry'] : []);
+
+const mockRemoveState = { removed: [], seen: new Map() };
+
+/**
+ * §3.9 transcribed, over a given row list — the flag-on branch, exercised by
+ * direct import while the wired door ships dark:
+ *  · the row is MOVED to `Removed` (five columns + RemovedFrom/RemovedAt),
+ *    never vanished — a mis-swipe is recoverable by hand from that tab;
+ *  · a stale match answers `row_changed` with the current snapshot;
+ *  · identical twins with no position are REFUSED — the counterpart-survives
+ *    law forbids guessing which of two real expenses to take;
+ *  · a REPLAY answers `already: true` and touches nothing — the one replay
+ *    that could take the counterpart is the one this map exists to stop.
+ * The caller's rows are never mutated; the wired book drops the row itself.
+ */
+export function mockRemoveEntryOn(rows, body, state) {
+  const st = state || mockRemoveState;
+  const match = (body && body.match) || {};
+  const sig = JSON.stringify([body && body.tab, body && body.rowHint, match]);
+  if (st.seen.has(sig)) return { ...st.seen.get(sig), already: true };
+
+  const hint = Number(body && body.rowHint);
+  let at = -1;
+  if (isFinite(hint) && hint >= 2 && hint <= rows.length + 1 && rows[hint - 2]
+      && editSnapshotEq_(rows[hint - 2], match, EDIT_ALL_FIELDS)) at = hint - 2;
+  if (at === -1) {
+    const full = [];
+    for (let i = 0; i < rows.length; i++) if (rows[i] && editSnapshotEq_(rows[i], match, EDIT_ALL_FIELDS)) full.push(i);
+    if (full.length === 1) at = full[0];
+    else if (full.length > 1) return { ok: false, error: 'row_not_found' };
+    else {
+      const ident = [];
+      for (let j = 0; j < rows.length; j++) if (rows[j] && editSnapshotEq_(rows[j], match, ['date', 'description'])) ident.push(j);
+      if (ident.length === 1) return { ok: false, error: 'row_changed', current: { ...rows[ident[0]] } };
+      return { ok: false, error: 'row_not_found' };
+    }
+  }
+  const row = rows[at];
+  st.removed.push({ ...row, RemovedFrom: (body && body.tab) || '', RemovedAt: new Date().toISOString() });
+  const res = { ok: true, tab: body && body.tab, row: at + 2, removed: { ...row } };
+  st.seen.set(sig, res);
+  return res;
+}
+
+export function mockRemoveEntry(body) {
+  if (!MOCK_HAS_REMOVE_ENTRY) {
+    // The deployed doPost's exact answer for a verb its table does not hold —
+    // the client must meet the state it will actually meet.
+    return new Promise((resolve) => setTimeout(() => resolve({ ok: false, v: 1, error: 'unknown_action' }), 120));
+  }
+  const book = mockBookFor_(body && body.tab);
+  if (!book) return new Promise((resolve) => setTimeout(() => resolve({ ok: false, v: 1, error: 'row_not_found' }), 120));
+  const out = mockRemoveEntryOn(mockLiveRows_(body.tab, book.rows), body, mockRemoveState);
+  if (out.ok && !out.already) mockRemovedIdx.add(`${body.tab}#${out.row - 2}`);
+  return new Promise((resolve) => setTimeout(() => resolve({ v: 1, ...out }), 240));
+}
+
+/** Test seams — the Removed tab is a fact a suite must be able to read. */
+export function _mockRemovedRows() { return mockRemoveState.removed.slice(); }
+export function _resetMockRemove() {
+  mockRemoveState.removed.length = 0;
+  mockRemoveState.seen.clear();
+  mockRemovedIdx.clear();
+}

@@ -44,7 +44,7 @@ import { dirname, join } from 'node:path';
  * If you are here because the run went red: the number below is a claim about
  * the suite, and one of the two is wrong. Neither is automatically the number.
  */
-const EXPECTED_ASSERTIONS = 5002;
+const EXPECTED_ASSERTIONS = 5572;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -106,6 +106,10 @@ const SUITES = [
   'test-chunk-a13.mjs',
   'test-chunk-s1.mjs',
   'test-chunk-w1.mjs',
+  'test-chunk-u1.mjs',
+  'test-chunk-u4.mjs',
+  'test-chunk-s2.mjs',
+  'test-chunk-u3.mjs',
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));

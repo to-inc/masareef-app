@@ -255,6 +255,42 @@ export const EN = {
   dupUnpriced: (n) => `${n} ${n === 1 ? 'row has' : 'rows have'} no amount, so ${n === 1 ? 'it was' : 'they were'} not compared.`,
   dupNoDescription: '(no description)',
   dupOpenSheet: 'Open the sheet to check them',
+  // ═══ U4 — duplicate pairs in the Inbox (06 §3.9, Owner ruling 2026-08-27) ═══
+  // «keep this» and «remove that» are the same decision from opposite ends;
+  // the removed row goes to the Removed tab and the other one STAYS — said in
+  // the words, never implied.
+  dupPairTitle: 'Recorded twice?',
+  dupPairBody: 'Two rows alike in the book. Choose which one to remove — the other stays as it is.',
+  dupPairRemove: 'Remove this row',
+  dupPairRemoved: "Removed — moved to the sheet's Removed tab",
+  dupPairSurvives: 'and the other stays as it is ✓',
+  dupPairFailed: 'It was not removed — try again',
+  dupPairGone: 'That row is not in the sheet now — it may already be gone',
+  // A door the server does not have yet — the voice button's own era: the
+  // state is stated honestly, and no button posts into the void.
+  dupNeedsEngine: "The book's engine needs its update first — until it does, review these in the sheet by hand",
+  dupGroupBig: (n) => `${n} rows alike — more than a pair, so that review belongs in the sheet`,
+  // ═══ U1 — the row edit sheet (06 §3.7; the VR case: booked Cash, was Card) ═══
+  editOpen: 'Edit',
+  editRowTitle: 'Edit the row',
+  editDescription: 'Description',
+  editSave: 'Save the change',
+  editNothingChanged: 'Nothing changed yet',
+  editDone: 'Changed in the sheet ✓',
+  // The whole ROW moved — cardConflict is the category's sentence; this is the row's.
+  editConflict: 'The row changed in the sheet',
+  editConflictUse: "Show the sheet's row",
+  editRefused: 'The sheet refused this change',
+  editNotFound: 'Could not find the row in the sheet — refresh and look again',
+  // No «will send when the network returns» here: nothing replays an edit yet,
+  // so that promise would be a lie. The truth: it did not go — try again.
+  editOffline: 'The network dropped — it never reached the sheet. Try again.',
+  editBadAmount: 'The amount must be a number above zero',
+  editBadDate: 'The date must be day/month/year',
+  editNeedCurrency: 'Pick the currency with the amount',
+  // The refusal names the month it protects — moving a row between months is
+  // hand-work in the sheet (docs/09 §4).
+  editDateLeavesMonth: (m) => `That date would move the row out of ${m} — moving a row between months happens in the sheet, by hand`,
   batchTooLarge: 'The server takes at most 40 rows per confirm — untick down to 40 and log the rest after.',
   batchOverCap: (n, max) => `${n} ticked — the most in one go is ${max}`,
   batchFailed: 'Could not reach the server — nothing was written. Your ticks are safe; try again.',

@@ -19,7 +19,9 @@ import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay, parseS
 import { bookPeriods, rowsSource, travelOf, egpTotalOf, needsCategory } from '../state/book.js';
 import { getSheetUrl } from '../state/secret.js';
 import { lensOpen as loadLensOpen, setLensOpen } from '../state/lens.js';
+import { supportsAction, loadBuild } from '../state/capabilities.js';
 import LogCard from '../components/LogCard.jsx';
+import EditSheet from './EditSheet.jsx';
 
 /**
  * «الدفتر» — THE BOOK. One list at four zooms (finding M1).
@@ -122,6 +124,18 @@ export default function BookView({
    * screen he opens; nothing about the live app moves.
    */
   initialPeriod = 'today',
+  /**
+   * U1 — the serving backend's advertisement, for gating the edit door
+   * (§3.7: `actions` contains `edit_entry`, fail closed — the dictation
+   * button's own law). A PROP defaulting to the cached ping answer, so a
+   * suite can render both sides of the gate without a storage shim.
+   */
+  build = loadBuild(),
+  /**
+   * U1 — the opened row's seed, in the same house pattern: the edit door
+   * lives inside a row's tapped-open panel, which SSR cannot tap open.
+   */
+  initialOpenKey = null,
 }) {
   const [period, setPeriod] = useState(initialPeriod);
   /**
@@ -176,7 +190,17 @@ export default function BookView({
    */
   const monthCache = useRef(new Map());
   const [undated, setUndated] = useState(0);
-  const [open, setOpen] = useState(null);
+  const [open, setOpen] = useState(initialOpenKey);
+  /**
+   * U1 — which row's edit sheet is up ({item, key}), and the rows the sheet
+   * has ALREADY fixed this session, keyed by the row's settle key and holding
+   * the SERVER's re-read snapshot. The overlay renders only what the sheet
+   * said it wrote — never the draft — and it is self-retiring: the next fetch
+   * delivers the edited row, whose content builds a NEW key, so the stale
+   * entry simply stops matching anything.
+   */
+  const [editing, setEditing] = useState(null);
+  const [editedRows, setEditedRows] = useState({});
   // Read once — it cannot change while he is looking at the screen.
   const [sheetUrl] = useState(() => getSheetUrl());
   // B1 — with every other hook, at the top, never below a branch (the same
@@ -331,6 +355,20 @@ export default function BookView({
     if (browsing) monthCache.current.delete(`${browsing.y}_${browsing.m}`);
     return onEdit(item, category);
   }, [browsing, onEdit]);
+
+  /**
+   * U1 — the edit door, gated on the ADVERTISEMENT (§3.7's client law, the
+   * dictation button's own): absent means UNSUPPORTED, and no control is
+   * mounted that can only post into the void.
+   */
+  const canEdit = supportsAction(build, 'edit_entry');
+  const openEditSheet = useCallback((item, key) => setEditing({ item, key }), []);
+  const onEditSaved = useCallback((key, entry) => {
+    setEditedRows((s) => ({ ...s, [key]: entry }));
+    // The cache's premise — closed months do not change mid-session — is
+    // falsified by his own edit, exactly as the category door already knows.
+    if (browsing) monthCache.current.delete(`${browsing.y}_${browsing.m}`);
+  }, [browsing]);
 
   const fetchedOrToday = needsFetch ? fetched : sortForDisplay(data.today.entries || []);
   /**
@@ -659,6 +697,7 @@ export default function BookView({
         <RowList
           rows={rows} settled={settled} onEdit={editThenBust}
           open={open} setOpen={setOpen}
+          canEdit={canEdit} onOpenEdit={openEditSheet} edited={editedRows}
           /**
             * ⚠️ TODAY'S ROWS NEVER BORROW A BROWSED MONTH'S TAB — refuted into
             * this form by the verification pass. `fetchedTab` survives leaving
@@ -733,6 +772,17 @@ export default function BookView({
           browsing={browsing}
           onChoose={chooseMonth}
           onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      {/* U1 — the edit sheet, opened only from a row's own panel. The key
+          rides the closure at MOUNT, so the overlay can never land under a
+          different row than the one whose panel opened the sheet. */}
+      {editing && (
+        <EditSheet
+          item={editing.item}
+          onClose={() => setEditing(null)}
+          onSaved={(entry) => onEditSaved(editing.key, entry)}
         />
       )}
     </div>
@@ -1737,7 +1787,10 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
  * the category on one quiet line under the description, so nothing wraps and
  * nothing is repeated six times.
  */
-function RowList({ rows, settled, onEdit, open, setOpen, tabName, showDate, emptyTitle, emptyBody }) {
+function RowList({
+  rows, settled, onEdit, open, setOpen, tabName, showDate, emptyTitle, emptyBody,
+  canEdit = false, onOpenEdit = null, edited = null,
+}) {
   if (!rows.length) {
     return (
       <div style={{ textAlign: 'center', paddingTop: 60 }}>
@@ -1757,15 +1810,25 @@ function RowList({ rows, settled, onEdit, open, setOpen, tabName, showDate, empt
 
   return (
     <div>
-      {rows.map((row, i) => {
+      {rows.map((rawRow, i) => {
         /**
          * The settle key carries the row's CONTENT, because a row here has no
          * sheet position — two purchases from the same shop on the same day for
          * the same amount really are indistinguishable, here and in his book.
          * This value is a KEY only; the edit payload never carries a rowHint.
          */
-        const item = { tab: tabName || row.date, rowHint: `${row.date}|${row.amount}`, match: row };
-        const key = `${cardKey(item)}:${i}`;
+        const rawItem = { tab: tabName || rawRow.date, rowHint: `${rawRow.date}|${rawRow.amount}`, match: rawRow };
+        const key = `${cardKey(rawItem)}:${i}`;
+        /**
+         * U1 — a row the edit sheet already fixed renders the SERVER's re-read
+         * snapshot in place of the stale fetch. The overlay is keyed by the
+         * row's OLD content, so the next fetch — which delivers the row
+         * already edited — simply stops matching it: self-retiring, and the
+         * screen never shows a method the sheet no longer holds.
+         */
+        const row = (edited && edited[key]) || rawRow;
+        const item = row === rawRow ? rawItem
+          : { tab: tabName || row.date, rowHint: `${row.date}|${row.amount}`, match: row };
         const outcome = settled[cardKey(item)] || null;
         const isOpen = open === key;
         const inert = !needsHim(outcome);
@@ -1845,6 +1908,26 @@ function RowList({ rows, settled, onEdit, open, setOpen, tabName, showDate, empt
               <div style={{ padding: '0 14px 14px' }}>
                 <OutcomeNote outcome={outcome} />
                 <CategoryActions guess={null} outcome={outcome} onPick={(category) => onEdit(item, category)} />
+                {/**
+                  * U1 — the edit DOOR (the Owner's VR case: a booked row whose
+                  * method is wrong, and until now no way in). It opens the B4
+                  * edit sheet for the row's OTHER fields; category stays the
+                  * picker's above — two doors to that one cell is the
+                  * two-normalisers hazard. Gated fail-closed on the server
+                  * advertising `edit_entry` (§3.7).
+                  */}
+                {canEdit && onOpenEdit && (
+                  <button
+                    onClick={() => onOpenEdit(item, key)}
+                    style={{
+                      width: '100%', minHeight: TAP, marginTop: 10, borderRadius: RADIUS.row,
+                      background: C.card, border: `1px solid ${C.line}`,
+                      color: C.harbor, fontSize: TYPE.label, fontWeight: 700,
+                    }}
+                  >
+                    {S.editOpen}
+                  </button>
+                )}
               </div>
             )}
           </div>

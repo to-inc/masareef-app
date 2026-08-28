@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { Sheet, LangToggle, CurrencyToggle, SectionLabel } from '../components/Primitives.jsx';
 import { otherDisplayCurrency } from '../state/display.js';
+import { METHODS } from '../state/entryPayload.js';
+import { getDefaultMethod, setDefaultMethod } from '../state/settings.js';
 
 /**
  * S1 — THE SETTINGS SHEET BEHIND THE COG (Owner field ruling 2026-08-27).
@@ -29,9 +32,10 @@ import { otherDisplayCurrency } from '../state/display.js';
  * grammar: a backdrop button honestly labelled (the whole page behind the
  * sheet is the way out), a positioning wrapper that clips the lip square at
  * the screen's bottom edge, and the RADIUS.sheet lip + pinned entrance +
- * reduced-motion instant that belong to the primitive. One named section —
- * currency & language — because v1 HAS one section's worth of settings, and
- * inventing chrome for future ones would be furniture for rooms not built.
+ * reduced-motion instant that belong to the primitive. Named sections only
+ * for settings that EXIST — currency & language (S1), and the default method
+ * (S2, the Owner's 2026-08-27 ruling); inventing chrome for future ones
+ * would be furniture for rooms not built.
  *
  * ——— AND AN EXPLICIT WAY OUT. The month picker closes by backdrop alone;
  * a SETTINGS surface is rarer and less self-evident, so beside the labelled
@@ -72,6 +76,16 @@ export function SettingsCog({ onOpen }) {
 }
 
 export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose }) {
+  /**
+   * S2 — the DEFAULT METHOD (06 §3.10.3). Owned HERE rather than threaded
+   * from the shell: the language toggle already set the precedent (a control
+   * that owns its own persisted preference), and nothing else in the app
+   * re-renders on this value — EntryView reads it fresh at each visit through
+   * `entryDefaultMethod`. State and storage move together through the one
+   * setter, which also coerces (a label can never be stored as the value).
+   */
+  const [defaultMethod, setDefaultMethodState] = useState(() => getDefaultMethod());
+  const methodLabel = (m) => (m === 'Visa' ? S.methodCard : S.methodCash);
   return (
     <>
       {/* The way out: the whole page behind the sheet, honestly labelled. */}
@@ -176,6 +190,45 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
               }}
             >
               {S.settingsCurrencyNote}
+            </div>
+          </div>
+
+          {/* ═══ S2 — the default method (06 §3.10.3) ═══ */}
+          <div style={{ marginTop: SPACE.gap }}>
+            {/**
+              * MEANWHILE-LABEL: `entryMethod` («الدفع كان إزاي») names the
+              * same concept the control defaults — a dedicated
+              * `settingsDefaultMethod` key is this chunk's reported residual
+              * (this leaf may not touch the locale files), and the swap is
+              * one line when it lands.
+              */}
+            <SectionLabel>{S.entryMethod}</SectionLabel>
+            {/**
+              * The EntryView chooser's own grammar, verbatim: options from
+              * METHODS (the wire vocabulary — also the sheet's columns),
+              * labels looked up per option, harbor for the chosen one (the
+              * one warm action stays the keypad's). The tap persists THROUGH
+              * the setter so state and storage cannot disagree, and the
+              * setter's coercion means no label ever becomes the value.
+              */}
+            <div style={{ display: 'flex', gap: SPACE.gap }} role="group" aria-label={S.entryMethod}>
+              {METHODS.map((m) => (
+                <button
+                  key={m}
+                  className="catchip"
+                  onClick={() => setDefaultMethodState(setDefaultMethod(m))}
+                  aria-pressed={defaultMethod === m}
+                  style={{
+                    flex: 1, minHeight: TAP, padding: '12px 0', borderRadius: RADIUS.row,
+                    fontSize: TYPE.row, fontWeight: 700,
+                    background: defaultMethod === m ? C.harbor : C.card,
+                    color: defaultMethod === m ? C.onDark : C.ink,
+                    border: `1px solid ${defaultMethod === m ? C.harbor : C.line}`,
+                  }}
+                >
+                  {methodLabel(m)}
+                </button>
+              ))}
             </div>
           </div>
         </Sheet>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, SPACE, unitSize,
 } from '../theme.js';
@@ -6,6 +6,7 @@ import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { repeatChips } from '../state/repeats.js';
 import { isTravelling, toggleCurrency, HOME_CURRENCY } from '../state/travel.js';
 import { METHODS } from '../state/entryPayload.js';
+import { entryDefaultMethod } from '../state/settings.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { normalizeDigits } from '../lib/format.js';
 import { entryReady, dockState, pressKey } from '../state/entryDock.js';
@@ -174,6 +175,37 @@ export default function EntryView({
     if (q.method) setMethod(q.method);
     if (q.amount != null) setAmount(String(q.amount));
   };
+  /**
+   * S2 — THE PRE-CHOICE (06 §3.10.3). The chooser initializes from the ONE
+   * rule in state/settings.js: the install's default method (shipped Card,
+   * the Owner's ruling; Dad's install settable back to Cash), forced to Card
+   * whenever the currency mode is not EGP — euro cash is not his life.
+   *
+   * MOUNT applies it only to a PRISTINE composition. The shell keeps this
+   * screen's state across tab swaps, so he can leave mid-entry and come back;
+   * re-applying the default over a method he already tapped would be the
+   * shape-changing-while-you-reach problem, aimed at the one field that files
+   * money into a column. (App.jsx still resets to the wire floor after a
+   * write and clears the fields with it, so every NEW entry starts pristine
+   * and takes the setting here.)
+   */
+  useEffect(() => {
+    if (!amount && !desc && !cat) setMethod(entryDefaultMethod(currency));
+    // Mount only: the default is an opening position, not a running rule.
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * ENTERING a non-EGP mode re-applies the rule — which answers Card away,
+   * whatever the setting says. Keyed on the MODE, not on `method`: after the
+   * force, a manual tap within the entry being composed stands (an effect
+   * that watched `method` would un-tap him, and the S2 oracle pins that no
+   * such dependency exists).
+   */
+  const travelling = isTravelling(currency);
+  useEffect(() => {
+    if (travelling) setMethod(entryDefaultMethod(currency));
+    // The way HOME restores nothing: his EGP pre-choice is whatever stood
+    // before the trip forced Card, and only his own tap moves it again.
+  }, [travelling]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     /**

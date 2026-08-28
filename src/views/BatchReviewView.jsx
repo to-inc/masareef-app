@@ -189,6 +189,7 @@ export default function BatchReviewView({
                 setTicks((t) => ({ ...t, [rowKey(r)]: true }));
               }}
               onPick={(cat) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), category: cat } }))}
+              onMethod={(m) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), method: m } }))}
             />
           ))}
         </div>
@@ -297,6 +298,33 @@ export default function BatchReviewView({
 }
 
 /**
+ * U3 — THE ROW'S EFFECTIVE METHOD: what the chip STATES and what the wire
+ * will SEND, one answer (06 §3.10.2 — «batch rows default to Card»; the
+ * Owner's 2026-08-27 ruling: a bank statement's rows are card movements by
+ * definition; an explicit cash hint on the row is EVIDENCE and outranks the
+ * presumption; his tap outranks everything).
+ *
+ * ⚠️ THIS IS A MIRROR OF `toConfirmRows`' method expression, not a second
+ * opinion — the builder computes mid-loop and cannot be imported as a rule.
+ * A mirror is the two-readers hazard by construction, so the U3 oracle
+ * EXECUTES both sides over the whole hint × defaultMethod × edit matrix and
+ * fails on the first divergence. Change either side and that suite is where
+ * the drift surfaces. Exported for exactly that reason.
+ */
+export const effectiveMethod = (row, edit) =>
+  (edit && edit.method)
+  || (row.payment_hint === 'cash' ? 'Cash' : (row.defaultMethod || 'Visa'));
+
+/** One tap, the other value — a two-value chooser needs a flip, not a menu. */
+const otherMethod = (m) => (m === 'Visa' ? 'Cash' : 'Visa');
+
+/**
+ * The label is never the value (state/entryPayload.js owns that story): the
+ * chip renders a LOOKUP of the wire value it holds, per locale.
+ */
+const methodLabel = (m) => (m === 'Visa' ? S.methodCard : S.methodCash);
+
+/**
  * A duplicate that has not been deliberately overridden blocks the tick.
  *
  * `inBatch` and a book `match` both block; `checked:false` does NOT — that is
@@ -333,7 +361,7 @@ function statusNote(row) {
   }
 }
 
-function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTick, onOverride, onPick }) {
+function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTick, onOverride, onPick, onMethod }) {
   /**
    * Per-row, collapsing when the row closes — 27 chips left open on every row
    * would turn the reconciliation list back into the five-row grid EntryView
@@ -348,6 +376,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
   const bookDup = dup && dup.checked && dup.match;
   const unchecked = dup && dup.checked === false;
   const category = (edit && edit.category) || row.category;
+  const method = effectiveMethod(row, edit);
   const settled = !!outcome;
 
   /**
@@ -484,6 +513,31 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             {category && <span dir="auto">{categoryLabel(category)}</span>}
           </span>
         </TitleTag>
+
+        {/**
+          * U3 — THE METHOD CHIP, on the collapsed row (§3.10.2: the review
+          * screen SHOWS the chip; a tap still overrides). Pre-selected to
+          * Card through `effectiveMethod` — the same answer the wire sends —
+          * and one tap flips it, riding the SAME edits overlay the category
+          * picker uses, into the one wire builder. It exists exactly where
+          * the decision is live: a written row's method is a fact in his
+          * book, a non-writable row's is a method on money that will not
+          * move — neither gets a control.
+          */}
+        {!settled && writable && (
+          <button
+            className="catchip"
+            onClick={() => onMethod(otherMethod(method))}
+            style={{
+              flex: '0 0 auto', minHeight: 44, padding: '9px 12px',
+              borderRadius: RADIUS.capsule, background: C.shell,
+              border: `1px solid ${C.line}`, color: C.ink,
+              fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap',
+            }}
+          >
+            {methodLabel(method)}
+          </button>
+        )}
 
         {/* A null amount renders —, never 0. An aggregate has no single figure. */}
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16.5, fontWeight: 650, ...LATIN, ...NUMERALS }}>
