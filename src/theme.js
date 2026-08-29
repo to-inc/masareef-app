@@ -629,6 +629,25 @@ export const NAV = {
  * accepts, `atmosphere` re-tints the ground, `comfortZoom` scales the root.
  */
 export const FROST = { sheer: 6 / 26, designed: 1, deep: 42 / 26 };
+/**
+ * ⚠️ WHERE THIS MAY BE APPLIED — A22, and it is not a style preference.
+ *
+ * A CSS `filter` other than `none` makes its element the CONTAINING BLOCK for
+ * every `position: fixed` descendant. This app has nine fixed elements: the
+ * nav, the conflict strip, and all three bottom sheets. Applying an atmosphere
+ * to any ancestor of those — which is exactly what the design prototype does
+ * with `#glass-root { filter: ... }` — silently re-parents every one of them.
+ *
+ * And it would look fine in testing. `morning` is `'none'`, so the default
+ * setting produces no filter and no bug; the breakage appears ONLY under
+ * `golden` and `dusk`. A layout failure that depends on a colour setting is
+ * not a bug anyone finds by using the app.
+ *
+ * So: apply an atmosphere to a GROUND LAYER that is a SIBLING of the content,
+ * never to an ancestor of it. `test-glass.mjs` enforces this — it fails the
+ * build on any bare CSS `filter` in a style object, with its own positive
+ * control so the absence assertion cannot pass vacuously.
+ */
 export const ATMOSPHERE = {
   morning: 'none',
   golden: 'sepia(.12) saturate(1.06) hue-rotate(-6deg)',

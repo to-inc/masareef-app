@@ -14,6 +14,7 @@
     "check:inbox": "node scripts/test-inbox.mjs",
     "check:categories": "node scripts/test-categories.mjs",
     "check:contrast": "node scripts/test-contrast.mjs",
+    "check:glass": "node scripts/test-glass.mjs",
     "icons": "node scripts/make-icons.mjs",
     "check:icons": "node scripts/test-icons.mjs",
     "check:logcard": "node scripts/test-logcard.mjs",

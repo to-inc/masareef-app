@@ -78,8 +78,24 @@ import { dirname, join } from 'node:path';
  * shell, label tier on card and shell, the 12.5px editable marker), plus a
  * sixth assertion: a negative control that fails if `harbor` ever clears
  * 4.5:1 as text, so the split cannot quietly become folklore.
+ *
+ * 5600 on 2026-08-29 (glass audit Tier 2/3). RECONCILED BY DIFFING EVERY
+ * SUITE'S OWN COUNT against the previous run: exactly one entry moved, and it
+ * moved from absent to present. The +14 is `test-glass.mjs` in its entirety —
+ * a NEW suite, not new assertions inside an old one.
+ *
+ * It exists because the glass redesign added a whole surface vocabulary to
+ * theme.js and no suite owned it. Its load-bearing assertion is A22's: a CSS
+ * `filter` other than `none` makes its element the containing block for every
+ * `position: fixed` descendant, and this app has nine of those — the nav, the
+ * conflict strip, and all three bottom sheets. The design prototype applies
+ * the atmosphere tint as `#glass-root { filter }`, an ancestor of everything.
+ * Ported here it would re-parent all nine — and `ATMOSPHERE.morning` is
+ * `'none'`, so it would test clean under the default and break only under
+ * Golden hour and Cool dusk. The guard carries its own positive control, so
+ * the absence assertion cannot pass vacuously.
  */
-const EXPECTED_ASSERTIONS = 5586;
+const EXPECTED_ASSERTIONS = 5600;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -98,6 +114,7 @@ const SUITES = [
   'test-accountability.mjs',
   'honest-render.mjs',
   'test-chips.mjs',
+  'test-glass.mjs',
   'test-queue.mjs',
   'test-inbox.mjs',
   'test-categories.mjs',

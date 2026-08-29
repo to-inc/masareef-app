@@ -395,7 +395,8 @@ export default function EntryView({
                 background: cat === c ? C.harbor : C.card,
                 color: cat === c ? C.onDark : C.ink,
                 border: `1px solid ${cat === c ? C.harbor : C.line}`,
-                ...LATIN,
+                /* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is categoryLabel(c) — the category chip, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */
+                ...ISOLATE,
               }}
               dir="auto"
             >
@@ -415,7 +416,8 @@ export default function EntryView({
               aria-pressed
               style={{
                 padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
-                background: C.harbor, color: C.onDark, border: `1px solid ${C.harbor}`, ...LATIN,
+                /* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is categoryLabel(cat) — the selected category, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */
+                background: C.harbor, color: C.onDark, border: `1px solid ${C.harbor}`, ...ISOLATE,
               }}
               dir="auto"
             >

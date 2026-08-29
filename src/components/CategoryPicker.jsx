@@ -157,7 +157,8 @@ export function CategoryActions({ guess, outcome, onPick }) {
               style={{
                 padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,
                 background: C.shell, border: `1px solid ${C.line}`,
-                fontSize: TYPE.label, fontWeight: 500, color: C.ink, ...LATIN,
+                /* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is categoryLabel(c) — the category chip, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */
+                fontSize: TYPE.label, fontWeight: 500, color: C.ink, ...ISOLATE,
               }}
               dir="auto"
             >
