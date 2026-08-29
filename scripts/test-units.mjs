@@ -35,9 +35,10 @@ import { HOME_CURRENCY } from '../src/state/travel.js';
  * twice, against a stubbed `localStorage`, with its own Vite server per
  * language because `LOCALE` is a module-level constant.
  */
-const stubLang = (lang) => {
+const stubLang = (lang, displayCurrency = null) => {
   globalThis.localStorage = {
-    getItem: (k) => (k === 'masareef.lang' ? lang : null),
+    getItem: (k) => (k === 'masareef.lang' ? lang
+      : k === 'masareef.display.currency' ? displayCurrency : null),
     setItem() {}, removeItem() {}, clear() {},
   };
 };
@@ -50,7 +51,7 @@ const ok = (c, m) => { if (c) pass++; else failures.push(m); };
 
 for (const lang of ['ar', 'en']) {
 stubLang(lang);
-const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
+const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const S = (await vite.ssrLoadModule('/src/i18n/strings.js')).S;
   const L = `[${lang}]`;
@@ -71,7 +72,8 @@ try {
     year: { cur: { Visa: [1], Cash: [1] }, prev: { Visa: [1], Cash: [1] } },
     monthCats: [], pending: [],
   });
-  const render = (p) => renderToStaticMarkup(createElement(BookView, { data: p }));
+  const render = (p, period) => renderToStaticMarkup(
+    createElement(BookView, { data: p, ...(period ? { initialPeriod: period } : {}) }));
   const text = (h) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
   // ——— the exact screen from the Owner's report: one foreign row, EGP at zero
@@ -80,6 +82,44 @@ try {
   )));
   // ——— an ordinary EGP day
   const homeLead = text(render(payload([day()], { Visa: 100, Cash: 0 })));
+
+  /**
+   * EVERY PERIOD, not just Today.
+   *
+   * The first version of this file rendered only the default period and passed
+   * while the WEEK screen still said "0 EGP" — the aside on that screen is a
+   * different component (`PeriodBlock`) with its own currency rendering, and
+   * nothing here ever reached it. A law about what the screen says has to be
+   * checked on every screen that says it.
+   */
+  for (const period of ['today', 'week', 'month', 'year']) {
+    const scoped = text(render(payload([day()], { Visa: 100, Cash: 0 }), period));
+    ok(!/\d[\s\u00A0]*EGP\b/.test(scoped),
+      `${L} [${period}] a figure is followed by the raw ISO code EGP — the home currency has a mark`);
+    ok(!new RegExp(`\\d[\\s\\u00A0]*${S.currency}\\b`).test(scoped),
+      `${L} [${period}] a figure is followed by the long form ${JSON.stringify(S.currency)}`);
+  }
+
+  /**
+   * THE OWNER'S OWN SETTING. His display currency is EUR, so every period leads
+   * with a foreign figure and states the home total as an aside — which is the
+   * exact line that shipped reading "and with them 0 EGP" on the Week screen.
+   */
+  for (const period of ['today', 'week', 'month', 'year']) {
+    stubLang(lang, 'EUR');
+    const v2 = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
+    try {
+      const BV = (await v2.ssrLoadModule('/src/views/BookView.jsx')).default;
+      const SS = (await v2.ssrLoadModule('/src/i18n/strings.js')).S;
+      const html = renderToStaticMarkup(createElement(BV, { data: payload([day()], { Visa: 100, Cash: 0 }), initialPeriod: period }))
+        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      ok(!/\d[\s\u00A0]*EGP\b/.test(html),
+        `${L} [${period}, display=EUR] the home aside still prints the raw code EGP`);
+      ok(html.includes(SS.currencyShort),
+        `${L} [${period}, display=EUR] the home aside must state its mark`);
+    } finally { await v2.close(); }
+    stubLang(lang);
+  }
 
   // ─────────────────────────────── A4 · the mark, not the long form
   ok(typeof S.currencyShort === 'string' && S.currencyShort.length > 0,

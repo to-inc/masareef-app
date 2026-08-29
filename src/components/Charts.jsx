@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP, TYPE } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP, TYPE, unitSize } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel, monthByTab } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
@@ -550,25 +550,31 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
               borderRadius: RADIUS.row, padding: '10px 11px', minWidth: 0,
             }}
           >
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: active ? C.onDark : C.muted, letterSpacing: '.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: TYPE.label, fontWeight: 700, color: active ? C.onDark : C.muted, letterSpacing: '.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {/* GEOMETRY EXEMPTION (ruling 4): an 8×8 series swatch — any
                   surface radius exceeds half its width and would clamp the
                   square to a circle, erasing the "swatch = series" shape. */}
               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: active ? C.onDark : m.color, marginInlineEnd: 5 }} />
               {S[m.labelKey]}
             </div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 19, fontWeight: 650, color: active ? C.onDark : C.ink, marginTop: 2, ...LATIN, ...NUMERALS }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.action, fontWeight: 650, color: active ? C.onDark : C.ink, marginTop: 2, ...LATIN, ...NUMERALS }}>
               {moneyRound(now)}
+              {/* A5 (HANDOFF:56): the figure carries its unit. The «in EGP»
+                  caption above scopes the GROUP; it does not put a unit on any
+                  one figure, and the law has no exception for a scoped group.
+                  Sized by `unitSize` so ruling 5's senior floor applies. */}
+              <span style={{ fontSize: unitSize(TYPE.action), fontFamily: FONT_UI, fontWeight: 600,
+                color: active ? C.onDark : C.muted }}>{' '}{S.currencyShort}</span>
             </div>
-            <div style={{ fontSize: 12, color: active ? C.onDark : C.muted }}>
+            <div style={{ fontSize: TYPE.label, color: active ? C.onDark : C.muted }}>
               {/* No comparison data ≠ a comparison of zero — and a TRUE zero
                   is worded (A4): «كان 0 — الأسبوع اللي فات», never a naked 0
                   the reader must diagnose. Prose, so no LATIN isolate. */}
               {prevAt == null
                 ? <span style={LATIN}>—</span>
                 : prevAt === 0 && prevName
-                  ? <span>{S.prevWorded(moneyRound(0), prevName)}</span>
-                  : <span style={LATIN}>{moneyRound(prevAt)}</span>}
+                  ? <span>{S.prevWorded(`${moneyRound(0)} ${S.currencyShort}`, prevName)}</span>
+                  : <span style={LATIN}>{moneyRound(prevAt)} {S.currencyShort}</span>}
               {comparable && <NeutralDelta now={now} prev={prevAt} />}
             </div>
           </button>

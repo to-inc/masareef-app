@@ -1541,7 +1541,7 @@ export function PeriodBlock({
               */}
             {asides.map((l) => (
               <span key={l.currency} style={{ marginInlineEnd: 10 }}>
-                {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {l.currency}</b>
+                {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {unitFor(l.currency)}</b>
               </span>
             ))}
             {/* Money we know is there and cannot size — said, not implied, and

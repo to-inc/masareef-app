@@ -146,7 +146,21 @@ import { dirname, join } from 'node:path';
  * made it `!includes(undefined)` — true for every input, a check that could no
  * longer fail. It pins the literal «الرسالة الأصلية» now.
  */
-const EXPECTED_ASSERTIONS = 5465;
+/**
+ * 5497 on 2026-08-30. All +32 is `test-units.mjs` (28 → 60); no other suite
+ * moved and none vanished.
+ *
+ * It grew because it had a hole the size of three screens. It rendered only the
+ * DEFAULT period, so it passed while the WEEK screen still said "0 EGP" — that
+ * aside is `PeriodBlock`, a different component with its own currency
+ * rendering, and nothing in the suite ever reached it. It now renders today,
+ * week, month AND year, in both languages, and again with the display currency
+ * set to EUR — which is the Owner's own setting and the only configuration in
+ * which the home total appears as an aside at all.
+ *
+ * Re-proved: reverting the one-line fix fails six of those assertions by name.
+ */
+const EXPECTED_ASSERTIONS = 5497;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

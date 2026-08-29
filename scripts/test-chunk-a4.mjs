@@ -188,7 +188,15 @@ try {
       data: zeroPrev, labels: [], liveIndex: -1, metric: 'all', setMetric: () => {},
       periodNames: names, showBars: false,
     }));
-    const worded = typeof AR.prevWorded === 'function' ? AR.prevWorded(moneyRound(0), AR.lastWeek) : null;
+    /**
+     * A4.16 asserts the zero is WORDED rather than a naked 0 the reader has to
+     * diagnose — and it still is. What moved is A5: that worded zero now
+     * carries its unit, «كان 0 ج.م — الأسبوع اللي فات», because a figure on
+     * this card sits under a hero that may be in another currency entirely.
+     * Both laws hold at once, so the pin states both.
+     */
+    const worded = typeof AR.prevWorded === 'function'
+      ? AR.prevWorded(`${moneyRound(0)} ${AR.currencyShort}`, AR.lastWeek) : null;
     ok(!!worded && text(html).includes(worded),
       `A4.16 [cross-file Charts.jsx] a method card’s «0» prev is WORDED — expected ${JSON.stringify(worded)} in the card`);
   }
