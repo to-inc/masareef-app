@@ -188,6 +188,14 @@ check('harborInk on card — the editable-field marker', C.harborInk, C.card, 12
  */
 if (ratio(C.harbor, C.shell) < 4.5) pass++;
 else failures.push('negative control: harbor cleared 4.5:1 as text on the shell — the A7 harborInk split is no longer forced; re-derive it');
+/**
+ * THE HEADER BAR is a `harbor → harborInk` gradient, so white text on it has
+ * to clear the LIGHTEST stop — `harbor` itself. Pinned because the design pass
+ * first drew this bar as `#4E8CB4 → #34688C` (the ﹢ button's pair), where the
+ * light stop measures 3.66:1 and fails every text size on the bar. The check
+ * below is what makes that a caught mistake rather than a shipped one.
+ */
+check('white on the header bar — its lightest stop', C.onDark, C.harbor, TYPE.caption);
 check('white on harbor — primary button', C.onDark, C.harbor, 18.5, true);
 check('white on harbor — toast', C.onDark, C.harbor, TYPE.body);
 check('white on harbor — active metric value', C.onDark, C.harbor, 19, true);

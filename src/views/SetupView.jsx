@@ -63,14 +63,14 @@ export default function SetupView({ onDone }) {
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
         <LangToggle subtle />
       </div>
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 650, color: C.harborInk }}>
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk }}>
         {S.setupTitle}
       </div>
       <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, margin: '8px 0 18px' }}>
         {S.setupBody}
       </p>
 
-      <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.muted }}>
+      <label style={{ display: 'block', fontSize: TYPE.label, fontWeight: 600, color: C.muted }}>
         {S.setupUrl}
         <input
           type="url"
@@ -84,7 +84,7 @@ export default function SetupView({ onDone }) {
         />
       </label>
 
-      <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.muted, marginTop: 14 }}>
+      <label style={{ display: 'block', fontSize: TYPE.label, fontWeight: 600, color: C.muted, marginTop: 14 }}>
         {S.setupSecret}
         <input
           type="password"
@@ -104,7 +104,7 @@ export default function SetupView({ onDone }) {
         * an https docs.google.com/spreadsheets URL), so a typo costs him a
         * missing link rather than a failed setup.
         */}
-      <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.muted, marginTop: 14 }}>
+      <label style={{ display: 'block', fontSize: TYPE.label, fontWeight: 600, color: C.muted, marginTop: 14 }}>
         {S.setupSheet}
         <input
           type="url"
@@ -122,7 +122,7 @@ export default function SetupView({ onDone }) {
       </label>
 
       {state === 'error' && (
-        <div style={{ color: C.conflictInk, fontSize: 14.5, marginTop: 10, lineHeight: 1.6 }}>{error}</div>
+        <div style={{ color: C.conflictInk, fontSize: TYPE.label, marginTop: 10, lineHeight: 1.6 }}>{error}</div>
       )}
 
       <button
@@ -133,7 +133,7 @@ export default function SetupView({ onDone }) {
           marginTop: 18, width: '100%', minHeight: 56, padding: '16px 0', borderRadius: RADIUS.row,
           background: state === 'testing' ? C.line : C.harbor,
           color: state === 'testing' ? C.muted : C.onDark,
-          fontSize: 17.5, fontWeight: 700,
+          fontSize: TYPE.action, fontWeight: 700,
         }}
       >
         {state === 'testing' ? S.setupTesting : S.setupTest}

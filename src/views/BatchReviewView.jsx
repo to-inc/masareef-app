@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS } from '../theme.js';
+import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE } from '../theme.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, moneyRound } from '../lib/format.js';
@@ -134,7 +134,7 @@ export default function BatchReviewView({
               * wrote. This says so, in the same words the Book screen uses.
               */}
             {outstanding > 0 && (
-              <div style={{ fontSize: 13.5, color: C.conflictInk, marginTop: 4, fontWeight: 600 }}>
+              <div style={{ fontSize: TYPE.label, color: C.conflictInk, marginTop: 4, fontWeight: 600 }}>
                 {S.batchWaiting(outstanding)}
               </div>
             )}
@@ -146,7 +146,7 @@ export default function BatchReviewView({
                 ? chosenTotals.map(([cur, amt]) => `${moneyRound(amt)} ${cur}`).join(' · ')
                 : '—'}
             </div>
-            <div style={{ fontSize: 13.5, color: C.muted, marginTop: 3 }}>
+            <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 3 }}>
               {S.batchCount(chosen.length, rows.length)}
             </div>
           </>
@@ -162,7 +162,7 @@ export default function BatchReviewView({
                 // A3: 42 -> TAP. These are the Select all / Clear all buttons —
             // the same pair A3 names at GLASS :539/:540.
             flex: 1, minHeight: TAP, borderRadius: RADIUS.row, background: C.card,
-                border: `1px solid ${C.line}`, color: C.ink, fontSize: 14.5, fontWeight: 600,
+                border: `1px solid ${C.line}`, color: C.ink, fontSize: TYPE.label, fontWeight: 600,
               }}
             >
               {label}
@@ -246,7 +246,7 @@ export default function BatchReviewView({
             : () => onConfirm(chosen)}
           disabled={busy || (!chosen.length && !settled) || chosen.length > BATCH_MAX_ROWS}
           style={{
-            width: '100%', minHeight: 58, borderRadius: RADIUS.row, fontSize: 18, fontWeight: 700,
+            width: '100%', minHeight: 58, borderRadius: RADIUS.row, fontSize: TYPE.action, fontWeight: 700,
             /**
              * AMBER — this screen's primary action (ruled 2026-08-19).
              *
@@ -288,7 +288,7 @@ export default function BatchReviewView({
             style={{
               marginTop: 10, width: '100%', minHeight: TAP, borderRadius: RADIUS.row,
               background: 'transparent', border: `1px solid ${C.line}`,
-              color: C.muted, fontSize: 14.5,
+              color: C.muted, fontSize: TYPE.label,
             }}
           >
             {S.batchDiscardWaiting(outstanding)}
@@ -454,7 +454,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             {ticked ? '✓' : ''}
           </button>
         ) : (
-          <span style={{ flex: '0 0 30px', textAlign: 'center', color: C.muted, fontSize: 18 }}>✕</span>
+          <span style={{ flex: '0 0 30px', textAlign: 'center', color: C.muted, fontSize: TYPE.action }}>✕</span>
         )}
 
         <TitleTag
@@ -463,7 +463,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
           style={{ flex: 1, minWidth: 0, textAlign: 'start', background: 'transparent', padding: 0 }}
         >
           <span style={{
-            display: 'block', fontSize: 15.5, fontWeight: 600,
+            display: 'block', fontSize: TYPE.body, fontWeight: 600,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...ISOLATE,
           }} dir="auto">
             {/* Printed AS THE BANK PRINTED IT, truncation included — that is what
@@ -535,7 +535,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               flex: '0 0 auto', minHeight: TAP, padding: '9px 12px',
               borderRadius: RADIUS.capsule, background: C.shell,
               border: `1px solid ${C.line}`, color: C.ink,
-              fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap',
+              fontSize: TYPE.label, fontWeight: 700, whiteSpace: 'nowrap',
             }}
           >
             {methodLabel(method)}
@@ -616,7 +616,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                     background: category === c ? C.harbor : C.shell,
                     color: category === c ? C.onDark : C.ink,
                     border: `1px solid ${category === c ? C.harbor : C.line}`,
-                    fontSize: 14, fontWeight: category === c ? 700 : 500,
+                    fontSize: TYPE.label, fontWeight: category === c ? 700 : 500,
                   }}
                   dir="auto"
                 >
@@ -630,7 +630,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                     // A3: 44 -> TAP, senior touch floor.
                     padding: '9px 13px', minHeight: TAP, borderRadius: RADIUS.capsule,
                     background: 'transparent', color: C.harborInk,
-                    border: `1px dashed ${C.harbor}`, fontSize: 14, fontWeight: 600,
+                    border: `1px dashed ${C.harbor}`, fontSize: TYPE.label, fontWeight: 600,
                   }}
                 >
                   {S.more}
@@ -656,7 +656,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
 function Expired({ onResnap, onDiscard, busy }) {
   return (
     <div style={{ textAlign: 'center', paddingTop: 40 }}>
-      <div style={{ fontSize: 44 }}>🧾</div>
+      <div data-geometry="empty-state-illustration" style={{ fontSize: 44 }}>🧾</div>
       <p style={{ fontSize: 16, lineHeight: 1.7, color: C.ink, margin: '12px auto 18px', maxWidth: 300 }}>
         {S.batchExpired}
       </p>
@@ -673,7 +673,7 @@ function Expired({ onResnap, onDiscard, busy }) {
         className="catchip" onClick={onDiscard}
         style={{
           marginTop: 10, minHeight: TAP, padding: '0 16px', borderRadius: RADIUS.row,
-          background: 'transparent', border: `1px solid ${C.line}`, color: C.muted, fontSize: 14.5,
+          background: 'transparent', border: `1px solid ${C.line}`, color: C.muted, fontSize: TYPE.label,
         }}
       >
         {S.batchDiscard}

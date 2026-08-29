@@ -144,11 +144,11 @@ export default function InboxView({
   if (rows.length === 0) {
     return (
       <div style={{ textAlign: 'center', paddingTop: 110 }}>
-        <div style={{ fontSize: 52 }}>🍵</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 23, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
+        <div data-geometry="empty-state-illustration" style={{ fontSize: 52 }}>🍵</div>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.inboxEmptyTitle}
         </div>
-        <div style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
+        <div style={{ color: C.muted, fontSize: TYPE.body, marginTop: 8, lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
           {S.inboxEmptyBody}
         </div>
       </div>

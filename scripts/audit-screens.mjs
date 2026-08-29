@@ -58,12 +58,22 @@ const rawIso = (html) => (text(html).match(/\d[\s ]*(EGP)\b/) || [])[0] || null
 const longForm = (S) => (html) => (text(html).match(new RegExp(`\\d[\\s\\u00A0]*${S.currency}\\b`)) || [])[0] || null;
 
 /** font-size declarations in the rendered markup, below the prose floor */
-const smallType = (html, floor) => {
+/**
+ * A SIZE MUST BE A TYPE TOKEN, not merely large enough.
+ *
+ * The first version only asked «is it below the caption floor», and 13.5px
+ * sailed through it twice — a size that is not a rung on the ladder at all,
+ * sitting on the two sentences that show when a chart has nothing to draw.
+ * The North Star's rule is a positive one: text takes a TYPE token, always.
+ * So anything that is not one of the eight rungs is a finding, whether it is
+ * above the floor or below it.
+ */
+const smallType = (html, floor, rungs) => {
   const hits = [];
   const re = /font-size:\s*([\d.]+)px/g;
   let m; while ((m = re.exec(html))) {
     const v = Number(m[1]);
-    if (v >= floor) continue;
+    if (rungs.has(v)) continue;
     // Name the element and its text, so a raw number is never the whole report:
     // an SVG axis label is declared GEOMETRY and exempt, a prose span is not.
     const before = html.slice(Math.max(0, m.index - 220), m.index);
@@ -94,16 +104,18 @@ const smallTaps = (html, tap) => {
   return hits;
 };
 
+const RUNGS0 = new Set([40, 34, 22, 19, 17, 16, 15, 13]);
 // positive controls — each detector must fire on a known positive
 const CONTROLS = [
   ['leakedComment', leakedComment('<span>/* leaked */</span>') !== null],
   ['leakedComment-neg', leakedComment('<input accept="image/*"/>') === null],
   ['rawIso', rawIso('<b>0 EGP</b>') !== null],
   ['rawIso-neg', rawIso('<b>0 E£</b>') === null],
-  ['smallType', smallType('<i style="font-size: 11.5px">x</i>', 15).length === 1],
-  ['smallType-neg', smallType('<i style="font-size: 15px">x</i>', 15).length === 0],
-  ['smallType-geom', smallType('<i data-geometry="axis" style="font-size: 9.5px">x</i>', 15).length === 0],
-  ['smallType-undeclared', smallType('<i style="font-size: 9.5px">x</i>', 15).length === 1],
+  ['smallType', smallType('<i style="font-size: 11.5px">x</i>', 15, RUNGS0).length === 1],
+  ['smallType-neg', smallType('<i style="font-size: 15px">x</i>', 15, RUNGS0).length === 0],
+  ['smallType-geom', smallType('<i data-geometry="axis" style="font-size: 9.5px">x</i>', 15, RUNGS0).length === 0],
+  ['smallType-undeclared', smallType('<i style="font-size: 9.5px">x</i>', 15, RUNGS0).length === 1],
+  ['smallType-offladder', smallType('<i style="font-size: 13.5px">x</i>', 15, RUNGS0).length === 1],
   ['smallTaps', smallTaps('<button style="min-height: 30px">x</button>', 48).length === 1],
   ['smallTaps-neg', smallTaps('<div style="min-height: 30px">x</div>', 48).length === 0],
 ];
@@ -127,6 +139,7 @@ for (const lang of ['ar', 'en']) {
     {
     const S = (await vite.ssrLoadModule('/src/i18n/strings.js')).S;
     const { TYPE, TAP } = await vite.ssrLoadModule('/src/theme.js');
+    const RUNGS = new Set(Object.values(TYPE));
     const load = async (p) => (await vite.ssrLoadModule(p));
 
     /**
@@ -177,7 +190,7 @@ for (const lang of ['ar', 'en']) {
       const c = leakedComment(html); if (c) note(name, lang, 'LEAKED-COMMENT', c);
       const iso = rawIso(html); if (iso) note(name, lang, 'RAW-ISO-CODE', iso);
       const lf = longForm(S)(html); if (lf) note(name, lang, 'LONG-FORM-UNIT', lf);
-      const st = smallType(html, TYPE.caption); if (st.length) note(name, lang, 'BELOW-CAPTION-FLOOR', [...new Set(st)].join(' | '));
+      const st = smallType(html, TYPE.caption, RUNGS); if (st.length) note(name, lang, 'NOT-A-TYPE-TOKEN', [...new Set(st)].join(' | '));
       const tp = smallTaps(html, TAP); if (tp.length) note(name, lang, 'TAP-UNDER-FLOOR', [...new Set(tp)].join(', '));
     }
   }

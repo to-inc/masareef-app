@@ -1810,7 +1810,7 @@ function RowList({
         {emptyTitle && (
           <>
             {/* A picture sized as geometry (GLYPH), not a headline (theme.js). */}
-            <div style={{ fontSize: GLYPH.illustration }}>🌙</div>
+            <div data-geometry="empty-state-illustration" style={{ fontSize: GLYPH.illustration }}>🌙</div>
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk, marginTop: 8 }}>
               {emptyTitle}
             </div>

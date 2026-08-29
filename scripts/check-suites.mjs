@@ -177,7 +177,14 @@ import { dirname, join } from 'node:path';
  * per period, in both languages, with controls that fail if the fixture ever
  * stops containing the case under test.
  */
-const EXPECTED_ASSERTIONS = 5509;
+/**
+ * 5510 on 2026-08-30. +1: one contrast pin for the header bar, which became a
+ * harbor→harborInk gradient in the UI pass. It pins the LIGHTEST stop, because
+ * that is what white text has to clear — the design first drew this bar with
+ * the ﹢ button's #4E8CB4 light stop, where white measures 3.66:1 and fails
+ * every text size on it.
+ */
+const EXPECTED_ASSERTIONS = 5510;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

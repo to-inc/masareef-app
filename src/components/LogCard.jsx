@@ -101,13 +101,13 @@ export default function LogCard({ prevLog, todayCairo }) {
         * in it, and twice is not a habit.
         */}
       {prevLog.mostOften && (
-        <div style={{ marginTop: 12, fontSize: 14, color: C.ink }}>
+        <div style={{ marginTop: 12, fontSize: TYPE.label, color: C.ink }}>
           {S.logMostOften(prevLog.mostOften.name, prevLog.mostOften.times)}
         </div>
       )}
 
       {(prevLog.unpriced > 0 || prevLog.undated > 0) && (
-        <div style={{ marginTop: 14, fontSize: 14, color: C.ink, lineHeight: 1.9 }}>
+        <div style={{ marginTop: 14, fontSize: TYPE.label, color: C.ink, lineHeight: 1.9 }}>
           {prevLog.unpriced > 0 && <div>{S.logUnpriced(prevLog.unpriced)}</div>}
           {prevLog.undated > 0 && <div>{S.logUndated(prevLog.undated)}</div>}
         </div>
@@ -118,7 +118,7 @@ export default function LogCard({ prevLog, todayCairo }) {
           signature. */}
       <div style={{ ...DIVIDER, height: 4, marginTop: 18, paddingBottom: 0 }} />
 
-      <div style={{ marginTop: 14, fontSize: 14.5, color: C.ink, lineHeight: 1.9 }}>
+      <div style={{ marginTop: 14, fontSize: TYPE.label, color: C.ink, lineHeight: 1.9 }}>
         <div style={{ fontWeight: 700 }}>{S.logTo(CAPTAIN_INITIALS)}</div>
         <div style={{ color: C.muted }}>{S.logSignoff}</div>
       </div>
@@ -130,7 +130,7 @@ export default function LogCard({ prevLog, todayCairo }) {
           style={{
             minHeight: TAP, padding: '0 24px', borderRadius: RADIUS.capsule,
             background: 'transparent', border: `1px solid ${C.line}`,
-            color: C.ink, fontSize: 15.5, fontWeight: 600,
+            color: C.ink, fontSize: TYPE.body, fontWeight: 600,
           }}
         >
           {S.logDismiss}

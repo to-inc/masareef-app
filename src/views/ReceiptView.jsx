@@ -384,7 +384,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.receiptNotReceipt}
         </div>
-        <p style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
+        <p style={{ color: C.muted, fontSize: TYPE.body, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
           {/**
             * THE REASON, WHEN THE SERVER GAVE ONE (06 §6, `not_expense_reason`).
             *
@@ -426,7 +426,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.receiptQueuedTitle}
         </div>
-        <p style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
+        <p style={{ color: C.muted, fontSize: TYPE.body, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
           {S.receiptQueuedBody}
         </p>
         <button className="bigbtn" onClick={reset} style={primaryBtn}>{S.receiptRetake}</button>
@@ -553,7 +553,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
             {lowMerchant ? (
               <input value={merchant} onChange={(e) => setMerchant(e.target.value)} style={inputStyle} dir="auto" />
             ) : (
-              <div style={{ fontSize: 17.5, fontWeight: 600 }} dir="auto">{merchant}</div>
+              <div style={{ fontSize: TYPE.row, fontWeight: 600 }} dir="auto">{merchant}</div>
             )}
           </Field>
 
@@ -585,7 +585,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
             */}
             <div
               style={{
-                fontSize: 17.5, fontWeight: 600,
+                fontSize: TYPE.row, fontWeight: 600,
                 color: category ? C.ink : C.muted,
                 textAlign: 'right',
               }}
@@ -637,7 +637,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
           he can choose from does not change shape when he chooses.
         */}
         {category && !showAllCats && (
-          <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: C.harbor, color: C.onDark, fontSize: 18, fontWeight: 700, minHeight: 56 }}>
+          <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: C.harbor, color: C.onDark, fontSize: TYPE.action, fontWeight: 700, minHeight: 56 }}>
             ✓ <span dir="auto">{categoryLabel(category)}</span>
           </button>
         )}
@@ -666,7 +666,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
             style={{
               marginTop: 16, width: '100%', minHeight: 58, padding: '16px 0', borderRadius: RADIUS.row,
               background: ready ? C.harbor : C.line, color: ready ? C.onDark : C.ink,
-              fontSize: 18.5, fontWeight: 700,
+              fontSize: TYPE.action, fontWeight: 700,
             }}
           >
             {saving ? S.saving : S.receiptConfirm}
@@ -683,8 +683,8 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
   // ——— idle
   return (
     <Centered>
-      <div style={{ fontSize: 52 }}>🧾</div>
-      <p style={{ color: C.muted, fontSize: 15.5, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
+      <div data-geometry="empty-state-illustration" style={{ fontSize: 52 }}>🧾</div>
+      <p style={{ color: C.muted, fontSize: TYPE.body, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
         {S.receiptIntro}
       </p>
       <JobsList jobs={jobs} onReview={review} onRetry={retry} onCancel={cancelJob} />
@@ -904,12 +904,12 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
           // thumbnail's exact geometry so absence has the same shape as presence.
           <div style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0,
             background: C.shell, border: `1px solid ${C.line}`, display: 'flex',
-            alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
+            alignItems: 'center', justifyContent: 'center', fontSize: TYPE.action }} data-geometry="row-thumb-glyph">🧾</div>
         )}
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
-            style={{ fontSize: 14.5, fontWeight: 600, color: C.ink,
+            style={{ fontSize: TYPE.label, fontWeight: 600, color: C.ink,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             dir="auto"
           >
@@ -953,7 +953,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
             <button
               key={a.key} className="catchip" onClick={a.onTap}
               style={{
-                padding: '8px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: 13.5,
+                padding: '8px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
                 whiteSpace: 'nowrap',
                 background: a.primary ? C.harbor : C.shell,
                 color: a.primary ? C.onDark : C.ink,
@@ -1081,7 +1081,7 @@ export function Banner({ children }) {
   return (
     <Sheet style={{
       background: C.sand, border: `1px solid ${C.line}`, color: C.ink,
-      padding: '10px 14px', fontSize: 14.5, fontWeight: 600,
+      padding: '10px 14px', fontSize: TYPE.label, fontWeight: 600,
       marginBottom: 10, lineHeight: 1.6,
     }}>
       {children}
@@ -1091,12 +1091,12 @@ export function Banner({ children }) {
 
 const primaryBtn = {
   marginTop: 14, minHeight: 58, padding: '16px 30px', borderRadius: RADIUS.row,
-  background: C.harbor, color: C.onDark, fontSize: 18, fontWeight: 700,
+  background: C.harbor, color: C.onDark, fontSize: TYPE.action, fontWeight: 700,
 };
 const ghostBtn = {
   marginTop: 10, minHeight: TAP, padding: '12px 20px', borderRadius: RADIUS.row,
   background: 'transparent', border: `1px solid ${C.line}`, color: C.muted,
-  fontSize: 15.5, fontWeight: 600,
+  fontSize: TYPE.body, fontWeight: 600,
 };
 const chipStyle = {
   padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,

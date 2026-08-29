@@ -63,7 +63,7 @@ export function OutcomeNote({ outcome }) {
       style={{
         marginTop: 12, minHeight: 44, borderRadius: RADIUS.row, padding: '11px 14px',
         background: skin.bg, color: skin.fg, border: `1px solid ${skin.line}`,
-        fontSize: 15.5, fontWeight: 700,
+        fontSize: TYPE.body, fontWeight: 700,
         display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
       }}
     >

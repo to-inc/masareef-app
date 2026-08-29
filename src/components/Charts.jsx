@@ -517,7 +517,16 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
       <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 10, textAlign: 'center', ...LATIN }}>
         {S.chartUnit(unitFor(HOME_CURRENCY))}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+      {/**
+        * FULL-WIDTH ROWS, not three columns (UI pass 2026-08-30).
+        *
+        * Each card carried a label, a figure, its unit and a worded
+        * comparison inside ~102px. At the 15px prose floor «was 0 E£ — last
+        * week» wraps to three lines and the whole row grows to match. As rows
+        * every part sits on one line in about a third of the height, and the
+        * screen gets that space back for the chart.
+        */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
       {METRICS.map((m) => {
         const active = metric === m.key;
         const { now, prevAt } = computed[m.key];
@@ -528,7 +537,8 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
             onClick={() => setMetric(m.key)}
             aria-pressed={active}
             style={{
-              flex: 1, textAlign: 'start', minHeight: 72,
+              display: 'flex', alignItems: 'center', gap: 12,
+              textAlign: 'start', minHeight: 56, width: '100%',
               /**
                * THE ACTIVE FILL IS ALWAYS `harbor`, not the metric's own colour.
                *
@@ -547,17 +557,17 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
               border: `1px solid ${active ? C.harbor : C.line}`,
               // A tappable card-scale CONTROL, not a plain card: `row` is the
               // control-and-row radius the vocabulary assigns it.
-              borderRadius: RADIUS.row, padding: '10px 11px', minWidth: 0,
+              borderRadius: RADIUS.row, padding: '0 16px', minWidth: 0,
             }}
           >
-            <div style={{ fontSize: TYPE.label, fontWeight: 700, color: active ? C.onDark : C.muted, letterSpacing: '.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: TYPE.label, fontWeight: 700, color: active ? C.onDark : C.muted, letterSpacing: '.02em', whiteSpace: 'nowrap', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
               {/* GEOMETRY EXEMPTION (ruling 4): an 8×8 series swatch — any
                   surface radius exceeds half its width and would clamp the
                   square to a circle, erasing the "swatch = series" shape. */}
               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: active ? C.onDark : m.color, marginInlineEnd: 5 }} />
               {S[m.labelKey]}
             </div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.action, fontWeight: 650, color: active ? C.onDark : C.ink, marginTop: 2, ...LATIN, ...NUMERALS }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.action, fontWeight: 650, color: active ? C.onDark : C.ink, flexShrink: 0, ...LATIN, ...NUMERALS }}>
               {moneyRound(now)}
               {/* A5 (HANDOFF:56): the figure carries its unit. The «in EGP»
                   caption above scopes the GROUP; it does not put a unit on any
@@ -566,7 +576,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
               <span style={{ fontSize: unitSize(TYPE.action), fontFamily: FONT_UI, fontWeight: 600,
                 color: active ? C.onDark : C.muted }}>{' '}{S.currencyShort}</span>
             </div>
-            <div style={{ fontSize: TYPE.label, color: active ? C.onDark : C.muted }}>
+            <div style={{ fontSize: TYPE.label, color: active ? C.onDark : C.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>
               {/* No comparison data ≠ a comparison of zero — and a TRUE zero
                   is worded (A4): «كان 0 — الأسبوع اللي فات», never a naked 0
                   the reader must diagnose. Prose, so no LATIN isolate. */}
@@ -677,13 +687,13 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
         * the way «This week 0» claimed a clean week.
         */}
       {scoped && shown.length === 0 && (
-        <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '14px 4px' }}>
+        <p style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '14px 4px' }}>
           {S.priorityEmpty(S.lensGroup(selected))}
         </p>
       )}
       {shown.map((c) => (
         <div key={c.name} style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: TYPE.label, marginBottom: 4 }}>
             {/* Category name is frozen-schema Latin — isolated so RTL cannot reorder it */}
             <span style={{ fontWeight: 600 }} dir="auto">{categoryLabel(c.name)}</span>
             <span style={{ fontWeight: 700, fontFamily: FONT_DISPLAY }}>
@@ -722,7 +732,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
             background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: TYPE.label, gap: 8 }}>
             <span style={{ fontWeight: 700, color: C.conflictInk }}>{S.uncategorizedLine}</span>
             <span style={{ fontWeight: 700, color: C.conflictInk, ...LATIN, ...NUMERALS }}>
               {moneyRound(uncategorized.total)}
@@ -832,7 +842,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
           padding: '0', textAlign: 'start',
         }}
       >
-        <span style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>{S.lensTitle}</span>
+        <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>{S.lensTitle}</span>
         <span style={{ fontSize: 13, color: C.muted }}>{open ? '▾' : '▸'}</span>
       </button>
 
@@ -1036,7 +1046,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
     <div>
       <div style={{ background: C.card, borderRadius: RADIUS.card, padding: '14px 12px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px 8px', gap: 8 }}>
-          <span style={{ fontSize: 13.5, fontWeight: 700, color }}>
+          <span style={{ fontSize: TYPE.label, fontWeight: 700, color }}>
             {periodNames.cur} <span style={{ color: C.muted, fontWeight: 500 }}>{S.vs} {periodNames.prev}</span>
           </span>
           {/**
@@ -1117,13 +1127,13 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
            * series in the payload (D23 stage 2), and faking one from the
            * aggregate would be fabrication in the chart's own hand.
            */
-          <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '18px 8px 10px' }}>
+          <p style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', lineHeight: 1.55, margin: '10px 8px 6px' }}>
             {typeof S.chartHomeZero === 'function'
               ? S.chartHomeZero(unitFor(HOME_CURRENCY))
               : S.priorityEmpty(S.chartUnit(unitFor(HOME_CURRENCY)))}
           </p>
         ) : !plottable ? (
-          <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '18px 8px 10px' }}>
+          <p style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', lineHeight: 1.55, margin: '10px 8px 6px' }}>
             {S.periodJustStarted(periodNames.cur)}
           </p>
         ) : (

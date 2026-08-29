@@ -42,7 +42,7 @@ export default class ErrorBoundary extends Component {
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk }}>
           {S.crashTitle}
         </div>
-        <p style={{ fontSize: 15.5, color: C.muted, lineHeight: 1.7, margin: 0, maxWidth: 300 }}>
+        <p style={{ fontSize: TYPE.body, color: C.muted, lineHeight: 1.7, margin: 0, maxWidth: 300 }}>
           {S.crashBody}
         </p>
         <button
@@ -50,7 +50,7 @@ export default class ErrorBoundary extends Component {
           onClick={() => window.location.reload()}
           style={{
             marginTop: 6, minHeight: 56, padding: '16px 34px', borderRadius: RADIUS.row,
-            background: C.harbor, color: C.onDark, fontSize: 17.5, fontWeight: 700,
+            background: C.harbor, color: C.onDark, fontSize: TYPE.action, fontWeight: 700,
           }}
         >
           {S.crashRetry}

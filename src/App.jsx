@@ -882,7 +882,28 @@ export default function App() {
     >
       <header
         style={{
-          background: C.harbor, color: C.onDark,
+          /**
+           * THE HEADER IS GLASS-ADJACENT NOW, not a flat slab (UI pass
+           * 2026-08-30). It was the one surface still painted a single
+           * `harbor` while everything beneath it is glass over a gradient
+           * ground, and it read as a different app.
+           *
+           * `harbor → harborInk`, both canonical, and the direction matters:
+           * the LIGHTEST point is what white text has to clear, and it is
+           * `harbor` at 4.53:1 — enough for the 13px date. The design's own
+           * `#4E8CB4 → #34688C` pair was drawn first and rejected here: white
+           * on `#4E8CB4` measures 3.66:1, which fails every text size on this
+           * bar. test-contrast pins the light stop so this cannot drift back.
+           *
+           * AND NO CAST. A drop shadow was drawn here and refused by B5.10 and
+           * B4b.16 on a law this app already holds: «elevation by gradient
+           * light, not by a floating dark» (A2). The gradient IS the
+           * elevation — that is the whole point of it — and a shadow under it
+           * would be the second, cheaper answer to the same question.
+           */
+          background: `linear-gradient(160deg, ${C.harbor}, ${C.harborInk})`,
+          color: C.onDark,
+
           padding: `calc(12px + env(safe-area-inset-top)) 20px 12px`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
           // B5: the anchor for the scrim below. The header never scrolls (a
@@ -898,7 +919,13 @@ export default function App() {
             // A8: `opacity: 0.75` deleted. A group dimmer on the one line
             // that says WHICH DAY the figures below belong to; muted-on-glass
             // is already the thinnest pair on this screen without it.
-            <span style={{ fontSize: 12.5, direction: 'ltr' }}>
+            /**
+             * 12.5px was not a tier at all. `caption` was the first fix and it
+             * was wrong: caption is legal ONLY for something that DUPLICATES
+             * information available elsewhere, and the date appears nowhere
+             * else on any screen. Sole-source prose takes the label floor.
+             */
+            <span style={{ fontSize: TYPE.label, direction: 'ltr' }}>
               {`${data.today_cairo.d}/${data.today_cairo.m}/${data.today_cairo.y}`}
             </span>
           )}
@@ -1256,13 +1283,13 @@ export function StaleQueueCard({ item, onSend, onDrop }) {
         padding: 14, marginBottom: 12,
       }}
     >
-      <div style={{ fontWeight: 700, color: C.ink, fontSize: 15.5 }}>{S.outboxStaleTitle}</div>
+      <div style={{ fontWeight: 700, color: C.ink, fontSize: TYPE.body }}>{S.outboxStaleTitle}</div>
       {/* A8: `opacity: 0.85` deleted — this is the sentence explaining that
           entries are stuck in the outbox, which is the whole point of the card. */}
-      <div style={{ fontSize: 14, color: C.ink, marginTop: 4, lineHeight: 1.6 }}>
+      <div style={{ fontSize: TYPE.label, color: C.ink, marginTop: 4, lineHeight: 1.6 }}>
         {S.outboxStaleNote}
       </div>
-      <div style={{ fontSize: 14.5, marginTop: 8, direction: 'ltr', unicodeBidi: 'isolate', textAlign: 'end' }}>
+      <div style={{ fontSize: TYPE.label, marginTop: 8, direction: 'ltr', unicodeBidi: 'isolate', textAlign: 'end' }}>
         {item.payload?.description} · {item.payload?.amount} · {item.payload?.entryDate}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

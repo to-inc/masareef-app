@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { C, TAP, RADIUS } from '../theme.js';
+import { C, TAP, RADIUS, TYPE } from '../theme.js';
 import { S } from '../i18n/strings.js';
 
 /**
@@ -67,7 +67,7 @@ export default function DictateView({ onSend, onCancel, busy }) {
 
       {/* Only after he has typed and cleared it — never as a greeting. */}
       {touched && !ready && (
-        <div style={{ fontSize: 14, color: C.conflictInk, marginTop: 8 }}>{S.dictateNeedText}</div>
+        <div style={{ fontSize: TYPE.label, color: C.conflictInk, marginTop: 8 }}>{S.dictateNeedText}</div>
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
@@ -85,7 +85,7 @@ export default function DictateView({ onSend, onCancel, busy }) {
              */
             background: ready && !busy ? C.harbor : C.line,
             color: ready && !busy ? C.onDark : C.ink,
-            fontSize: 18, fontWeight: 700,
+            fontSize: TYPE.action, fontWeight: 700,
           }}
         >
           {busy ? S.saving : S.dictateSend}
