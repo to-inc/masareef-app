@@ -217,30 +217,58 @@ export function mockForeignIn(rows) {
  * sums with `total: null` because currencies do not add; an empty home
  * currency returns NULL — absent feature, not a zero.
  */
+/** §2.2c — one empty bucket, so the slices and the whole cannot drift apart. */
+const emptyHomeBucket = () => ({
+  native: { count: 0, total: 0 },
+  converted: { count: 0, total: 0 },
+  unstamped: { count: 0, total: null, byCurrency: {} },
+  unpriced: 0,
+  total: 0,
+});
+/** `Visa` or else `Cash` — the write path's own rule, stated once. */
+const homeMethodKey = (e) => ((e && e.method === 'Visa') ? 'Visa' : 'Cash');
+
 export function mockHomeAggIn(rows, home) {
   if (!home) return null;
   const native = { count: 0, total: 0 };
   const converted = { count: 0, total: 0 };
   const unstamped = { count: 0, total: null, byCurrency: {} };
   let unpriced = 0, strayStamps = 0;
+  // §2.2c: the SAME partition sliced by method, taken from the same branch that
+  // classifies the whole — never a second walk.
+  const byMethod = { Visa: emptyHomeBucket(), Cash: emptyHomeBucket() };
   for (const e of rows || []) {
     if (!e) continue;
+    const mk = byMethod[homeMethodKey(e)];
     if (e.currency === home && e.amount != null) {
       native.count++;
       native.total += e.amount;
+      mk.native.count++;
+      mk.native.total += e.amount;
       if (e.home != null) strayStamps++;
     } else if (e.home != null) {
       converted.count++;
       converted.total += e.home;
+      mk.converted.count++;
+      mk.converted.total += e.home;
     } else if (e.amount != null) {
       unstamped.count++;
       unstamped.byCurrency[e.currency] = round2((unstamped.byCurrency[e.currency] || 0) + e.amount);
+      mk.unstamped.count++;
+      mk.unstamped.byCurrency[e.currency] = round2((mk.unstamped.byCurrency[e.currency] || 0) + e.amount);
     } else {
       unpriced++;
+      mk.unpriced++;
     }
   }
   native.total = round2(native.total);
   converted.total = round2(converted.total);
+  for (const k of ['Visa', 'Cash']) {
+    const b = byMethod[k];
+    b.native.total = round2(b.native.total);
+    b.converted.total = round2(b.converted.total);
+    b.total = round2(b.native.total + b.converted.total);
+  }
   return {
     currency: home,
     total: round2(native.total + converted.total),
@@ -249,6 +277,7 @@ export function mockHomeAggIn(rows, home) {
     unstamped,
     unpriced,
     strayStamps,
+    byMethod,
   };
 }
 
