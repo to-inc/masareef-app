@@ -267,7 +267,11 @@ try {
       displayCurrency: 'EUR', onFlipCurrency: noop, onClose: noop,
     });
     {
-      const wantAria = typeof AR.readInUnit === 'function' ? AR.readInUnit('EGP') : null;
+      // The way back is named by the home currency's MARK now, not its ISO
+      // code — «اقرا بالـج.م», not «اقرا بالـEGP», which welded a Latin
+      // abbreviation into an Arabic sentence. S1.47 is about the control
+      // REORDERING rather than hard-coding, and that is unchanged.
+      const wantAria = typeof AR.readInUnit === 'function' ? AR.readInUnit(AR.currencyShort) : null;
       ok(h2.includes('EUR') && wantAria !== null && h2.includes(`aria-label="${wantAria}"`),
         'S1.47 with EUR chosen the control states EUR and offers the way back to EGP — the mount reorders, it never hard-codes');
     }

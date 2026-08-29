@@ -354,10 +354,21 @@ eq(unsizedForeign({ count: 1, byCurrency: { EUR: 200 } }), 0, 'and a fully-sized
    */
   const store = (v) => ({ getItem: () => v, setItem(_, x) { v = x; }, get value() { return v; } });
   const st = store(null);
-  eq(getDisplayCurrency(st), 'EGP', 'the default is the BOOK\'s unit — his install opts in');
+  /**
+   * OWNER RULING 2026-08-30, replacing «the default is the BOOK's unit».
+   *
+   * It used to default to `HOME_CURRENCY`, on the reasoning that an install
+   * should open in the unit its sheet is kept in and the reader opts out. In
+   * practice that opened an install whose money is in euros onto an EGP screen
+   * reading zero, and there was no way to tell the two installs apart because
+   * one constant was answering two different questions — what the SHEET sums
+   * in, and what the READER wants to read. `DEFAULT_DISPLAY_CURRENCY` is now a
+   * separate constant, and it is EUR by the Owner's word.
+   */
+  eq(getDisplayCurrency(st), 'EUR', "the default is the READER's unit — the sheet's unit is a separate question");
   setDisplayCurrency('EUR', st);
   eq(getDisplayCurrency(st), 'EUR', 'and the choice survives');
-  eq(getDisplayCurrency(store('nonsense')), 'EGP', 'a corrupted value falls back rather than rendering itself');
+  eq(getDisplayCurrency(store('nonsense')), 'EUR', 'a corrupted value falls back rather than rendering itself');
 }
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
@@ -582,7 +593,15 @@ try {
    * and takes the whole suite with it — the second time this pattern bit in one
    * afternoon. The dereference is made safe so the absence reports itself.
    */
-  const chartUnitWords = typeof AR.chartUnit === 'function' ? AR.chartUnit('EGP') : null;
+  /**
+   * The caption names the home currency by its MARK now — «بالـج.م», not
+   * «بالـEGP», which welded a Latin abbreviation into an Arabic sentence. What
+   * these two assertions are about is unchanged and is the important part: an
+   * EGP chart sitting under a euro headline must SAY which unit it plots, and
+   * must say it again over the metric cards, because one labelled region does
+   * not label the one below it.
+   */
+  const chartUnitWords = typeof AR.chartUnit === 'function' ? AR.chartUnit(AR.currencyShort) : null;
   ok(chartUnitWords && text(eurHtml).includes(chartUnitWords),
     'the chart names its own unit — it plots pounds under a euro headline and must say which');
 

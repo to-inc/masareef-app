@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP, TYPE, unitSize } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
-import { S, categoryLabel, monthByTab } from '../i18n/strings.js';
+import { S, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
 import { rollup, groupOf } from '../lib/priorities.js';
@@ -515,7 +515,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
         * ambiguity that one word fixes.
         */}
       <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, textAlign: 'center', ...LATIN }}>
-        {S.chartUnit(HOME_CURRENCY)}
+        {S.chartUnit(unitFor(HOME_CURRENCY))}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
       {METRICS.map((m) => {
@@ -1064,7 +1064,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
             */}
           {!homeZeroMisleads && (
           <span style={{ fontSize: 11.5, color: C.muted, whiteSpace: 'nowrap', ...LATIN }}>
-            {S.chartUnit(HOME_CURRENCY)}
+            {S.chartUnit(unitFor(HOME_CURRENCY))}
           </span>
           )}
           {/**
@@ -1119,8 +1119,8 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
            */
           <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '18px 8px 10px' }}>
             {typeof S.chartHomeZero === 'function'
-              ? S.chartHomeZero(HOME_CURRENCY)
-              : S.priorityEmpty(S.chartUnit(HOME_CURRENCY))}
+              ? S.chartHomeZero(unitFor(HOME_CURRENCY))
+              : S.priorityEmpty(S.chartUnit(unitFor(HOME_CURRENCY)))}
           </p>
         ) : !plottable ? (
           <p style={{ fontSize: 13.5, color: C.muted, textAlign: 'center', lineHeight: 1.7, margin: '18px 8px 10px' }}>

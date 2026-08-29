@@ -12,6 +12,7 @@
 import { AR_LOCALE } from './strings.ar.js';
 import { EN_LOCALE } from './strings.en.js';
 import { getLang } from '../state/lang.js';
+import { HOME_CURRENCY } from '../state/travel.js';
 
 export const LOCALES = { ar: AR_LOCALE, en: EN_LOCALE };
 
@@ -50,3 +51,20 @@ export const CAPTAIN_INITIALS = LOCALE.CAPTAIN_INITIALS;
  * to understand the current language to find his way out of it.
  */
 export const SWITCH_TO = LOCALE.switchTo;
+
+/**
+ * THE UNIT A CURRENCY IS WRITTEN AS (HANDOFF:57).
+ *
+ * Home money wears its MARK — «ج.م» / «E£». Foreign money keeps the code the
+ * sheet writes, because that code is what he matches against his statement.
+ *
+ * It lives here rather than in a view because it is a question about LANGUAGE,
+ * and because the first version lived in one view and was therefore missing
+ * from three screens: the Week, Month and Year asides kept printing the raw
+ * code for a day after Today was fixed. One place to ask.
+ *
+ * It also fixes a script collision nobody had noticed: the Arabic caption is
+ * `بالـ${cur}`, so passing the ISO code rendered «بالـEGP» — an Arabic prefix
+ * welded to a Latin abbreviation, in a locale that has a perfectly good mark.
+ */
+export const unitFor = (currency) => (currency === HOME_CURRENCY ? S.currencyShort : currency);

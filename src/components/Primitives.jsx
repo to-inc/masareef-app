@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize } from '../theme.js';
-import { S, SWITCH_TO, DIR } from '../i18n/strings.js';
+import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
 /**
@@ -205,7 +205,7 @@ export function CurrencyToggle({ value, other, onFlip, subtle }) {
   return (
     <button
       onClick={onFlip}
-      aria-label={S.readInUnit(other)}
+      aria-label={S.readInUnit(unitFor(other))}
       style={{
         // A3 (glass audit Tier 1): 32 -> TAP. This is a <button onClick>, so the
         // senior touch floor governs it. HANDOFF:72's audited list already claimed

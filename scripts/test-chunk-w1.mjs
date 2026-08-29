@@ -56,8 +56,8 @@ const svgCount = (html) => (html.match(/<svg\b/g) || []).length;
  * words. The metric cards' unit line is `text-align:center` and must be told
  * apart — the chunk removes the caption and KEEPS the cards' label.
  */
-const capRe = (L) => new RegExp(`white-space:nowrap[^"]*"[^>]*>\\s*${escapeRe(L.chartUnit(HOME_CURRENCY))}`);
-const cardsUnitRe = (L) => new RegExp(`text-align:center[^"]*"[^>]*>\\s*${escapeRe(L.chartUnit(HOME_CURRENCY))}`);
+const capRe = (L) => new RegExp(`white-space:nowrap[^"]*"[^>]*>\\s*${escapeRe(L.chartUnit(L.currencyShort))}`);
+const cardsUnitRe = (L) => new RegExp(`text-align:center[^"]*"[^>]*>\\s*${escapeRe(L.chartUnit(L.currencyShort))}`);
 /** The hero figure, by its token size — test-book's own extractor. */
 const heroOf = (html) => {
   const m = html.match(new RegExp(`font-size:${TYPE.hero}px[^"]*"[^>]*>([^<]*)<`));
@@ -71,18 +71,22 @@ const heroOf = (html) => {
  * emptied chart scope; the EGP lens over a euro week is the same shape.
  */
 const wordsOf = (L) => (typeof L.chartHomeZero === 'function'
-  ? L.chartHomeZero(HOME_CURRENCY)
+  ? L.chartHomeZero(L.currencyShort)
   : (typeof L.priorityEmpty === 'function' && typeof L.chartUnit === 'function'
-    ? L.priorityEmpty(L.chartUnit(HOME_CURRENCY))
+    ? L.priorityEmpty(L.chartUnit(L.currencyShort))
     : null));
 
 // ——— controls: the detectors prove themselves on seeded input first.
 {
-  const seededCap = '<span style="font-size:11.5px;color:#8A94A6;white-space:nowrap;unicode-bidi:isolate">بالـEGP</span>';
+  // Seeded from the LOCALE, not from a literal. The first version pasted
+  // «بالـEGP» in by hand, so when the caption moved to the mark the detectors
+  // were correct and their own controls were the things that failed.
+  const seedWords = AR.chartUnit(AR.currencyShort);
+  const seededCap = `<span style="font-size:11.5px;color:#8A94A6;white-space:nowrap;unicode-bidi:isolate">${seedWords}</span>`;
   ok(capRe(AR).test(seededCap), 'control — the caption detector finds a seeded nowrap unit caption');
   ok(!capRe(AR).test(seededCap.replace('white-space:nowrap', 'text-align:center')),
     'control — and refuses the same words under the metric cards’ own centred style');
-  ok(cardsUnitRe(AR).test('<div style="font-size:11.5px;margin-top:10px;text-align:center">بالـEGP</div>'),
+  ok(cardsUnitRe(AR).test(`<div style="font-size:11.5px;margin-top:10px;text-align:center">${seedWords}</div>`),
     'control — the cards-unit detector finds the centred label');
   ok(svgCount('<div><svg viewBox="0 0 1 1"></svg></div>') === 1 && svgCount('<div></div>') === 0,
     'control — the svg counter counts what is there and only that');
@@ -93,8 +97,8 @@ for (const [name, L] of [['ar', AR], ['en', EN]]) {
   const w = wordsOf(L);
   ok(typeof w === 'string' && w.length > 0,
     `W1.1 [${name}] the quiet sentence derives from strings the locale already owns — no new key required to be honest`);
-  ok(typeof w === 'string' && w.includes(L.chartUnit(HOME_CURRENCY)),
-    `W1.2 [${name}] the sentence NAMES the chart's unit («${L.chartUnit(HOME_CURRENCY)}») — the caption's fact survives the caption, and test-book's two-unit-mentions law depends on it`);
+  ok(typeof w === 'string' && w.includes(L.chartUnit(L.currencyShort)),
+    `W1.2 [${name}] the sentence NAMES the chart's unit («${L.chartUnit(L.currencyShort)}») — the caption's fact survives the caption, and test-book's two-unit-mentions law depends on it`);
   ok(typeof w === 'string' && !/[▲▼%!⚠]/.test(w),
     `W1.3 [${name}] the sentence is a quiet statement — no delta glyph, no percentage, no alarm`);
 }
@@ -136,7 +140,7 @@ async function sweep(lang, L) {
     ok(!eur.includes('chart-draw') && !eur.includes('@keyframes'),
       `W1.5 [${lang}] and B3's draw animation does not mount — an absent line is never animated`);
     ok(!capRe(L).test(eur),
-      `W1.6 [${lang}] the «${L.chartUnit(HOME_CURRENCY)}» header caption is gone — a caption over an absent chart captions nothing`);
+      `W1.6 [${lang}] the «${L.chartUnit(L.currencyShort)}» header caption is gone — a caption over an absent chart captions nothing`);
     ok(typeof L.avg === 'string' && !eurText.includes(L.avg),
       `W1.7 [${lang}] the paired bars stand down with the line — the same zero in columns is the same lie`);
     ok(!!words && eurText.includes(words),
@@ -176,7 +180,7 @@ async function sweep(lang, L) {
     eq(svgCount(mixedEur), 1,
       `W1.14 [${lang}] the moment the period has ANY EGP money the line is back — the rule fires on the unmeant zero, not on foreignness`);
     ok(capRe(L).test(mixedEur),
-      `W1.15 [${lang}] …with its «${L.chartUnit(HOME_CURRENCY)}» caption — an EGP chart under a euro hero must still say which unit it plots`);
+      `W1.15 [${lang}] …with its «${L.chartUnit(L.currencyShort)}» caption — an EGP chart under a euro hero must still say which unit it plots`);
     ok(!!words && !text(mixedEur).includes(words),
       `W1.16 [${lang}] …and no sentence — it exists only where the chart would lie`);
     ok(typeof L.avg === 'string' && text(mixedEur).includes(L.avg),
@@ -258,7 +262,7 @@ await sweep('en', EN);
 
   const charts = await readFile(new URL('../src/components/Charts.jsx', import.meta.url), 'utf8');
   ok(/typeof S\.chartHomeZero === 'function'/.test(charts)
-    && /S\.priorityEmpty\(S\.chartUnit\(HOME_CURRENCY\)\)/.test(charts),
+    && /S\.priorityEmpty\(S\.chartUnit\(unitFor\(HOME_CURRENCY\)\)\)/.test(charts),
     'W1.28 the sentence is a GUARDED lookup — the proposed chartHomeZero key when i18n lands it, the owned-strings fallback until then');
 }
 

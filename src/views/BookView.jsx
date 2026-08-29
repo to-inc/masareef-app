@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize,
 } from '../theme.js';
-import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS } from '../i18n/strings.js';
+import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, moneyRound, amountWithCurrency } from '../lib/format.js';
 import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand } from '../lib/series.js';
@@ -22,18 +22,6 @@ import { lensOpen as loadLensOpen, setLensOpen } from '../state/lens.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
 import LogCard from '../components/LogCard.jsx';
 import EditSheet from './EditSheet.jsx';
-
-/**
- * THE UNIT A CURRENCY SHOWS AS (HANDOFF:57, A4).
- *
- * Home money wears its MARK — «ج.م» / «E£». Foreign money keeps the code the
- * sheet writes, because that code is what he will match against his statement.
- *
- * This exists as one function because the mark shipped as a locale token that
- * nothing rendered: `currencyShort` sat in both locales for a day while the
- * screen said "0 EGP". One place to ask means one place to get it wrong.
- */
-const unitFor = (currency) => (currency === HOME_CURRENCY ? S.currencyShort : currency);
 
 /**
  * «الدفتر» — THE BOOK. One list at four zooms (finding M1).
@@ -1584,7 +1572,7 @@ export function PeriodBlock({
             padding: '8px 12px', lineHeight: 1.7, marginTop: 2,
           }}>
             {(hasForeign(foreign) || hasForeign(prevForeign)) && <div>{S.foreignNoCompare}</div>}
-            {!leadsHome && <div>{S.noCompareInUnit(lead.currency)}</div>}
+            {!leadsHome && <div>{S.noCompareInUnit(unitFor(lead.currency))}</div>}
           </Sheet>
         )}
 

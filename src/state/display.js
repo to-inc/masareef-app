@@ -70,13 +70,27 @@ export const otherDisplayCurrency = (c) => (c === AWAY_CURRENCY ? HOME_CURRENCY 
  * same reasoning as `getLang`: a corrupted preference must not become a unit
  * label on a figure.
  */
+/**
+ * WHAT AN INSTALL READS IN BEFORE IT IS TOLD (Owner ruling, 2026-08-30).
+ *
+ * This is NOT `HOME_CURRENCY`, and the difference is the whole point.
+ * `HOME_CURRENCY` is a fact about the SHEET: EGP is the currency its sums are
+ * kept in, and D8's «foreign money never joins an EGP sum» depends on it. This
+ * is a fact about the READER: which unit he wants the screen to answer in.
+ *
+ * They were the same constant until now, and that is why an install whose money
+ * is in euros opened on an EGP screen reading zero — the app defaulted to the
+ * sheet's unit rather than the reader's, and then had no way to be told apart.
+ */
+export const DEFAULT_DISPLAY_CURRENCY = 'EUR';
+
 export function getDisplayCurrency(storage) {
   try {
     const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
     const v = store && store.getItem(KEY);
-    return DISPLAY_CURRENCIES.indexOf(v) === -1 ? HOME_CURRENCY : v;
+    return DISPLAY_CURRENCIES.indexOf(v) === -1 ? DEFAULT_DISPLAY_CURRENCY : v;
   } catch {
-    return HOME_CURRENCY;
+    return DEFAULT_DISPLAY_CURRENCY;
   }
 }
 
