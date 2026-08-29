@@ -16,6 +16,7 @@
     "check:contrast": "node scripts/test-contrast.mjs",
     "check:glass": "node scripts/test-glass.mjs",
     "check:jsx": "node scripts/test-jsx-comments.mjs",
+    "check:units": "node scripts/test-units.mjs",
     "icons": "node scripts/make-icons.mjs",
     "check:icons": "node scripts/test-icons.mjs",
     "check:logcard": "node scripts/test-logcard.mjs",

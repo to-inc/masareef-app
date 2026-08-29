@@ -75,7 +75,14 @@ try {
   const fText = text(foreignOnly);
   ok(/42\.87\s*EUR/.test(fText),
     'A10.2 …and the lead names its unit — a bare 42.87 under an EGP habit is the same hazard reversed');
-  ok(fText.includes(AR.andAlso) && /0\s*(?:EGP|جنيه)/.test(fText),
+  /**
+   * The zero is still stated beside the money — that is what A10 tests and it
+   * has not changed. What changed is how the home currency writes itself:
+   * «ج.م», not «جنيه» and never the raw code (HANDOFF:57). Pinning the MARK
+   * rather than an alternation is deliberate: accepting the old forms here
+   * would let the very regression this file exists to catch pass again.
+   */
+  ok(fText.includes(AR.andAlso) && new RegExp(`0\\s*${AR.currencyShort}`).test(fText),
     'A10.3 the true EGP zero stands BESIDE the money as the aside — stated, never alone, never hidden');
   ok((fText.match(/\d+\.\d\d/g) || []).every((n) => n === '42.87'),
     'A10.4 no figure appears that the payload did not carry — emphasis, never arithmetic (Boundary 8)');
@@ -102,7 +109,7 @@ try {
   );
   eq(heroOf(twoCur), '20', 'A10.8 with two foreign currencies one leads (stable code order — EUR before SEK)');
   const tText = text(twoCur);
-  ok(/100\s*SEK/.test(tText) && /0\s*(?:EGP|جنيه)/.test(tText),
+  ok(/100\s*SEK/.test(tText) && new RegExp(`0\\s*${AR.currencyShort}`).test(tText),
     'A10.9 …and the other currency AND the EGP zero are both named beside it');
   ok(!tText.includes('120'),
     'A10.10 20 EUR + 100 SEK is never 120 of anything — no sum across currencies, ever');

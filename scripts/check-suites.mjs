@@ -109,7 +109,25 @@ import { dirname, join } from 'node:path';
  * what the browser is handed. It carries positive controls both ways, and it
  * was proved against the real defect before being trusted.
  */
-const EXPECTED_ASSERTIONS = 5623;
+/**
+ * 5659 on 2026-08-30. RECONCILED BY DIFFING EVERY SUITE'S OWN COUNT: exactly
+ * two moved. +28 is `test-units.mjs` entire; +8 is `test-i18n.mjs` picking up
+ * the parity checks for one new key, `travelApartLead`, in both locales.
+ *
+ * `test-units.mjs` exists because `currencyShort` («ج.م» / «E£») was added to
+ * both locales and rendered by NOTHING for a day, while the Owner's phone
+ * showed "0 EGP". The check that let it through was a grep for the string in
+ * the built bundle — and the token WAS in the bundle, sitting in a locale
+ * object nobody read. PRESENCE IS NOT USE. So every assertion in that file
+ * renders a component and reads the output, in BOTH languages, because the
+ * defect was seen in English and a server-side render defaults to Arabic.
+ *
+ * It also carries a dead-key scan, which is what would have caught this on day
+ * one. That scan exempts keys reached dynamically (S[`period${Key}`]) and
+ * freezes the 24 already-dead keys in a named list, so the existing debt is
+ * visible and no NEW dead key can join it.
+ */
+const EXPECTED_ASSERTIONS = 5659;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -130,6 +148,7 @@ const SUITES = [
   'test-chips.mjs',
   'test-glass.mjs',
   'test-jsx-comments.mjs',
+  'test-units.mjs',
   'test-queue.mjs',
   'test-inbox.mjs',
   'test-categories.mjs',

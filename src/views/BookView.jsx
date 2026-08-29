@@ -24,6 +24,18 @@ import LogCard from '../components/LogCard.jsx';
 import EditSheet from './EditSheet.jsx';
 
 /**
+ * THE UNIT A CURRENCY SHOWS AS (HANDOFF:57, A4).
+ *
+ * Home money wears its MARK — «ج.م» / «E£». Foreign money keeps the code the
+ * sheet writes, because that code is what he will match against his statement.
+ *
+ * This exists as one function because the mark shipped as a locale token that
+ * nothing rendered: `currencyShort` sat in both locales for a day while the
+ * screen said "0 EGP". One place to ask means one place to get it wrong.
+ */
+const unitFor = (currency) => (currency === HOME_CURRENCY ? S.currencyShort : currency);
+
+/**
  * «الدفتر» — THE BOOK. One list at four zooms (finding M1).
  *
  * ——— WHAT THIS REPLACED, and why it was two screens.
@@ -476,7 +488,6 @@ export default function BookView({
         />
       )}
 
-
       {period === 'week' && (
         <PeriodBlock
           data={data.week} labels={WEEK_DAYS} liveIndex={liveWeekIndex}
@@ -792,7 +803,6 @@ export default function BookView({
     </div>
   );
 }
-
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -1179,15 +1189,24 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
           * lead keeps its code, exactly as his sheet writes it (D8).
           */}
         <span style={{ fontSize: unitSize(TYPE.hero), fontFamily: FONT_UI, fontWeight: 600, color: C.muted }}>
-          {' '}{leadsHome ? S.currency : lead.currency}
+          {' '}{unitFor(lead.currency)}
         </span>
       </div>
       <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 3 }}>
         {S.todayCount((entries || []).length)}
       </div>
       <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 7, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <span>{S.metricVisa} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(totals.Visa)}</b></span>
-        <span>{S.metricCash} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(totals.Cash)}</b></span>
+        {/**
+          * A5 (HANDOFF:56): the unit rides these two as well. They read as a
+          * pair with the hero above them, and the hero may be in ANOTHER
+          * currency — on a foreign-led day the screen showed "24.04 EUR" over
+          * "Card 0  Cash 0", with nothing to say the 0 was EGP. The law has no
+          * exception clause, and this is the site that proves why.
+          */}
+        <span>{S.metricVisa} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(totals.Visa)}</b>
+          <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{S.currencyShort}</span></span>
+        <span>{S.metricCash} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(totals.Cash)}</b>
+          <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{S.currencyShort}</span></span>
       </div>
       {/* Only when there IS one. A day with no foreign spending says nothing
           about foreign spending — the silence is the ordinary case. */}
@@ -1206,9 +1225,9 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
         */}
       {!leadsHome && (
         <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
-          {S.travelApart} · {asides.map((a) => (
+          {S.travelApartLead} · {asides.map((a) => (
             <span key={a.currency} style={{ marginInlineStart: 4 }}>
-              {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{money(a.amount)} {a.currency}</b>
+              {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{money(a.amount)} {unitFor(a.currency)}</b>
             </span>
           ))}
         </div>
@@ -1494,7 +1513,7 @@ export function PeriodBlock({
             * (`S.currency`); a foreign lead keeps its code, as the sheet does.
             */}
           <span style={{ fontSize: unitSize(TYPE.hero), fontFamily: FONT_UI, fontWeight: 600, color: C.muted }}>
-            {' '}{leadsHome ? S.currency : lead.currency}
+            {' '}{unitFor(lead.currency)}
           </span>
         </div>
         {/**
@@ -1782,7 +1801,6 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
     </>
   );
 }
-
 
 /**
  * THE ROWS — cards, not a grid, and every gap is a door.

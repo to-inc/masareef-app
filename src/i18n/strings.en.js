@@ -258,6 +258,14 @@ export const EN = {
   todayCount: (n) => `${n} ${n === 1 ? 'thing' : 'things'} today`,
   // Foreign money is counted on its own — never added into the EGP sum (D8).
   travelApart: 'on its own',
+  /**
+   * The LEADING form. `travelApart` above is a trailing modifier — it is
+   * grammatical after its subject ("24.04 EUR — on its own") and ungrammatical
+   * in front of one, where the foreign figure lives in the hero and never
+   * enters the sentence. That reuse rendered "on its own · and with them 0 E£",
+   * which is not a sentence in either language. One slot, one string.
+   */
+  travelApartLead: 'Counted on its own',
 
   // ═══ D20 — the statement review screen ═══
   batchTitle: 'Review the statement',

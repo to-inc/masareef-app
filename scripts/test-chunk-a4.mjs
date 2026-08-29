@@ -137,7 +137,16 @@ try {
   const labelStyle = styleOfContent(egpHtml, AR.thisWeek) || '';
   ok(labelStyle.includes(`font-size:${TYPE.label}px`) && labelStyle.toUpperCase().includes(C.muted.toUpperCase()),
     `A4.9 the label above the hero is muted at TYPE.label=${TYPE.label} — got style ${JSON.stringify(labelStyle)}`);
-  const egpUnitStyle = styleOfContent(egpHtml, AR.currency);
+  /**
+   * A4 (glass audit): the unit's CONTENT is now the mark «ج.م», not the word
+   * «جنيه» — HANDOFF:57. These three assertions have never been about the
+   * wording; they are about PLACEMENT (inline, not on its own line), SIZE
+   * (unitSize(TYPE.hero)) and FACE (non-serif beside a serif figure). All three
+   * still hold. Only the string used to FIND the element moved, so the pin
+   * moves with it — and moves to the mark specifically, which is stricter than
+   * accepting either form.
+   */
+  const egpUnitStyle = styleOfContent(egpHtml, AR.currencyShort);
   ok(!!egpUnitStyle && egpUnitStyle.includes(`font-size:${UNIT_PX}px`),
     `A4.10 the EGP hero carries its unit INLINE at unitSize(TYPE.hero)=${UNIT_PX} — never on its own line`);
   ok(!!egpUnitStyle && egpUnitStyle.includes('-apple-system'),
@@ -165,9 +174,9 @@ try {
     },
   }));
   eq(heroOf(today), '100', 'A4.14 the Today hero rides TYPE.hero too — anatomy everywhere, not per-screen');
-  const todayUnit = styleOfContent(today, AR.currency);
+  const todayUnit = styleOfContent(today, AR.currencyShort);
   ok(!!todayUnit && todayUnit.includes(`font-size:${UNIT_PX}px`) && todayUnit.includes('-apple-system'),
-    'A4.15 and its unit is inline, floored, non-serif — «جنيه» rides the figure, not the meta line');
+    'A4.15 and its unit is inline, floored, non-serif — «ج.م» rides the figure, not the meta line');
 
   // ═══ [cross-file] the method cards’ worded prev (Charts leaf’s render half) ═══
   {
