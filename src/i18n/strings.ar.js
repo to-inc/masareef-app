@@ -33,20 +33,15 @@ export const AR = {
   tabInbox: 'للمراجعة',
   // مش «كاش» تاني — الشاشة اللي وراه بتاخد كاش أو فيزا (R-receipts 1).
   tabEntry: 'جديد',
-  tabReceipt: 'فاتورة',
-  tabSummary: 'اليوم',
-  tabRecent: 'الأخير',
 
   // ——— inbox
   inboxEmptyTitle: 'كله متسجّل',
   inboxEmptyBody: 'أي شراء بالفيزا هيظهر هنا أول ما البنك يبعت الرسالة.',
   inboxWaiting: (n) => `${n} ${n === 1 ? 'عملية مستنية' : 'عمليات مستنية'} — دوس على النوع عشان يتسجل`,
-  inboxOriginal: 'الرسالة الأصلية',
   // Months-old rows live behind one card so today's two purchases aren't buried
   // under forty of them. Nothing is hidden — it opens on a tap.
   inboxOldTitle: (n) => `مصاريف قديمة (${n})`,
   inboxOldBody: 'من شهور فاتت — لسه من غير نوع.',
-  inboxOldOpen: 'افتحها',
   inboxOldHide: 'اقفلها',
   more: 'أنواع تانية…',
   // الزرار اللي بيقفل الصفوف اللي إحنا عارفينها كلها مرة واحدة (M4).
@@ -202,7 +197,6 @@ export const AR = {
   // لما وقت التصوير مايتقراش. مفيش وقت أحسن من وقت مخترع.
   jobPhoto: 'صورة',
   jobThumbAlt: 'الصورة',
-  jobRemove: 'شيلها',
   jobRemoveTitle: 'شيل الصورة دي',
   receiptConfirm: '✓ سجّلها',
   receiptUnsure: 'مش متأكدين من اللي عليه علامة — راجعه.',
@@ -232,11 +226,6 @@ export const AR = {
 
   receiptQueuedTitle: 'الصورة اتحفظت',
   receiptQueuedBody: 'مفيش نت دلوقتي. هنقراها أول ما النت يرجع.',
-  receiptQueuedCount: (n) => `${n} ${n === 1 ? 'فاتورة محفوظة' : 'فواتير محفوظة'}`,
-  receiptStaleTitle: 'فاتورة من فترة',
-  receiptStaleBody: 'دي اتصورت من زمان. تحب نقراها دلوقتي؟',
-  receiptReadNow: 'اقراها',
-  receiptDiscard: 'امسحها',
 
   /**
    * ——— the captain's log (W-6). The ONE place this app speaks a full sentence.
@@ -283,7 +272,6 @@ export const AR = {
   travelApartLead: 'محسوبة لوحدها',
 
   // ═══ D20 — شاشة مراجعة كشف الحساب ═══
-  batchTitle: 'مراجعة الكشف',
   batchCount: (n, total) => `${n} من ${total} هتتسجل`,
   batchAll: 'اختار الكل',
   batchNone: 'شيل الكل',
@@ -369,7 +357,6 @@ export const AR = {
   batchRefusedDup: 'الدفتر فيه زيها — ما اتسجلتش',
   batchRetryPending: 'هتتسجل برضه',
   batchErrored: 'مااتسجلتش',
-  batchNotChosen: 'ما اخترتهاش',
   batchSettled: (w, s, e) => `${w} اتسجلوا ✓${s ? ` · ${s} كانوا متسجلين` : ''}${e ? ` · ${e} فيهم مشكلة` : ''}`,
   batchBack: 'خلاص — ارجع للدفتر',
   // الصورة راحت من على السيرفر — تعبه محفوظ، القراية هي اللي بتنتهي
@@ -444,20 +431,11 @@ export const AR = {
    * القالب ده عمره ما بيخترع أرقام) واسم الفترة زي ما العنوان بيسميها.
    */
   prevWorded: (amount, prevName) => `كان ${amount} — ${prevName}`,
-  todayTitle: 'مصاريف النهاردة — زي ما هي في الشيت بالظبط',
   todayEmptyTitle: 'لسه مفيش حاجة اتسجلت النهاردة',
   todayEmptyBody: 'أكّد العمليات من «للمراجعة»، أو سجّل مصروف جديد.',
-  colDate: 'التاريخ',
-  colDesc: 'البيان',
-  colMethod: 'كاش/فيزا',
-  colCategory: 'النوع',
-  colAmount: 'المبلغ',
 
   thisWeek: 'الأسبوع ده',
   lastWeek: 'الأسبوع اللي فات',
-  unitWeek: 'الأسبوع',
-  unitMonth: 'الشهر',
-  unitYear: 'السنة',
 
   // قصيرة عشان تدخل في تلت الشاشة من غير ما تتقص (S6b).
   metricAll: 'الكل',
@@ -490,7 +468,6 @@ export const AR = {
   recentMonths: 'شهور',
   recentEmpty: 'مفيش مصاريف في الفترة دي',
   recentUndatedNote: (n) => `${n} ${n === 1 ? 'مصروف' : 'مصاريف'} من غير يوم واضح — بيظهروا في الشهر بس`,
-  recentEdit: 'غيّر النوع',
 
   // ——— month accountability (D16d). Every gap on the screen has a name.
   uncategorizedLine: 'غير مصنّف ؟',
@@ -587,7 +564,6 @@ export const AR = {
   outboxStaleNote: 'دي اتسجلت عندنا من فترة ومش متأكدين وصلت ولا لأ. لو مش لاقيها في الشيت، دوس تسجيل.',
   outboxSend: 'سجّلها',
   outboxDrop: 'امسحها',
-  outboxPending: (n) => `${n} ${n === 1 ? 'عملية' : 'عمليات'} مستنية النت`,
 
   // ——— setup (Tarek-facing, appears only when there are no credentials)
   setupTitle: 'إعداد مصاريف',

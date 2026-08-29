@@ -127,7 +127,26 @@ import { dirname, join } from 'node:path';
  * freezes the 24 already-dead keys in a named list, so the existing debt is
  * visible and no NEW dead key can join it.
  */
-const EXPECTED_ASSERTIONS = 5659;
+/**
+ * 5465 on 2026-08-30 — a DROP of 194, which is the number this file exists to
+ * make someone explain. Reconciled by diffing every suite's own count: exactly
+ * one moved, `test-i18n.mjs`, and no suite vanished.
+ *
+ * 24 dead locale keys were deleted from both locales. i18n runs 8 parity
+ * assertions per key (24 × 8 = 192), plus one arity assertion per FUNCTION key
+ * — and 2 of the 24 were functions, `receiptQueuedCount` and `outboxPending`.
+ * 192 + 2 = 194, to the assertion.
+ *
+ * The keys were strings for states the app never wired up. A string nothing
+ * renders is not a placeholder; it is a claim the screen does not make. The
+ * dead-key scan in `test-units.mjs` now enforces zero with no allowlist.
+ *
+ * One of them needed care: `test-inbox.mjs` asserted a removed disclosure stays
+ * removed via `!html.includes(AR.inboxOriginal)`. Deleting that key would have
+ * made it `!includes(undefined)` — true for every input, a check that could no
+ * longer fail. It pins the literal «الرسالة الأصلية» now.
+ */
+const EXPECTED_ASSERTIONS = 5465;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

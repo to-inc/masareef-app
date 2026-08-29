@@ -696,7 +696,15 @@ try {
   }
 
   ok(!unguessed.includes('<details'), 'no disclosure triangle on the card any more');
-  ok(!unguessed.includes(AR.inboxOriginal), 'and the label that opened it is gone with it');
+  /**
+   * The LITERAL, not the token. This asserts a DELETED feature stays deleted —
+   * the disclosure whose label was «الرسالة الأصلية». Pointing it at a live
+   * locale key made it hostage to that key: once the key was removed as dead,
+   * `AR.inboxOriginal` would be `undefined`, `includes(undefined)` false, and
+   * the assertion would pass without measuring anything. A regression test for
+   * removed copy pins the copy.
+   */
+  ok(!unguessed.includes('الرسالة الأصلية'), 'and the label that opened it is gone with it');
   ok(!/#14/.test(unguessed), 'the row index is not printed at him anywhere on the card');
   ok(unguessed.includes('150'), 'while the amount, which IS his, is still there');
 } finally {

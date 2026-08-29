@@ -29,18 +29,13 @@ export const EN = {
   tabInbox: 'To review',
   // Not "Cash" any more — the screen behind it takes either method (R-receipts 1).
   tabEntry: 'New',
-  tabReceipt: 'Receipt',
-  tabSummary: 'Today',
-  tabRecent: 'Recent',
 
   // ——— inbox
   inboxEmptyTitle: 'All logged',
   inboxEmptyBody: 'Any card purchase shows up here as soon as the bank texts.',
   inboxWaiting: (n) => `${n} ${n === 1 ? 'purchase' : 'purchases'} waiting — tap a category to log it`,
-  inboxOriginal: 'The original row',
   inboxOldTitle: (n) => `Older expenses (${n})`,
   inboxOldBody: 'From previous months — still without a category.',
-  inboxOldOpen: 'Open',
   inboxOldHide: 'Close',
   more: 'More categories…',
   // The button that settles every row we already know, in one tap (M4).
@@ -199,7 +194,6 @@ export const EN = {
   // When the capture time cannot be read. No time beats an invented one.
   jobPhoto: 'Photo',
   jobThumbAlt: 'The photo',
-  jobRemove: 'Remove',
   jobRemoveTitle: 'Remove this photo',
   receiptConfirm: '✓ Log it',
   receiptUnsure: "We're not sure about the marked fields — check them.",
@@ -227,11 +221,6 @@ export const EN = {
 
   receiptQueuedTitle: 'The photo is saved',
   receiptQueuedBody: 'No network right now. We read it as soon as it is back.',
-  receiptQueuedCount: (n) => `${n} ${n === 1 ? 'receipt saved' : 'receipts saved'}`,
-  receiptStaleTitle: 'A receipt from a while ago',
-  receiptStaleBody: 'This was photographed some time back. Read it now?',
-  receiptReadNow: 'Read it',
-  receiptDiscard: 'Discard it',
 
   /**
    * ——— the captain's log. The first-officer register, in English: it reports,
@@ -268,7 +257,6 @@ export const EN = {
   travelApartLead: 'Counted on its own',
 
   // ═══ D20 — the statement review screen ═══
-  batchTitle: 'Review the statement',
   batchCount: (n, total) => `${n} of ${total} will be logged`,
   batchAll: 'Select all',
   batchNone: 'Clear all',
@@ -355,7 +343,6 @@ export const EN = {
   batchRefusedDup: 'Your book already has one like it — not logged',
   batchRetryPending: 'Will be logged anyway',
   batchErrored: 'Not logged',
-  batchNotChosen: 'You did not choose it',
   /**
    * NOT named `batchDone` — that key already exists lower in this SAME object
    * (the outbox flush toast), and in a literal the LAST definition silently
@@ -440,20 +427,11 @@ export const EN = {
    * never invents digits) and the localized period name the header names.
    */
   prevWorded: (amount, prevName) => `was ${amount} — ${prevName}`,
-  todayTitle: "Today's expenses — exactly as they sit in the sheet",
   todayEmptyTitle: 'Nothing logged today yet',
   todayEmptyBody: 'Confirm from the Inbox, or add a new expense.',
-  colDate: 'Date',
-  colDesc: 'Description',
-  colMethod: 'Cash/Card',
-  colCategory: 'Category',
-  colAmount: 'Amount',
 
   thisWeek: 'This week',
   lastWeek: 'Last week',
-  unitWeek: 'the week',
-  unitMonth: 'the month',
-  unitYear: 'the year',
 
   // Short enough for a third of 375px — it used to render as "All expen…",
   // an ellipsis on the label of the app's most important figure (finding S6b).
@@ -484,7 +462,6 @@ export const EN = {
   recentMonths: 'Months',
   recentEmpty: 'No expenses in this period',
   recentUndatedNote: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'} with no clear day — they show under Month only`,
-  recentEdit: 'Change category',
 
   // ——— month accountability (D16d). Every gap on the screen has a name.
   uncategorizedLine: 'Uncategorised ?',
@@ -580,7 +557,6 @@ export const EN = {
   outboxStaleNote: "This was saved here a while ago and we are not sure it arrived. If you cannot find it in the sheet, tap log.",
   outboxSend: 'Log it',
   outboxDrop: 'Discard it',
-  outboxPending: (n) => `${n} ${n === 1 ? 'entry' : 'entries'} waiting for the network`,
 
   // ——— setup
   setupTitle: 'Set up Masareef',

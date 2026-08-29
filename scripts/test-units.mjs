@@ -132,20 +132,21 @@ try {
     || prefixes.some((p) => k.startsWith(p));
 
   /**
-   * KNOWN DEAD, and left in deliberately rather than deleted. These are strings
-   * for states the app does not currently wire up. Removing user-facing copy I
-   * did not author is the Owner's call, not a test's. The list is frozen here
-   * so the debt is VISIBLE and, more importantly, so no NEW dead key can join
-   * it — which is the whole reason this check exists: `currencyShort` sat here
-   * for a day while the Owner's phone showed "0 EGP".
+   * NO ALLOWLIST. It held 24 keys for one day; all 24 are now deleted from both
+   * locales, so this check enforces zero.
+   *
+   * `inboxOriginal` was the one that needed care. `test-inbox.mjs` asserted the
+   * disclosure it labelled stays REMOVED — `!html.includes(AR.inboxOriginal)`.
+   * Delete the key and that reads `!includes(undefined)`, which is true for
+   * every possible input: the assertion would have survived as a check that
+   * could not fail. It now pins the literal «الرسالة الأصلية» instead, which is
+   * what a regression test for removed copy should always have done.
+   *
+   * If a key is genuinely wanted before its feature exists, wire it to the
+   * feature or leave it out. A string nothing renders is not a placeholder, it
+   * is a claim the screen does not make.
    */
-  const KNOWN_DEAD = new Set([
-    'tabReceipt', 'tabSummary', 'tabRecent', 'inboxOriginal', 'inboxOldOpen',
-    'jobRemove', 'receiptQueuedCount', 'receiptStaleTitle', 'receiptStaleBody',
-    'receiptReadNow', 'receiptDiscard', 'batchTitle', 'batchNotChosen',
-    'todayTitle', 'colDate', 'colDesc', 'colMethod', 'colCategory', 'colAmount',
-    'unitWeek', 'unitMonth', 'unitYear', 'recentEdit', 'outboxPending',
-  ]);
+  const KNOWN_DEAD = new Set([]);
   const dead = Object.keys(S).filter((k) => !reachable(k) && !KNOWN_DEAD.has(k));
   ok(dead.length === 0,
     `${L} locale keys defined but never rendered — presence is not use: ${dead.join(', ')}`);
