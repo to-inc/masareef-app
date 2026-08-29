@@ -159,7 +159,9 @@ export default function BatchReviewView({
             <button
               key={label} className="catchip" onClick={() => setAll(on)}
               style={{
-                flex: 1, minHeight: 42, borderRadius: RADIUS.row, background: C.card,
+                // A3: 42 -> TAP. These are the Select all / Clear all buttons —
+            // the same pair A3 names at GLASS :539/:540.
+            flex: 1, minHeight: TAP, borderRadius: RADIUS.row, background: C.card,
                 border: `1px solid ${C.line}`, color: C.ink, fontSize: 14.5, fontWeight: 600,
               }}
             >
@@ -529,7 +531,8 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             className="catchip"
             onClick={() => onMethod(otherMethod(method))}
             style={{
-              flex: '0 0 auto', minHeight: 44, padding: '9px 12px',
+              // A3: 44 -> TAP, senior touch floor.
+              flex: '0 0 auto', minHeight: TAP, padding: '9px 12px',
               borderRadius: RADIUS.capsule, background: C.shell,
               border: `1px solid ${C.line}`, color: C.ink,
               fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap',
@@ -608,7 +611,8 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                 <button
                   key={c} className="catchip" onClick={() => onPick(c)}
                   style={{
-                    padding: '9px 13px', minHeight: 44, borderRadius: RADIUS.capsule,
+                    // A3: 44 -> TAP, senior touch floor.
+                    padding: '9px 13px', minHeight: TAP, borderRadius: RADIUS.capsule,
                     background: category === c ? C.harbor : C.shell,
                     color: category === c ? C.onDark : C.ink,
                     border: `1px solid ${category === c ? C.harbor : C.line}`,
@@ -623,7 +627,8 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                 <button
                   className="catchip" onClick={() => setCatsOpen(true)}
                   style={{
-                    padding: '9px 13px', minHeight: 44, borderRadius: RADIUS.capsule,
+                    // A3: 44 -> TAP, senior touch floor.
+                    padding: '9px 13px', minHeight: TAP, borderRadius: RADIUS.capsule,
                     background: 'transparent', color: C.harborInk,
                     border: `1px dashed ${C.harbor}`, fontSize: 14, fontWeight: 600,
                   }}

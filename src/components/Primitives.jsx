@@ -48,7 +48,11 @@ export function LangToggle({ subtle }) {
       onClick={flip}
       lang={otherLang(getLang())}
       style={{
-        minHeight: 32, padding: '4px 12px', borderRadius: RADIUS.capsule,
+        // A3 (glass audit Tier 1): 32 -> TAP. This is a <button onClick>, so the
+        // senior touch floor governs it. HANDOFF:72's audited list already claimed
+        // the language toggle shipped at 48; it shipped at 32. The padding stays,
+        // so the pill grows downward from its text rather than moving it.
+        minHeight: TAP, padding: '4px 12px', borderRadius: RADIUS.capsule,
         background: 'transparent',
         border: `1px solid ${subtle ? C.line : 'rgba(255,255,255,.45)'}`,
         color: subtle ? C.ink : '#fff',
@@ -203,7 +207,11 @@ export function CurrencyToggle({ value, other, onFlip, subtle }) {
       onClick={onFlip}
       aria-label={S.readInUnit(other)}
       style={{
-        minHeight: 32, padding: '4px 12px', borderRadius: RADIUS.capsule,
+        // A3 (glass audit Tier 1): 32 -> TAP. This is a <button onClick>, so the
+        // senior touch floor governs it. HANDOFF:72's audited list already claimed
+        // the language toggle shipped at 48; it shipped at 32. The padding stays,
+        // so the pill grows downward from its text rather than moving it.
+        minHeight: TAP, padding: '4px 12px', borderRadius: RADIUS.capsule,
         background: 'transparent',
         border: `1px solid ${subtle ? C.line : 'rgba(255,255,255,.45)'}`,
         color: subtle ? C.ink : '#fff',

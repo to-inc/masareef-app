@@ -665,7 +665,9 @@ export default function BookView({
             <button
               key={k} onClick={() => setSortBy(k)} aria-pressed={sortBy === k}
               style={{
-                minHeight: 34, padding: '4px 12px', borderRadius: RADIUS.capsule, fontSize: TYPE.label,
+                // A3: 34 -> TAP. Three <button aria-pressed> sort controls; the
+                // senior touch floor governs them like any other control.
+                minHeight: TAP, padding: '4px 12px', borderRadius: RADIUS.capsule, fontSize: TYPE.label,
                 fontWeight: 600,
                 background: sortBy === k ? C.harbor : C.card,
                 color: sortBy === k ? C.onDark : C.ink,
