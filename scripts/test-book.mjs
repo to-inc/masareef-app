@@ -336,10 +336,26 @@ eq(unsizedForeign({ count: 1, byCurrency: { EUR: 200 } }), 0, 'and a fully-sized
    * outside it. So a period with no rows in the chosen unit still leads with
    * that unit's true zero, and the aside carrying the money is mandatory.
    */
+  /**
+   * REFINED 2026-08-30, and D23's law is KEPT rather than replaced.
+   *
+   * D23's rule is «a zero is honest only beside its aside» — the defect it
+   * named was never the zero, it was a zero standing ALONE while real money sat
+   * outside it. That still holds below, and holds more strongly: both figures
+   * are on screen either way.
+   *
+   * What changed is which of the two gets the HERO. Making EUR the default made
+   * this case ordinary rather than rare, and on the real payload August holds
+   * 123,110.68 EGP and no euros — so the largest element on the screen read
+   * «0 EUR» while the money sat in the aside. A zero can be honest and still be
+   * the wrong thing to put in 40px type. The money leads; the chosen unit's
+   * true zero is stated beside it, which is exactly what D23 required.
+   */
   const noneInUnit = leadAndAsides(3000, { count: 0, byCurrency: {} }, 'EUR');
-  eq(noneInUnit.lead.amount, 0, 'a period with nothing in his unit leads with a true zero…');
-  ok(noneInUnit.asides.some((a) => a.currency === 'EGP' && a.amount === 3000),
-    '…and NEVER alone — the aside carrying the real money is what makes the zero honest');
+  eq(noneInUnit.lead.amount, 3000, 'a period with nothing in his unit leads with the money that IS there…');
+  eq(noneInUnit.lead.currency, 'EGP', '…in the unit that holds it');
+  ok(noneInUnit.asides.some((a) => a.currency === 'EUR' && a.amount === 0),
+    '…and the chosen unit is NEVER dropped — its true zero is stated beside the money (D23)');
 
   eq(DISPLAY_CURRENCIES.join(','), 'EGP,EUR', 'two display units, the book\'s and his');
   eq(otherDisplayCurrency('EGP'), 'EUR', 'the toggle names where it goes…');
@@ -569,13 +585,32 @@ try {
 
   const egpHtml = renderToStaticMarkup(createElement(PeriodBlock,
     { data: hisWeek, displayCurrency: 'EGP' }));
-  eq(heroOf(egpHtml), '0',
-    'reading in EGP the same week leads with its true zero…');
-  ok(text(egpHtml).includes('80'),
-    '…and the euros are named beside it, which is the whole difference between this and the defect');
+  /**
+   * Same week read in EGP: the euros lead, because they are the only money in
+   * it. Boundary 8 is untouched — 80 is the payload's own figure, not a
+   * conversion — and the EGP zero is still stated, which is D23's actual law.
+   */
+  eq(heroOf(egpHtml), '80',
+    'reading in EGP a week that holds only euros still leads with the money…');
+  ok(text(egpHtml).includes('0'),
+    '…and the chosen unit\'s true zero is named beside it (D23: never alone)');
 
-  eq(heroOf(renderToStaticMarkup(createElement(PeriodBlock, { data: hisWeek }))), '0',
-    'and with no choice expressed at all the book\'s own unit leads — Dad\'s install is unmoved');
+  eq(heroOf(renderToStaticMarkup(createElement(PeriodBlock, { data: hisWeek }))), '80',
+    'and with no choice expressed the lead still follows the money, not the setting');
+
+  /**
+   * DAD'S INSTALL IS UNMOVED, and this now asserts it DIRECTLY rather than
+   * inferring it from the default.
+   *
+   * The default display unit became EUR by the Owner's ruling, so «Dad reads in
+   * the book's unit» can no longer be proved by the default alone. It does not
+   * need to be: his book's money is in pounds, and the lead follows the money.
+   * A pound week leads in pounds on an install that has never been told
+   * anything — which is the outcome that claim was always about.
+   */
+  const dadWeek = { ...hisWeek, cur: { Visa: [3000], Cash: [0] }, foreign: { count: 0, byCurrency: {} } };
+  const dadHtml = renderToStaticMarkup(createElement(PeriodBlock, { data: dadWeek }));
+  eq(heroOf(dadHtml), '3,000', 'a pound week leads in pounds with no choice expressed — Dad\'s install is unmoved');
 
   /**
    * ——— THE CHART STAYS HONEST ABOUT ITS OWN UNIT (D23 stage 1).

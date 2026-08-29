@@ -160,7 +160,24 @@ import { dirname, join } from 'node:path';
  *
  * Re-proved: reverting the one-line fix fails six of those assertions by name.
  */
-const EXPECTED_ASSERTIONS = 5497;
+/**
+ * 5499 on 2026-08-30. +2, all of it `test-book`, and nothing vanished: the two
+ * assertions added when the LEAD rule was refined — one pinning the unit the
+ * lead lands in, one asserting Dad's install directly instead of inferring it
+ * from a default that no longer implies it.
+ */
+/**
+ * 5509 on 2026-08-30. +10, all of it `check-lead.mjs` joining the board — a
+ * new suite, no existing count moved.
+ *
+ * It asserts the one thing a currency setting can get wrong in a way the
+ * setting itself will never admit: that the LARGEST figure on a screen is a
+ * figure and not a zero. Making EUR the default put «0 EUR» in 40px type over
+ * a month holding 123,110.68 EGP. Measured against a real captured payload,
+ * per period, in both languages, with controls that fail if the fixture ever
+ * stops containing the case under test.
+ */
+const EXPECTED_ASSERTIONS = 5509;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -182,6 +199,7 @@ const SUITES = [
   'test-glass.mjs',
   'test-jsx-comments.mjs',
   'test-units.mjs',
+  'check-lead.mjs',
   'test-queue.mjs',
   'test-inbox.mjs',
   'test-categories.mjs',

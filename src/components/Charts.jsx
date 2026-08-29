@@ -386,7 +386,7 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
     <div style={{ position: 'relative', marginTop: 4 }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: labels.length > 8 ? 3 : 6, height: 110, position: 'relative' }}>
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: `${(avg / max) * 100}%`, borderTop: `1.5px solid ${color}`, opacity: 0.55, zIndex: 1 }} />
-        <span
+        <span data-geometry="chart-average-label"
           style={{
             position: 'absolute', right: 0, bottom: `calc(${(avg / max) * 100}% + 2px)`,
             fontSize: 10, fontWeight: 800, color, background: C.card, padding: '0 3px', zIndex: 2,
@@ -453,7 +453,7 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
                 * to `caption` would make every tick wider than its column
                 * and hand back the collisions the thinning just removed.
                 */}
-              <div style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: isLive || within(i) ? 800 : 500, color: isLive || within(i) ? C.harbor : C.muted }}>
+              <div data-geometry="chart-axis-tick" style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: isLive || within(i) ? 800 : 500, color: isLive || within(i) ? C.harbor : C.muted }}>
                 {isLive ? '•' : speaks(i) ? lb : ''}
               </div>
             </>
@@ -514,7 +514,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
         * sentence — suppressing it would delete real information to solve an
         * ambiguity that one word fixes.
         */}
-      <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, textAlign: 'center', ...LATIN }}>
+      <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 10, textAlign: 'center', ...LATIN }}>
         {S.chartUnit(unitFor(HOME_CURRENCY))}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
@@ -653,7 +653,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
   const max = Math.max(...shown.map((c) => Math.max(c.now, c.prev)), 1);
   return (
     <div style={{ background: C.card, borderRadius: RADIUS.card, padding: 14, marginTop: 12 }}>
-      <div style={{ display: 'flex', gap: 14, fontSize: 12.5, color: C.muted, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 14, fontSize: TYPE.label, color: C.muted, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         {/* GEOMETRY EXEMPTION (ruling 4): 10×10 series swatches — a surface
             radius would clamp them to circles; the square is the mark. */}
         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: C.harbor, marginInlineEnd: 5, verticalAlign: '-1px' }} />{curName}</span>
@@ -728,7 +728,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
               {moneyRound(uncategorized.total)}
             </span>
           </div>
-          <div style={{ fontSize: 12.5, color: C.ink, marginTop: 2 }}>{S.uncategorizedHint}</div>
+          <div style={{ fontSize: TYPE.label, color: C.ink, marginTop: 2 }}>{S.uncategorizedHint}</div>
         </button>
       )}
 
@@ -917,7 +917,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
                 {row(S.lensRemainder, folded.remainder.total)}
               </div>
               {folded.remainder.names.length > 0 && (
-                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7, paddingBottom: 6 }} dir="auto">
+                <div style={{ fontSize: TYPE.label, color: C.muted, lineHeight: 1.7, paddingBottom: 6 }} dir="auto">
                   {folded.remainder.names.map((n) => categoryLabel(n)).join(' · ')}
                 </div>
               )}
@@ -1063,7 +1063,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
             * quoted this exact caption as part of the lie).
             */}
           {!homeZeroMisleads && (
-          <span style={{ fontSize: 11.5, color: C.muted, whiteSpace: 'nowrap', ...LATIN }}>
+          <span style={{ fontSize: TYPE.label, color: C.muted, whiteSpace: 'nowrap', ...LATIN }}>
             {S.chartUnit(unitFor(HOME_CURRENCY))}
           </span>
           )}
@@ -1179,7 +1179,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
         * card's header names the year, this line names the selection.
         */}
       {range && (
-        <div dir="auto" style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', margin: '6px 0 0' }}>
+        <div dir="auto" style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', margin: '6px 0 0' }}>
           {rangeWords}
         </div>
       )}
@@ -1201,7 +1201,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
         * looks like a comparison and isn't.
         */}
       {!hasPrevData && (
-        <p style={{ fontSize: 12.5, color: C.muted, textAlign: 'center', lineHeight: 1.6, margin: '10px 0 0' }}>
+        <p style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', lineHeight: 1.6, margin: '10px 0 0' }}>
           {S.noComparison(periodNames.prev)}
         </p>
       )}

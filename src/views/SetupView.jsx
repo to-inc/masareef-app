@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, RADIUS } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS, TYPE } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { LangToggle } from '../components/Primitives.jsx';
 import { probe } from '../api/client.js';
@@ -116,7 +116,7 @@ export default function SetupView({ onDone }) {
           onChange={(e) => setSheet(e.target.value)}
           style={field}
         />
-        <span style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: C.muted, marginTop: 4, lineHeight: 1.6 }}>
+        <span style={{ display: 'block', fontSize: TYPE.label, fontWeight: 500, color: C.muted, marginTop: 4, lineHeight: 1.6 }}>
           {S.setupSheetHint}
         </span>
       </label>

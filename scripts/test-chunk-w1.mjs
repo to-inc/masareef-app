@@ -132,6 +132,22 @@ async function sweep(lang, L) {
       foreign: { count: 2, byCurrency: { EUR: 160 } },
       ...over,
     });
+    /**
+     * DAD'S WEEK, as its own fixture. These checks used to simulate Dad by
+     * rendering HIS euro week with no `displayCurrency` and leaning on the
+     * default being EGP. Two rulings since have retired that proxy: the default
+     * is EUR now, and the lead follows the money rather than the setting — so a
+     * euro-only week leads in euros no matter what is or is not chosen.
+     *
+     * Dad's install is unmoved, and this asserts it the way it should always
+     * have been asserted: with pounds in the book.
+     */
+    const dadWeek = (over = {}) => ({
+      cur: { Visa: [3000, 0, null], Cash: [0, 0, null] },
+      prev: { Visa: [500, 500, 500], Cash: [0, 0, 0] },
+      foreign: { count: 0, byCurrency: {} },
+      ...over,
+    });
     const eur = pb(hisWeek(), { displayCurrency: 'EUR' });
     const eurText = text(eur);
 
@@ -168,7 +184,7 @@ async function sweep(lang, L) {
     ok(!!words && text(daySlot).includes(words)
       && !text(daySlot).includes(L.periodJustStarted(L.thisWeek)),
       `W1.13b [${lang}] on a one-slot foreign-led zero week the TRUE sentence outranks the just-started promise`);
-    ok(text(pb(hisWeek(oneSlot))).includes(L.periodJustStarted(L.thisWeek)),
+    ok(text(pb(dadWeek(oneSlot))).includes(L.periodJustStarted(L.thisWeek)),
       `W1.13c [${lang}] while under an EGP lead the one-slot week keeps M7's own sentence — the just-started case is untouched where the rule does not fire`);
 
     /**
@@ -195,7 +211,7 @@ async function sweep(lang, L) {
     // ——— Dad's install: EGP leads, so the flat zero MATCHES the headline
     // above it («0 جنيه · ومعاهم 160 EUR») — the card's story and its chart
     // agree, and nothing moves.
-    const dad = pb(hisWeek());
+    const dad = pb(dadWeek());
     eq(svgCount(dad), 1,
       `W1.19 [${lang}] under an EGP lead the chart stays — the zero it draws is the zero the head states beside the euros`);
     ok(!!words && !text(dad).includes(words),

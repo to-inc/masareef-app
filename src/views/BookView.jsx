@@ -112,7 +112,10 @@ export default function BookView({
    * The install's reading unit (D23). A PROP rather than a module read inside
    * `PeriodBlock`, so a suite can render the same week in either unit without a
    * storage shim — and so there is exactly one place the choice enters the
-   * screen. Defaults to the book's own unit: Dad's install is unmoved.
+   * screen. Defaults to `DEFAULT_DISPLAY_CURRENCY` (EUR since the Owner's
+     * 2026-08-30 ruling), NOT the book's unit as it once did. Dad's install
+     * is still unmoved, by a different mechanism: the lead follows the MONEY,
+     * so a book whose rows are in pounds leads in pounds whatever is chosen.
    */
   displayCurrency = getDisplayCurrency(),
   /**

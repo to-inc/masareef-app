@@ -31,9 +31,17 @@ const failures = [];
 const ok = (c, label) => { if (c) { pass++; } else { failures.push(label); } };
 const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
-/** The average pill: the absolutely-positioned span pinned to the right edge. */
+/**
+ * The average pill: the absolutely-positioned span pinned to the right edge.
+ *
+ * `[^>]*?` before `style` deliberately: the first version required `style` to
+ * be the FIRST attribute, so adding an unrelated one — `data-geometry`, when
+ * the pill declared itself chart geometry — made the extractor find nothing and
+ * ten assertions fail for a reason none of them was about. An extractor should
+ * survive an attribute it does not care about.
+ */
 const avgSpan = (html) => {
-  const re = /<span style="([^"]*)"[^>]*>([\s\S]*?)<\/span>/g;
+  const re = /<span[^>]*?style="([^"]*)"[^>]*>([\s\S]*?)<\/span>/g;
   let m;
   while ((m = re.exec(html))) {
     if (m[1].includes('position:absolute') && m[1].includes('right:0')) return { style: m[1], inner: m[2] };

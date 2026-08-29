@@ -139,12 +139,40 @@ export function leadAndAsides(egpTotal, foreign, currency) {
   }
 
   const found = figures.find((f) => f.currency === want);
+  const chosen = found || { currency: want, amount: 0 };
+
   /**
-   * The chosen unit had no rows this period. Its true sum is zero and it still
-   * leads — he asked to read in it, and answering in a different unit would be
-   * the app overruling the choice rather than reporting on it.
+   * THE CHOSEN UNIT LEADS WHENEVER IT HAS MONEY. When it does not, the unit
+   * that DOES leads instead, and the chosen one is stated beside it.
+   *
+   * This used to lead with the chosen unit unconditionally, on the reasoning
+   * that «he asked to read in it, and answering in a different unit would be
+   * the app overruling the choice». That held while the default WAS the book's
+   * unit, because then the chosen unit was the one with the money and this
+   * case almost never arose.
+   *
+   * Making EUR the default (Owner ruling 2026-08-30) made it arise on every
+   * EGP-heavy period: August holds 123,110.68 EGP and no euros, and the
+   * largest element on the screen read «0 EUR» while the real money sat in an
+   * aside. The setting was not lying — the HEADLINE was, by giving the hero to
+   * the one figure that had nothing to say.
+   *
+   * Nothing is hidden either way: every other figure, the chosen unit
+   * included, is still stated as an aside. So the choice is still REPORTED,
+   * which is what the old reasoning actually cared about. What moves is only
+   * which true number is given the hero — and a zero never wins that against a
+   * figure. On a genuinely empty period every figure is zero, the chosen unit
+   * wins by default, and the screen honestly reads zero.
    */
-  const lead = found || { currency: want, amount: 0 };
-  const asides = figures.filter((f) => f !== found);
+  const richest = figures
+    .filter((f) => Number(f.amount) > 0)
+    .sort((a, b) => Number(b.amount) - Number(a.amount))[0];
+  const lead = Number(chosen.amount) > 0 || !richest ? chosen : richest;
+  const asides = figures.filter((f) => f.currency !== lead.currency);
+  if (lead !== chosen && chosen.currency !== lead.currency
+    && !asides.some((f) => f.currency === chosen.currency)) {
+    // the chosen unit had no line of its own; state its true zero anyway
+    asides.push(chosen);
+  }
   return { lead, asides };
 }
