@@ -196,6 +196,8 @@ else failures.push('negative control: harbor cleared 4.5:1 as text on the shell 
  * below is what makes that a caught mistake rather than a shipped one.
  */
 check('white on the header bar — its lightest stop', C.onDark, C.harbor, TYPE.caption);
+// The batch advisory's Review pill rides the same gradient, at TYPE.label.
+check('white on the Review pill — its lightest stop', C.onDark, C.harbor, TYPE.label);
 check('white on harbor — primary button', C.onDark, C.harbor, 18.5, true);
 check('white on harbor — toast', C.onDark, C.harbor, TYPE.body);
 check('white on harbor — active metric value', C.onDark, C.harbor, 19, true);

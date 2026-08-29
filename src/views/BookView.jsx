@@ -1235,12 +1235,38 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
         <button
           onClick={onOpenBatch}
           style={{
-            marginTop: 12, minHeight: TAP, borderRadius: RADIUS.row, padding: '9px 16px',
+            marginTop: 12, minHeight: TAP, borderRadius: RADIUS.row, padding: '8px 8px 8px 16px',
             background: C.sand, border: `1px solid ${C.line}`,
             color: C.amberInk, fontSize: TYPE.label, fontWeight: 700,
+            display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'start',
           }}
         >
-          {S.batchWaiting(unsettledBatch)}
+          <span style={{ flex: 1, minWidth: 0 }}>{S.batchWaiting(unsettledBatch)}</span>
+          {/**
+            * THE ACTION, SAID OUT LOUD. The whole row has always been the
+            * button, which is true and was invisible: a sand block of bold
+            * text reads as a NOTICE, and a notice about money missing from his
+            * book is exactly the thing he must not scroll past.
+            *
+            * `harbor → harborInk` because white on it has to clear 4.5:1 at
+            * TYPE.label, and harbor at 4.53 is the lightest stop that does —
+            * the ﹢ button's lighter pair measures 3.66 and would not.
+            *
+            * A span, not a nested <button>: the row is one target, and a
+            * button inside a button is invalid HTML and a second tab stop for
+            * one act.
+            */}
+          <span
+            aria-hidden="true"
+            style={{
+              flexShrink: 0, minHeight: 40, display: 'flex', alignItems: 'center',
+              padding: '0 16px', borderRadius: RADIUS.capsule,
+              background: `linear-gradient(160deg, ${C.harbor}, ${C.harborInk})`,
+              color: C.onDark, fontSize: TYPE.label, fontWeight: 600,
+            }}
+          >
+            {S.batchReview}
+          </span>
         </button>
       )}
 

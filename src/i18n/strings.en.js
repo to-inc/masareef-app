@@ -365,6 +365,9 @@ export const EN = {
   batchLeave: 'Leave it for now',
   batchDiscardWaiting: (n) => `Discard — and with it ${n} ${n === 1 ? 'expense' : 'expenses'} that never reached the book`,
   batchWaiting: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'} not logged yet`,
+  // The batch advisory's own action. It used to be a sand block whose whole
+  // sentence was the button — true, but it did not LOOK like anything to press.
+  batchReview: 'Review',
 
   // ——— foreign money inside a period: the EGP figure is not the whole period.
   andAlso: 'and with them',

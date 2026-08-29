@@ -184,7 +184,13 @@ import { dirname, join } from 'node:path';
  * the ﹢ button's #4E8CB4 light stop, where white measures 3.66:1 and fails
  * every text size on it.
  */
-const EXPECTED_ASSERTIONS = 5510;
+/**
+ * 5519 on 2026-08-30. +9 against the declared 5510, and both halves accounted
+ * for: +1 contrast, pinning white on the batch advisory's new Review pill at
+ * its lightest stop, and +8 i18n parity for the one new key that pill needed
+ * (`batchReview`). No suite moved otherwise and none vanished.
+ */
+const EXPECTED_ASSERTIONS = 5519;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
