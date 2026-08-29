@@ -451,6 +451,8 @@ export const AR = {
   keypadBackspace: 'مسح',
   // W1 — الرسمة مترسمش صفر مش صحيح: الجملة الصادقة مكان الخط (لازم تحتوي chartUnit حرفيًا).
   chartHomeZero: (cur) => `مفيش مصاريف بالـ${cur} في الفترة دي — الرسم بيتحسب بالـ${cur} بس`,
+  // بتتقال مرة واحدة، بدل تلات كروت كل واحد بيقول نفس الصفر بتلات طرق.
+  methodAllZero: (cur) => `مفيش مصاريف بالـ${cur} في الفترة دي نقسّمها حسب الطريقة`,
   // Shown when there is nothing to compare against — better than describing a
   // grey line he cannot see.
   noComparison: (prev) => `مفيش بيانات لـ${prev} للمقارنة.`,

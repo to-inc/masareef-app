@@ -493,6 +493,26 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
  * it would have survived a visual check.
  */
 export function MetricCards({ metric, setMetric, computed, comparable = true, prevName = '' }) {
+  /**
+   * NOTHING TO SPLIT — collapse to one line (Owner ruling, 2026-08-30).
+   *
+   * This REPLACES W1.13's «the method cards keep their own honest rendering»,
+   * and the old reasoning was not wrong: «0 E£» is a TRUE and complete
+   * sentence, and blanking it would delete real information.
+   *
+   * It still is true, and it is still said. What changed is how MANY times: on
+   * a period with no home-currency spending, three tiles each state the same
+   * zero three ways — label, figure, and a «was 0 — last week» — so the reader
+   * gets nine restatements of «nothing». The fact survives, once, as a
+   * sentence. That is a different act from suppressing it.
+   *
+   * The condition is about the FIGURES, not the reading unit: zero by method
+   * is zero by method whichever unit he reads in, and coupling this to
+   * `displayCurrency` would render the same data two ways for two people.
+   */
+  const shown = METRICS.map((m) => computed[m.key]).filter(Boolean);
+  const nothingToSplit = shown.length > 0
+    && shown.every((v) => Number(v.now) === 0 && (v.prevAt == null || Number(v.prevAt) === 0));
   return (
     <div>
       {/**
@@ -526,6 +546,11 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
         * every part sits on one line in about a third of the height, and the
         * screen gets that space back for the chart.
         */}
+      {nothingToSplit ? (
+        <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8, textAlign: 'center', lineHeight: 1.55 }}>
+          {S.methodAllZero(unitFor(HOME_CURRENCY))}
+        </div>
+      ) : (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
       {METRICS.map((m) => {
         const active = metric === m.key;
@@ -591,6 +616,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
         );
       })}
       </div>
+      )}
     </div>
   );
 }

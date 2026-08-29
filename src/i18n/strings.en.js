@@ -448,6 +448,8 @@ export const EN = {
   keypadBackspace: 'Delete',
   // W1 — the chart never draws a zero it does not mean: the true sentence in its place (must contain chartUnit verbatim).
   chartHomeZero: (cur) => `Nothing in ${cur} this period — this chart counts in ${cur} only`,
+  // Said ONCE, in place of three tiles each stating the same zero three ways.
+  methodAllZero: (cur) => `No ${cur} spending this period to split by method`,
   noComparison: (prev) => `No data for ${prev} to compare against.`,
   // A period with one point has no shape to draw — the figure stands, the
   // chart waits (M7).
