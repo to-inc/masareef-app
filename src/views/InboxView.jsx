@@ -145,7 +145,7 @@ export default function InboxView({
     return (
       <div style={{ textAlign: 'center', paddingTop: 110 }}>
         <div style={{ fontSize: 52 }}>🍵</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 23, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 23, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.inboxEmptyTitle}
         </div>
         <div style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
@@ -257,7 +257,7 @@ function StaleGroup({ rows, onConfirm }) {
         style={{
           width: '100%', minHeight: 56, borderRadius: RADIUS.row, padding: '12px 16px',
           background: open ? C.mist : C.card, border: `1px dashed ${C.harbor}`,
-          color: C.harbor, fontSize: 16, fontWeight: 700, textAlign: 'start',
+          color: C.harborInk, fontSize: 16, fontWeight: 700, textAlign: 'start',
         }}
       >
         {S.inboxOldTitle(remaining(rows) || rows.length)}

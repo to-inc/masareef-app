@@ -50,6 +50,30 @@ export const C = {
   // ——— canonical: primary
   harbor: '#3E7CA6',    // active tabs, primary buttons, chart stroke, suggested category
 
+  /**
+   * canonical: HARBOR WHEN IT IS TEXT (glass audit Tier 1, A7).
+   *
+   * `harbor` has almost no headroom as ink. Measured on this app's own
+   * surfaces: 4.53:1 on `card`, 4.23:1 on `shell`, 3.25:1 on `sand`. Only the
+   * first clears the 4.5 floor, and it clears it by 0.6% — so every harbor
+   * label on the shell background has been failing, quietly, at every size
+   * below the 18.66px-bold large-text line. The contrast suite did not catch
+   * it because it measures harbor on `card` (which passes) and rules harbor on
+   * `shell` canonical at 23px bold (where the floor is 3:1 and it passes too).
+   *
+   * `#34688C` is not a new hue: it is the END STOP of the harbor gradient the
+   * owner already ratified (HANDOFF:13, `#4E8CB4→#34688C`). It measures 5.99 /
+   * 5.60 / 4.30 on the same three surfaces, still reads as harbor, and so
+   * keeps the link affordance the colour exists to carry.
+   *
+   * `harbor` itself is UNCHANGED and stays the fill, stroke, tint, border and
+   * chart colour — including the C2 derivation, whose negative control in
+   * test-contrast.mjs asserts that harbor FAILS 4.5:1 on the worst-case bar.
+   * Editing the token rather than its text uses would have flipped that
+   * control and forced a re-derivation of the C2 ink override.
+   */
+  harborInk: '#34688C',
+
   // ——— canonical: tertiary
   sand: '#E7D9BE',      // chips, and the calm advisory surfaces (offline, outbox)
 
@@ -320,11 +344,19 @@ const MORSE_BEADS = (colour) => {
    * black in it. Caught by the assertion in test-inbox.mjs, not by looking.
    */
   const c = colour;
-  const dash = (x) => `<rect x='${x}' y='1' width='9' height='2' rx='1' fill='${c}'/>`;
+  /**
+   * A8: the beads carry their OWN alpha. It used to arrive as a group
+   * `opacity: 0.9` on the whole SECTION_RULE, which dimmed the heading text
+   * along with the decoration and cost that text ~0.8 of a contrast point.
+   * At 0.9 here the beads paint exactly as they always did; the label above
+   * them no longer pays for it.
+   */
+  const a = 0.9;
+  const dash = (x) => `<rect x='${x}' y='1' width='9' height='2' rx='1' fill='${c}' fill-opacity='${a}'/>`;
   return 'url("data:image/svg+xml,'
     + encodeURIComponent(
       `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 4' width='56' height='4'>`
-      + `<circle cx='2' cy='2' r='1.4' fill='${c}'/>`
+      + `<circle cx='2' cy='2' r='1.4' fill='${c}' fill-opacity='${a}'/>`
       + dash(6) + dash(21) + dash(33) + dash(45)
       + `</svg>`,
     ).replace(/'/g, '%27')
@@ -348,7 +380,21 @@ export const DIVIDER = {
   // The clearance under the beads IS the sibling gap — a divider that clears
   // more than a sibling would claim a hierarchy the layout does not have.
   paddingBottom: SPACE.gap,
-  opacity: 0.9,
+  /**
+   * A8 (glass audit Tier 1): the `opacity: 0.9` that used to sit here is gone.
+   *
+   * A group opacity on a section label dims the LABEL, not just the beads —
+   * and the label is `muted` on a light surface, which is the pair with the
+   * least headroom in the file. Measured across the real painted bands the
+   * dimmer put these headings at 3.86–4.32:1; without it they read 4.67–5.35.
+   * Even against the bare paper base with zero gradient contribution the
+   * dimmed version only reached 4.32, so this failure was never caused by the
+   * glass and neither sanctioned contrast retreat would have moved it.
+   *
+   * The beads are the only thing that WANTED dimming. They are decorative, so
+   * they carry their own alpha inside MORSE_BEADS rather than borrowing one
+   * from the text they sit under.
+   */
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════

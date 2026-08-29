@@ -44,7 +44,7 @@ export default function LogCard({ prevLog, todayCairo }) {
         padding: '18px 18px 14px', marginBottom: 16,
       }}
     >
-      <div style={{ fontSize: TYPE.label, fontWeight: 700, color: C.harbor }}>
+      <div style={{ fontSize: TYPE.label, fontWeight: 700, color: C.harborInk }}>
         {S.logTitle(monthByTab(prevLog.name))}
       </div>
 

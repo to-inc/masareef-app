@@ -26,7 +26,13 @@
   --harbor-tint: rgba(62,124,166,0.16);
 }
 
-* {
+/* A1 (glass audit Tier 1): `*` does not match pseudo-elements, so ::before and
+   ::after were still content-box — a padded ::after hit-area expander computes
+   wider than declared. The design brief names border-box a HARD floor and
+   HANDOFF:73 says to set it globally, so the selector carries all three. */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }

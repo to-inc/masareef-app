@@ -155,8 +155,39 @@ check('the "❓" uncategorised marker on card', C.ink, C.card, 15, true);
 check('the "❓" uncategorised marker on shell', C.ink, C.shell, 15, true);
 
 // ——————————————————————— primary
-canonical('harbor on shell — headings', C.harbor, C.shell, 23, true, 'reserved for large/bold per the brief; passes there');
-check('harbor on card — headings', C.harbor, C.card, 21, true);
+/**
+ * A7 (glass audit Tier 1). Harbor SPLIT: `harbor` is the fill, stroke, tint
+ * and focus ring; `harborInk` (#34688C — the end stop of the harbor gradient
+ * the owner already ratified, HANDOFF:13) is harbor WHEN IT IS TEXT.
+ *
+ * What the old two lines were hiding. `harbor on card — headings` passed at
+ * 4.53:1, so the suite read green — but the pair it measured (21px bold) was
+ * not the pair that was failing. Harbor was ALSO the colour of every
+ * `TYPE.label` link, section link and «needs a category» marker in the app,
+ * at 15px and normal weight, where the floor is 4.5 rather than 3. On `card`
+ * those sat at 4.53 — 0.6% of headroom — and on `shell` at 4.23, which is a
+ * FAILURE that shipped. The old `canonical()` line let it through by
+ * describing harbor-on-shell as "reserved for large/bold per the brief", a
+ * description of the 23px heading that was true of the heading and false of
+ * the eleven 15px labels sharing the colour.
+ *
+ * So the pairs below are now stated at the size that actually binds them, and
+ * the label tier is a `check()`, not a `canonical()`: nothing here is an owner
+ * ruling to defer to, it is arithmetic.
+ */
+check('harborInk on card — headings', C.harborInk, C.card, 21, true);
+check('harborInk on shell — headings', C.harborInk, C.shell, 23, true);
+check('harborInk on card — label-tier links and markers', C.harborInk, C.card, TYPE.label);
+check('harborInk on shell — label-tier links and markers', C.harborInk, C.shell, TYPE.label);
+check('harborInk on card — the editable-field marker', C.harborInk, C.card, 12.5, true);
+/**
+ * Negative control for the split: if `harbor` ever clears 4.5:1 as normal text
+ * the split has stopped being necessary and this block should be re-derived
+ * rather than left standing as folklore. It fails today at 4.53 on card and
+ * 4.23 on shell, which is exactly why `harborInk` exists.
+ */
+if (ratio(C.harbor, C.shell) < 4.5) pass++;
+else failures.push('negative control: harbor cleared 4.5:1 as text on the shell — the A7 harborInk split is no longer forced; re-derive it');
 check('white on harbor — primary button', C.onDark, C.harbor, 18.5, true);
 check('white on harbor — toast', C.onDark, C.harbor, TYPE.body);
 check('white on harbor — active metric value', C.onDark, C.harbor, 19, true);

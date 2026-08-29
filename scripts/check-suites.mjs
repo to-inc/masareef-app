@@ -61,8 +61,25 @@ import { dirname, join } from 'node:path';
  * design uses the full word beside hero figures and the abbreviation beside
  * row-scale ones — 21 sites out of 21, no exception — and the app had only the
  * hero form.
+ *
+ * 5586 on 2026-08-29 (glass audit Tier 1, A7 — the harbor split). RECONCILED
+ * BY DIFFING EVERY SUITE'S OWN COUNT against the pre-change run: exactly ONE
+ * suite moved, test-contrast, 68 -> 73. Nothing else in the board shifted by
+ * a single assertion, which is what makes +5 a claim rather than a guess.
+ *
+ * The +5 is 6 added and 2 removed, and the removals are the point. The suite
+ * used to carry `harbor on card - headings` (21px bold, 4.53:1, green) and a
+ * `canonical()` for `harbor on shell` excused as "reserved for large/bold per
+ * the brief". Both described the 21-23px headings truthfully and the ELEVEN
+ * 15px labels sharing that colour not at all — and at 15px the floor is 4.5,
+ * where harbor measures 4.53 on card and 4.23 on shell. The app had been
+ * shipping that failure with a green board. So the two lines were replaced by
+ * five pairs stated at the sizes that actually bind (headings on card and
+ * shell, label tier on card and shell, the 12.5px editable marker), plus a
+ * sixth assertion: a negative control that fails if `harbor` ever clears
+ * 4.5:1 as text, so the split cannot quietly become folklore.
  */
-const EXPECTED_ASSERTIONS = 5581;
+const EXPECTED_ASSERTIONS = 5586;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

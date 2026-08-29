@@ -895,7 +895,10 @@ export default function App() {
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650 }}>{S.appName}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {data && (
-            <span style={{ fontSize: 12.5, opacity: 0.75, direction: 'ltr' }}>
+            // A8: `opacity: 0.75` deleted. A group dimmer on the one line
+            // that says WHICH DAY the figures below belong to; muted-on-glass
+            // is already the thinnest pair on this screen without it.
+            <span style={{ fontSize: 12.5, direction: 'ltr' }}>
               {`${data.today_cairo.d}/${data.today_cairo.m}/${data.today_cairo.y}`}
             </span>
           )}
@@ -1254,7 +1257,9 @@ export function StaleQueueCard({ item, onSend, onDrop }) {
       }}
     >
       <div style={{ fontWeight: 700, color: C.ink, fontSize: 15.5 }}>{S.outboxStaleTitle}</div>
-      <div style={{ fontSize: 14, color: C.ink, opacity: 0.85, marginTop: 4, lineHeight: 1.6 }}>
+      {/* A8: `opacity: 0.85` deleted — this is the sentence explaining that
+          entries are stuck in the outbox, which is the whole point of the card. */}
+      <div style={{ fontSize: 14, color: C.ink, marginTop: 4, lineHeight: 1.6 }}>
         {S.outboxStaleNote}
       </div>
       <div style={{ fontSize: 14.5, marginTop: 8, direction: 'ltr', unicodeBidi: 'isolate', textAlign: 'end' }}>

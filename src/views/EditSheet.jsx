@@ -391,7 +391,7 @@ export default function EditSheet({ item, onClose, onSaved, initialDraft = null,
                 style={{
                   width: '100%', minHeight: TAP, marginTop: 10, borderRadius: RADIUS.row,
                   background: C.card, border: `1px solid ${C.line}`,
-                  color: C.harbor, fontSize: TYPE.label, fontWeight: 700,
+                  color: C.harborInk, fontSize: TYPE.label, fontWeight: 700,
                 }}
               >
                 {S.editConflictUse}

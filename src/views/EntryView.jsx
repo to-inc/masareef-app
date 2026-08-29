@@ -429,7 +429,7 @@ export default function EntryView({
               style={{
                 padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
                 background: 'transparent', border: `1px dashed ${C.harbor}`,
-                color: C.harbor, fontWeight: 600,
+                color: C.harborInk, fontWeight: 600,
               }}
             >
               {S.more}

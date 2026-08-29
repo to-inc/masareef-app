@@ -624,7 +624,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                   className="catchip" onClick={() => setCatsOpen(true)}
                   style={{
                     padding: '9px 13px', minHeight: 44, borderRadius: RADIUS.capsule,
-                    background: 'transparent', color: C.harbor,
+                    background: 'transparent', color: C.harborInk,
                     border: `1px dashed ${C.harbor}`, fontSize: 14, fontWeight: 600,
                   }}
                 >

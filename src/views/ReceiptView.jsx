@@ -348,7 +348,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
     return (
       <Centered>
         <div style={{ fontSize: GLYPH.illustration }}>🧾</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.receiptReading}
         </div>
         {slow && (
@@ -381,7 +381,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
     return (
       <Centered>
         <div style={{ fontSize: GLYPH.illustration }}>🤔</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.receiptNotReceipt}
         </div>
         <p style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
@@ -423,7 +423,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
     return (
       <Centered>
         <div style={{ fontSize: GLYPH.illustration }}>📥</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harbor, marginTop: 10 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.receiptQueuedTitle}
         </div>
         <p style={{ color: C.muted, fontSize: 15.5, marginTop: 8, lineHeight: 1.6, maxWidth: 290 }}>
@@ -649,7 +649,7 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
           />
           {!showAllCats && (
             <button className="catchip" onClick={() => setShowAllCats(true)}
-              style={{ ...chipStyle, background: 'transparent', border: `1px dashed ${C.harbor}`, color: C.harbor, fontWeight: 600 }}>
+              style={{ ...chipStyle, background: 'transparent', border: `1px dashed ${C.harbor}`, color: C.harborInk, fontWeight: 600 }}>
               {S.more}
             </button>
           )}
@@ -1051,7 +1051,7 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
 function Field({ label, editable, children }) {
   return (
     <div style={{ marginTop: 12 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 700, color: editable ? C.harbor : C.ink, letterSpacing: '.02em' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: editable ? C.harborInk : C.ink, letterSpacing: '.02em' }}>
         {label}{editable ? ' •' : ''}
       </div>
       {children}

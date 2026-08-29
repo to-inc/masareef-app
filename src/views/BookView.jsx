@@ -570,7 +570,9 @@ export default function BookView({
                 {ref.y !== today.y && (
                   // Chip years are one of ruling 2's NAMED caption sites — the
                   // year duplicates what the strip's position already says.
-                  <span style={{ fontSize: TYPE.caption, opacity: 0.7, marginInlineStart: 5, ...LATIN }}>{ref.y}</span>
+                  // A8: `opacity: 0.7` deleted. Caption tier already carries
+                  // the recession; a dimmer on top of it put the year at ~3.4:1.
+                  <span style={{ fontSize: TYPE.caption, marginInlineStart: 5, ...LATIN }}>{ref.y}</span>
                 )}
               </button>
             );
@@ -758,7 +760,7 @@ export default function BookView({
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             minHeight: TAP, marginTop: 16, borderRadius: RADIUS.row,
-            color: C.harbor, fontSize: TYPE.label, fontWeight: 600, textDecoration: 'none',
+            color: C.harborInk, fontSize: TYPE.label, fontWeight: 600, textDecoration: 'none',
           }}
         >
           {S.openTheSheet}
@@ -1118,7 +1120,7 @@ function Lookalikes({ rows, sheetUrl }) {
           href={sheetUrl} target="_blank" rel="noreferrer"
           style={{
             display: 'inline-block', marginTop: 11, minHeight: TAP, lineHeight: '30px',
-            color: C.harbor, fontSize: TYPE.label, fontWeight: 700, textDecoration: 'underline',
+            color: C.harborInk, fontSize: TYPE.label, fontWeight: 700, textDecoration: 'underline',
           }}
         >
           {S.dupOpenSheet}
@@ -1798,7 +1800,7 @@ function RowList({
           <>
             {/* A picture sized as geometry (GLYPH), not a headline (theme.js). */}
             <div style={{ fontSize: GLYPH.illustration }}>🌙</div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harbor, marginTop: 8 }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk, marginTop: 8 }}>
               {emptyTitle}
             </div>
           </>
@@ -1867,7 +1869,7 @@ function RowList({
                   {gap
                     // The door's PROMPT is an action he must read, not meta —
                     // it stays at the prose floor even inside the caption row.
-                    ? <span style={{ color: C.harbor, fontWeight: 700, fontSize: TYPE.label }}>{S.rowNeedsCategory}</span>
+                    ? <span style={{ color: C.harborInk, fontWeight: 700, fontSize: TYPE.label }}>{S.rowNeedsCategory}</span>
                     : <span style={{ color: C.ink }} dir="auto">{categoryLabel(row.category)}</span>}
                   {/**
                     * HE NEVER CHOSE THIS ONE (finding A2, re-scoped).
@@ -1922,7 +1924,7 @@ function RowList({
                     style={{
                       width: '100%', minHeight: TAP, marginTop: 10, borderRadius: RADIUS.row,
                       background: C.card, border: `1px solid ${C.line}`,
-                      color: C.harbor, fontSize: TYPE.label, fontWeight: 700,
+                      color: C.harborInk, fontSize: TYPE.label, fontWeight: 700,
                     }}
                   >
                     {S.editOpen}

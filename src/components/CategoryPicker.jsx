@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { C, TAP, RADIUS, TYPE } from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { S, categoryLabel } from '../i18n/strings.js';
-import { LATIN } from './Primitives.jsx';
+import { ISOLATE, LATIN } from './Primitives.jsx';
 import { needsHim } from '../state/inboxOutcomes.js';
 
 /**
@@ -128,7 +128,20 @@ export function CategoryActions({ guess, outcome, onPick }) {
               the tap he makes most, and seeing the two together is what lets
               him check the app against his own sheet during the changeover. */}
           <span>✓ {categoryLabel(guess)}</span>
-          <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.72, ...LATIN }} dir="auto">{guess}</span>
+          {/* A9 (glass audit Tier 1). Three changes, one line:
+              · 12 → TYPE.caption. 12 is below the caption rung; this string is
+                caption-LEGAL because it duplicates the Arabic label above it,
+                but legal at 13, not at 12.
+              · `opacity: 0.72` deleted. White on harbor measures 4.53:1, which
+                clears the floor — but 0.72 of it composites toward the harbor
+                behind it and drops the pair to ~3.3. The dimmer was the whole
+                defect; the hierarchy against the 19px/700 line above is
+                carried by size and weight, which is where it belongs.
+              · LATIN → ISOLATE. Same bidi isolation, without the hard
+                `direction: ltr`. `dir="auto"` on the element already resolves
+                a Latin category name correctly, and the forced direction is
+                what mis-parents the string in an RTL row. */}
+          <span style={{ fontSize: TYPE.caption, fontWeight: 500, ...ISOLATE }} dir="auto">{guess}</span>
         </button>
       )}
 
@@ -159,7 +172,7 @@ export function CategoryActions({ guess, outcome, onPick }) {
             style={{
               padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,
               background: 'transparent', border: `1px dashed ${C.harbor}`,
-              fontSize: TYPE.label, color: C.harbor, fontWeight: 600,
+              fontSize: TYPE.label, color: C.harborInk, fontWeight: 600,
             }}
           >
             {S.more}
