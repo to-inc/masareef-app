@@ -95,7 +95,21 @@ import { dirname, join } from 'node:path';
  * Golden hour and Cool dusk. The guard carries its own positive control, so
  * the absence assertion cannot pass vacuously.
  */
-const EXPECTED_ASSERTIONS = 5600;
+/**
+ * 5623 on 2026-08-29. The +23 is `test-jsx-comments.mjs`, added because a
+ * comment SHIPPED TO THE SCREEN and 5,600 assertions did not notice.
+ *
+ * In JSX a block comment is only a comment inside an expression container; in
+ * children position it is a text node. An annotation landed between `<span>`
+ * and `{row.description}` and React painted nine lines of source commentary
+ * onto the Today screen, above the merchant name, on the Owner's phone.
+ *
+ * The new suite compiles every .jsx through Vite and looks for a comment
+ * delimiter inside a string literal of the compiled output — which is exactly
+ * what the browser is handed. It carries positive controls both ways, and it
+ * was proved against the real defect before being trusted.
+ */
+const EXPECTED_ASSERTIONS = 5623;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -115,6 +129,7 @@ const SUITES = [
   'honest-render.mjs',
   'test-chips.mjs',
   'test-glass.mjs',
+  'test-jsx-comments.mjs',
   'test-queue.mjs',
   'test-inbox.mjs',
   'test-categories.mjs',

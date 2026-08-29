@@ -1860,7 +1860,7 @@ function RowList({
               }}
             >
               <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
-                /* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is row.description — his own words, often Arabic, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */
+                {/* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is row.description — his own words, often Arabic, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */}
                 <span style={{ fontSize: TYPE.body, fontWeight: 600, ...ISOLATE, overflow: 'hidden', textOverflow: 'ellipsis' }} dir="auto">
                   {row.description}
                 </span>
