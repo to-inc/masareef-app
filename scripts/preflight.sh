@@ -22,7 +22,22 @@ if [ -d "$SHIP" ]; then
   echo "   HEAD          : $(git rev-parse --short HEAD 2>/dev/null)  $(git log -1 --format=%s 2>/dev/null | cut -c1-56)"
   git fetch -q origin 2>/dev/null
   L=$(git rev-parse HEAD 2>/dev/null); R=$(git rev-parse origin/main 2>/dev/null)
-  echo "   origin/main   : $(git rev-parse --short origin/main 2>/dev/null)  $([ "$L" = "$R" ] && echo 'IN SYNC' || echo '⚠️  DIVERGED')"
+  # WHICH BRANCH, IF ANY. This tree is a worktree and `main` is checked out in
+  # ANOTHER one, so HEAD here is detached — and a detached HEAD whose commit
+  # happens to equal origin/main printed a confident «IN SYNC» while `git push`
+  # could not work at all. Reported 2026-08-30, after exactly that.
+  B=$(git symbolic-ref --quiet --short HEAD 2>/dev/null)
+  if [ -z "$B" ]; then
+    echo "   branch        : ⚠️  DETACHED HEAD — plain 'git push' will REFUSE."
+    echo "                   push with: git push origin HEAD:main  (verify the"
+    echo "                   fast-forward first: git merge-base --is-ancestor origin/main HEAD)"
+  else
+    echo "   branch        : $B"
+  fi
+  if [ "$L" = "$R" ]; then SYNC='IN SYNC (no local commits)';
+  elif git merge-base --is-ancestor "$R" "$L" 2>/dev/null; then SYNC='AHEAD — unpushed commits, fast-forward';
+  else SYNC='⚠️  DIVERGED'; fi
+  echo "   origin/main   : $(git rev-parse --short origin/main 2>/dev/null)  $SYNC"
   echo "   uncommitted   : $(git status --short | wc -l | tr -d ' ') files"
 else
   echo "   ⚠️  ship worktree missing at $SHIP"
