@@ -191,12 +191,12 @@ import { dirname, join } from 'node:path';
  * (`batchReview`). No suite moved otherwise and none vanished.
  */
 /**
- * 5528 on 2026-08-30. +9, all i18n, nothing vanished: the one new key
+ * 5545 on 2026-08-30. +9, all i18n, nothing vanished: the one new key
  * `methodAllZero`. It is FUNCTION-valued, so it costs 8 parity assertions plus
  * the arity check — the same arithmetic the 24 dead-key deletion established
  * in reverse.
  */
-const EXPECTED_ASSERTIONS = 5528;
+const EXPECTED_ASSERTIONS = 5549;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

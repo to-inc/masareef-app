@@ -8,7 +8,7 @@ import { money, moneyRound, amountWithCurrency } from '../lib/format.js';
 import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
-import { leadAndAsides, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
+import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
 import { fetchEntries } from '../api/index.js';
 import { findLookalikes, lookalikeCounts } from '../state/duplicates.js';
 import { PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
@@ -1379,7 +1379,56 @@ export function PeriodBlock({
    * express a rate, and the suite pins that the only figures on screen are the
    * ones the payload carried.
    */
-  const { lead, asides } = leadAndAsides(shown.now, foreign, displayCurrency);
+  /**
+   * D27 — THE ALL-IN FIGURE WINS WHERE THE SERVER COMPUTED ONE.
+   *
+   * `leadAndAsides` selects among the per-currency sums, each over its own rows;
+   * `homeAgg.total` is the server's sum of native + converted, every converted
+   * row at the rate recorded on that row at its own date. Where the second
+   * exists for the unit he is reading in, it is strictly more of the period
+   * than the first, in the same unit, from the same arithmetic.
+   *
+   * ⚠️ AND THE ASIDES GO WITH IT. Once those rows are converted they are INSIDE
+   * the total, so «and with them 123,120 E£» would read as money beside the
+   * headline while being money within it — the one way this screen could newly
+   * lie. What survives beside the figure is `unstamped` alone: money the total
+   * genuinely does not cover, which is the only remainder there is.
+   *
+   * When the server sends no `homeAgg` — Dad's book, and his own until this
+   * build is deployed — nothing changes at all: `allIn` is null and the naive
+   * selection stands, tri-state, exactly as it shipped.
+   */
+  const homeAgg = data && data.homeAgg;
+  const allIn = allInLead(homeAgg, displayCurrency);
+  const naive = leadAndAsides(shown.now, foreign, displayCurrency);
+  /**
+   * ⚠️ AND A ZERO STILL NEVER WINS THE HERO. The all-in figure is NOT exempt
+   * from the law that put it here.
+   *
+   * Caught by `check-lead` on the first run of this change, which is exactly
+   * what that suite is for: on a book whose rows are all still unstamped,
+   * `homeAgg.total` is a truthful 0 — every native euro row summed, and none of
+   * them exist — and letting it lead reproduced «This week 0» over a month
+   * holding 123,110.68 EGP. The same defect, arriving through the fix for it.
+   *
+   * So the all-in figure leads only when it HAS money, or when nothing else
+   * does either and the screen honestly reads zero.
+   */
+  const useAllIn = !!allIn
+    && (Number(allIn.amount) > 0 || !(Number(naive.lead.amount) > 0));
+  const lead = useAllIn ? allIn : naive.lead;
+  const asides = useAllIn ? [] : naive.asides;
+  const remainder = useAllIn ? unconvertedLines(homeAgg) : [];
+  /**
+   * D27 — A EURO PERIOD CAN BE COMPARED TO A EURO PERIOD. `prevHomeAgg` is the
+   * same aggregate over the previous window, so when both exist in the unit he
+   * is reading, the comparison is like for like and the refusal is no longer
+   * earned. Absent it, nothing changes and the refusal stands.
+   */
+  const prevHomeAgg = data && data.prevHomeAgg;
+  const homeComparable = !!useAllIn && !!prevHomeAgg
+    && prevHomeAgg.currency === displayCurrency
+    && isFinite(Number(prevHomeAgg.total));
   /**
    * A PERCENTAGE MUST DESCRIBE THE NUMBER ABOVE IT.
    *
@@ -1545,7 +1594,7 @@ export function PeriodBlock({
           * PART of the period, and may only appear accompanied by what it
           * excludes — one line per currency, never summed across them.
           */}
-        {(asides.length > 0 || unsized > 0) && (
+        {(asides.length > 0 || unsized > 0 || remainder.length > 0) && (
           <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6, lineHeight: 1.7 }}>
             {/**
               * EVERY CURRENCY THE PERIOD TOUCHED, MINUS THE ONE LEADING. This
@@ -1564,6 +1613,21 @@ export function PeriodBlock({
             {/* Money we know is there and cannot size — said, not implied, and
                 NOT behind the tap: a count of money is a figure, not policy. */}
             {unsized > 0 && <div style={{ fontSize: TYPE.label }}>{S.foreignUnsized(unsized)}</div>}
+            {/**
+              * D27 — THE REMAINDER THE FIGURE ABOVE DOES NOT COVER.
+              *
+              * Stated, never implied, and never folded in: these rows carry no
+              * rate, so including them would mean inventing one. This is the
+              * line that keeps an all-in total from being a quiet lie on a book
+              * whose history predates the stamps — 44 of his 72 August rows on
+              * the day this shipped.
+              */}
+            {remainder.map((l) => (
+              <div key={`nc-${l.currency}`} style={{ fontSize: TYPE.label }}>
+                <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {unitFor(l.currency)}</b>
+                {' '}{S.notConverted}
+              </div>
+            ))}
           </div>
         )}
 
@@ -1658,11 +1722,18 @@ export function PeriodBlock({
         // W1 — the card renders a verdict reached HERE, beside the head that
         // shares its inputs; it never re-decides from data it half-sees.
         homeZeroMisleads={homeZeroMisleads}
+        displayCurrency={displayCurrency}
         /**
          * The cards carry percentages too. Gating only the headline left «▼100%»
          * on a period whose EGP figure is a subset — smaller type, same lie.
+         *
+         * D27 widens it in ONE direction only: when the cards are drawn from
+         * `homeAgg`/`prevHomeAgg`, both sides of the comparison are the same
+         * server's totals in the SAME unit, which is precisely the condition
+         * `mayCompare` was protecting. The verdict still belongs here, beside
+         * the head that shares its inputs — PeriodSummary never re-decides it.
          */
-        comparable={mayCompare(foreign, prevForeign)}
+        comparable={mayCompare(foreign, prevForeign) || homeComparable}
       />
     </>
   );

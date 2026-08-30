@@ -88,6 +88,95 @@ for (const lang of ['ar', 'en']) {
   } finally { await vite.close(); }
 }
 
+/**
+ * ═══ D27 — THE POST-BACKFILL SHAPE, and the double-count it must not create ═══
+ *
+ * The backfill's ENTIRE effect on this payload is that rows move from
+ * `unstamped` into `converted`, and `total` grows by their home value. So the
+ * fixture performs exactly that move on the REAL wire at a REAL measured rate
+ * (0.017274 EGP→EUR, the source's own answer for 2026-08-12), rather than
+ * inventing a payload shape — a hand-built one is a guess, and a guess has
+ * already corrected me twice in this project.
+ *
+ * ONE ROW IS DELIBERATELY LEFT UNSTAMPED. A fixture where the backfill priced
+ * everything cannot see the remainder line at all, and the remainder is the
+ * whole honesty of the feature.
+ */
+const RATE = 0.017274;
+const LEFT_UNSTAMPED = 2033.32;
+const converted = JSON.parse(JSON.stringify(wire));
+let exercised = 0;
+for (const key of ['month', 'year']) {
+  const ha = converted[key] && converted[key].homeAgg;
+  const egp = Number(ha && ha.unstamped && ha.unstamped.byCurrency && ha.unstamped.byCurrency.EGP);
+  if (!isFinite(egp) || egp <= LEFT_UNSTAMPED) continue;
+  const moved = egp - LEFT_UNSTAMPED;
+  const inEur = Math.round(moved * RATE * 100) / 100;
+  ha.converted = { count: Math.max(1, (ha.unstamped.count || 2) - 1), total: inEur, byCurrency: {} };
+  ha.total = Math.round((Number(ha.total || 0) + inEur) * 100) / 100;
+  ha.unstamped = { count: 1, total: null, byCurrency: { EGP: LEFT_UNSTAMPED } };
+  /**
+   * §2.2c — the same partition sliced by method. Split so that the two halves
+   * SUM TO THE WHOLE, because «All = Card + Cash» is the arithmetic he will do
+   * by eye the moment the three sit together, and a fixture that does not hold
+   * it would certify a card that cannot be read.
+   */
+  const visa = Math.round(ha.total * 0.6 * 100) / 100;
+  const cash = Math.round((ha.total - visa) * 100) / 100;
+  const bucket = (t) => ({ native: { count: 1, total: t }, converted: { count: 0, total: 0 },
+                           unstamped: { count: 0, total: null, byCurrency: {} }, unpriced: 0, total: t });
+  ha.byMethod = { Visa: bucket(visa), Cash: bucket(cash) };
+  ok(Math.abs((visa + cash) - ha.total) < 0.011,
+    `the ${key} fixture must satisfy All = Card + Cash (${visa} + ${cash} vs ${ha.total})`);
+  exercised++;
+}
+ok(exercised > 0, 'the post-backfill fixture must actually move money, or these checks are theatre');
+
+for (const lang of ['ar', 'en']) {
+  stub(lang);
+  const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
+  try {
+    const BookView = (await vite.ssrLoadModule('/src/views/BookView.jsx')).default;
+    const { TYPE } = await vite.ssrLoadModule('/src/theme.js');
+    const { S } = await vite.ssrLoadModule('/src/i18n/strings.js');
+    const { unitFor } = await vite.ssrLoadModule('/src/i18n/strings.js');
+    const displayUnit = unitFor('EUR');
+    const naiveEur = Number(wire.month?.homeAgg?.total || 0);
+    const allIn = Number(converted.month?.homeAgg?.total || 0);
+    ok(allIn > naiveEur, `[${lang}] the all-in total must exceed the native-only one (${allIn} vs ${naiveEur})`);
+
+    let html;
+    try { html = renderToStaticMarkup(createElement(BookView, { data: converted, initialPeriod: 'month' })); }
+    catch (e) { failures.push(`[${lang}] converted month threw: ${e.message}`); continue; }
+
+    const hero = heroOf(html, TYPE.hero);
+    const heroNum = Number(String(hero || '').replace(/[^\d]/g, ''));
+    ok(heroNum > Math.floor(naiveEur),
+      `[${lang}] the hero must be the ALL-IN figure once rows are converted — read ${JSON.stringify(hero)}, `
+      + `which is not more than the native-euro sum ${naiveEur}`);
+
+    // ——— THE DOUBLE COUNT. Converted pounds are INSIDE the euro hero, so the
+    // additive aside must be gone. This is the one way this change could newly
+    // lie, and it is the assertion that would catch it.
+    ok(!html.includes(S.andAlso),
+      `[${lang}] «${S.andAlso}» is still on screen under an all-in hero — converted money is INSIDE that figure, `
+      + 'and restating it beside the figure reads as money the total does not include');
+
+    // ——— THE REMAINDER. Real money, no rate on its row, therefore outside the
+    // total and therefore stated.
+    // ——— THE CARD HE POINTED AT. «By method … in E£» under a euro hero was
+    // the screenshot that opened this whole sitting; with `byMethod` on the
+    // wire the cards are euro figures and must say so.
+    ok(html.includes(S.chartUnit(displayUnit)),
+      `[${lang}] the method cards still do not say «${S.chartUnit(displayUnit)}» — with byMethod on the wire `
+      + 'their figures are euros, and a euro figure under a pounds label is the mislabelling this change exists to end');
+
+    ok(html.includes(S.notConverted),
+      `[${lang}] the unstamped remainder is not stated — an all-in total that silently omits what it could not price `
+      + 'is the same defect this file exists to prevent');
+  } finally { await vite.close(); }
+}
+
 const report = failures.length
   ? `❌ ${failures.length} / ${pass + failures.length} lead checks failed:\n  - ${failures.join('\n  - ')}`
   : `✅ all ${pass} lead checks passed · no period headlines a zero while it holds money`;

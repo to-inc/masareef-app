@@ -5,7 +5,7 @@ import { S, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
 import { rollup, groupOf } from '../lib/priorities.js';
-import { HOME_CURRENCY } from '../state/display.js';
+import { HOME_CURRENCY, homeMetricTotals } from '../state/display.js';
 import { LATIN, SectionLabel, NeutralDelta } from './Primitives.jsx';
 
 /**
@@ -492,7 +492,13 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
  * subset. Same rule, second render path — and the cards are the smaller type, so
  * it would have survived a visual check.
  */
-export function MetricCards({ metric, setMetric, computed, comparable = true, prevName = '' }) {
+export function MetricCards({ metric, setMetric, computed, comparable = true, prevName = '',
+  /**
+   * D27 — WHAT THESE FIGURES ARE DENOMINATED IN. Defaulted to the book's own
+   * unit, which is what every caller meant before `byMethod` existed and is
+   * still exactly right for a book that does not serve it.
+   */
+  unit = unitFor(HOME_CURRENCY) }) {
   /**
    * NOTHING TO SPLIT — collapse to one line (Owner ruling, 2026-08-30).
    *
@@ -535,7 +541,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
         * ambiguity that one word fixes.
         */}
       <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 10, textAlign: 'center', ...LATIN }}>
-        {S.chartUnit(unitFor(HOME_CURRENCY))}
+        {S.chartUnit(unit)}
       </div>
       {/**
         * FULL-WIDTH ROWS, not three columns (UI pass 2026-08-30).
@@ -548,7 +554,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
         */}
       {nothingToSplit ? (
         <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8, textAlign: 'center', lineHeight: 1.55 }}>
-          {S.methodAllZero(unitFor(HOME_CURRENCY))}
+          {S.methodAllZero(unit)}
         </div>
       ) : (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
@@ -599,7 +605,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
                   one figure, and the law has no exception for a scoped group.
                   Sized by `unitSize` so ruling 5's senior floor applies. */}
               <span style={{ fontSize: unitSize(TYPE.action), fontFamily: FONT_UI, fontWeight: 600,
-                color: active ? C.onDark : C.muted }}>{' '}{S.currencyShort}</span>
+                color: active ? C.onDark : C.muted }}>{' '}{unit}</span>
             </div>
             <div style={{ fontSize: TYPE.label, color: active ? C.onDark : C.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>
               {/* No comparison data ≠ a comparison of zero — and a TRUE zero
@@ -608,8 +614,8 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
               {prevAt == null
                 ? <span style={LATIN}>—</span>
                 : prevAt === 0 && prevName
-                  ? <span>{S.prevWorded(`${moneyRound(0)} ${S.currencyShort}`, prevName)}</span>
-                  : <span style={LATIN}>{moneyRound(prevAt)} {S.currencyShort}</span>}
+                  ? <span>{S.prevWorded(`${moneyRound(0)} ${unit}`, prevName)}</span>
+                  : <span style={LATIN}>{moneyRound(prevAt)} {unit}</span>}
               {comparable && <NeutralDelta now={now} prev={prevAt} />}
             </div>
           </button>
@@ -982,7 +988,9 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
 // total of 0, so an EGP chart flat at zero would tell a foreign week as
 // «nothing happened». This component only ever RENDERS that verdict — the
 // doctrine lives where the inputs do, in views/BookView.jsx.
-export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads = false }) {
+export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads = false,
+  /** D27 — the unit he is READING in; the cards follow it where the wire can. */
+  displayCurrency = HOME_CURRENCY }) {
   const color = METRICS.find((m) => m.key === metric).color;
   const cur = seriesFor(data.cur, metric);
   const prev = seriesFor(data.prev, metric);
@@ -1027,6 +1035,20 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
   // figures these cards show, and two derivations of one number is how this
   // project has produced three of its bugs.
   const computed = periodTotals(data, METRICS, offPlot);
+  /**
+   * D27 — THE CARDS FOLLOW THE READING UNIT WHERE THE WIRE CAN CARRY IT.
+   *
+   * `computed` is the EGP day-series, and stays: it is what the CHART draws,
+   * and the chart's own caption keeps naming pounds for exactly that reason.
+   * The CARDS are a different claim — the period's totals by method — and the
+   * server sends those in the home unit whenever `byMethod` is present.
+   *
+   * Null when it is not, and then nothing here changes at all: the EGP cards
+   * render under an EGP label, which is what a book without the stamps can
+   * honestly say.
+   */
+  const homeCards = homeMetricTotals(data && data.homeAgg, data && data.prevHomeAgg, displayCurrency);
+  const cardUnit = homeCards ? unitFor(displayCurrency) : unitFor(HOME_CURRENCY);
 
   /**
    * E1 — THE TOTALS RE-SCOPE TO THE SELECTION, with the same honesty the
@@ -1219,7 +1241,16 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
           {rangeWords}
         </div>
       )}
-      <MetricCards metric={metric} setMetric={setMetric} computed={scoped || computed} comparable={comparable} prevName={periodNames.prev} />
+      {/**
+        * ⚠️ A SCOPED SELECTION STILL WINS. `scoped` is a range the reader has
+        * dragged out of the chart, and the chart is the EGP series — so its
+        * totals are pounds, and handing them a euro label would be the one
+        * mislabelling this whole change exists to avoid.
+        */}
+      <MetricCards metric={metric} setMetric={setMetric}
+        computed={scoped || homeCards || computed}
+        unit={scoped ? unitFor(HOME_CURRENCY) : cardUnit}
+        comparable={comparable} prevName={periodNames.prev} />
       {footnote}
       {/**
         * THE THREE-LINE EXPLAINER IS GONE (finding S6).

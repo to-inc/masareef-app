@@ -176,3 +176,98 @@ export function leadAndAsides(egpTotal, foreign, currency) {
   }
   return { lead, asides };
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THE ALL-IN HOME FIGURE (D27, Owner ruling 2026-08-30: «switches everything
+ * into Euro or EGP … anything in either currency translated to the other»).
+ *
+ * ——— WHY `leadAndAsides` COULD NOT ALREADY DO THIS.
+ *
+ * That function may only SELECT figures that arrived, and the only EUR figure
+ * that arrived was `foreign.byCurrency.EUR` — the sum of rows ALREADY WRITTEN
+ * in euros. That is not his euro spending. It is the part of it that happened
+ * to be denominated that way. Measured on his own book, 2026-08-30: August held
+ * EUR 735.86 of native euros beside 123,120.68 EGP that no euro figure covered
+ * at all, so the euro screen showed a quarter of a real ~EUR 2,862 month and
+ * called it the month.
+ *
+ * `homeAgg.total` is the server's sum of `native` + `converted`, every
+ * converted row taken at the rate recorded ON ITS OWN ROW at its own date
+ * (D21/D27). Nothing here converts anything — Boundary 8 stands, and this file
+ * still cannot express a rate. It selects a figure the payload carried, exactly
+ * as before; there is simply now a better one in it.
+ *
+ * ——— THE TRAP THIS FUNCTION EXISTS TO AVOID: DOUBLE COUNTING.
+ *
+ * The moment those pounds are converted they are INSIDE the euro total. The
+ * old aside line — «and with them 123,120 E£» — was true while the two sums
+ * were disjoint and becomes a lie the day they are not, because it reads as
+ * money BESIDE the headline when it is money WITHIN it.
+ *
+ * So the partition is honoured exactly as the server states it:
+ *   native + converted  → INSIDE `total`. Never restated as an addition.
+ *   unstamped           → OUTSIDE it. Real money the total does not cover, and
+ *                         therefore the one thing that MUST be stated beside.
+ *   unpriced            → not money yet; `unsizedForeign` already says it.
+ *
+ * A home total that silently omits `unstamped` is the same defect this whole
+ * file exists to prevent, in a politer font.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+export function allInLead(homeAgg, currency) {
+  if (!homeAgg || homeAgg.currency !== currency) return null;
+  const total = Number(homeAgg.total);
+  if (!isFinite(total)) return null;          // tri-state: absent is not zero
+  return { currency: homeAgg.currency, amount: total };
+}
+
+/**
+ * WHAT THE ALL-IN FIGURE DOES NOT COVER — one line per currency, never summed
+ * across them, because currencies do not add and `unstamped.total` is `null`
+ * for that exact reason.
+ *
+ * This is the honest remainder: money that is really in his book, really in the
+ * period, and has no rate recorded on its row, so no euro figure can include it
+ * without inventing one.
+ */
+export function unconvertedLines(homeAgg) {
+  const by = homeAgg && homeAgg.unstamped && homeAgg.unstamped.byCurrency;
+  if (!by) return [];
+  return Object.keys(by)
+    .map((c) => ({ currency: c, amount: Number(by[c]) }))
+    .filter((l) => isFinite(l.amount) && l.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+}
+
+/**
+ * THE METHOD CARDS, DENOMINATED IN THE UNIT HE IS READING (D27 · §2.2c).
+ *
+ * The cards were the last thing on the screen still speaking only pounds, and
+ * for a real reason rather than an oversight: the only per-method figures on
+ * the wire were the EGP day-totals, so a euro book read «All 0 E£ · Card 0 E£ ·
+ * Cash 0 E£» beneath a euro hero. True, useless, and the best the app had.
+ *
+ * `homeAgg.byMethod` is the same native/converted partition the whole is built
+ * from, sliced by method by the SAME server branch that classifies the whole —
+ * so «All» equals «Card» plus «Cash» by construction, which is the arithmetic
+ * he will do by eye the moment the three sit together.
+ *
+ * TRI-STATE, DELIBERATELY. A book without `byMethod` — Dad's, and his own until
+ * this build is deployed — returns null here and keeps its EGP cards, honestly
+ * labelled. A half-deployed book therefore never renders a half-truth.
+ */
+export function homeMetricTotals(homeAgg, prevHomeAgg, currency) {
+  if (!allInLead(homeAgg, currency)) return null;
+  if (!homeAgg.byMethod) return null;
+  const at = (agg, key) => {
+    if (!agg || agg.currency !== currency) return null;
+    const n = Number(key === 'all' ? agg.total : (agg.byMethod && agg.byMethod[key] || {}).total);
+    return isFinite(n) ? n : null;
+  };
+  const out = {};
+  for (const key of ['all', 'Visa', 'Cash']) {
+    out[key] = { now: at(homeAgg, key) || 0, prevAt: at(prevHomeAgg, key) };
+  }
+  return out;
+}

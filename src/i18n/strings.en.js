@@ -383,6 +383,9 @@ export const EN = {
   noCompareInUnit: (cur) => `No ${cur} history to compare against yet`,
   foreignNoCompare: 'This period has foreign spending — an EGP-only comparison would not be true',
   foreignUnsized: (n) => `and ${n} foreign ${n === 1 ? 'expense' : 'expenses'} with no price`,
+  // D27 — money the all-in figure above does NOT cover: real, in the period,
+  // and carrying no rate on its row, so no honest total can include it.
+  notConverted: 'not converted yet',
   /**
    * ——— A7: the foreign-money essay, compressed to ONE line. Every rule that
    * suppresses a comparison (foreign money in the period, a lead unit with no
