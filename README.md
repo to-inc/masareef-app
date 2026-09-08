@@ -12,8 +12,16 @@ builds, and a sync queue that never drains.
 **Work from a local clone instead:**
 
 ```bash
-rsync -a --exclude node_modules --exclude dist "$PWD/" ~/masareef-app/ && cd ~/masareef-app && npm install && npm run dev
+rsync -a --exclude node_modules --exclude dist "$PWD/" ~/masareef-app/ && cd ~/masareef-app && npm install && npx playwright install chromium && npm run dev
 ```
+
+`npx playwright install chromium` is a one-time step (~95 MB, cached outside the
+tree). It is what the browser-layout guard runs on: `npm test` ends with a real
+headless-chromium check (`scripts/test-layout.mjs`) that measures a geometric
+defect the string-rendering suites are blind to — a ledger row splitting a Latin
+merchant name away from its own metadata. Without the browser that guard fails
+loud with this exact remedy rather than skipping; run `npm run check:layout`
+alone to exercise just it.
 
 Source stays canonical in Drive; copy changes back when you are done (or keep the
 local copy as your working tree and rsync in the other direction). `dist/` and

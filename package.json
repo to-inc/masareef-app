@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node scripts/check-suites.mjs",
+    "test": "node scripts/check-suites.mjs && node scripts/test-layout.mjs",
     "preflight": "bash scripts/preflight.sh",
     "check:honest": "node scripts/honest-render.mjs",
     "check:chips": "node scripts/test-chips.mjs",
@@ -34,7 +34,8 @@
     "check:entry": "node scripts/test-entry.mjs",
     "check:dock": "node scripts/test-dock.mjs",
     "check:receipt-dup": "node scripts/test-receipt-dup.mjs",
-    "check:priorities": "node scripts/test-priorities.mjs"
+    "check:priorities": "node scripts/test-priorities.mjs",
+    "check:layout": "node scripts/test-layout.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -42,6 +43,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "playwright": "^1.63.0",
     "vite": "^5.4.11",
     "vite-plugin-pwa": "^0.21.1"
   }
