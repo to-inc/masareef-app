@@ -1966,8 +1966,19 @@ function RowList({
               }}
             >
               <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
-                {/* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is row.description — his own words, often Arabic, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */}
-                <span style={{ fontSize: TYPE.body, fontWeight: 600, ...ISOLATE, overflow: 'hidden', textOverflow: 'ellipsis' }} dir="auto">
+                {/* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is row.description — his own words, often Arabic, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60».
+                    UX pass 2026-08-30: `dir="auto"` REMOVED. ISOLATE keeps the glyphs
+                    ordered (unicode-bidi:isolate), but `dir="auto"` re-flipped the
+                    span's BASE direction to LTR for a Latin merchant name («Coffee»,
+                    «Nile Star Market» — a large share of card rows). Measured: the
+                    description then aligned to the row's LEFT (start=ltr) while its
+                    own meta line stayed at the RIGHT — one row split across a ~290px
+                    gutter, the amount collided with the drifting name («60Coffee»),
+                    the very «قهوة60» hazard in the bilingual direction. Dropping the
+                    attribute lets the span inherit the paragraph direction, so the
+                    name sits at the row's start above its own category, in both
+                    locales. */}
+                <span style={{ fontSize: TYPE.body, fontWeight: 600, ...ISOLATE, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {row.description}
                 </span>
                 {/* Row meta — one of ruling 2's NAMED caption sites: the date,

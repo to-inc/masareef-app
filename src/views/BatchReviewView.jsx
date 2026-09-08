@@ -465,9 +465,16 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
           <span style={{
             display: 'block', fontSize: TYPE.body, fontWeight: 600,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...ISOLATE,
-          }} dir="auto">
+          }}>
             {/* Printed AS THE BANK PRINTED IT, truncation included — that is what
-                lets him match this list against the picture in his hand. */}
+                lets him match this list against the picture in his hand.
+                UX pass 2026-08-30: `dir="auto"` REMOVED, same defect and same fix
+                as the Book ledger row. The bank prints merchant names in Latin,
+                so `dir="auto"` resolved this block LTR and drifted it to the row's
+                LEFT while its own status/category meta stayed at the RIGHT — one
+                batch row split across the card. ISOLATE still orders the glyphs;
+                inheriting the paragraph direction puts the name at the start edge,
+                above its meta, in both locales. */}
             {row.merchant_display || row.description || '—'}
           </span>
           <span style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, color: C.muted, marginTop: 2 }}>

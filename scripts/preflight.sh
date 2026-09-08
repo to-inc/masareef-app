@@ -9,7 +9,7 @@
 # Run it at the start of a sitting and before any deploy. It asserts nothing —
 # it just refuses to let the facts stay unread.
 set -u
-SHIP="/private/tmp/masareef-ship"
+SHIP="$HOME/masareef-app"
 DRIVE="/Users/Tarek/Library/CloudStorage/GoogleDrive-consult@tarekomran.com/Shared drives/Captain AO Finances"
 
 echo "── WHEN"
@@ -42,7 +42,8 @@ if [ -d "$SHIP" ]; then
 else
   echo "   ⚠️  ship worktree missing at $SHIP"
 fi
-echo "   ~/masareef-app: $(git -C ~/masareef-app rev-parse --short HEAD 2>/dev/null || echo '—')  ⚠️ STALE CLONE, do not edit"
+# 2026-08-30: /private/tmp/masareef-ship was wiped with /private/tmp. ~/masareef-app
+# IS the live tree now (reset to origin/main; the stale local snapshot is in git stash).
 
 echo "── DRIVE"
 if ls "$DRIVE" >/dev/null 2>&1; then echo "   readable ✅"
