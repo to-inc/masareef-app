@@ -139,6 +139,8 @@ export default function BookView({
    * lives inside a row's tapped-open panel, which SSR cannot tap open.
    */
   initialOpenKey = null,
+  /** SSR seam: the server-authored live tab (an effect cannot run under SSR). */
+  initialLiveTab = '',
 }) {
   const [period, setPeriod] = useState(initialPeriod);
   /**
@@ -169,6 +171,14 @@ export default function BookView({
   const [browsing, setBrowsing] = useState(null);   // a specific {y,m}, or null
   const [fetched, setFetched] = useState([]);
   const [fetchedTab, setFetchedTab] = useState('');
+  /**
+   * THE LIVE MONTH'S TAB, SERVER-AUTHORED (06 §3.2: «never constructed»).
+   * Today rows come from the summary, which names the month for DISPLAY
+   * («September») — not the sheet tab («Sep»). Posting the display name made
+   * every Book-row edit answer «could not find the row». The `entries` answer
+   * carries the resolved tab; read it once per summary and echo it.
+   */
+  const [liveTab, setLiveTab] = useState(initialLiveTab);
   const [loadingRows, setLoadingRows] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [sortBy, setSortBy] = useState('date');   // 'date' | 'amount' | 'name'
@@ -220,6 +230,14 @@ export default function BookView({
    * needless Apps Script cold start on the screen he opens most.
    */
   const needsFetch = rowsSource(period, browsing) === 'fetch';
+  useEffect(() => {
+    if (!today) return undefined;
+    let live = true;
+    fetchEntries({ y: today.y, m: today.m })
+      .then((a) => { if (live && a && a.ok !== false && a.tab) setLiveTab(a.tab); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [today && today.y, today && today.m]);
 
   const load = useCallback(async (force) => {
     /**
@@ -717,7 +735,7 @@ export default function BookView({
             */
           tabName={needsFetch
             ? fetchedTab
-            : ((data.month && data.month.names && data.month.names.cur) || '')}
+            : liveTab}
           /**
             * THE DATE IS DROPPED UNDER «النهاردة» (finding S5). The old grid
             * printed `17/8/2026` once per row on a screen whose title already
@@ -1927,7 +1945,7 @@ function RowList({
          * the same amount really are indistinguishable, here and in his book.
          * This value is a KEY only; the edit payload never carries a rowHint.
          */
-        const rawItem = { tab: tabName || rawRow.date, rowHint: `${rawRow.date}|${rawRow.amount}`, match: rawRow };
+        const rawItem = { tab: tabName, rowHint: `${rawRow.date}|${rawRow.amount}`, match: rawRow };
         const key = `${cardKey(rawItem)}:${i}`;
         /**
          * U1 — a row the edit sheet already fixed renders the SERVER's re-read
@@ -1938,7 +1956,7 @@ function RowList({
          */
         const row = (edited && edited[key]) || rawRow;
         const item = row === rawRow ? rawItem
-          : { tab: tabName || row.date, rowHint: `${row.date}|${row.amount}`, match: row };
+          : { tab: tabName, rowHint: `${row.date}|${row.amount}`, match: row };
         const outcome = settled[cardKey(item)] || null;
         const isOpen = open === key;
         const inert = !needsHim(outcome);

@@ -28,6 +28,7 @@
  * Guarded lookups throughout — a red test that DIES is not a red test (the
  * twice-in-one-afternoon law); a missing key or module is a NAMED failure.
  */
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -340,13 +341,21 @@ async function sweep(lang, L) {
         year: { cur: { Visa: [1], Cash: [1] }, prev: { Visa: [1], Cash: [1] } },
         monthCats: [], pending: [],
       };
-      const openKey = `${cardKey({ tab: 'August', rowHint: '17/8/2026|100', match: row })}:0`;
+      const openKey = `${cardKey({ tab: 'Aug', rowHint: '17/8/2026|100', match: row })}:0`;
       const render = (props = {}) => {
         try {
-          return renderToStaticMarkup(createElement(BV.default, { data: payload, onEdit: () => {}, ...props }));
+          return renderToStaticMarkup(createElement(BV.default, { data: payload, onEdit: () => {}, initialLiveTab: 'Aug', ...props }));
         } catch (err) { failures.push(`[${lang}] BookView THREW — ${err && err.message}`); return ''; }
       };
       const doorWord = kw(L, 'editOpen') || '∅';
+      // E-001 (2026-10): the edit tab is SERVER-AUTHORED. Posting the display
+      // month («September») made every Book edit answer «could not find the row».
+      if (lang === 'ar') {
+        const bvSrc = readFileSync(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
+        const tabExpr = (bvSrc.match(/tabName=\{needsFetch[\s\S]*?\}\n/) || [''])[0];
+        ok(tabExpr && !/names\.cur/.test(tabExpr) && /liveTab/.test(tabExpr) && !/tab: tabName \|\|/.test(bvSrc),
+          'U1.E001 the live edit tab is the entries-resolved liveTab — never names.cur, never a date fallback');
+      }
       const withDoor = render({ build: { actions: ['edit_entry'] }, initialOpenKey: openKey });
       ok(text(withDoor).includes(doorWord),
         `U1.r24 [${lang}] the opened row offers the edit door when the server advertises edit_entry`);

@@ -39,8 +39,14 @@ export const fetchSummary = () => (USING_MOCK ? mockFetchSummary() : live.summar
 
 export const fetchEntries = (ref) => (USING_MOCK ? mockEntries(ref) : live.entries(ref));
 
-export const fixCategory = (args) =>
-  USING_MOCK ? Promise.resolve({ ok: true, v: 1, learned: false }) : live.fixCategory(args);
+// MOCK PARITY: the server resolves `tab` by its 3-letter name and refuses
+// anything else; a mock that accepted any tab hid the «September» edit bug.
+const MOCK_TABS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+export const fixCategory = (args) => (USING_MOCK
+  ? Promise.resolve(MOCK_TABS.indexOf(String((args && args.tab) || '').trim()) === -1
+    ? { ok: false, v: 1, error: 'row_not_found' }
+    : { ok: true, v: 1, learned: false })
+  : live.fixCategory(args));
 
 export const postManual = (args) =>
   USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.manual(args);
