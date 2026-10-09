@@ -70,10 +70,12 @@ export const SWITCH_TO = LOCALE.switchTo;
 export const unitFor = (currency) => (currency === HOME_CURRENCY ? S.currencyShort : currency);
 
 /**
- * ROW SCALE (HANDOFF:61, Tarek 2026-10-09): a row's amount wears its currency's
- * MARK — «€», as G06 draws it — where the code would be noise beside a figure
- * already in his hand. Headline sentences and the currency chip keep `unitFor`.
+ * AMOUNTS WEAR THEIR CURRENCY'S MARK (HANDOFF:61, Tarek 2026-10-09): «€», as
+ * G06 draws it — on rows and on headline totals alike. Home money is unchanged.
+ * Sentences that NAME a unit and the currency chip keep `unitFor` (the code).
  * Only EUR travels today (travel.js CURRENCIES); a third currency adds its mark here.
  */
 const MARKS = { EUR: '€' };
-export const rowUnitFor = (currency) => MARKS[currency] || unitFor(currency);
+export const markUnitFor = (currency) => MARKS[currency] || unitFor(currency);
+/** The statement total's unit: the mark, else the currency's word («جنيه»/EGP). */
+export const headlineUnitFor = (currency) => MARKS[currency] || S.currencyName(currency);

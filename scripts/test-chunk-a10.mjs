@@ -74,7 +74,8 @@ try {
   eq(heroOf(foreignOnly), '42.87',
     'A10.1 a foreign-only day HEADLINES the euros he actually spent — the misleading 0 never leads');
   const fText = text(foreignOnly);
-  ok(/42\.87\s*EUR/.test(fText),
+  // Re-cut 2026-10-09 (R0): Tarek ruled that euro amounts wear «€», headline totals included.
+  ok(/42\.87\s*€/.test(fText),
     'A10.2 …and the lead names its unit — a bare 42.87 under an EGP habit is the same hazard reversed');
   /**
    * The zero is still stated beside the money — that is what A10 tests and it

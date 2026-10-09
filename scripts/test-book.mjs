@@ -571,8 +571,9 @@ try {
   eq(heroOf(eurHtml), '80',
     'reading in EUR, the WEEK ITSELF leads with the 80 he actually spent');
   const eurText = text(eurHtml);
-  ok(/80\s*EUR/.test(eurText),
-    'and the lead names its unit — a bare 80 where euros are meant is the §6.0 hazard through the human');
+  // Re-cut 2026-10-09 (R0): Tarek ruled that euro amounts wear «€», headline totals included.
+  ok(/80\s*€/.test(eurText),
+    'and the lead names its unit («€») — a bare 80 where euros are meant is the §6.0 hazard through the human');
   ok(eurText.includes(AR.andAlso),
     'the pounds remain as the aside — a lead is a reordering, never a deletion');
   /**

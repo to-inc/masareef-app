@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
-import { S, categoryLabel, rowUnitFor } from '../i18n/strings.js';
+import { S, categoryLabel, markUnitFor, headlineUnitFor } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, money2 } from '../lib/format.js';
 import { isoToDmy } from '../lib/dates.js';
@@ -147,7 +147,7 @@ export default function BatchReviewView({
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: 38, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
               {chosenTotals.length
                 // R4: a hero names its unit in full («EGP»/«جنيه»); every amount carries one.
-                ? chosenTotals.map(([cur, amt]) => `${money2(amt)} ${S.currencyName(cur)}`).join(' · ')
+                ? chosenTotals.map(([cur, amt]) => `${money2(amt)} ${headlineUnitFor(cur)}`).join(' · ')
                 : '—'}
             </div>
             <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 3 }}>
@@ -583,7 +583,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               read must not sit indistinguishable from pounds, because ticking
               it writes it as pounds (server rule: UNKNOWN → EGP). */}
           {row.amount == null ? '—'
-            : `${money2(Math.abs(row.amount))} ${row.currency === 'UNKNOWN' ? '؟' : rowUnitFor(row.currency || 'EGP')}`}
+            : `${money2(Math.abs(row.amount))} ${row.currency === 'UNKNOWN' ? '؟' : markUnitFor(row.currency || 'EGP')}`}
         </span>
       </div>
 

@@ -152,10 +152,11 @@ try {
   ok(!!egpUnitStyle && egpUnitStyle.includes('-apple-system'),
     'A4.11 …and the unit is NON-serif (FONT_UI) beside a serif value');
 
-  // ——— the foreign-led period: same anatomy, the unit is the code
+  // ——— the foreign-led period: same anatomy, the unit is its mark
+  // Re-cut 2026-10-09 (R0): Tarek ruled that euro amounts wear «€», headline totals included.
   const eurHtml = pb(week({ count: 2, byCurrency: { EUR: 80 } }), { displayCurrency: 'EUR' });
   eq(heroOf(eurHtml), '80', 'A4.12 a EUR-led hero rides the same TYPE.hero');
-  const eurUnitStyle = styleOfContent(eurHtml, 'EUR');
+  const eurUnitStyle = styleOfContent(eurHtml, '€');
   ok(!!eurUnitStyle && eurUnitStyle.includes(`font-size:${UNIT_PX}px`) && eurUnitStyle.includes('-apple-system'),
     'A4.13 the foreign unit rides inline at unitSize(TYPE.hero), non-serif — same anatomy, other unit');
 

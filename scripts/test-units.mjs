@@ -60,9 +60,9 @@ try {
 
   // ——— ROW SCALE WEARS THE MARK (Tarek 2026-10-09, HANDOFF:61, G06 «85.00 €»)
   {
-    const { rowUnitFor, unitFor } = await vite.ssrLoadModule('/src/i18n/strings.js');
-    ok(rowUnitFor('EUR') === '€' && rowUnitFor(HOME_CURRENCY) === S.currencyShort,
-      `${L} rowUnitFor: euro is «€», home money keeps its mark «${S.currencyShort}»`);
+    const { markUnitFor, unitFor } = await vite.ssrLoadModule('/src/i18n/strings.js');
+    ok(markUnitFor('EUR') === '€' && markUnitFor(HOME_CURRENCY) === S.currencyShort,
+      `${L} markUnitFor: euro is «€», home money keeps its mark «${S.currencyShort}»`);
     ok(unitFor('EUR') === 'EUR', `${L} headline sentences (unitFor) still name the code`);
     const BR = (await vite.ssrLoadModule('/src/views/BatchReviewView.jsx')).default;
     const r = (o) => ({ date: '2026-08-26', row_status: 'completed', payment_hint: 'card', category: 'Groceries', ...o });
@@ -73,6 +73,9 @@ try {
     const taxi = html.slice(html.indexOf('>TAXI<'), html.indexOf('>CARREFOUR<'));
     ok(taxi.length > 0 && /85\.00 €</.test(taxi) && !/85\.00 EUR</.test(taxi), `${L} a statement row in euro reads «85.00 €», not «85.00 EUR»`);
     ok(html.includes(`1,204.00 ${S.currencyShort}<`), `${L} a home row keeps «${S.currencyShort}»`);
+    const head = html.slice(0, html.indexOf('>TAXI<'));
+    ok(head.includes('85.00 €') && head.includes(`1,204.00 ${S.currencyName('EGP')}`) && !/85\.00 EUR/.test(head),
+      `${L} the statement's headline total: euro wears «€», home money keeps its word «${S.currencyName('EGP')}»`);
   }
   const day = (over = {}) => ({
     date: '29/8/2026', description: 'S-MARKET VALLILA', method: 'Visa',
@@ -150,9 +153,10 @@ try {
   ok(!/\d[\s ]*EGP\b/.test(foreignLead),
     `${L} no figure may be followed by the raw ISO code EGP — the home currency has a mark`);
 
-  // negative control: a FOREIGN currency keeps its own code, per HANDOFF:57.
-  ok(foreignLead.includes('EUR'),
-    `${L} a foreign lead keeps its own code — the mark rule must not be over-applied`);
+  // negative control: a FOREIGN currency wears ITS OWN mark, never the home one.
+  // Re-cut 2026-10-09 (R0): Tarek ruled that euro amounts wear «€», headline totals included.
+  ok(foreignLead.includes('€') && !/\d[\s ]*EUR\b/.test(foreignLead),
+    `${L} a foreign lead wears its own mark «€» — every figure its own currency's mark`);
 
   // ─────────────────────────────── A5 · no bare amount
   // The Card/Cash metric pair is the site that shipped unitless.
