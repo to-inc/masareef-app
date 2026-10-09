@@ -348,7 +348,8 @@ decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a backg
    * screen here.
    */
   const users = all
-    .map((p) => [p.pathname.split('/src/')[1], (fs.readFileSync(p, 'utf8').match(/C\.amber\b/g) || []).length])
+    // v4 (R13): a view's warm action is GRADIENT.amber, which STARTS at C.amber — both spellings are the one amber.
+    .map((p) => [p.pathname.split('/src/')[1], (fs.readFileSync(p, 'utf8').match(/\b(?:C|GRADIENT)\.amber\b/g) || []).length])
     .filter(([, n]) => n > 0);
 
   const crowded = users.filter(([, n]) => n > 1);

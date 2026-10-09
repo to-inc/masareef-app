@@ -592,6 +592,12 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
     const html = render({ jobs });
     const t = text(html);
 
+    // ═══ G06 — two defects the restyle surfaced, pinned so they cannot return.
+    { const egp = render({ jobs: [{ sourceHash: 'q', entriesTotal: 1, entries: [row({ merchant_display: 'Seoudi', amount: 300, currency: 'EGP' })] }] });
+      ok(!/2026-08-14/.test(text(egp)) && text(egp).includes('14/8/2026'),
+        'G06.1 the day heading reads d/M/yyyy — statement rows carry ISO dates, and «2026-08-14» used to print as-is');
+      ok(/300\.00\s*ج\.م/.test(text(egp)), 'G06.2 a pound row carries its unit and two decimals — «300.00 ج.م», never a bare «300»'); }
+
     // ——— the non-writable row stays visible, with its reason in words
     ok(t.includes('Harbour Baths'), 'a declined row is still SHOWN — it is information he may want');
     ok(t.includes(AR.batchDeclined), '…with its reason in words, not merely greyed');

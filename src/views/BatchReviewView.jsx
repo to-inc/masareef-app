@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE } from '../theme.js';
-import { S, categoryLabel } from '../i18n/strings.js';
+import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
+import { S, categoryLabel, unitFor } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
-import { money, moneyRound } from '../lib/format.js';
+import { money, money2 } from '../lib/format.js';
+import { isoToDmy } from '../lib/dates.js';
 import { LATIN, ISOLATE } from '../components/Primitives.jsx';
 import {
   rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows, BATCH_MAX_ROWS,
@@ -121,7 +122,9 @@ export default function BatchReviewView({
 
   return (
     <div>
-      <div style={{ textAlign: 'center', padding: '2px 0 12px' }}>
+      {/* G06 (v4 tokens): the statement's total and select/clear on ONE glass card. */}
+      <div style={{ ...glass('card'), padding: '18px 14px 14px', marginBottom: 14 }}>
+      <div style={{ textAlign: 'center', padding: settled ? 0 : '0 0 12px' }}>
         {settled ? (
           <>
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 650 }}>
@@ -143,7 +146,8 @@ export default function BatchReviewView({
           <>
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: 38, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
               {chosenTotals.length
-                ? chosenTotals.map(([cur, amt]) => `${moneyRound(amt)} ${cur}`).join(' · ')
+                // R4: a hero names its unit in full («EGP»/«جنيه»); every amount carries one.
+                ? chosenTotals.map(([cur, amt]) => `${money2(amt)} ${S.currencyName(cur)}`).join(' · ')
                 : '—'}
             </div>
             <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 3 }}>
@@ -154,15 +158,14 @@ export default function BatchReviewView({
       </div>
 
       {!settled && (
-        <div style={{ display: 'flex', gap: 7, marginBottom: 10 }}>
+        <div style={{ display: 'flex', gap: 7 }}>
           {[[S.batchAll, true], [S.batchNone, false]].map(([label, on]) => (
             <button
               key={label} className="catchip" onClick={() => setAll(on)}
               style={{
                 // A3: 42 -> TAP. These are the Select all / Clear all buttons —
             // the same pair A3 names at GLASS :539/:540.
-            flex: 1, minHeight: TAP, borderRadius: RADIUS.row, background: C.card,
-                border: `1px solid ${C.line}`, color: C.ink, fontSize: TYPE.label, fontWeight: 600,
+            ...glass('chip'), flex: 1, minHeight: TAP, color: C.ink, fontSize: TYPE.label, fontWeight: 600,
               }}
             >
               {label}
@@ -170,11 +173,13 @@ export default function BatchReviewView({
           ))}
         </div>
       )}
+      </div>
 
       {days.map((day) => (
         <div key={day.date || 'undated'}>
           <div style={{ fontSize: TYPE.label, fontWeight: 700, color: C.muted, margin: '14px 2px 7px' }}>
-            <span style={LATIN}>{day.date || '—'}</span>
+            {/* Statement rows carry ISO dates; he reads d/M/yyyy (it used to print «2026-08-26»). */}
+            <span style={LATIN}>{day.date ? (isoToDmy(day.date) || day.date) : '—'}</span>
           </div>
           {day.rows.map((r) => (
             <Row
@@ -213,7 +218,7 @@ export default function BatchReviewView({
         */}
       {truncated && (
         <p style={{
-          fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
+          fontSize: TYPE.label, color: C.ink, ...glass('advisory'), borderRadius: RADIUS.glassWell,
           borderRadius: RADIUS.row, padding: '9px 12px', marginTop: 12, textAlign: 'center', lineHeight: 1.6,
         }}>
           {S.batchTruncated(rows.length, totalSeen)}
@@ -262,7 +267,7 @@ export default function BatchReviewView({
              * and after a settle alike: the accent tracks the consequence, not
              * the position on the screen.
              */
-            background: chosen.length && !busy ? C.amber : (settled ? C.card : C.line),
+            background: chosen.length && !busy ? GRADIENT.amber : (settled ? C.card : C.line),
             // Same rim as the keypad's commit: amber needs a boundary against
             // the shell (theme.js `amberRim`), and this is the higher-stakes of
             // the two buttons — it writes N rows in one tap.
@@ -287,7 +292,7 @@ export default function BatchReviewView({
             className="catchip" onClick={onDiscard}
             style={{
               marginTop: 10, width: '100%', minHeight: TAP, borderRadius: RADIUS.row,
-              background: 'transparent', border: `1px solid ${C.line}`,
+              ...glass('chip'), borderRadius: RADIUS.row,
               color: C.muted, fontSize: TYPE.label,
             }}
           >
@@ -410,15 +415,19 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
     warn: { fg: C.amberInk, bg: C.sand },
   };
 
-  const bg = settled
-    ? (outcome.status === 'written' ? C.settledBg : outcome.status === 'error' ? C.conflictBg : C.sand)
-    : !writable ? C.shell
-      : (bookDup || row.twinOf) ? C.conflictBg : C.card;
+  // G06 (v4 tokens): a row is glass; its STATE picks the tier — written/failed
+  // keep their state tints, a duplicate is the terracotta alert glass, a row
+  // that can never be written is quiet chip glass.
+  const surface = settled
+    ? (outcome.status === 'written' ? { background: STATE_BOX.ok.bg, border: `1px solid ${STATE_BOX.ok.border}` }
+      : outcome.status === 'error' ? { background: STATE_BOX.error.bg, border: `1px solid ${STATE_BOX.error.border}` }
+        : glass('advisory'))
+    : !writable ? glass('chip')
+      : (bookDup || row.twinOf) ? glass('alert') : glass('card');
 
   return (
     <div style={{
-      background: bg,
-      border: `1px solid ${(bookDup || row.twinOf) && !settled ? C.conflictLine : C.line}`,
+      ...surface,
       borderRadius: RADIUS.row, marginBottom: 7,
       opacity: settled && outcome.status !== 'written' ? 0.75 : 1,
     }}>
@@ -463,7 +472,10 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
           style={{ flex: 1, minWidth: 0, textAlign: 'start', background: 'transparent', padding: 0 }}
         >
           <span style={{
-            display: 'block', fontSize: TYPE.body, fontWeight: 600,
+            // maxWidth: inside a <button> a block child sizes to its TEXT, not
+            // to the button — the name overflowed under the method chip, hidden
+            // while the chip was opaque and shown through it once it was glass.
+            display: 'block', maxWidth: '100%', fontSize: TYPE.body, fontWeight: 600,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...ISOLATE,
           }}>
             {/* Printed AS THE BANK PRINTED IT, truncation included — that is what
@@ -540,8 +552,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             style={{
               // A3: 44 -> TAP, senior touch floor.
               flex: '0 0 auto', minHeight: TAP, padding: '9px 12px',
-              borderRadius: RADIUS.capsule, background: C.shell,
-              border: `1px solid ${C.line}`, color: C.ink,
+              ...glass('chip'), color: C.ink,
               fontSize: TYPE.label, fontWeight: 700, whiteSpace: 'nowrap',
             }}
           >
@@ -556,8 +567,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               read must not sit indistinguishable from pounds, because ticking
               it writes it as pounds (server rule: UNKNOWN → EGP). */}
           {row.amount == null ? '—'
-            : `${money(Math.abs(row.amount))}${!row.currency || row.currency === 'EGP' ? ''
-              : row.currency === 'UNKNOWN' ? ' ؟' : ` ${row.currency}`}`}
+            : `${money2(Math.abs(row.amount))} ${row.currency === 'UNKNOWN' ? '؟' : unitFor(row.currency || 'EGP')}`}
         </span>
       </div>
 
@@ -620,9 +630,8 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                   style={{
                     // A3: 44 -> TAP, senior touch floor.
                     padding: '9px 13px', minHeight: TAP, borderRadius: RADIUS.capsule,
-                    background: category === c ? C.harbor : C.shell,
-                    color: category === c ? C.onDark : C.ink,
-                    border: `1px solid ${category === c ? C.harbor : C.line}`,
+                    ...glass('chip'), ...(category === c ? { background: SELECTED_TINT, border: SHEET.pickedRim } : null),
+                    color: C.ink,
                     fontSize: TYPE.label, fontWeight: category === c ? 700 : 500,
                   }}
                   dir="auto"
@@ -670,7 +679,7 @@ function Expired({ onResnap, onDiscard, busy }) {
       <button
         className="bigbtn" onClick={onResnap} disabled={busy}
         style={{
-          width: '100%', minHeight: 56, borderRadius: RADIUS.row, background: C.harbor,
+          width: '100%', minHeight: 56, borderRadius: RADIUS.row, background: GRADIENT.harbor,
           color: C.onDark, fontSize: 17, fontWeight: 700,
         }}
       >

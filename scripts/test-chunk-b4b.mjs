@@ -88,7 +88,8 @@ ok(bannerSlice && /<Sheet/.test(bannerSlice),
   'B4b.3 Banner mounts the Sheet — the hand-rolled sand box is retired; lip and entrance are the primitive\'s');
 {
   const style = sheetStyle(bannerSlice);
-  ok(style && style.includes('C.sand') && /border: `1px solid \$\{C\.line\}`/.test(style),
+  // G05 (v4 tokens): the sand fill and its rim are the ADVISORY glass tier now.
+  ok(style && /\.\.\.glass\('advisory'\)/.test(style),
     'B4b.4 Banner keeps its sand fill AND its meaning border — advisory surfaces stay bordered by name (A2\'s doctrine); the sheet did not shed it');
   ok(style && !/borderRadius/.test(style),
     'B4b.5 Banner states no radius of its own — the RADIUS.sheet lip is the primitive\'s identity, never restated at a call site');

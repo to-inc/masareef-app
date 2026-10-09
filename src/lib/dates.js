@@ -32,3 +32,9 @@ export const newClientId = () =>
   globalThis.crypto?.randomUUID
     ? globalThis.crypto.randomUUID()
     : `cid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+/** «2026-08-26» → «26/8/2026» — his reading form. Anything else → ''. */
+export function isoToDmy(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  return m ? `${Number(m[3])}/${Number(m[2])}/${m[1]}` : '';
+}

@@ -92,7 +92,7 @@ function pinPlainCard(file, component, label) {
 // edge and cast come from glass('card'); nothing hand-written rides beside it.
 function pinGlassCard(file, component, label) {
   const slice = componentSlice(src(file), component) || '';
-  ok(/\.\.\.glass\('card'\)/.test(slice), `${label} — the card is glass('card') (G04, v4 tokens)`);
+  ok(/glass\('card'\)/.test(slice), `${label} — the card is glass('card') (G04/G05, v4 tokens; a state may pick its tint)`);
   ok(!/boxShadow:\s*[`'"]/.test(slice) && !/background: C\.card, borderRadius: RADIUS\.card/.test(slice), `${label} — no hand-rolled shadow or solid card beside it`);
 }
 pinGlassCard('src/components/Charts.jsx', 'CategoryCompare', 'A2.1 Charts/CategoryCompare');
@@ -105,8 +105,8 @@ pinGlassCard('src/components/LogCard.jsx', 'LogCard', 'A2.3 LogCard');
   ok(/\.\.\.glass\('card'\)/.test(slice), 'A2.4 Inbox/PendingCard — the review card is glass(\'card\') (v4 P6)');
   ok(!/boxShadow:\s*[`'"]/.test(slice) && !/background: C\.card/.test(slice), 'A2.4 …with no hand-rolled shadow or solid fill beside it');
 }
-pinPlainCard('src/views/ReceiptView.jsx', 'ReceiptView', 'A2.5 Receipt/main card');
-pinPlainCard('src/views/ReceiptView.jsx', 'JobRow', 'A2.6 Receipt/JobRow');
+pinGlassCard('src/views/ReceiptView.jsx', 'ReceiptView', 'A2.5 Receipt/main card');
+pinGlassCard('src/views/ReceiptView.jsx', 'JobRow', 'A2.6 Receipt/JobRow');
 pinPlainCard('src/views/BookView.jsx', 'Lookalikes', 'A2.7 Book/Lookalikes group card');
 // v4 P8 (R0 re-cut): the first-read skeleton is the glass layout itself — a well
 // and a glass card — holding the shape steady; nothing hand-rolled beside it.

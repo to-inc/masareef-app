@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, GLYPH } from '../theme.js';
+import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, GLYPH, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, normalizeDigits } from '../lib/format.js';
-import { newClientId, cairoClock } from '../lib/dates.js';
+import { newClientId, cairoClock, isoToDmy } from '../lib/dates.js';
 import { prepareReceipt, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
@@ -33,10 +33,7 @@ const DMY_OK = (v) => {
   const t = new Date(Date.UTC(y, mo - 1, d));
   return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;
 };
-const ISO_TO_DMY = (iso) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
-  return m ? `${Number(m[3])}/${Number(m[2])}/${m[1]}` : '';
-};
+const ISO_TO_DMY = isoToDmy; // shared with the batch review (lib/dates.js)
 
 // Field-test diagnostics, off unless explicitly switched on.
 const debugOn = () => {
@@ -546,7 +543,7 @@ export default function ReceiptView({
           </div>
         )}
 
-        <div style={{ background: C.card, borderRadius: RADIUS.card, padding: 16 }}>
+        <div style={{ ...glass('card'), padding: 16 }}>
           <Field label={S.receiptAmount} editable={lowAmount}>
             {lowAmount ? (
               <input
@@ -630,7 +627,7 @@ export default function ReceiptView({
 
           {/* Cash / Visa. Cash is the default and the steer explains why, so the
               same purchase is not counted twice. */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 4, marginTop: 14, ...glass('well'), borderRadius: RADIUS.capsule, padding: 4 }}>
             {['Cash', 'Visa'].map((m) => (
               <button
                 key={m}
@@ -638,10 +635,10 @@ export default function ReceiptView({
                 onClick={() => setMethod(m)}
                 aria-pressed={method === m}
                 style={{
-                  flex: 1, minHeight: TAP, borderRadius: RADIUS.row, fontSize: 16, fontWeight: 700,
-                  background: method === m ? METHOD[m].bg : C.shell,
-                  color: method === m ? METHOD[m].fg : C.ink,
-                  border: `1px solid ${method === m ? C.harbor : C.line}`,
+                  // G05 (v4 tokens): cash | card is P4's pressed well with a raised choice.
+                  flex: 1, minHeight: TAP, fontSize: TYPE.body,
+                  ...(method === m ? glass('raised') : { background: 'transparent', borderRadius: RADIUS.capsule }),
+                  color: method === m ? C.ink : C.muted, fontWeight: method === m ? 700 : 600,
                 }}
               >
                 {m === 'Visa' ? S.metricVisa : S.metricCash}
@@ -671,7 +668,7 @@ export default function ReceiptView({
           he can choose from does not change shape when he chooses.
         */}
         {category && !showAllCats && (
-          <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: C.harbor, color: C.onDark, fontSize: TYPE.action, fontWeight: 700, minHeight: 56 }}>
+          <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: GRADIENT.harbor, color: C.onDark, fontSize: TYPE.action, fontWeight: 700, minHeight: 56 }}>
             ✓ <span dir="auto">{categoryLabel(category)}</span>
           </button>
         )}
@@ -691,7 +688,7 @@ export default function ReceiptView({
 
         {blockedByDup ? (
           <button className="bigbtn" onClick={() => setOverrideDup(true)}
-            style={{ ...primaryBtn, marginTop: 16, width: '100%', background: C.harbor }}>
+            style={{ ...primaryBtn, marginTop: 16, width: '100%' }}>
             {S.receiptSaveAnyway}
           </button>
         ) : (
@@ -699,7 +696,7 @@ export default function ReceiptView({
             className="bigbtn" disabled={!ready} onClick={save}
             style={{
               marginTop: 16, width: '100%', minHeight: 58, padding: '16px 0', borderRadius: RADIUS.row,
-              background: ready ? C.harbor : C.line, color: ready ? C.onDark : C.ink,
+              background: ready ? GRADIENT.harbor : C.line, color: ready ? C.onDark : C.ink,
               fontSize: TYPE.action, fontWeight: 700,
             }}
           >
@@ -717,7 +714,8 @@ export default function ReceiptView({
   // ——— idle
   return (
     <Centered>
-      <div data-geometry="empty-state-illustration" style={{ fontSize: 52 }}>🧾</div>
+      {/* G05: the receipt glyph sits in a glass disc — geometry, not a heading. */}
+      <div data-geometry="empty-state-illustration" style={{ ...glass('chip'), width: 128, height: 128, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>🧾</div>
       <p style={{ color: C.muted, fontSize: TYPE.body, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
         {S.receiptIntro}
       </p>
@@ -917,7 +915,11 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
   return (
     <div
       style={{
-        background: C.card,
+        // G05 (v4 tokens): a queued photo is glass; ready wears the settled tint,
+        // a failure the conflict tint — its state is visible before it is read.
+        ...(stage === 'ready' ? { background: STATE_BOX.ok.bg, border: `1px solid ${STATE_BOX.ok.border}` }
+          : stage === 'failed' ? { background: STATE_BOX.error.bg, border: `1px solid ${STATE_BOX.error.border}` }
+            : glass('card')),
         borderRadius: RADIUS.row, padding: '10px 12px', marginBottom: 6,
       }}
     >
@@ -937,7 +939,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
           // geometry exemption (ruling 4): the placeholder tile keeps the
           // thumbnail's exact geometry so absence has the same shape as presence.
           <div style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0,
-            background: C.shell, border: `1px solid ${C.line}`, display: 'flex',
+            ...glass('well'), display: 'flex',
             alignItems: 'center', justifyContent: 'center', fontSize: TYPE.action }} data-geometry="row-thumb-glyph">🧾</div>
         )}
 
@@ -1068,9 +1070,8 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
         onClick={() => onPick(isSelected ? null : c)}
         style={{
           ...base,
-          background: isSelected ? C.harbor : C.shell,
-          border: `1px solid ${isSelected ? C.harbor : C.line}`,
-          color: isSelected ? C.onDark : C.ink,
+          ...glass('chip'), ...(isSelected ? { background: SELECTED_TINT, border: SHEET.pickedRim } : null),
+          color: C.ink,
           fontWeight: isSelected ? 700 : 500,
           /* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is categoryLabel(c) — the category chip, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */
           ...ISOLATE,
@@ -1114,7 +1115,7 @@ function Field({ label, editable, children }) {
 export function Banner({ children }) {
   return (
     <Sheet style={{
-      background: C.sand, border: `1px solid ${C.line}`, color: C.ink,
+      ...glass('advisory'), color: C.ink, // the Sheet primitive owns its lip radius
       padding: '10px 14px', fontSize: TYPE.label, fontWeight: 600,
       marginBottom: 10, lineHeight: 1.6,
     }}>
@@ -1123,14 +1124,15 @@ export function Banner({ children }) {
   );
 }
 
+// G05 (v4 tokens): the primary action is the harbor gradient; the second
+// choice is a glass chip — never a hand-drawn grey outline.
 const primaryBtn = {
   marginTop: 14, minHeight: 58, padding: '16px 30px', borderRadius: RADIUS.row,
-  background: C.harbor, color: C.onDark, fontSize: TYPE.action, fontWeight: 700,
+  background: GRADIENT.harbor, color: C.onDark, fontSize: TYPE.action, fontWeight: 700,
 };
 const ghostBtn = {
-  marginTop: 10, minHeight: TAP, padding: '12px 20px', borderRadius: RADIUS.row,
-  background: 'transparent', border: `1px solid ${C.line}`, color: C.muted,
-  fontSize: TYPE.body, fontWeight: 600,
+  ...glass('chip'), marginTop: 10, minHeight: TAP, padding: '12px 20px', borderRadius: RADIUS.row,
+  color: C.ink, fontSize: TYPE.body, fontWeight: 600,
 };
 const chipStyle = {
   padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,
