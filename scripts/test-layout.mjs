@@ -139,6 +139,35 @@ try {
     'positive control FAILED: re-adding dir="auto" did not split the Coffee row '
     + `(desc@${split.descStart} vs meta@${split.metaStart}) — the guard cannot detect the defect it exists for`);
 
+  // ═══ E-010 — THE EDIT SHEET'S BOTTOM SAT UNDER THE TAB BAR ═══
+  // `.view-in` kept translateY(0) after its entrance (fill: both), which made
+  // the view box the containing block of every position:fixed sheet in it.
+  // Measured where he taps: the Save button's centre must hit Save itself.
+  {
+    await page.locator('button', { hasText: 'Coffee' }).first().click(); // unfold the row…
+    await page.getByRole('button', { name: /^(عدّل|Edit)$/ }).first().click(); // …and open its edit sheet
+    await page.waitForSelector('[role="dialog"]');
+    await page.waitForTimeout(700); // entrance done — the bug lives AFTER it
+    const hit = () => page.evaluate(() => {
+      const dlg = document.querySelector('[role="dialog"]');
+      const btns = [...dlg.querySelectorAll('button')];
+      const save = btns[btns.length - 1];
+      save.scrollIntoView({ block: 'nearest' });
+      const r = save.getBoundingClientRect();
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { onSave: !!top && save.contains(top), bottom: Math.round(dlg.getBoundingClientRect().bottom), vh: innerHeight };
+    });
+    const h = await hit();
+    ok(h.onSave && h.bottom >= h.vh - 2,
+      `E010 the edit sheet reaches the screen bottom and its Save is tappable, not under the tab bar — onSave=${h.onSave} sheet@${h.bottom}/${h.vh}`);
+    // POSITIVE CONTROL: put the old fill back and the guard must see it.
+    await page.evaluate(() => { document.querySelector('.view-in').style.animationFillMode = 'both'; });
+    await page.waitForTimeout(50);
+    const c = await hit();
+    ok(!(c.onSave && c.bottom >= c.vh - 2),
+      `E010 positive control FAILED — fill:both did not push the sheet under the bar (onSave=${c.onSave} sheet@${c.bottom}); the guard is blind`);
+  }
+
   // ═══ E-003 / E-004 — THE NEW SCREEN'S KEYPAD AND ITS SECOND QUESTION ═══
   // With a «like before» card (every visit after his first entry), «0» and «⌫»
   // sat 44px under the pinned Save bar; and the bar asked «choose a category»

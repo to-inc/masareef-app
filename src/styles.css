@@ -108,7 +108,7 @@ textarea {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.view-in { animation: viewin var(--dur-page) var(--ease-settle) both; }
+.view-in { animation: viewin var(--dur-page) var(--ease-settle) backwards; } /* E-010: never `both` — a transform left on the view box re-anchors every position:fixed sheet inside it to the view, under the tab bar */
 
 /* ═══ B6 — THE DETAIL PUSH'S CROSS-FADE (View Transitions, where supported) ═══
    Even the browser-drawn swap speaks the MOTION vocabulary. The reduced-motion

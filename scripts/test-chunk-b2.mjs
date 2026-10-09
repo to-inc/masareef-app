@@ -63,8 +63,11 @@ ok(/to\s*\{\s*opacity:\s*1;\s*transform:\s*translateY\(0\);?\s*\}/.test(kf),
 // keyframes mentions the class in prose.
 const ruleAt = css.indexOf('\n.view-in {');
 const rule = ruleAt === -1 ? '' : css.slice(ruleAt, css.indexOf('}', ruleAt) + 1);
-ok(ruleAt !== -1 && /animation:\s*viewin\s+var\(--dur-page\)\s+var\(--ease-settle\)\s+both/.test(rule),
-  'B2.5 .view-in runs viewin at var(--dur-page) with var(--ease-settle) both — a screen SWAP rides the page token, settling');
+// E-010: fill-mode `backwards`, NEVER `both`/`forwards` — a fill that keeps the
+// end frame leaves translateY(0) on the view box, and a transformed ancestor
+// re-anchors every position:fixed sheet inside it to the view (under the tab bar).
+ok(ruleAt !== -1 && /animation:\s*viewin\s+var\(--dur-page\)\s+var\(--ease-settle\)\s+backwards\s*;/.test(rule),
+  'B2.5 .view-in runs viewin at var(--dur-page) with var(--ease-settle) backwards — a screen SWAP rides the page token, and leaves no transform behind (E-010)');
 ok(rule && !/opacity/.test(rule),
   'B2.6 .view-in carries NO opacity of its own — with the animation removed the view must render fully visible, instantly');
 
