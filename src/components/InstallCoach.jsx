@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, RADIUS, TAP, TYPE, glass, GRADIENT, SHEET, pinBottom, FULL_BLEED } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS, TAP, TYPE, glass, GRADIENT, SHEET } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { coachDue, readCoach, snoozeCoach, retireCoach, isIosSafari, isStandalone } from '../state/installCoach.js';
 
@@ -29,9 +29,9 @@ export default function InstallCoach({ force = false }) {
   );
   return (
     <>
-      <div aria-hidden style={{ position: 'fixed', ...FULL_BLEED, zIndex: 60, background: SHEET.dim }} />
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 60, background: SHEET.dim }} />
       <div role="dialog" aria-modal="true" aria-label={S.coachTitle} className="view-in"
-        style={{ ...glass('card'), position: 'fixed', zIndex: 61, left: 12, right: 12, bottom: pinBottom('112px + env(safe-area-inset-bottom)'),
+        style={{ ...glass('card'), position: 'fixed', zIndex: 61, left: 12, right: 12, bottom: 'calc(112px + env(safe-area-inset-bottom))',
           padding: '24px 22px 20px', display: 'flex', flexDirection: 'column', gap: 18, color: C.ink }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ ...glass('chip'), borderRadius: RADIUS.glassWell, width: 60, height: 60, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Helm /></div>

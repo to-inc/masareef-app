@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG, pinBottom, FULL_BLEED } from '../theme.js';
+import {
+  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG,
+} from '../theme.js';
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, money2, moneyRound, amountWithCurrency } from '../lib/format.js';
@@ -997,7 +999,7 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
       <button
         onClick={onClose}
         aria-label={S.monthPickerClose}
-        style={{ position: 'fixed', ...FULL_BLEED, zIndex: 44, background: 'transparent', cursor: 'default' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 44, background: 'transparent', cursor: 'default' }}
       />
       {/**
         * The wrapper only POSITIONS AND CLIPS (the Toast's own pattern: the
@@ -1011,7 +1013,7 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
         */}
       <div
         style={{
-          position: 'fixed', insetInline: 0, bottom: pinBottom(), zIndex: 45,
+          position: 'fixed', insetInline: 0, bottom: 0, zIndex: 45,
           borderRadius: `${RADIUS.sheet}px ${RADIUS.sheet}px 0 0`,
           overflow: 'hidden',
         }}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM, pinBottom, FULL_BLEED } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { Sheet, LangToggle, CurrencyToggle, SectionLabel } from '../components/Primitives.jsx';
 import { otherDisplayCurrency } from '../state/display.js';
@@ -106,7 +106,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
       <button
         onClick={onClose}
         aria-label={S.settingsClose}
-        style={{ position: 'fixed', ...FULL_BLEED, zIndex: 44, background: 'transparent', cursor: 'default' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 44, background: 'transparent', cursor: 'default' }}
       />
       {/**
         * The wrapper only POSITIONS AND CLIPS (MonthSheet's pattern, which is
@@ -117,7 +117,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
         */}
       <div
         style={{
-          position: 'fixed', insetInline: 0, bottom: pinBottom(), zIndex: 45,
+          position: 'fixed', insetInline: 0, bottom: 0, zIndex: 45,
           borderRadius: `${RADIUS.sheet}px ${RADIUS.sheet}px 0 0`,
           overflow: 'hidden',
         }}

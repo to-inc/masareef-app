@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { money2 } from '../lib/format.js';
-import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG, pinBottom } from '../theme.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG } from '../theme.js';
 import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
@@ -310,7 +310,7 @@ export function UpdatePrompt({ onUpdate }) {
     <div role="status" aria-live="polite"
       style={{
         ...glass('prompt'), position: 'fixed', zIndex: 34, left: NAV.inset, right: NAV.inset,
-        bottom: pinBottom(`max(${NAV.bottom}px, env(safe-area-inset-bottom)) + ${NAV.height + 14}px`),
+        bottom: `calc(max(${NAV.bottom}px, env(safe-area-inset-bottom)) + ${NAV.height + 14}px)`,
         padding: '14px 14px 14px 18px', display: 'flex', alignItems: 'center', gap: 12, color: C.ink,
       }}>
       <span aria-hidden style={{ width: 40, height: 40, borderRadius: RADIUS.inset + 4, background: C.mist, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: C.harbor }}>
@@ -336,7 +336,7 @@ export function UndoToast({ undo, onUndo }) {
     <div role="status" aria-live="polite" className="sheet-in"
       style={{
         ...glass('toast'), position: 'fixed', zIndex: 35, left: NAV.inset, right: NAV.inset,
-        bottom: pinBottom(`max(${NAV.bottom}px, env(safe-area-inset-bottom)) + ${NAV.height + 14}px`),
+        bottom: `calc(max(${NAV.bottom}px, env(safe-area-inset-bottom)) + ${NAV.height + 14}px)`,
         minHeight: 60, padding: '0 8px 0 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
         color: C.onDark,
       }}>
@@ -622,7 +622,7 @@ export function Toast({ message }) {
     <div
       style={{
         position: 'fixed',
-        bottom: pinBottom('96px + env(safe-area-inset-bottom)'),
+        bottom: `calc(96px + env(safe-area-inset-bottom))`,
         insetInline: 0,
         display: 'flex',
         justifyContent: 'center',

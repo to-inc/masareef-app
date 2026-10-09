@@ -49,8 +49,7 @@ ok(NAV.height === 70 && NAV.pad === 6 && NAV.gap === 6 && NAV.inset === 20 && NA
 ok(/left: `calc\(\$\{NAV\.inset\}px \+ env\(safe-area-inset-left\)\)`/.test(nav)
   && /right: `calc\(\$\{NAV\.inset\}px \+ env\(safe-area-inset-right\)\)`/.test(nav),
   'C1.4 both side insets ride NAV.inset + their safe-area env');
-// Re-cut 2026-10-10 (R0, E-017): bottom-pinned layers extend by the measured iOS shortfall (pinBottom / FULL_BLEED).
-ok(/bottom: pinBottom\(`max\(\$\{NAV\.bottom\}px, env\(safe-area-inset-bottom\)\)`\)/.test(nav),
+ok(/bottom: `max\(\$\{NAV\.bottom\}px, env\(safe-area-inset-bottom\)\)`/.test(nav),
   'C1.5 the bottom is NAV.bottom or the home-indicator safe area, whichever is larger');
 ok(/height: NAV\.height/.test(nav) && /padding: NAV\.pad/.test(nav) && /gap: NAV\.gap/.test(nav), 'C1.6 the bar reads its size from NAV, never restated');
 ok(GLASS.chrome.blur === 30 && GLASS.chrome.sat === 180, 'C1.7 chrome is blur 30 / sat 180 (A3)');

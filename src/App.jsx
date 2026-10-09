@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_EDGE, STATUS_SHADE, pinBottom, FULL_BLEED, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_EDGE, STATUS_SHADE, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
 import { S, LOCALE, DIR } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -834,7 +834,7 @@ export default function App() {
         // the screen MINUS the status bar while the page still starts under it, so
         // the frame stopped ~60pt short and the bare body paper showed below the
         // bar. `inset: 0` on a fixed box is the real screen, whatever dvh says.
-        position: 'fixed', ...FULL_BLEED,   // E-017: reaches the REAL bottom even where iOS reports it short
+        position: 'fixed', inset: 0,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -1109,7 +1109,7 @@ export default function App() {
         <>
           {/* The screen he came from, dimmed — tapping it closes the sheet. */}
           <button aria-label={S.settingsClose} onClick={closeEntry}
-            style={{ position: 'fixed', ...FULL_BLEED, zIndex: 40, background: SHEET.dim, cursor: 'default' }} />
+            style={{ position: 'fixed', inset: 0, zIndex: 40, background: SHEET.dim, cursor: 'default' }} />
           <div
             role="dialog" aria-modal="true" aria-label={S.tabEntry} className="view-in"
             onTouchStart={(e) => { const t = e.touches[0]; swipeY.current = t ? { x: t.clientX, y: t.clientY } : null; }}
@@ -1123,7 +1123,7 @@ export default function App() {
               if (dy >= 80 && dy >= 2 * dx) closeEntry();
             }}
             style={{
-              position: 'fixed', left: 0, right: 0, bottom: pinBottom(), zIndex: 41,
+              position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 41,
               top: `calc(${SHEET.top}px + env(safe-area-inset-top))`,
               ...glass('sheet'), borderRadius: `${RADIUS.sheetTall}px ${RADIUS.sheetTall}px 0 0`,
               display: 'flex', flexDirection: 'column',
@@ -1178,7 +1178,7 @@ export default function App() {
             position: 'fixed', zIndex: 30,
             left: `calc(${NAV.inset}px + env(safe-area-inset-left))`,
             right: `calc(${NAV.inset}px + env(safe-area-inset-right))`,
-            bottom: pinBottom(`max(${NAV.bottom}px, env(safe-area-inset-bottom))`),
+            bottom: `max(${NAV.bottom}px, env(safe-area-inset-bottom))`,
             height: NAV.height, padding: NAV.pad, gap: NAV.gap, boxSizing: 'border-box',
             display: 'flex', alignItems: 'stretch',
             ...glass('chrome'),
