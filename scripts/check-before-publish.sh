@@ -2,8 +2,8 @@
 #
 # Gate for the PUBLIC repo. Run before every commit and in CI.
 #
-# This repo is `masareef/app/` ONLY. `docs/` and `backend/` stay in Drive and are
-# never published — they carry Dad's real figures, his name, and family context.
+# This repo is the app ONLY (the one tree — ARCHITECTURE A1, 2026-10-09).
+# `docs/` and `backend/` stay in Drive and are never published — they carry Dad's real figures, his name, and family context.
 #
 # TWO DIFFERENT THREATS, and the second is the one that is easy to forget:
 #   1. CREDENTIALS — a secret or /exec URL. Rotatable, embarrassing.
@@ -115,50 +115,10 @@ else
   echo "  ℹ️  node_modules absent — honesty tests SKIPPED (run 'npm test' in a local clone)."
 fi
 
-# ——— 7. THE REPO IS DRIVE PLUS NOTHING.
-#
-# Drive is the editing source; this repo is only ever a faithful COPY of it
-# (README, sync-from-drive.sh). `rsync --delete` guarantees one direction —
-# anything in Drive reaches the repo, and anything deleted from Drive leaves it.
-# It says nothing about the other direction: a file created HERE, after a sync,
-# is invisible to every check above and rides into the commit on `git add -A`.
-#
-# That is not hypothetical. A `.claude/launch.json` containing a personal home
-# directory path was created in this repo to run a preview, passed this gate
-# clean, and would have been published — caught only by reading `git status`
-# before pushing. This check is that reading, automated.
-#
-# It flags repo-not-in-Drive ONLY. The reverse needs no check: rsync handles it,
-# and a file missing from the repo cannot be published.
-if [ -n "${MASAREEF_DRIVE_APP:-}" ] && [ -d "${MASAREEF_DRIVE_APP:-}" ]; then
-  # A file RETIRED in Drive is deleted from this working tree by the rsync, but
-  # `git ls-files --cached` still lists it until the deletion is STAGED — and it
-  # is still in the repo in every sense that matters, because a commit made now
-  # would keep it. So it is reported, with the right instruction: the fix is
-  # `git add -A`, not another `rm` of a file that is already gone. (Found when
-  # the Fraunces subset was retired with the Nile palette, 2026-08-03.)
-  extra=""; unstaged=""
-  while IFS= read -r f; do
-    [ -e "$MASAREEF_DRIVE_APP/$f" ] && continue
-    if [ -e "$f" ]; then extra="$extra
-    $f"; else unstaged="$unstaged
-    $f  (already deleted here — the DELETION is unstaged)"; fi
-  done < <(git ls-files --cached --others --exclude-standard 2>/dev/null \
-            | grep -v -E '^(node_modules|dist)/' || true)
-  if [ -n "$unstaged" ]; then
-    note "these files are gone from Drive and from this tree, but a commit would still carry them:$unstaged
-   Stage the removal:  git add -A"
-  fi
-  if [ -n "$extra" ]; then
-    note "these files exist in the repo but NOT in Drive:$extra
-   The repo is a copy of Drive plus nothing. Either create them in Drive (if they
-   belong) or delete them here (if they were scratch). Anything left will publish."
-  fi
-else
-  # Skipped LOUDLY. CI has no Drive mount and legitimately cannot run this — a
-  # gate that quietly does nothing is the failure mode this project names most.
-  echo "  ℹ️  MASAREEF_DRIVE_APP unset — repo-equals-Drive check SKIPPED (expected in CI)."
-fi
+# ——— 7. (retired 2026-10-09, ARCHITECTURE A1) The repo-equals-Drive check.
+# This repo IS the app now; the Drive copy it mirrored was deleted, so there is
+# nothing to compare against. The threat it caught — a file created here riding
+# into a commit — is still caught by reading `git status` before every push.
 
 if [ "$fail" -eq 0 ]; then
   echo "✅ safe to publish — app only, no personal data, no credentials, tests green"

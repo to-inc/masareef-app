@@ -3,63 +3,31 @@
 The dad-facing installable web app. Reads and writes through the one `doPost` in
 `../backend/Code.gs`; his Google Sheet stays the single source of truth.
 
-## ⚠️ Do not run `npm install` in this folder
+## This repo is the app — the one tree (ARCHITECTURE A1, 2026-10-09)
 
-This project lives inside a Google Drive mount. `node_modules` here means tens of
-thousands of tiny files handed to the Drive sync client — slow installs, slow
-builds, and a sync queue that never drains.
-
-**Work from a local clone instead:**
+Edit, test and publish here. There is no Drive copy any more: the old
+`masareef/app/` in Drive and the stray root copies were deleted, and the
+Drive→repo sync script was retired with them. `docs/` and `backend/` still live
+in Drive and are never published.
 
 ```bash
-rsync -a --exclude node_modules --exclude dist "$PWD/" ~/masareef-app/ && cd ~/masareef-app && npm install && npx playwright install chromium && npm run dev
+npm install && npx playwright install chromium && npm run dev
 ```
 
 `npx playwright install chromium` is a one-time step (~95 MB, cached outside the
 tree). It is what the browser-layout guard runs on: `npm test` ends with a real
-headless-chromium check (`scripts/test-layout.mjs`) that measures a geometric
-defect the string-rendering suites are blind to — a ledger row splitting a Latin
-merchant name away from its own metadata. Without the browser that guard fails
-loud with this exact remedy rather than skipping; run `npm run check:layout`
-alone to exercise just it.
-
-Source stays canonical in Drive; copy changes back when you are done (or keep the
-local copy as your working tree and rsync in the other direction). `dist/` and
-`node_modules/` are gitignored.
-
-> **After an rsync, hard-reload the preview** (⌘⇧R, or Empty Cache and Hard
-> Reload). Vite's HMR does not reliably survive having its files replaced in
-> bulk underneath it — you can end up looking at a stale bundle and debugging a
-> problem you already fixed.
+headless-chromium check (`scripts/test-layout.mjs`). Without the browser that
+guard fails loud with this exact remedy rather than skipping.
 
 ## Publishing
 
-**Drive is the editing source. This repo is only ever a faithful copy of it** —
-it lives outside Drive so a sync conflict can never corrupt `.git`. Never edit
-here: the next sync overwrites it.
-
-One-time setup:
-
 ```bash
-export MASAREEF_DRIVE_APP="/path/to/…/masareef/app"   # add to ~/.zshrc
+npm run preflight && git add <files> && git commit && git push
 ```
 
-Every publish, in this order:
-
-```bash
-bash scripts/sync-from-drive.sh && git add -A && git commit && git push
-```
-
-`sync-from-drive.sh` mirrors Drive with `--delete` (preserving `.git`,
-`node_modules`, `dist`) and then runs `check-before-publish.sh`, so a private
-file that appears in Drive cannot pass quietly into a commit.
-
-**Why the source path is an environment variable rather than a constant:** it
-contains a personal email address and a private shared-drive name, and this file
-is published. **And why the script refuses so loudly:** it uses `rsync --delete`,
-so a missing or empty source — an unmounted Drive, a renamed folder — would
-delete this entire repo. It verifies the source really is the app before removing
-anything.
+The pre-commit hook is `scripts/check-before-publish.sh` (privacy, credentials,
+the whole test board). GitHub Pages deploys `main`. Read `git status` before every
+push: a file created here rides into a commit on `git add -A`.
 
 ## Scripts
 
