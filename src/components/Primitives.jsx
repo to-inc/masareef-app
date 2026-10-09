@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize } from '../theme.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT } from '../theme.js';
 import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
@@ -339,8 +339,8 @@ export function NeutralDelta({ now, prev }) {
 }
 
 /**
- * THE «الدفتر» GLYPH — the V2 Ledger mark, transcribed verbatim from the design
- * file (`Masareef Glass System.dc.html`, the الدفتر nav states).
+ * THE «الدفتر» GLYPH — the V2 Ledger mark, transcribed verbatim from the v4
+ * design (`Masareef Glass PWA.dc.html` P3 nav, R16).
  *
  * It replaces «☰», which said «a list» and could have been any list in any app.
  * This says «a ruled book with a spine and entries» — which is what الدفتر IS,
@@ -368,63 +368,88 @@ export function LedgerIcon({ size = ICON.nav }) {
       focusable="false"
       style={{ display: 'block' }}
     >
-      <rect x="4.5" y="3.5" width="15" height="17" rx="2.5" />
-      <path d="M8.5 3.5v17" />
-      <path d="M12 8.5h4.5M12 12h4.5M12 15.5h2.5" />
+      <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" />
+      <path d="M5 17a3 3 0 0 1 3-3h11" />
+      <path d="M9 8h6" />
     </svg>
   );
 }
 
+/** «للمراجعة» — the tray (R16 retires the ✉ placeholder). Verbatim from v4 P3. */
+export function TrayIcon({ size = ICON.nav }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" style={{ display: 'block' }}>
+      <path d="M3 13h5l1.5 2.5h5L16 13h5" />
+      <path d="M5.5 5h13L21 13v6H3v-6z" />
+    </svg>
+  );
+}
+
+/** «جديد» — the plus, at 20 inside the pill. Verbatim from v4 P3. */
+export function PlusIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+      strokeLinecap="round" aria-hidden="true" focusable="false" style={{ display: 'block' }}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+/**
+ * A TAB IN THE v4 BAR (R16). Two shapes:
+ *  · a side tab — icon over word, the active one tinted harbor with an ink 700
+ *    label (the colour and the weight say «you are here»; aria-current says it
+ *    to VoiceOver — the same attribute, so they cannot disagree);
+ *  · `big` — «جديد», a filled harbor pill, ALWAYS filled: it is the action, not
+ *    a place, so it never looks «off».
+ * «icon PLUS word, never icon-only» still holds.
+ */
 export function TabButton({ active, onClick, label, icon, badge, big }) {
+  if (big) {
+    return (
+      <button
+        onClick={onClick}
+        aria-label={label}
+        aria-current={active ? 'page' : undefined}
+        style={{
+          flex: NAV.newFlex, borderRadius: RADIUS.capsule, background: GRADIENT.harbor,
+          boxShadow: NAV.newCast, color: C.onDark, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 6, fontSize: TYPE.body, fontWeight: 700, minHeight: TAP,
+        }}
+      >
+        {icon}
+        {label}
+      </button>
+    );
+  }
   return (
     <button
       onClick={onClick}
       aria-label={label}
       aria-current={active ? 'page' : undefined}
       style={{
-        flex: 1,
-        padding: '10px 0 12px',
-        minHeight: 56,
-        background: 'transparent',
-        color: active ? C.harbor : C.muted,
+        flex: 1, borderRadius: RADIUS.capsule, minHeight: TAP,
+        background: active ? NAV.activeTint : 'transparent',
+        color: active ? C.ink : C.muted,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+        // GEOMETRY EXEMPTION (A3, R16): chrome label text at 14 — the bar's own
+        // floor is «14px+/600+», and both weights here clear it.
+        fontSize: NAV.label, fontWeight: active ? 700 : 600,
         position: 'relative',
       }}
     >
-      <div
-        style={
-          big
-            ? {
-                width: 50, height: 50, margin: '-18px auto 2px', borderRadius: RADIUS.capsule,
-                background: C.harbor, color: C.onDark, fontSize: ICON.primary, lineHeight: '48px',
-                fontWeight: 600, boxShadow: '0 6px 16px rgba(62,124,166,.42)',
-              }
-            : {
-                fontSize: ICON.nav, marginBottom: 2,
-                // An SVG glyph sizes itself; centring is what the slot owes it.
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }
-        }
-      >
-        {icon}
-      </div>
-      {/* TYPE.label (A4b): «icon PLUS word, never icon-only» makes this word
-          REQUIRED reading, so it may not sit under the prose floor — and
-          caption is illegal for it by ruling 2, because a word the icon needs
-          is not a duplicate of the icon. */}
-      <div style={{ fontSize: TYPE.label, fontWeight: active ? 700 : 500 }}>{label}</div>
+      {icon}
+      {label}
       {badge ? (
         <span
           style={{
-            position: 'absolute', top: 6, insetInlineEnd: '24%',
-            background: C.conflictInk, color: C.onDark,
-            // GEOMETRY EXEMPTION (ruling 4, applied to TYPE by A4b — Owner's
-            // veto open): a count pill riding the corner of the 50px circle,
-            // its size bounded by that geometry; at caption(13) the pill grows
-            // into the circle it annotates. The count is ruling 2's
-            // badge-count duplicate — the Inbox itself carries every item.
-            // GEOMETRY EXEMPTION (ruling 2): the dock badge's count text at 11 — Owner's veto open.
-            fontSize: 11, fontWeight: 700,
-            borderRadius: RADIUS.capsule, padding: '1px 7px', ...LATIN,
+            position: 'absolute', top: 4, right: 22, minWidth: 20, height: 20, padding: '0 5px',
+            boxSizing: 'border-box', borderRadius: RADIUS.capsule, background: C.conflictInk, color: C.onDark,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            // GEOMETRY EXEMPTION (ruling 2, R16): the badge's count text at 12 — a
+            // 20px disc on the tab's corner; the review screen carries every item.
+            fontSize: 12, fontWeight: 700, ...LATIN,
           }}
         >
           {badge}

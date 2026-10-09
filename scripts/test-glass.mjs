@@ -99,7 +99,7 @@ for (const p of files) {
 ok(literal.test("background: 'linear-gradient(155deg, rgba(255,255,255,.7), x)'") && literal.test("backdropFilter: 'blur(4px)'"),
   'control: the literal detector sees a white-alpha gradient and a hand-written blur');
 // RESIDUE, not a veto, until each view is converted in R20 step 3 — the count may only fall.
-const GLASS_LITERAL_BUDGET = 5; // 2026-10-09: App nav blur + 4 white rims on harbor buttons
+const GLASS_LITERAL_BUDGET = 4; // 2026-10-09: 4 white rims on harbor buttons (the nav blur went with R16)
 ok(glassLiterals.length <= GLASS_LITERAL_BUDGET,
   `glass literals in views grew past ${GLASS_LITERAL_BUDGET} — use glass(tier): ${glassLiterals.join(', ')}`);
 

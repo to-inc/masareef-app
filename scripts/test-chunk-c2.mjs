@@ -22,8 +22,14 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { C, TAP, RADIUS } from '../src/theme.js';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createServer } from 'vite';
+import { C, TAP, NAV } from '../src/theme.js';
 
+// ═══ RE-CUT 2026-10-09 to OWNER-RULINGS R16: the 48pt tinted circle is retired.
+// «You are here» is now the WHOLE side tab tinted harbor (.13) with an ink 700
+// label; «جديد» is a filled harbor pill, always. aria-current still carries it.
 const MARKER = 'CHUNK-C2-GREEN';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(root, p), 'utf8');
@@ -33,70 +39,32 @@ const failures = [];
 const ok = (c, label) => { if (c) { pass++; } else { failures.push(label); } };
 
 const css = read('src/styles.css');
-const prims = read('src/components/Primitives.jsx');
+ok(!/nav button\[aria-current/.test(css) && !/--harbor-tint/.test(css),
+  'C2.1 the retired circle rule and its --harbor-tint are gone from styles.css — no CSS can repaint the v4 tab behind its back');
+ok(NAV.activeTint.replace(/\s/g, '') === 'rgba(62,124,166,0.13)', 'C2.2 the active tint is C.harbor at .13 (R16)');
 
-// ——— the CSS↔theme bridge: restated once, held equal here
-const cssVar = (name) => {
-  const m = new RegExp(`--${name}:\\s*([^;]+);`).exec(css);
-  return m ? m[1].trim() : null;
-};
-ok(cssVar('tap') === `${TAP}px`,
-  `C2.1 :root --tap equals theme TAP (${TAP}px) — got ${JSON.stringify(cssVar('tap'))}`);
-ok(TAP === 48, 'C2.1b …and TAP is still the 48pt senior floor the chunk names');
-ok(cssVar('radius-capsule') === `${RADIUS.capsule}px`,
-  `C2.2 :root --radius-capsule equals RADIUS.capsule (${RADIUS.capsule}px) — got ${JSON.stringify(cssVar('radius-capsule'))}`);
-{
-  const hexRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(',');
-  const tint = cssVar('harbor-tint') || '';
-  ok(tint.replace(/\s/g, '').includes(`rgba(${hexRgb(C.harbor)},`),
-    `C2.3 --harbor-tint is C.harbor's own rgb (${hexRgb(C.harbor)}) at an alpha — a tint, never a fifth hue`);
-  ok((cssVar('ink') || '').toLowerCase() === C.ink.toLowerCase(),
-    `C2.4 :root --ink equals C.ink (${C.ink}) — got ${JSON.stringify(cssVar('ink'))}`);
-}
-
-// ——— the circle itself: 48pt, capsule-clamped, tinted, centred
-const sel = 'nav button[aria-current="page"] > div:first-child';
-const at = css.indexOf(sel);
-const block = at === -1 ? '' : css.slice(at, css.indexOf('}', at) + 1);
-ok(at !== -1, `C2.5 the circle rule exists: ${sel}`);
-ok(/width:\s*var\(--tap\)/.test(block) && /height:\s*var\(--tap\)/.test(block),
-  'C2.6 the circle is TAP × TAP — the «you are here» mark IS the touch floor, not a decoration inside it');
-ok(/border-radius:\s*var\(--radius-capsule\)/.test(block),
-  'C2.7 its radius rides the capsule token (via the pinned var), clamping the 48pt box to a circle on purpose');
-{
-  const lines = css.slice(0, at).split('\n');
-  const above = lines.slice(-5).join('\n');
-  ok(/geometry[\s-]*exemption/i.test(above + block),
-    'C2.8 the clamp is DECLARED — the named geometry-exemption comment stands where A3\'s audit will read it');
-}
-ok(/background:\s*var\(--harbor-tint\)/.test(block),
-  'C2.9 the fill is the harbor tint — harbor plays selection (anti-drift casting), softly');
-ok(/display:\s*flex/.test(block) && /align-items:\s*center/.test(block) && /justify-content:\s*center/.test(block),
-  'C2.10 the glyph is centred IN the circle — a 21px icon in a 48pt circle without centring reads as a misprint');
-
-// ——— a state, not a shadow — and quiet neighbours
-const c2Region = css.slice(css.indexOf('/* C2'), css.indexOf('}', at) + 400);
-ok(c2Region.length > 0 && !/shadow/i.test(c2Region),
-  'C2.11 no shadow anywhere in the C2 rules — the circle is a state (A2: luminance and fill carry meaning, nothing floats)');
-ok((css.match(/var\(--harbor-tint\)/g) || []).length === 1,
-  'C2.12 exactly ONE consumer of the tint — inactive items stay quiet; a second tinted circle would unsay «you are here»');
-
-// ——— the label ink override: the C1 worst case is what forces it
-{
-  const m = /nav button\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--ink\)\s*!important/.exec(css);
-  ok(!!m,
-    'C2.13 the active label reads in INK over the translucent bar — harbor at 13.5px bold measures under 4.5:1 on the C1 '
-    + 'worst-case composite (test-contrast), so the state is carried by circle + weight, never by an ink that fails its floor');
-}
-
-// ——— the hook this whole chunk hangs on, and the neighbour it must not break
-ok(/aria-current=\{active \? 'page' : undefined\}/.test(prims),
-  'C2.14 TabButton still emits aria-current="page" — the one attribute the circle, the ink and VoiceOver all read');
-ok(/background: C\.harbor, color: C\.onDark/.test(prims),
-  'C2.15 the big ﹢ keeps its OWN inline fill — the ink override cannot pierce it, so the primary action stays white-on-harbor');
+const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
+try {
+  const { TabButton } = await vite.ssrLoadModule('/src/components/Primitives.jsx');
+  const r = (p) => renderToStaticMarkup(createElement(TabButton, { onClick: () => {}, label: 'الدفتر', icon: 'x', ...p }));
+  const on = r({ active: true }), off = r({ active: false });
+  ok(on.includes('aria-current="page"') && !off.includes('aria-current'), 'C2.3 aria-current marks the active tab, and only it');
+  ok(on.includes('background:rgba(62,124,166,0.13)') && off.includes('background:transparent'), 'C2.4 the active side tab is tinted harbor; at rest it is clear');
+  ok(on.includes(`color:${C.ink}`) && on.includes('font-weight:700'), 'C2.5 the active label is ink 700 (R16)');
+  ok(off.includes(`color:${C.muted}`) && off.includes('font-weight:600'), 'C2.6 a resting label is muted 600 — chrome\'s «600+» floor');
+  ok(new RegExp(`min-height:${TAP}px`).test(on), 'C2.7 every tab is at least the 48pt touch floor');
+  const big = r({ big: true, active: false, label: 'جديد' });
+  const bigOn = r({ big: true, active: true, label: 'جديد' });
+  ok(big.includes('linear-gradient(160deg, #3E7CA6, #34688C)') && bigOn.includes('linear-gradient(160deg, #3E7CA6, #34688C)'),
+    'C2.8 «جديد» is the canonical harbor gradient — filled at rest AND active (R16 «always», R13 start stop)');
+  ok(big.includes(`color:${C.onDark}`) && big.includes('font-weight:700'), 'C2.9 «جديد» is white 700 on the pill');
+  ok(big.includes(`flex:${NAV.newFlex}`), 'C2.10 «جديد» is the wider pill (flex 1.15)');
+  const badged = r({ active: false, badge: 3 });
+  ok(/background:#A05446[^"]*font-size:12px/.test(badged) && badged.includes('>3<'), 'C2.11 the review badge is a terracotta disc with its count');
+} finally { await vite.close(); }
 
 if (failures.length) {
   console.log(`❌ CHUNK C2 — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`);
   process.exit(1);
 }
-console.log(`✅ ${MARKER} · ${pass} checks · «you are here» is a 48pt tinted state, quiet elsewhere`);
+console.log(`✅ ${MARKER} · ${pass} checks · «you are here» is a tinted tab with an ink 700 label; «جديد» is always filled`);

@@ -108,7 +108,7 @@ eq(GLYPH?.illustration, 46, 'GLYPH.illustration');
 eq(GLYPH?.spot, 34, 'GLYPH.spot');
 // ⚠️ 21→20 with the glass redesign (2026-08-28): the nav glyph is 20 at rest
 // and 26 pressed (NAV.iconActive), because icon scale became a state signal.
-eq(ICON?.nav, 20, 'ICON.nav — the glyph at REST (NAV.iconActive is the pressed size)');
+eq(ICON?.nav, 22, 'ICON.nav — the v4 bar glyph, 22 at rest and active (R16)');
 eq(ICON?.primary, 32, 'ICON.primary');
 eq(ICON?.control, 17, 'ICON.control');
 

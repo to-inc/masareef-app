@@ -292,15 +292,11 @@ export const MOTION = {
  */
 export const GLYPH = { illustration: 46, spot: 34 };
 /**
- * ⚠️ `nav` 21→20 with the glass redesign (2026-08-28). The nav glyph is no
- * longer ONE size: it is 20 at rest and 26 when the tab is pressed, because
- * icon scale is now a STATE SIGNAL — a senior user reads the size change
- * before the colour change. `ICON.nav` IS the rest size; the pressed size is
- * `NAV.iconActive`. Two tokens for one dimension would be the drift this file
- * spends its length preventing, so there is exactly one of each.
- * A1 pins this value; the pin moved in the same edit.
+ * `nav` is 22 by R16 (v4, 2026-10-09) — one size at rest and active; the
+ * active tab is told by its harbor tint and ink 700 label, not by icon scale
+ * (the pressed-well nav and its 26px state are retired). A1 pins this value.
  */
-export const ICON = { nav: 20, primary: 32, control: 17 };
+export const ICON = { nav: 22, primary: 32, control: 17 }; // nav 20→22: R16
 
 /**
  * THE SENIOR FLOORS — one family, three members (CLAUDE.md: large type, big
@@ -587,47 +583,24 @@ export const STATE_BOX = {
 };
 
 /**
- * 6 · THE FLOATING BAR — and its ALIGNMENT LAW, which is the part most easily
- * broken by a later padding tweak.
- *
- * The active tab is a pressed well; the inactive tab is not. Their paddings
- * and circle sizes differ, and they are chosen so that BOTH states put the
- * icon centre at y=32 from the bar top and the label top at y=58:
- *     active   6 (margin) + 4 (pad) + 44/2 = 32
- *     inactive 8 (pad)             + 48/2 = 32
- * Change one number here and you must re-solve the pair. The suite pins it.
- *
- * ICON SCALE IS A STATE SIGNAL, not decoration: 20px at rest, 26px pressed,
- * animated over MOTION.tap-scale time. A senior user reads the size change
- * before the colour change.
+ * 6 · THE FLOATING BAR — v4 (OWNER-RULINGS R16, 2026-10-09). Replaces the
+ * pressed-well nav: a glass `chrome` capsule; «جديد» is a filled harbor pill,
+ * ALWAYS; the active side tab takes a harbor tint and an ink 700 label.
+ * Geometry is the P3 artboard's: 70 tall, 6 inner padding and gap, 20 from the
+ * screen sides, 28 from the bottom (never inside the home-indicator safe area).
  */
 export const NAV = {
-  /** The pressed size. The REST size is `ICON.nav` — one token per dimension. */
-  iconActive: 26,
-  circleActive: 44,
-  circleInactive: 48,
-  activeMargin: 6,
-  activePadTop: 4,
-  activePadBottom: 6,
-  inactivePadTop: 8,
-  inactivePadBottom: 12,
-  /** The invariant both states must satisfy — asserted, never assumed. */
-  iconCentreY: 32,
-  labelTopY: 58,
-  bar: (f = 1) => ({
-    background: `linear-gradient(160deg, ${W(0.66)}, ${W(0.36)})`,
-    backdropFilter: blur(30, 160, f),
-    WebkitBackdropFilter: blur(30, 160, f),
-    border: `1px solid ${W(0.6)}`,
-    boxShadow: `0 12px 34px ${alpha(C.ink, 0.14)}, inset 0 1px 0 ${W(0.85)}`,
-    borderRadius: RADIUS.capsule,
-    alignItems: 'stretch',
-  }),
-  /** The active tab's harbor-tinted disc — the rgb is the token's. */
-  activeCircleBg: alpha(C.harbor, 0.14),
-  /** «جديد» at rest floats above the bar; ACTIVE it loses the float and sinks. */
-  plusFloatMarginTop: -14,
-  plusPressedShadow: 'inset 0 2px 5px rgba(0,0,0,.28)',
+  height: 70,
+  pad: 6,
+  gap: 6,
+  inset: 20,
+  bottom: 28,
+  newFlex: 1.15,
+  /** Side-tab label: chrome carries 14px+/600+ labels only (A3). */
+  label: 14,
+  activeTint: alpha(C.harbor, 0.13),
+  /** The «جديد» pill's own cast — the harbor glow under a filled control. */
+  newCast: `0 6px 16px ${alpha(C.harbor, 0.35)}`,
 };
 
 /**

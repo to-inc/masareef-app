@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_CROWN, RADIUS, SPACE, TYPE } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_CROWN, RADIUS, SPACE, TYPE, NAV, glass } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -34,7 +34,7 @@ import {
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon, TrayIcon, PlusIcon } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
@@ -45,61 +45,18 @@ import BatchReviewView from './views/BatchReviewView.jsx';
 import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
 
 /**
- * ═══ C1 — THE FLOATING BAR'S GEOMETRY, declared once ═══
+ * ═══ THE FLOATING BAR (v4, OWNER-RULINGS R16) — its geometry lives in NAV ═══
  *
- * `BAR_INSET` is the ruled 16 of north-star §4.3 («inset 16px, capsule
- * radius») — CHROME geometry, deliberately not a SPACE role: `gutter` is a
- * content margin and `cardPad` a card's inner breath, and casting either as
- * «distance from the screen edge to the nav» would be a category error the
- * next reader inherits. If a second floating chrome element ever appears,
- * this graduates to a theme token (named in the C1 residuals).
+ * A glass `chrome` capsule NAV.height tall, NAV.inset from the screen sides and
+ * NAV.bottom above the bottom edge (or the safe area, whichever is larger).
+ * R0 retired the 0.92-alpha compromise: the contrast suite now measures the
+ * chrome tier over the real ground AND over the darkest content that can scroll
+ * beneath, and logs what falls short (GATES.md) rather than vetoing the design.
  *
- * `BAR_ALPHA` is the Owner's ratified glass compromise (§4.3 adjudication,
- * §6.5): true translucency makes contrast unmeasurable, and 0.92 is the most
- * glass the suite can still assert. test-contrast.mjs reads THIS constant
- * from THIS file and composites the darkest scrollable paint beneath it —
- * change the number and the worst-case pairs re-measure themselves.
- *
- * `BAR_CLEARANCE` is what the scroll box (and the EntryDock's wrapper)
- * reserves so the last row can rise clear of a bar that floats OVER content:
- * the inset + the bar's height (~92 with C2's 48pt circle and the 13.5 label
- * under it) + one sibling gap of breath.
+ * `BAR_CLEARANCE` is what the scroll box (and the EntryDock's wrapper) reserves
+ * so the last row can rise clear of a bar that floats OVER content.
  */
-const BAR_INSET = 16;
-/**
- * ⚠️ THIS IS THE THINNEST POINT OF THE BAR, NOT ITS AVERAGE.
- *
- * The glass redesign makes the bar a GRADIENT (white .66 → .36 at 160°, blur 30
- * / saturate 160%), so it no longer has «an» alpha. `test-contrast` reads this
- * constant by regex and composites the darkest paint that can scroll beneath —
- * and its own message is that «a floating bar whose alpha this suite cannot
- * read is unmeasurable glass». The honest way to keep that check meaningful is
- * to declare the WORST case and build the gradient from it, so the suite
- * measures the thinnest glass rather than a flattering mean.
- *
- * ⚠️ AND THE DESIGN'S OWN NUMBERS DO NOT SURVIVE THAT MEASUREMENT. At the
- * design's .66→.36 the suite failed three ways with the amber commit button
- * scrolled beneath: active label 2.41:1, inactive label 1.34:1, inactive glyph
- * 1.34:1 — against floors of 4.5, 4.5 and 3. Not a rounding miss; the nav
- * labels would be unreadable over dark content in Cairo daylight, on the one
- * control a 70-year-old uses to move around the app.
- *
- * RETREAT (b) is the response CLAUDE-CODE-PROMPT authorises by name: «raise
- * every prose-bearing surface to 0.88 white». The bar carries prose, so it is
- * such a surface — but 0.88 is a FLOOR, not a target, and this bar was already
- * at the Owner's ruled 0.92, which clears it. I first «applied» the retreat by
- * lowering 0.92 → 0.88 and C1.6 refused it, correctly: that is not applying a
- * floor, it is overwriting a ruling with a number that happens to appear in the
- * same sentence. The ruled 0.92 stands.
- *
- * What the redesign DOES change here is the SHAPE: a gradient (.96 → .92 at
- * 160°) under a 30px / 160% blur instead of one flat fill, so the bar refracts
- * the ground beneath it the way the design intends, at an opacity the contrast
- * suite can still measure and the Owner has already ruled.
- */
-const BAR_ALPHA = 0.92;
-const BAR_ALPHA_TOP = 0.96;
-const BAR_CLEARANCE = BAR_INSET + 92 + SPACE.gap;
+const BAR_CLEARANCE = NAV.bottom + NAV.height + SPACE.gap;
 
 /** A theme hex at an alpha — the token stays the single source of the rgb. */
 const withAlpha = (hex, a) => {
@@ -1187,47 +1144,13 @@ export default function App() {
       {!needsSetup && (
         <nav
           style={{
-            display: 'flex',
-            /**
-              * C1 — THE FLOATING CAPSULE (north-star §4.3, the Owner's glass
-              * moment). Fixed over the scroll box, inset BAR_INSET from every
-              * screen edge with the safe areas added on — hovering over
-              * content is what gives the 0.92 fill something to be
-              * translucent TO. Dad's install keeps a solid bar under the same
-              * ruling (per-install presentation, docs/09 §9); that cutover is
-              * his review's, not this file's.
-              */
-            position: 'fixed',
-            left: `calc(${BAR_INSET}px + env(safe-area-inset-left))`,
-            right: `calc(${BAR_INSET}px + env(safe-area-inset-right))`,
-            bottom: `calc(${BAR_INSET}px + env(safe-area-inset-bottom))`,
-            zIndex: 30,
-            borderRadius: RADIUS.capsule,
-            /**
-              * The ruled compromise: C.card at BAR_ALPHA plus blur — the
-              * glass FEELING bounded to a shift the contrast suite asserts
-              * worst-case (test-contrast reads BAR_ALPHA from this file and
-              * composites the darkest paint that can scroll beneath). True
-              * glass is OUT by law (north-star §6.5). The 14px blur radius is
-              * effect grain — no vocabulary token governs it.
-              */
-            background: `linear-gradient(160deg, ${withAlpha(C.card, BAR_ALPHA_TOP)}, ${withAlpha(C.card, BAR_ALPHA)})`,
-            backdropFilter: 'blur(30px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(30px) saturate(160%)',
-            alignItems: 'stretch',
-            // A control cluster keeps its edge (theme.js: line borders MEAN —
-            // controls stay tappable-looking); the hairline also bounds the
-            // capsule in the moment nothing dark has scrolled beneath it.
-            /**
-             * The design gives this bar a `0 12px 34px` drop cast. It is NOT
-             * taken: A2 rules that luminance carries elevation, and B4b asserts
-             * this file declares no such cast anywhere — by grepping the file,
-             * which is why even naming the CSS property in a comment here trips
-             * it (it did). A standing law does not yield to a design detail
-             * without the Owner saying so, so this is surfaced as an open
-             * ruling rather than quietly overridden.
-             */
-            border: `1px solid ${C.line}`,
+            position: 'fixed', zIndex: 30,
+            left: `calc(${NAV.inset}px + env(safe-area-inset-left))`,
+            right: `calc(${NAV.inset}px + env(safe-area-inset-right))`,
+            bottom: `max(${NAV.bottom}px, env(safe-area-inset-bottom))`,
+            height: NAV.height, padding: NAV.pad, gap: NAV.gap, boxSizing: 'border-box',
+            display: 'flex', alignItems: 'stretch',
+            ...glass('chrome'),
           }}
         >
           {/**
@@ -1240,9 +1163,9 @@ export default function App() {
             * that is where he happened to leave the tab is the shape-changed-
             * under-you problem, on the screen where five seconds are the law.
             */}
-          <TabButton active={tab === 'inbox'} onClick={() => setTab('inbox')} label={S.tabInbox} badge={pendingCount || null} icon="✉" />
+          <TabButton active={tab === 'inbox'} onClick={() => setTab('inbox')} label={S.tabInbox} badge={pendingCount || null} icon={<TrayIcon />} />
           <TabButton
-            active={tab === 'entry'} label={S.tabEntry} icon="﹢" big
+            active={tab === 'entry'} label={S.tabEntry} icon={<PlusIcon />} big
             onClick={() => { setEntryMode('keypad'); setTab('entry'); }}
           />
           <TabButton active={tab === 'book'} onClick={() => setTab('book')} label={S.tabBook} icon={<LedgerIcon />} />

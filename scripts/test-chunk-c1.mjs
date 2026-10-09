@@ -24,7 +24,7 @@ import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { RADIUS } from '../src/theme.js';
+import { RADIUS, NAV, GLASS } from '../src/theme.js';
 
 const MARKER = 'CHUNK-C1-GREEN';
 const here = dirname(fileURLToPath(import.meta.url));
@@ -37,65 +37,35 @@ const ok = (c, label) => { if (c) { pass++; } else { failures.push(label); } };
 
 const app = read('src/App.jsx');
 
-// ——— the bar itself: located, floating, capsule, safe-area aware
+// ═══ RE-CUT 2026-10-09 to OWNER-RULINGS R16 (v4): the 0.92-alpha capsule is
+// retired; the bar is the glass `chrome` tier at the P3 artboard's geometry.
 const navAt = app.indexOf('<nav');
 const nav = navAt === -1 ? '' : app.slice(navAt, app.indexOf('</nav>'));
 ok(navAt !== -1 && nav.length > 0, 'C1.0 the nav is findable in App.jsx — a slice that missed it would assert nothing');
-
-ok(/position: 'fixed'/.test(nav),
-  'C1.1 the bar FLOATS — position fixed, so content actually scrolls beneath it (the blur has something to blur)');
-
-const inset = /const BAR_INSET = (\d+)/.exec(app);
-ok(inset && Number(inset[1]) === 16,
-  `C1.2 BAR_INSET is declared once and equals the ruled 16 (got ${inset ? inset[1] : 'nothing'})`);
-ok(/left: `calc\(\$\{BAR_INSET\}px \+ env\(safe-area-inset-left\)\)`/.test(nav)
-  && /right: `calc\(\$\{BAR_INSET\}px \+ env\(safe-area-inset-right\)\)`/.test(nav),
-  'C1.3 both side insets ride BAR_INSET + their safe-area env — inset 16 from the EDGES, not from wherever the notch left off');
-ok(/bottom: `calc\(\$\{BAR_INSET\}px \+ env\(safe-area-inset-bottom\)\)`/.test(nav),
-  'C1.4 the bottom inset rides BAR_INSET + the home-indicator safe area');
-
-ok(nav.includes('borderRadius: RADIUS.capsule'),
-  'C1.5 the bar is a CAPSULE — RADIUS.capsule, the token, never a restated 999');
-ok(RADIUS.capsule === 999, 'C1.5b …and the token still means capsule (999)');
-
-// ——— the ruled fill: 0.92 alpha derived from the card token, plus the blur
-const alpha = /const BAR_ALPHA = (0\.\d+)/.exec(app);
-ok(alpha && Number(alpha[1]) === 0.92,
-  `C1.6 BAR_ALPHA is declared and equals the Owner's ruled 0.92 (got ${alpha ? alpha[1] : 'nothing'})`);
-ok(nav.includes('withAlpha(C.card, BAR_ALPHA)'),
-  'C1.7 the fill is C.card AT BAR_ALPHA — derived from the token, so a palette change cannot strand the bar in an old white');
-ok(/backdropFilter: 'blur\(/.test(nav) && /WebkitBackdropFilter: 'blur\(/.test(nav),
-  'C1.8 backdrop blur, BOTH spellings — this app has exactly one device to be wrong on and it needs the -webkit- prefix');
-
-// ——— the old solid-bar chrome is gone, not merely painted over
-ok(!nav.includes('borderTop'),
-  'C1.9 the full-width borderTop died with the full-width bar — a capsule with a leftover top rule is two designs at once');
-
-// ——— content can still get OUT from under it
-// /<main\s/ — the ELEMENT: doc comments higher up legitimately say «<main>» in prose
+ok(/position: 'fixed'/.test(nav), 'C1.1 the bar floats — fixed over the scroll box');
+ok(nav.includes("...glass('chrome')"), "C1.2 the bar IS the chrome glass tier — glass('chrome'), not a hand-mixed fill (R16, A3)");
+ok(NAV.height === 70 && NAV.pad === 6 && NAV.gap === 6 && NAV.inset === 20 && NAV.bottom === 28,
+  'C1.3 NAV carries the P3 geometry: 70 tall, 6 pad, 6 gap, 20 from the sides, 28 from the bottom');
+ok(/left: `calc\(\$\{NAV\.inset\}px \+ env\(safe-area-inset-left\)\)`/.test(nav)
+  && /right: `calc\(\$\{NAV\.inset\}px \+ env\(safe-area-inset-right\)\)`/.test(nav),
+  'C1.4 both side insets ride NAV.inset + their safe-area env');
+ok(/bottom: `max\(\$\{NAV\.bottom\}px, env\(safe-area-inset-bottom\)\)`/.test(nav),
+  'C1.5 the bottom is NAV.bottom or the home-indicator safe area, whichever is larger');
+ok(/height: NAV\.height/.test(nav) && /padding: NAV\.pad/.test(nav) && /gap: NAV\.gap/.test(nav), 'C1.6 the bar reads its size from NAV, never restated');
+ok(GLASS.chrome.blur === 30 && GLASS.chrome.sat === 180, 'C1.7 chrome is blur 30 / sat 180 (A3)');
+ok(!/BAR_ALPHA/.test(app), 'C1.8 the retired 0.92 compromise is gone, not left as a dead constant');
 ok(/BAR_CLEARANCE/.test(app.slice((/<main\s/.exec(app) || { index: -1 }).index, app.indexOf('</main>'))),
-  'C1.10 the scroll box reserves BAR_CLEARANCE — the last row must be able to rise clear of a bar that floats over content');
-ok((app.match(/BAR_CLEARANCE/g) || []).length >= 3,
-  'C1.11 …and so does the EntryDock side (declaration + main + dock): the submit may never sit buried under the bar');
-
-// ——— the contrast half: the suite reads the REAL alpha and composites worst-case
-const contrast = read('scripts/test-contrast.mjs');
-ok(/BAR_ALPHA/.test(contrast) && /App\.jsx/.test(contrast),
-  'C1.12 test-contrast extracts BAR_ALPHA from App.jsx — one number, one home; a copied 0.92 is the drift that unmeasures the glass');
-ok(/darkest/.test(contrast) && /C1 worst case/.test(contrast),
-  'C1.13 test-contrast composites the DARKEST scrollable paint under the fill and labels the pairs «C1 worst case»');
-
-// ——— and it RUNS, with the worst-case rows in its own report
+  'C1.9 the scroll box reserves BAR_CLEARANCE — the last row must rise clear of a bar that floats over content');
+ok(/const BAR_CLEARANCE = NAV\.bottom \+ NAV\.height \+ SPACE\.gap;/.test(app), 'C1.10 BAR_CLEARANCE is derived from NAV, so it moves with the bar');
 {
   const run = spawnSync(process.execPath, [join(here, 'test-contrast.mjs')], { encoding: 'utf8' });
-  ok(run.status === 0,
-    `C1.14 test-contrast passes with the worst-case pairs in force (exit ${run.status})`);
-  ok(((run.stdout || '').match(/C1 worst case/g) || []).length >= 2,
-    'C1.15 …and its own printed table carries ≥2 «C1 worst case» rows — asserted and visible, never eyeballed');
+  ok(run.status === 0, `C1.11 test-contrast passes (exit ${run.status})`);
+  ok(((run.stdout || '').match(/v4 bar — /g) || []).length >= 6,
+    'C1.12 …and it measures the v4 bar over what scrolls beneath it (≥6 printed rows) — the residues are visible, never assumed');
 }
 
 if (failures.length) {
   console.log(`❌ CHUNK C1 — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`);
   process.exit(1);
 }
-console.log(`✅ ${MARKER} · ${pass} checks · the bar floats at 0.92 over a measured worst case`);
+console.log(`✅ ${MARKER} · ${pass} checks · the v4 chrome bar floats at the P3 geometry, measured over what scrolls beneath`);

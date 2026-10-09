@@ -112,12 +112,14 @@ ok(/fontSize: TYPE\.caption\b/.test(componentSlice(src, 'NeutralDelta')),
   'A4b.9 NeutralDelta speaks TYPE.caption — a delta is text restating two shown figures, not exempt furniture');
 {
   const tab = componentSlice(src, 'TabButton');
-  ok(/fontSize: TYPE\.label\b/.test(tab),
-    'A4b.10 the tab WORD speaks TYPE.label — «icon PLUS word» makes it required reading, so it takes the prose floor');
+  // R16 RE-CUT (2026-10-09): the v4 bar's side-tab word is NAV.label (14) under A3's
+  // «chrome carries 14px+/600+» — declared at the site; «جديد» is TYPE.body.
+  ok(/fontSize: NAV\.label\b/.test(tab) && /GEOMETRY EXEMPTION \(A3, R16\)/.test(tab) && /fontSize: TYPE\.body\b/.test(tab),
+    'A4b.10 the tab WORD speaks NAV.label under a declared A3 exemption; the «جديد» pill speaks TYPE.body');
   const lines = tab.split('\n');
-  const badgeAt = lines.findIndex((l) => /fontSize: 11\b/.test(l));
+  const badgeAt = lines.findIndex((l) => /fontSize: 12\b/.test(l));
   ok(badgeAt !== -1 && /GEOMETRY EXEMPTION/i.test(lines.slice(Math.max(0, badgeAt - 8), badgeAt + 1).join('\n')),
-    'A4b.11 the badge stays 11 UNDER the named geometry exemption — a count pill bounded by the 50px circle it rides, exempted in words at the site');
+    'A4b.11 the badge is 12 (v4 P3) UNDER the named geometry exemption — a 20px count disc on the tab corner, exempted in words at the site');
 }
 
 // ═══ 3. RENDERS — the retokenized sizes actually reach the markup ═══
@@ -165,10 +167,10 @@ try {
     `A4b.19 NeutralDelta renders at ${TYPE.caption}px, 11.5 gone`);
 
   const tab = html('TabButton', P.TabButton, { active: false, onClick: () => {}, label: 'الدفتر', icon: '☰', badge: 3 });
-  ok(tab.includes(px(TYPE.label)) && !tab.includes(px(13.5)),
-    `A4b.20 the tab word renders at ${TYPE.label}px, 13.5 gone`);
-  ok(tab.includes(px(11)),
-    'A4b.21 …and the exempted badge still renders at 11px — the retokenization did not sweep the furniture it ruled out');
+  ok(tab.includes(px(14)) && !tab.includes(px(13.5)),
+    'A4b.20 the side-tab word renders at 14px (NAV.label, R16), 13.5 gone');
+  ok(tab.includes(px(12)),
+    'A4b.21 …and the exempted badge renders at 12px (v4 P3)');
 } finally {
   await vite.close();
 }
@@ -186,9 +188,10 @@ ok(/'offline banner', C\.ink, C\.sand, TYPE\.label\b/.test(contrast),
 ok(/'Visa chip', METHOD\.Visa\.fg, METHOD\.Visa\.bg, TYPE\.caption\b/.test(contrast)
   && /'Cash chip', METHOD\.Cash\.fg, METHOD\.Cash\.bg, TYPE\.caption\b/.test(contrast),
   'A4b.24 both method-chip rows declare TYPE.caption by reference');
-ok(/active tab label \(ink — the C2 override\)', C\.ink, C\.card, TYPE\.label\b/.test(contrast)
-  && (contrast.match(/C1 worst case — (?:active|inactive) nav label[^\n]*TYPE\.label/g) || []).length === 2,
-  'A4b.25 the tab-word rows — the C2 override and BOTH C1 worst-case labels — declare TYPE.label by reference');
+// R16 RE-CUT: the tab-word rows declare NAV.label (14) by reference — the size the bar renders.
+ok(/active tab label \(ink 700, R16\)', C\.ink, C\.card, NAV\.label\b/.test(contrast)
+  && (contrast.match(/v4 bar — (?:active|inactive) label[^\n]*NAV\.label/g) || []).length === 2,
+  'A4b.25 the tab-word rows — the active label and BOTH v4-bar worst cases — declare NAV.label by reference');
 
 // ═══ 5. THE BUMP MUST STILL CLEAR EVERY FLOOR — or the bump loses ═══
 {

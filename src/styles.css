@@ -23,7 +23,6 @@
   --ink: #2C4356;
   /* C.harbor's own rgb (62,124,166) at 0.16 — the C2 tint. The alpha is the
      tint choice; the rgb is the token's, pinned equal by test-chunk-c2. */
-  --harbor-tint: rgba(62,124,166,0.16);
 }
 
 /* A1 (glass audit Tier 1): `*` does not match pseudo-elements, so ::before and
@@ -120,44 +119,9 @@ textarea {
   animation-timing-function: var(--ease-out);
 }
 
-/* ═══ C2 — «YOU ARE HERE» (north-star §4.3) ═══
-   The active destination sits in a 48pt harbor-tinted circle. The tabs are
-   TabButton (Primitives — another leaf's file), so the circle is a stylesheet
-   consequence of the one honest hook TabButton already emits:
-   aria-current="page". The visual state and the announced state are one
-   attribute — they cannot disagree. A STATE, not a shadow (A2): the tint is a
-   fill the eye reads as location; nothing floats. */
-nav button {
-  /* items centre as columns, so a 48pt circle and a bare 21px icon sit on the
-     same optical line instead of both hanging from the bar's top edge */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-/* C2 clamp — geometry exemption (ruling 4): a 48pt box whose radius is bounded
-   by its own dimensions, deliberately a circle («you are here» IS the touch
-   floor); --radius-capsule restates RADIUS.capsule, pinned by test-chunk-c2. */
-nav button[aria-current="page"] > div:first-child {
-  border-radius: var(--radius-capsule);
-  width: var(--tap);
-  height: var(--tap);
-  background: var(--harbor-tint);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-nav button[aria-current="page"] {
-  /* INK, not harbor — and !important because TabButton paints its state colour
-     inline. Over the C1 bar (0.92 fill composited over the darkest scrollable
-     paint) harbor at 13.5px bold measures ≈3.9:1, under the 4.5 floor, while
-     ink clears ≈8.9:1 — measured in test-contrast («C1 worst case»). Location
-     is carried by the circle, the weight and aria-current; the ink only reads.
-     The big ﹢ is untouched: its icon sets its own inline white-on-harbor. */
-  color: var(--ink) !important;
-}
+/* ═══ C2 — retired by R16 (v4, 2026-10-09). The 48pt «you are here» circle and
+   the !important ink override are gone: TabButton paints the v4 active state
+   (harbor tint + ink 700 label) itself, keyed on the same aria-current. */
 
 @media (prefers-reduced-motion: reduce) {
   .card-in,

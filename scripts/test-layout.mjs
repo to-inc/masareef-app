@@ -155,16 +155,20 @@ try {
       save.scrollIntoView({ block: 'nearest' });
       const r = save.getBoundingClientRect();
       const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-      return { onSave: !!top && save.contains(top), bottom: Math.round(dlg.getBoundingClientRect().bottom), vh: innerHeight };
+      // The FRAME is what is pinned (position:fixed; bottom:0) — the dialog inside
+      // deliberately hangs its rounded lip RADIUS.sheet below the screen edge.
+      return { onSave: !!top && save.contains(top), bottom: Math.round(dlg.parentElement.getBoundingClientRect().bottom), vh: innerHeight };
     });
     const h = await hit();
-    ok(h.onSave && h.bottom >= h.vh - 2,
+    // The sheet is anchored to the VIEWPORT: its bottom IS the screen's bottom.
+    // («≥» was too loose — under the bug a taller view box put it below the screen.)
+    ok(h.onSave && Math.abs(h.bottom - h.vh) <= 2,
       `E010 the edit sheet reaches the screen bottom and its Save is tappable, not under the tab bar — onSave=${h.onSave} sheet@${h.bottom}/${h.vh}`);
     // POSITIVE CONTROL: put the old fill back and the guard must see it.
     await page.evaluate(() => { document.querySelector('.view-in').style.animationFillMode = 'both'; });
     await page.waitForTimeout(50);
     const c = await hit();
-    ok(!(c.onSave && c.bottom >= c.vh - 2),
+    ok(!(c.onSave && Math.abs(c.bottom - c.vh) <= 2),
       `E010 positive control FAILED — fill:both did not push the sheet under the bar (onSave=${c.onSave} sheet@${c.bottom}); the guard is blind`);
   }
 

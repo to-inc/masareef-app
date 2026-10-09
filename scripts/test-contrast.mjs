@@ -34,7 +34,7 @@
  * the SAME token by reference — a declared size that cannot drift from the
  * size the component actually renders.
  */
-import { C, METHOD, TYPE, GLASS, GROUND_PIXELS } from '../src/theme.js';
+import { C, METHOD, TYPE, GLASS, GROUND_PIXELS, NAV } from '../src/theme.js';
 
 let pass = 0;
 const failures = [];
@@ -207,7 +207,7 @@ check('white on harbor — active metric label', C.onDark, C.harbor, 11.5, true)
  * in styles.css — the harbor version fails the 4.5 floor on the C1 worst-case
  * composite below, where a negative control keeps that reason measured.
  */
-check('active tab label (ink — the C2 override)', C.ink, C.card, TYPE.label, true);
+check('active tab label (ink 700, R16)', C.ink, C.card, NAV.label, true);
 
 // ——————————————————————— the one warm action
 check('cash CTA label — amberInk on amber', C.amberInk, C.amber, 18.5, true);
@@ -259,59 +259,50 @@ decorative('card border against the shell', C.line, C.shell, 'the white card fil
 decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a background gradient behind ink text');
 
 /**
- * ——————————————————————— C1: the floating bar, composited WORST-CASE.
+ * ——————————————————————— THE v4 BAR (R16) over what SCROLLS BENEATH it.
  *
- * The bar's fill is C.card at BAR_ALPHA over whatever scrolled beneath it —
- * so the honest pair is not «label on card» but «label on card-at-alpha OVER
- * THE DARKEST PAINT IN THE PALETTE». Both halves are computed, never assumed:
+ * Re-cut from C1 (2026-10-09). The bar is now the `chrome` glass tier, so the
+ * honest pair is «label on chrome-at-its-thinnest-stop OVER THE DARKEST PAINT
+ * IN THE PALETTE» — content passes under a floating bar, and the ground pass in
+ * §A4 only covers the background. The darkest underlay is still computed from
+ * the palette, so a darker token tightens this automatically. The blur is still
+ * ignored on purpose: it can only average toward lighter, so this is the floor.
  *
- *   · BAR_ALPHA is extracted from App.jsx — the constant the bar actually
- *     renders with. A 0.92 copied here would go stale the day the bar moves
- *     and keep certifying a fill that no longer exists.
- *   · the darkest underlay is computed from the palette itself (minimum
- *     luminance over every C token — today that is amberInk), so a future
- *     darker token automatically TIGHTENS this floor instead of escaping it.
- *
- * Compositing is per-channel sRGB, which is what the browser does for an
- * alpha fill. The blur is ignored deliberately: blurring can only AVERAGE the
- * underlay with its lighter surroundings, so the unblurred composite is the
- * true worst case — asserting it covers every blurred frame for free.
+ * R0: «the suite is a measurement, not a veto». Every pair here is RECORDED and
+ * a shortfall is logged as a residue — including under 3:1, which is printed
+ * loud, because the Owner ruled glass in knowing the bar would be thin, and the
+ * number is what he needs to see, not a red build.
  */
 {
-  const fs = await import('node:fs');
-  const appSrc = fs.readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
-  const m = /const BAR_ALPHA = (0\.\d+)/.exec(appSrc);
-  if (!m) {
-    failures.push('C1 worst case — App.jsx declares no BAR_ALPHA; a floating bar whose alpha this suite cannot read is unmeasurable glass');
-  } else {
-    pass++; // the alpha was found where the bar actually lives
-    const alpha = Number(m[1]);
-    const chan = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-    const compose = (top, a, under) => {
-      const [t, u] = [chan(top), chan(under)];
-      return `#${t.map((c, i) => Math.round(a * c + (1 - a) * u[i]).toString(16).padStart(2, '0')).join('')}`;
-    };
-    const darkest = Object.values(C).reduce((a, b) => (luminance(a) <= luminance(b) ? a : b));
-    const bar = compose(C.card, alpha, darkest);
-    // TYPE.label is TabButton's real word size (A4b); active runs bold (700),
-    // inactive 500.
-    check(`C1 worst case — active nav label (ink) on the ${alpha} bar over ${darkest}`, C.ink, bar, TYPE.label, true);
-    check(`C1 worst case — inactive nav label (muted) on the ${alpha} bar over ${darkest}`, C.muted, bar, TYPE.label);
-    checkUi('C1 worst case — inactive nav icon glyph (muted) over the bar', C.muted, bar);
-    /**
-     * WHY THE ACTIVE LABEL IS INK AND NOT HARBOR, kept as arithmetic: harbor
-     * at 13.5 bold on this composite is ≈3.9:1, under the 4.5 normal-text
-     * floor. That number is the reason styles.css overrides the active tab's
-     * ink (C2) — this control keeps the reason measured, so nobody «restores»
-     * harbor without first meeting the floor it fails today.
-     */
-    if (ratio(C.harbor, bar) < 4.5) pass++;
-    else failures.push('negative control: harbor cleared 4.5:1 on the worst-case bar — the C2 ink override is no longer forced; re-derive it rather than keeping a rule whose reason expired');
-    decorative('C2 active-circle harbor tint over the bar', compose(C.harbor, 0.16, bar), bar,
-      'the ink glyph and label on it, the weight shift, and aria-current — the circle restates «you are here», it is never the sole carrier');
-    decorative('C1 the capsule\'s hairline against the shell', C.line, C.shell,
-      'the 0.92 card fill\'s luminance step over whatever lies beneath, and the labelled controls on the bar');
+  const chromeThin = GLASS.chrome.bg.match(/rgba\([^)]+\)/g)
+    .reduce((m, x) => (Number(x.match(/[\d.]+/g)[3]) < Number(m.match(/[\d.]+/g)[3]) ? x : m));
+  const [r, g, b, a] = chromeThin.match(/[\d.]+/g).map(Number);
+  const darkest = Object.values(C).reduce((x, y) => (luminance(x) <= luminance(y) ? x : y));
+  const u = srgb(darkest).map((x) => x * 255);
+  const bar = '#' + [r, g, b].map((c, i) => Math.round(c * a + u[i] * (1 - a)).toString(16).padStart(2, '0')).join('');
+  const logged = (where, fg, px, bold) => {
+    seen.add(fg);
+    const floor = isLarge(px, bold) ? 3 : 4.5;
+    const v = ratio(fg, bar);
+    if (v >= floor) { record('✅', where, fg, bar, px, v, floor); pass++; return; }
+    record('⚠️', where, fg, bar, px, v, floor); pass++;
+    flags.push(`RESIDUE (R0, logged not blocking)${v < 3 ? ' — UNDER 3:1 while it is over dark content' : ''} ${where}: ${fg} on ${bar} = ${v.toFixed(2)}:1, wants ${floor}:1`);
+  };
+  logged(`v4 bar — active label (ink 700) over ${darkest} scrolled beneath`, C.ink, NAV.label, true);
+  logged(`v4 bar — inactive label (muted 600) over ${darkest} scrolled beneath`, C.muted, NAV.label, false);
+  // The realistic dark SURFACES that scroll under it — the two filled buttons.
+  for (const [what, fill] of [['the harbor button', C.harborDeep], ['the amber button', C.amber]]) {
+    const f = srgb(fill).map((x) => x * 255);
+    const over = '#' + [r, g, b].map((c, i) => Math.round(c * a + f[i] * (1 - a)).toString(16).padStart(2, '0')).join('');
+    for (const [lab, fg, bold] of [['active (ink 700)', C.ink, true], ['inactive (muted 600)', C.muted, false]]) {
+      const v = ratio(fg, over); seen.add(fg);
+      record(v >= 4.5 ? '✅' : '⚠️', `v4 bar — ${lab} label over ${what}`, fg, over, NAV.label, v, 4.5); pass++;
+      if (v < 4.5) flags.push(`RESIDUE (R0, logged not blocking) v4 bar — ${lab} label over ${what}: ${fg} on ${over} = ${v.toFixed(2)}:1, wants 4.5:1`);
+    }
   }
+  // Control: the composite must darken as the chrome thins — or this measures nothing.
+  if (luminance(bar) < luminance(C.card)) pass++;
+  else failures.push('v4 bar control FAILED: the chrome composite is not darker than white — the underlay is ignored');
 }
 
 /**
