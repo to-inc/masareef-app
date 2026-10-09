@@ -89,11 +89,12 @@ try {
     'A7.9 …and the pounds stay beside the lead — compression never hides a figure');
 
   // ——— the detail is ONE TAP away, not deleted
-  const opened = pb(week({ count: 3, byCurrency: { EUR: 200 } }), { policyOpen: true });
+  // Re-cut 2026-10-10: «unsized» is the server's explicit `unpriced` count, never rows − currencies (see unsizedForeign).
+  const opened = pb(week({ count: 3, unpriced: 2, byCurrency: { EUR: 200 } }), { policyOpen: true });
   ok(opened.includes(AR.foreignNoCompare),
     'A7.10 opened, the screen says the full foreign-comparison sentence — compressed, not censored');
   ok(typeof AR.foreignUnsized === 'function' && opened.includes(AR.foreignUnsized(2)),
-    'A7.11 …and the unsized-money count is named — count 3 against one priced line is 2 we cannot size');
+    'A7.11 …and the unsized-money count is named — the 2 the server says it cannot size');
   const eurOpened = pb(week({ count: 2, byCurrency: { EUR: 200 } }), { displayCurrency: 'EUR', policyOpen: true });
   // Re-cut 2026-10-09 (R0): Tarek ruled every unit wears its mark — «€», «ج.م» — in sentences and controls too.
   ok(typeof AR.noCompareInUnit === 'function' && eurOpened.includes(AR.noCompareInUnit('€')),

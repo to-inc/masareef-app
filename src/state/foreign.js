@@ -87,13 +87,20 @@ export function foreignLines(foreign) {
 }
 
 /**
- * Money we know is there and cannot size: `count` exceeds what the lines
- * account for. The screen says so rather than letting the lines imply they are
- * the whole of it.
+ * Money we know is there and cannot size — said, never implied.
+ *
+ * FIXED 2026-10-10 (his Year screen: «9,193 € and 201 foreign expenses with no
+ * price»). This used to return `count − lines`: ROWS minus CURRENCIES, two
+ * different units — 203 foreign rows across EUR and SEK became «201 with no
+ * price», every one of which was priced and already inside the 9,193 €.
+ * `foreign.count` counts EVERY foreign row, priced or not, so the shape cannot
+ * say how many are unpriced; only an explicit `unpriced` count can (the server
+ * notes such a row is unreachable from the sheet: no amount, no currency). So:
+ * the server's count when sent, all of them when nothing is summed, else none.
  */
 export function unsizedForeign(foreign) {
   if (!hasForeign(foreign)) return 0;
-  const counted = foreignLines(foreign).length;
-  const n = Number(foreign.count);
-  return counted > 0 && n > counted ? n - counted : (counted === 0 ? n : 0);
+  const told = Number(foreign.unpriced);
+  if (foreign.unpriced != null && isFinite(told)) return Math.max(0, told);
+  return foreignLines(foreign).length === 0 ? Number(foreign.count) || 0 : 0;
 }

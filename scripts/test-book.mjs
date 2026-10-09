@@ -275,8 +275,13 @@ eq(JSON.stringify(foreignLines({ count: 2, byCurrency: { SEK: 100, EUR: 200 } })
 ok(!JSON.stringify(foreignLines({ count: 2, byCurrency: { SEK: 100, EUR: 200 } })).includes('300'),
   'NEVER summed across currencies — 200 EUR + 100 SEK is not 300 of anything');
 eq(foreignLines(null).length, 0, 'nothing is no lines');
-eq(unsizedForeign({ count: 3, byCurrency: { EUR: 200 } }), 2,
-  'money we know is there and cannot size is counted, not swallowed');
+// Re-cut 2026-10-10: the old law (count − lines = unsized) subtracted CURRENCIES
+// from ROWS — his 203 priced euro/krona rows read «201 with no price».
+eq(unsizedForeign({ count: 203, byCurrency: { EUR: 7007.14, SEK: 325 } }), 0,
+  'priced rows are never called unpriced — 203 rows over two currencies is not «201 with no price»');
+eq(unsizedForeign({ count: 3, unpriced: 2, byCurrency: { EUR: 200 } }), 2,
+  'money we know is there and cannot size is counted, not swallowed — when the server says how many');
+eq(unsizedForeign({ count: 2, byCurrency: {} }), 2, 'nothing summed at all → every foreign row is unsized');
 eq(unsizedForeign({ count: 1, byCurrency: { EUR: 200 } }), 0, 'and a fully-sized period reports none');
 
 /**
