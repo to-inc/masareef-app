@@ -190,7 +190,8 @@ try {
   const busy = html('busy');
   ok(busy.includes('aria-busy="true"'), 'in flight it says so, for a screen reader too');
   ok(busy.includes('disabled'), 'and it cannot be pressed again — the guard is visible, not just internal');
-  ok(busy.includes('class="spin"'), 'the spinner is on, driven by the real fetch');
+  // v4 P8: the busy sign is the pill's breathing dot (it stops under reduced motion).
+  ok(busy.includes('class="pulse"'), 'the busy sign is on, driven by the real fetch');
   ok(!html('idle').includes('class="spin"'), 'and off when nothing is in flight');
 
   const failed = html('failed');

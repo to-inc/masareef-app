@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, glass, SHEET } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -37,7 +37,8 @@ import {
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon, TrayIcon, PlusIcon, UndoToast } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon, TrayIcon, PlusIcon, UndoToast, UpdatePrompt } from './components/Primitives.jsx';
+import { useUpdatePrompt } from './state/update.js';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
@@ -88,6 +89,7 @@ export default function App() {
   const underTab = useRef('book');
   useEffect(() => { if (tab !== 'entry') underTab.current = tab; }, [tab]);
   const swipeY = useRef(null); // the sheet's swipe-down start (hooks stay above every early return)
+  const update = useUpdatePrompt(); // v4 P8: a waiting build, applied only when he says
   /**
    * THE ﹢ TAB HAS TWO MODES (finding M1). «فاتورة» was a whole destination
    * holding one button; a receipt is a way of making an entry, not a place, so
@@ -377,7 +379,11 @@ export default function App() {
   }, []);
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
+  // v4 P8: reads in flight — the startup read and the after-save refresh too, not
+  // only a press of the pill — so the pill can say «بنجيب من الشيت…» / «آخر تحديث».
+  const [reading, setReading] = useState(0);
   const refresh = useCallback(async () => {
+    setReading((n) => n + 1);
     try {
       const res = await fetchSummary();
       // `ok:true` is not enough — a truncated response or an older deployment can
@@ -402,6 +408,8 @@ export default function App() {
       // Keep whatever is on screen. Losing signal in Cairo is normal, not an error.
       setOffline(true);
       return false;
+    } finally {
+      setReading((n) => Math.max(0, n - 1));
     }
   }, []);
 
@@ -849,7 +857,7 @@ export default function App() {
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!needsSetup && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
-          {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
+          {!needsSetup && <RefreshButton state={reading > 0 ? 'busy' : refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
         </span>
       </header>
 
@@ -994,6 +1002,8 @@ export default function App() {
 
       <Toast message={toast} />
       <UndoToast undo={undo} onUndo={undoEntry} />
+      {/* R19: never while the entry sheet is open — and the undo toast has the floor first. */}
+      {update.waiting && !sheetOpen && !undo && <UpdatePrompt onUpdate={update.apply} />}
 
       {/**
         * S1 — the Settings sheet, mounted at the SHELL so it opens over any
@@ -1178,18 +1188,31 @@ export function StaleQueueCard({ item, onSend, onDrop }) {
 }
 
 // True first run only — every later launch paints from the snapshot.
+/**
+ * v4 P8 — THE FIRST READ, with nothing saved on the phone. Placeholder blocks
+ * hold the layout steady where the period well, the hero and the ledger will
+ * land, so nothing jumps when the sheet answers. (With a saved copy, the copy
+ * shows instead and the pill says how old it is.)
+ */
 function Skeleton() {
+  const bar = (w, h, c) => <span style={{ width: w, height: h, borderRadius: RADIUS.capsule, background: c }} />;
   return (
-    <div>
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          style={{
-            background: C.card, borderRadius: RADIUS.card,
-            height: 132, marginBottom: 14, opacity: 0.55,
-          }}
-        />
-      ))}
+    <div aria-busy="true" aria-label={S.fetchingSheet}>
+      <div style={{ ...glass('well'), borderRadius: RADIUS.capsule, height: 56 }} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '34px 0 30px' }}>
+        {bar(110, 14, SKELETON.strong)}
+        {/* geometry exemption (ruling 4): the hero's placeholder slab — a 14px corner bounded by its 52px height */}
+        <span style={{ width: 230, height: 52, borderRadius: 14, background: SKELETON.strong }} />
+        {bar(180, 14, SKELETON.strong)}
+      </div>
+      <div style={{ ...glass('card'), overflow: 'hidden' }}>
+        {[[150, 90, 70], [120, 80, 60], [140, 70, 66]].map(([a, b2, c], i) => (
+          <div key={i} style={{ minHeight: 68, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: i ? GLASS_DIVIDER : 'none' }}>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{bar(a, 12, SKELETON.row)}{bar(b2, 10, SKELETON.faint)}</span>
+            {bar(c, 14, SKELETON.row)}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

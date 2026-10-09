@@ -56,6 +56,11 @@ export const EN = {
   // Short on purpose: this line shares its row with three buttons (voice,
   // currency, receipt), and a longer heading wrapped and pushed the category
   // chips below the fold.
+  lastUpdated: 'Last updated', // v4 P8 pill, loading over a saved copy
+  fetchingSheet: 'Reading the sheet…',
+  updateReady: 'A new version is ready',
+  updateLater: 'It will update by itself next time',
+  updateNow: 'Update',
   waitingNet: (n) => `${n} waiting for signal`, // v4 P5 sync pill
   notInSheetYet: (x) => `${x} hasn't reached the sheet yet`,
   willSendOnline: 'Will be logged when you are back online',

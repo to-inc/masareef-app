@@ -551,6 +551,10 @@ export const GLASS = {
               inset: `inset 0 1px 0 ${W(0.9)}`, radius: 'sheetTall' },
   /** The card BEHIND the focus card (v4 P6) — it only says «more are waiting». No text on it. */
   peek:     { bg: W(0.35), blur: 14, rim: W(0.6), radius: 'card' },
+  /** The «نسخة جديدة جاهزة» card (v4 P8) — light glass above the bar; ink text on it. v4 draws
+   *  .62→.34; the muted caption measured 4.26:1 over dawn's darkest stop — .7→.5 clears (4.61). */
+  prompt:   { bg: `linear-gradient(160deg, ${W(0.7)}, ${W(0.5)})`, blur: 24, sat: 170,
+              rim: W(0.85), cast: `0 12px 30px ${alpha(C.ink, 0.18)}`, radius: 'sheet' },
   /** The «اتحفظ ✓ — رجوع» undo toast (R19) — white text on dark glass. */
   toast:    { bg: `linear-gradient(160deg, ${alpha(C.ink, 0.72)}, rgba(31,43,53,.62))`, blur: 24,
               cast: `0 10px 30px ${alpha(C.ink, 0.22)}`, radius: 'capsule' },
@@ -562,6 +566,8 @@ export const GLASS_DIVIDER = `1px solid ${W(0.6)}`;
 
 /** v4 P5 — the undo toast's action, and a row still on the phone (sand wash). */
 export const TOAST_ACTION_BG = W(0.16);
+/** v4 P8 — loading placeholders: warm blocks that hold the layout steady. Not text. */
+export const SKELETON = { strong: '#ECE5D8', row: '#F0EBE1', faint: '#F4F0E8' };
 export const PHONE_ROW_BG = `linear-gradient(90deg, ${alpha(C.sand, 0)}, ${alpha(C.sand, 0.5)})`;
 
 /** v4 P4 — the entry sheet's furniture. */

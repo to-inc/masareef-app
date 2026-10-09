@@ -267,7 +267,12 @@ export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t
       </button>
     );
   }
-  const words = busy ? S.refreshing : (savedAt && !failed ? S.synced : S.refresh);
+  /**
+   * v4 P8: while reading, the pill says what is ON the screen — over a saved
+   * copy «آخر تحديث 8:12» (the copy's age), with nothing yet «بنجيب من الشيت…».
+   * The dot is muted while reading: amber is the one save action (ONE-AMBER).
+   */
+  const words = busy ? (savedAt ? S.lastUpdated : S.fetchingSheet) : (savedAt && !failed ? S.synced : S.refresh);
   return (
     <button
       onClick={onPress}
@@ -280,11 +285,10 @@ export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t
         color: C.ink, fontSize: TYPE.label, fontWeight: 600,
       }}
     >
-      {busy
-        ? <span className="spin" aria-hidden style={{ display: 'inline-block', lineHeight: 1 }}>↻</span>
-        : <span aria-hidden style={{ width: 8, height: 8, borderRadius: RADIUS.capsule, background: failed ? C.conflictInk : C.settledInk }} />}
+      <span aria-hidden className={busy ? 'pulse' : undefined}
+        style={{ width: 8, height: 8, borderRadius: RADIUS.capsule, background: busy ? C.muted : failed ? C.conflictInk : C.settledInk }} />
       {words}
-      {savedAt && !busy && !failed && (
+      {savedAt && !failed && (
         <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{clock(savedAt)}</span>
       )}
     </button>
@@ -296,6 +300,36 @@ export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t
  * and a 48px «رجوع» that takes the entry back out of the outbox before it is
  * sent. Floats above the tab bar; gone after the undo window.
  */
+/**
+ * THE UPDATE PROMPT (v4 P8, R19, A6) — a new version waits; it never reloads
+ * on its own. «حدّث» applies it now; otherwise it applies at the next cold
+ * launch. The shell mounts this only while the entry sheet is CLOSED.
+ */
+export function UpdatePrompt({ onUpdate }) {
+  return (
+    <div role="status" aria-live="polite"
+      style={{
+        ...glass('prompt'), position: 'fixed', zIndex: 34, left: NAV.inset, right: NAV.inset,
+        bottom: `calc(max(${NAV.bottom}px, env(safe-area-inset-bottom)) + ${NAV.height + 14}px)`,
+        padding: '14px 14px 14px 18px', display: 'flex', alignItems: 'center', gap: 12, color: C.ink,
+      }}>
+      <span aria-hidden style={{ width: 40, height: 40, borderRadius: RADIUS.inset + 4, background: C.mist, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: C.harbor }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false">
+          <path d="M20 12a8 8 0 1 1-2.3-5.6" /><path d="M20 4v5h-5" />
+        </svg>
+      </span>
+      <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontSize: TYPE.body, fontWeight: 700 }}>{S.updateReady}</span>
+        <span style={{ fontSize: TYPE.caption, color: C.muted }}>{S.updateLater}</span>
+      </span>
+      <button onClick={onUpdate}
+        style={{ minHeight: TAP, padding: '0 16px', borderRadius: RADIUS.capsule, background: GRADIENT.harbor, color: C.onDark, fontSize: TYPE.label, fontWeight: 700, flexShrink: 0 }}>
+        {S.updateNow}
+      </button>
+    </div>
+  );
+}
+
 export function UndoToast({ undo, onUndo }) {
   if (!undo) return null;
   return (

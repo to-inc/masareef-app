@@ -415,6 +415,9 @@ for (const [ground, pixels] of Object.entries(GROUND_PIXELS)) {
     // v4 P6: the older-expenses row — ink title and muted sub-line on sand advisory glass.
     residue(`ink on advisory glass over ${ground} (${end})`, C.ink, over(thinnest(GLASS.advisory.bg), px0), TYPE.label, true);
     residue(`muted on advisory glass over ${ground} (${end})`, C.muted, over(thinnest(GLASS.advisory.bg), px0), TYPE.caption);
+    // v4 P8: the update card — ink title, muted caption on the prompt glass.
+    residue(`ink on the update card over ${ground} (${end})`, C.ink, over(thinnest(GLASS.prompt.bg), px0), TYPE.body, true);
+    residue(`muted on the update card over ${ground} (${end})`, C.muted, over(thinnest(GLASS.prompt.bg), px0), TYPE.caption);
     // chrome carries 14px+/600+ labels only (A3) — measured at that floor.
     residue(`ink label on chrome over ${ground} (${end})`, C.ink, over(thinnest(GLASS.chrome.bg), px0), 14, false);
   }

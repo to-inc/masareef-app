@@ -101,7 +101,13 @@ pinPlainCard('src/components/LogCard.jsx', 'LogCard', 'A2.3 LogCard');
 pinPlainCard('src/views/ReceiptView.jsx', 'ReceiptView', 'A2.5 Receipt/main card');
 pinPlainCard('src/views/ReceiptView.jsx', 'JobRow', 'A2.6 Receipt/JobRow');
 pinPlainCard('src/views/BookView.jsx', 'Lookalikes', 'A2.7 Book/Lookalikes group card');
-pinPlainCard('src/App.jsx', 'Skeleton', 'A2.8 App/Skeleton');
+// v4 P8 (R0 re-cut): the first-read skeleton is the glass layout itself — a well
+// and a glass card — holding the shape steady; nothing hand-rolled beside it.
+{
+  const slice = componentSlice(src('src/App.jsx'), 'Skeleton') || '';
+  ok(/\.\.\.glass\('well'\)/.test(slice) && /\.\.\.glass\('card'\)/.test(slice), 'A2.8 App/Skeleton — the placeholder is the glass well + card it stands in for (v4 P8)');
+  ok(!/boxShadow:\s*[`'"]/.test(slice), 'A2.8 …with no hand-rolled shadow');
+}
 
 // ——— the doctrine the sites answer to must still be stated where the token
 //     lives; a future hand reaching for `line` reads WHY before it can misuse it

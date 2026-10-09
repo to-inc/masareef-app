@@ -52,7 +52,7 @@ ok(!/aria-hidden/.test(header) && !/top: '100%'/.test(header) && !/scrimGround/.
   'B5.4 the scrim is gone — no strip hangs under the header, and its ground variable is not left behind');
 ok(/fontFamily: FONT_DISPLAY, fontSize: TYPE\.title/.test(header), 'B5.5 the screen\'s name is the display face at TYPE.title (24, v4 P3)');
 ok(/viewTab === 'book' \? S\.tabBook/.test(header), 'B5.6 the title names the screen he is on — the one under the entry sheet when it is open (v4 P3/P4)');
-ok(/<SettingsCog/.test(header) && /<RefreshButton[^>]*savedAt=\{savedAt\}/.test(header),
+ok(/<SettingsCog/.test(header) && /<RefreshButton[\s\S]{0,240}savedAt=\{savedAt\}/.test(header),
   'B5.7 the controls are the cog and the sync pill — which carries when the book was last read (R19)');
 ok(/env\(safe-area-inset-top\)/.test(header), 'B5.8 the header clears the status bar on its own (safe-area-inset-top)');
 

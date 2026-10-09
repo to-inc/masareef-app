@@ -11,7 +11,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // v4 A6/R19: a new build WAITS and the app asks («نسخة جديدة جاهزة») —
+      // autoUpdate could reload under a half-typed amount. See src/state/update.js.
+      registerType: 'prompt',
       includeAssets: ['icons/*.png'],
       manifest: {
         name: 'مصاريف',
@@ -23,7 +25,8 @@ export default defineConfig({
         scope: base,
         display: 'standalone',
         orientation: 'portrait',
-        theme_color: '#3E7CA6',
+        id: base,
+        theme_color: '#FAF7F1', // v4 A6: the paper, not harbor — the header is no longer a harbor slab
         background_color: '#FAF7F1',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
