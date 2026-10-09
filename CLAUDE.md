@@ -68,6 +68,20 @@ session in this folder is the executor (implements WS1–WS6, ticks the checkbox
 in docs/05). Executors: do not change the API contract, the frozen sheet schema,
 or the decision log unilaterally — route those to the orchestrator or Tarek.
 
+## Design law — Glass PWA v4 (2026-10-09, D-GLASS-v4)
+Glass is IN. The binding sources are `docs/design/masareef-design-handoff/`
+`OWNER-RULINGS.md` (R0–R20, signed) and `ARCHITECTURE.md` (A1–A8); the primary
+design is `Masareef Glass PWA.dc.html` (P1–P8). **Repealed by R0:** north-star
+§6.5 «true glass is OUT», A2 «cards are shadowless», B4b «no box-shadow in
+App.jsx», B5 (harbor header + scrim); `C.line` survives only on non-glass
+surfaces. A suite that asserts a repealed law is RE-CUT to the new law in the
+same commit; the contrast suite measures and logs residues, it does not veto.
+No glass literal in a view: everything goes through `GLASS` / `GROUND` /
+`glass()` in `theme.js`. Glass falls back to solid when blur is unsupported or
+reduced transparency is requested. Order of work: R20.
+**One tree (A1):** the app is the git repo `~/masareef-app`; the Drive copy
+`masareef/app/` and the root strays were deleted 2026-10-09.
+
 ## Conventions
 - **Honest rendering (learned 2026-07-29, four bugs deep):** no view may
   fabricate a value where the data is null/absent — a missing amount renders as
