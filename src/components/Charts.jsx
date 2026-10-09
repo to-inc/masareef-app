@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP, TYPE, unitSize } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP, TYPE, unitSize, glass, GRADIENT } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
@@ -592,8 +592,8 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
                * accepts `muted → #5C6871` (it fixes three other flags too), the
                * per-metric fill can come straight back — one token, one line.
                */
-              background: active ? C.harbor : C.card,
-              border: `1px solid ${active ? C.harbor : C.line}`,
+              // G04 (v4 tokens): the chosen metric is the harbor gradient; the rest are glass chips.
+              ...(active ? { background: GRADIENT.harbor, border: `1px solid ${C.harbor}` } : glass('chip')),
               // A tappable card-scale CONTROL, not a plain card: `row` is the
               // control-and-row radius the vocabulary assigns it.
               borderRadius: RADIUS.row, padding: '0 16px', minWidth: 0,
@@ -702,7 +702,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
   const shown = scoped ? (cats || []).filter((c) => groupOf(c && c.name) === selected) : cats;
   const max = Math.max(...shown.map((c) => Math.max(c.now, c.prev)), 1);
   return (
-    <div style={{ background: C.card, borderRadius: RADIUS.card, padding: 14, marginTop: 12 }}>
+    <div style={{ ...glass('card'), padding: 14, marginTop: 12 }}>
       <div style={{ display: 'flex', gap: 14, fontSize: TYPE.label, color: C.muted, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         {/* GEOMETRY EXEMPTION (ruling 4): 10×10 series swatches — a surface
             radius would clamp them to circles; the square is the mark. */}
@@ -767,9 +767,8 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
             // A row-scale tappable control; its old ad-hoc 12 retokenizes to
             // `row` — the control radius — rather than surviving as a 13th
             // distinct radius in the app.
-            width: '100%', minHeight: TAP, marginBottom: 12, borderRadius: RADIUS.row,
+            ...glass('alert'), width: '100%', minHeight: TAP, marginBottom: 12, borderRadius: RADIUS.row,
             padding: '10px 12px', textAlign: 'start',
-            background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: TYPE.label, gap: 8 }}>
@@ -872,7 +871,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
   );
 
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: RADIUS.card, padding: '4px 14px 10px', marginTop: 12 }}>
+    <div style={{ ...glass('card'), padding: '4px 14px 10px', marginTop: 12 }}>
       <button
         onClick={onToggle}
         aria-expanded={open}
@@ -1100,7 +1099,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
 
   return (
     <div>
-      <div style={{ background: C.card, borderRadius: RADIUS.card, padding: '14px 12px 10px' }}>
+      <div style={{ ...glass('card'), padding: '14px 12px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px 8px', gap: 8 }}>
           <span style={{ fontSize: TYPE.label, fontWeight: 700, color }}>
             {periodNames.cur} <span style={{ color: C.muted, fontWeight: 500 }}>{S.vs} {periodNames.prev}</span>

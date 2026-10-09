@@ -230,7 +230,8 @@ async function sweep(lang, L, monthNameOf) {
       ok(openedHtml.includes(AR.foreignNoCompare),
         'E7.29 …carrying the full sentence the compressed line promised (A7\'s tap, honored on the new surface)');
       const sheetStyles = [...openedHtml.matchAll(/class="sheet-in" style="([^"]*)"/g)].map((m) => m[1]);
-      ok(sheetStyles.some((s) => s.toUpperCase().includes(C.sand.toUpperCase()) && s.includes('1px solid')),
+      // G04 (v4 tokens): the sand advisory is GLASS now — sand in its wash, its rim by name.
+      ok(sheetStyles.some((s) => s.includes('rgba(231,217,190,') && s.includes('1px solid')),
         'E7.30 the detail dresses as what it is — a SAND advisory surface, bordered by name (theme.js\'s C.line doctrine: the foreign-money notes)');
 
       // ——— nothing else fell out of the opened screen

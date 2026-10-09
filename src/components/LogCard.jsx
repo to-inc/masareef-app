@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE } from '../theme.js';
+import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass } from '../theme.js';
 import { S, monthByTab, categoryLabel, CAPTAIN_INITIALS } from '../i18n/strings.js';
 import { money } from '../lib/format.js';
 import { LATIN } from './Primitives.jsx';
@@ -40,7 +40,7 @@ export default function LogCard({ prevLog, todayCairo }) {
       className="card-in"
       aria-label={S.logTitle(monthByTab(prevLog.name))}
       style={{
-        background: C.card, borderRadius: RADIUS.card,
+        ...glass('card'),
         padding: '18px 18px 14px', marginBottom: 16,
       }}
     >

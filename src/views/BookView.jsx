@@ -628,7 +628,7 @@ export default function BookView({
         */}
       {undated > 0 && !loadingRows && period !== 'year' && (
         <Sheet style={{
-          fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
+          fontSize: TYPE.label, color: C.ink, ...glass('advisory'), borderRadius: RADIUS.glassWell,
           padding: '8px 12px', margin: '10px 0', lineHeight: 1.6, textAlign: 'center',
         }}>
           {S.recentUndatedNote(undated)}
@@ -1022,7 +1022,7 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
         role="dialog"
         aria-label={S.monthPickerTitle}
         style={{
-          background: C.card, border: `1px solid ${C.line}`,
+          ...glass('sheet'), // the Sheet primitive owns its lip radius
           padding: `6px ${SPACE.gutter}px calc(${SPACE.cardPad}px + env(safe-area-inset-bottom, 0px) + ${RADIUS.sheet}px)`,
           marginBottom: -RADIUS.sheet,
           maxHeight: '70vh', overflowY: 'auto',
@@ -1103,8 +1103,7 @@ function Lookalikes({ rows, sheetUrl }) {
 
   return (
     <div style={{
-      marginTop: 14, padding: '13px 15px', borderRadius: RADIUS.row,
-      background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
+      ...glass('alert'), marginTop: 14, padding: '13px 15px',
     }}>
       <div style={{ color: C.conflictInk, fontSize: TYPE.label, fontWeight: 700 }}>
         {S.dupTitle(counts.rows)}
@@ -1286,7 +1285,7 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
           onClick={onOpenBatch}
           style={{
             marginTop: 12, minHeight: TAP, borderRadius: RADIUS.row, padding: '8px 8px 8px 16px',
-            background: C.sand, border: `1px solid ${C.line}`,
+            ...glass('advisory'), borderRadius: RADIUS.glassWell,
             color: C.amberInk, fontSize: TYPE.label, fontWeight: 700,
             display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'start',
           }}
@@ -1584,7 +1583,8 @@ export function PeriodBlock({
 
   return (
     <>
-      <div style={{ textAlign: 'center', padding: '2px 0 12px' }}>
+      {/* G04 (v4 tokens): the month's head — picker, headline, total, note — on ONE glass card. */}
+      <div style={{ ...glass('card'), textAlign: 'center', padding: '14px 16px 16px', marginBottom: 14 }}>
         {/* Stat anatomy (A4): the label above, muted, at the prose floor. */}
         {onPickMonth ? (
           /**
@@ -1714,7 +1714,7 @@ export function PeriodBlock({
           */}
         {policySuppressed && whyOpen && (
           <Sheet style={{
-            fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
+            fontSize: TYPE.label, color: C.ink, ...glass('advisory'), borderRadius: RADIUS.glassWell,
             padding: '8px 12px', lineHeight: 1.7, marginTop: 2,
           }}>
             {(hasForeign(foreign) || hasForeign(prevForeign)) && <div>{S.foreignNoCompare}</div>}
@@ -1845,7 +1845,7 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
     <p style={{
       // A caveat is real information: prose floor, never caption. The sand
       // note is a small advisory panel — RADIUS.inset is its surface.
-      fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
+      fontSize: TYPE.label, color: C.ink, ...glass('advisory'), borderRadius: RADIUS.glassWell,
       borderRadius: RADIUS.inset, padding: '8px 12px', margin: '10px 0 0', lineHeight: 1.6, textAlign: 'center',
     }}>
       {caveats.join(' · ')}
@@ -2119,8 +2119,7 @@ function RowList({
                   <button
                     onClick={() => onOpenEdit(item, key)}
                     style={{
-                      width: '100%', minHeight: TAP, marginTop: 10, borderRadius: RADIUS.row,
-                      background: C.card, border: `1px solid ${C.line}`,
+                      ...glass('chip'), width: '100%', minHeight: TAP, marginTop: 10, borderRadius: RADIUS.row,
                       color: C.harborInk, fontSize: TYPE.label, fontWeight: 700,
                     }}
                   >

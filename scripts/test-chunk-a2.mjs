@@ -88,9 +88,16 @@ function pinPlainCard(file, component, label) {
 }
 
 // ——— the enumerated plain-card sites, one pin each
-pinPlainCard('src/components/Charts.jsx', 'CategoryCompare', 'A2.1 Charts/CategoryCompare');
-pinPlainCard('src/components/Charts.jsx', 'PeriodSummary', 'A2.2 Charts/PeriodSummary');
-pinPlainCard('src/components/LogCard.jsx', 'LogCard', 'A2.3 LogCard');
+// G04 (v4 tokens, R0 re-cut): the Month/Year cards are GLASS — their surface,
+// edge and cast come from glass('card'); nothing hand-written rides beside it.
+function pinGlassCard(file, component, label) {
+  const slice = componentSlice(src(file), component) || '';
+  ok(/\.\.\.glass\('card'\)/.test(slice), `${label} — the card is glass('card') (G04, v4 tokens)`);
+  ok(!/boxShadow:\s*[`'"]/.test(slice) && !/background: C\.card, borderRadius: RADIUS\.card/.test(slice), `${label} — no hand-rolled shadow or solid card beside it`);
+}
+pinGlassCard('src/components/Charts.jsx', 'CategoryCompare', 'A2.1 Charts/CategoryCompare');
+pinGlassCard('src/components/Charts.jsx', 'PeriodSummary', 'A2.2 Charts/PeriodSummary');
+pinGlassCard('src/components/LogCard.jsx', 'LogCard', 'A2.3 LogCard');
 // v4 P6 (R0 re-cut): the review card is GLASS — its surface, edge and cast come
 // from glass('card') and nothing hand-written rides beside it.
 {
@@ -121,7 +128,8 @@ ok(theme.includes('conflictLine:') && theme.includes('settledLine:'),
 
 // ——— POSITIVE CONTROL: a state card that KEEPS its border
 const lookalikes = componentSlice(src('src/views/BookView.jsx'), 'Lookalikes');
-ok(lookalikes && BORDERED.test(lookalikes) && lookalikes.includes('C.conflictLine'),
+// G04: the wrapper is the ALERT glass, whose rim IS conflictLine (theme.js) — the meaning border survives in the tier.
+ok(lookalikes && /\.\.\.glass\('alert'\)/.test(lookalikes) && /alert:[\s\S]{0,400}rim: alpha\(C\.conflictLine/.test(theme),
   'A2.C control — the Lookalikes conflict wrapper still carries its conflictLine border; '
   + 'a tree that shed ALL borders (meaning included) must fail here, not pass');
 
