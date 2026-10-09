@@ -639,6 +639,26 @@ try {
     // And the folded group still declares its own share, so 2 + 2 = 4 on screen.
     ok(html.includes(AR.inboxOldTitle(2)),
       'with the folded rows counted where they are folded, so the arithmetic is visible');
+
+    // ═══ E-005 — «Older expenses (2)» stayed 2 after he filed both.
+    // `remaining(rows) || rows.length` fell back to the row count at zero.
+    const olds = mixed.filter((r) => r.stale);
+    const filed = Object.fromEntries(olds.map((r) => [cardKey(r), { status: 'done' }]));
+    const after = renderToStaticMarkup(createElement(InboxView, { pending: mixed, settled: filed, onConfirm: () => {} }));
+    ok(!after.includes(AR.inboxOldTitle(2)) && after.includes(AR.inboxOldTitle(0)) && !after.includes('(0)'),
+      'E005.1 filing both older rows takes the group count to nothing — not back to 2, and never «(0)»');
+    const oneFiled = renderToStaticMarkup(createElement(InboxView, {
+      pending: mixed, settled: { [cardKey(olds[0])]: { status: 'done' } }, onConfirm: () => {} }));
+    ok(oneFiled.includes(AR.inboxOldTitle(1)), 'E005.2 …and filing one of two says 1');
+    // ═══ The unfolded group used to throw (`openEdit` undefined inside StaleGroup).
+    let threw = null, opened = '';
+    try {
+      opened = renderToStaticMarkup(createElement(InboxView, {
+        pending: mixed, settled: {}, onConfirm: () => {}, initialStaleOpen: true,
+        build: { actions: ['edit_entry'] } }));
+    } catch (e) { threw = e; }
+    ok(!threw && opened.includes('OLD ONE') && opened.includes('OLD TWO'),
+      `E005.3 opening «older expenses» renders its rows instead of crashing (${threw && threw.message})`);
   }
 
   /**

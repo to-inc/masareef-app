@@ -100,6 +100,7 @@ export default function InboxView({
    */
   onEdited = null,
   initialEditing = null,
+  initialStaleOpen = false, // SSR seam: render the older group unfolded
 }) {
   const [editing, setEditing] = useState(initialEditing);
   // E-011 — rows he removed from the edit sheet leave the list at once; the
@@ -247,7 +248,7 @@ export default function InboxView({
       {fresh.map((row) => (
         <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} onOpenEdit={openEdit} />
       ))}
-      {stale.length > 0 && <StaleGroup rows={stale} onConfirm={onConfirm} onOpenEdit={openEdit} />}
+      {stale.length > 0 && <StaleGroup rows={stale} onConfirm={onConfirm} onOpenEdit={openEdit} initialOpen={initialStaleOpen} />}
 
       {editing && (
         <EditSheet
@@ -266,8 +267,8 @@ export default function InboxView({
   );
 }
 
-function StaleGroup({ rows, onConfirm, onOpenEdit }) {
-  const [open, setOpen] = useState(false);
+function StaleGroup({ rows, onConfirm, onOpenEdit, initialOpen = false }) {
+  const [open, setOpen] = useState(initialOpen);
   return (
     <div style={{ marginTop: 8 }}>
       <button
@@ -279,7 +280,7 @@ function StaleGroup({ rows, onConfirm, onOpenEdit }) {
           color: C.harborInk, fontSize: 16, fontWeight: 700, textAlign: 'start',
         }}
       >
-        {S.inboxOldTitle(remaining(rows) || rows.length)}
+        {S.inboxOldTitle(remaining(rows))}
         <div style={{ fontSize: 13, fontWeight: 500, color: C.muted, marginTop: 2 }}>
           {open ? S.inboxOldHide : S.inboxOldBody}
         </div>
@@ -287,7 +288,7 @@ function StaleGroup({ rows, onConfirm, onOpenEdit }) {
       {open && (
         <div style={{ marginTop: 12 }}>
           {rows.map((row) => (
-            <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} onOpenEdit={openEdit} />
+            <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} onOpenEdit={onOpenEdit} />
           ))}
         </div>
       )}

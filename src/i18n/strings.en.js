@@ -34,7 +34,7 @@ export const EN = {
   inboxEmptyTitle: 'All logged',
   inboxEmptyBody: 'Any card purchase shows up here as soon as the bank texts.',
   inboxWaiting: (n) => `${n} ${n === 1 ? 'purchase' : 'purchases'} waiting — tap a category to log it`,
-  inboxOldTitle: (n) => `Older expenses (${n})`,
+  inboxOldTitle: (n) => (n ? `Older expenses (${n})` : 'Older expenses'),
   inboxOldBody: 'From previous months — still without a category.',
   inboxOldHide: 'Close',
   more: 'More categories…',

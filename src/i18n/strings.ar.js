@@ -40,7 +40,7 @@ export const AR = {
   inboxWaiting: (n) => `${n} ${n === 1 ? 'عملية مستنية' : 'عمليات مستنية'} — دوس على النوع عشان يتسجل`,
   // Months-old rows live behind one card so today's two purchases aren't buried
   // under forty of them. Nothing is hidden — it opens on a tap.
-  inboxOldTitle: (n) => `مصاريف قديمة (${n})`,
+  inboxOldTitle: (n) => (n ? `مصاريف قديمة (${n})` : 'مصاريف قديمة'),
   inboxOldBody: 'من شهور فاتت — لسه من غير نوع.',
   inboxOldHide: 'اقفلها',
   more: 'أنواع تانية…',
