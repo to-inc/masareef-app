@@ -1007,6 +1007,7 @@ export default function App() {
                   <InboxView
                     pending={data.pending} settled={settled}
                     onConfirm={confirmPending} onConfirmMany={confirmMany}
+                    onEdited={refresh}
                   />
                 )}
                 {tab === 'entry' && entryMode === 'keypad' && (

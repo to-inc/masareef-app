@@ -8,6 +8,7 @@ import { cardKey, reconcile, remaining, needsHim, headlineFor, batchable } from 
 import { findLookalikes } from '../state/duplicates.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { removeEntry } from '../api/index.js';
+import EditSheet from './EditSheet.jsx';
 
 /**
  * The Inbox is where the 5-second law is won or lost. Each card is one purchase
@@ -101,7 +102,18 @@ export default function InboxView({
   build = loadBuild(),
   initialPairOutcomes = null,
   onResolved = null,
+  /**
+   * E-002 — the review card's edit door. A pending row carries the SERVER's
+   * own tab + rowHint + match, the exact identity EditSheet posts, so this is
+   * the Book's door re-used — not a second editor. After a save the list
+   * refetches (`onEdited`): the server's re-read is the truth, not a guess.
+   */
+  onEdited = null,
+  initialEditing = null,
 }) {
+  const [editing, setEditing] = useState(initialEditing);
+  const canEdit = supportsAction(build, 'edit_entry');
+  const openEdit = canEdit ? (item) => setEditing(item) : null;
   /**
    * What happened to each PAIR, keyed by the detector's own group key. A
    * `done` outcome carries `removedKey` — the removed row's settle key — and
@@ -240,14 +252,22 @@ export default function InboxView({
       )}
 
       {fresh.map((row) => (
-        <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} />
+        <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} onOpenEdit={openEdit} />
       ))}
-      {stale.length > 0 && <StaleGroup rows={stale} onConfirm={onConfirm} />}
+      {stale.length > 0 && <StaleGroup rows={stale} onConfirm={onConfirm} onOpenEdit={openEdit} />}
+
+      {editing && (
+        <EditSheet
+          item={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { if (onEdited) onEdited(); }}
+        />
+      )}
     </div>
   );
 }
 
-function StaleGroup({ rows, onConfirm }) {
+function StaleGroup({ rows, onConfirm, onOpenEdit }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ marginTop: 8 }}>
@@ -268,7 +288,7 @@ function StaleGroup({ rows, onConfirm }) {
       {open && (
         <div style={{ marginTop: 12 }}>
           {rows.map((row) => (
-            <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} />
+            <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} onOpenEdit={openEdit} />
           ))}
         </div>
       )}
@@ -448,7 +468,7 @@ function GroupCard({ group }) {
   );
 }
 
-function PendingCard({ item, outcome, onConfirm }) {
+function PendingCard({ item, outcome, onConfirm, onOpenEdit = null }) {
   const p = item.match;
 
   /**
@@ -509,6 +529,21 @@ function PendingCard({ item, outcome, onConfirm }) {
       <OutcomeNote outcome={outcome} />
 
       <CategoryActions guess={item.guess} outcome={outcome} onPick={(c) => onConfirm(item, c)} />
+
+      {/* E-002 — fix the amount, currency, method, date or wording in place.
+          Gated fail-closed on the server advertising `edit_entry` (§3.7). */}
+      {onOpenEdit && (
+        <button
+          onClick={() => onOpenEdit(item)}
+          style={{
+            width: '100%', minHeight: TAP, marginTop: 10, borderRadius: RADIUS.row,
+            background: C.card, border: `1px solid ${C.line}`,
+            color: C.harborInk, fontSize: TYPE.label, fontWeight: 700,
+          }}
+        >
+          {S.editOpen}
+        </button>
+      )}
 
       {/**
         * «الرسالة الأصلية» IS GONE (finding S10).

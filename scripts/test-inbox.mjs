@@ -707,6 +707,28 @@ try {
   ok(!unguessed.includes('الرسالة الأصلية'), 'and the label that opened it is gone with it');
   ok(!/#14/.test(unguessed), 'the row index is not printed at him anywhere on the card');
   ok(unguessed.includes('150'), 'while the amount, which IS his, is still there');
+
+  // ——— E-002: the review card's edit door. A row added in the wrong currency
+  // had no way to be fixed from the screen that shows it. The door re-uses the
+  // Book's EditSheet and posts the card's OWN server-authored tab — gated
+  // fail-closed on the server advertising edit_entry (§3.7).
+  {
+    const editWord = 'عدّل';
+    const card = { ...row('Oct', 3), match: { ...row('Oct', 3).match, amount: 15.5, currency: 'EGP' } };
+    const withEdit = renderToStaticMarkup(createElement(InboxView, {
+      pending: [card], settled: {}, onConfirm: () => {}, build: { actions: ['edit_entry'] },
+    }));
+    const noEdit = renderToStaticMarkup(createElement(InboxView, {
+      pending: [card], settled: {}, onConfirm: () => {}, build: { actions: [] },
+    }));
+    ok(withEdit.includes(`>${editWord}</button>`), 'E002.1 a review card offers «عدّل» when the server advertises edit_entry');
+    ok(!noEdit.includes(`>${editWord}</button>`), 'E002.2 …and offers nothing when it does not — no door that posts into the void');
+    ok(/min-height:48px[^"]*"[^>]*>عدّل</.test(withEdit), 'E002.3 …at the senior tap floor');
+    const open = renderToStaticMarkup(createElement(InboxView, {
+      pending: [card], settled: {}, onConfirm: () => {}, build: { actions: ['edit_entry'] }, initialEditing: card,
+    }));
+    ok(open.includes('عدّل الصف') && open.includes('15.5') && !withEdit.includes('عدّل الصف'), 'E002.4 tapping it opens the edit sheet on THAT row');
+  }
 } finally {
   await vite.close();
 }
