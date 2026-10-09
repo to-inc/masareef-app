@@ -34,7 +34,7 @@
  * the SAME token by reference — a declared size that cannot drift from the
  * size the component actually renders.
  */
-import { C, METHOD, TYPE } from '../src/theme.js';
+import { C, METHOD, TYPE, GLASS, GROUND_PIXELS } from '../src/theme.js';
 
 let pass = 0;
 const failures = [];
@@ -377,6 +377,62 @@ decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a backg
 
   if (users.length) pass++;
   else failures.push('the warm accent is used NOWHERE — an accent nothing uses is not a design system, it is a dead token');
+}
+
+// ——————————————————————— A4 · GLASS OVER ITS REAL GROUND (v4, 2026-10-09)
+// Each text-bearing tier is composited over the LIGHTEST and the DARKEST pixel
+// of every ground — at the tier's thinnest stop, the worst case — and text is
+// measured against the result. R0: the suite MEASURES; a pair below AA is
+// logged as a residue (⚠️), never a veto — except under 3:1, which nothing reads.
+const hex2 = (n) => Math.round(n).toString(16).padStart(2, '0');
+const over = (rgba, under) => {           // composite rgba(...) onto a hex
+  const [r, g, b, a] = rgba.match(/[\d.]+/g).map(Number);
+  const u = srgb(under).map((x) => x * 255);
+  return '#' + [r, g, b].map((c, i) => hex2(c * a + u[i] * (1 - a))).join('');
+};
+const stops = (bg) => bg.match(/rgba\([^)]+\)/g) || [];
+const thinnest = (bg) => stops(bg).reduce((m, x) => (Number(x.match(/[\d.]+/g)[3]) < Number(m.match(/[\d.]+/g)[3]) ? x : m));
+const ends = (pixels) => {
+  const sorted = [...pixels].sort((a, b) => luminance(a) - luminance(b));
+  return [['darkest', sorted[0]], ['lightest', sorted[sorted.length - 1]]];
+};
+function residue(where, fg, bg, px, bold = false) {
+  seen.add(fg);
+  const floor = isLarge(px, bold) ? 3 : 4.5;
+  const r = ratio(fg, bg);
+  if (r >= floor) { record('✅', where, fg, bg, px, r, floor); pass++; return; }
+  if (r < 3) {
+    record('❌', where, fg, bg, px, r, floor);
+    failures.push(`${where} — ILLEGIBLE\n      ${fg} on ${bg} = ${r.toFixed(2)}:1 — under 3:1 is not a residue, it is unreadable.`);
+    return;
+  }
+  record('⚠️', where, fg, bg, px, r, floor);
+  flags.push(`RESIDUE (R0, logged not blocking) ${where}: ${fg} on ${bg} at ${px}px${bold ? ' bold' : ''} = ${r.toFixed(2)}:1, AA wants ${floor}:1`);
+}
+for (const [ground, pixels] of Object.entries(GROUND_PIXELS)) {
+  for (const [end, px0] of ends(pixels)) {
+    for (const tier of ['card', 'chip']) {                 // text may sit only here
+      const bg = over(thinnest(GLASS[tier].bg), px0);
+      residue(`ink on ${tier} glass over ${ground} (${end})`, C.ink, bg, TYPE.body);
+      residue(`muted on ${tier} glass over ${ground} (${end})`, C.muted, bg, TYPE.label);
+    }
+    // chrome carries 14px+/600+ labels only (A3) — measured at that floor.
+    residue(`ink label on chrome over ${ground} (${end})`, C.ink, over(thinnest(GLASS.chrome.bg), px0), 14, false);
+  }
+}
+// The toast is white on dark glass: its worst case is the LIGHTEST ground.
+for (const [ground, pixels] of Object.entries(GROUND_PIXELS)) {
+  const light = ends(pixels)[1][1];
+  const t = stops(GLASS.toast.bg).map((x) => over(x, light)).sort((a, b) => luminance(b) - luminance(a))[0];
+  residue(`white on the undo toast over ${ground} (lightest)`, C.onDark, t, TYPE.body);
+}
+// Control: the composite really depends on the tier — a near-clear tier over
+// the darkest dawn pixel must come out darker than the designed card.
+ok_composite: {
+  const d = ends(GROUND_PIXELS.dawn)[0][1];
+  const clear = over('rgba(255,255,255,0.05)', d), card = over(thinnest(GLASS.card.bg), d);
+  if (luminance(clear) < luminance(card)) pass++;
+  else failures.push('A4 control FAILED: compositing ignores the tier alpha — the glass measurement is blind');
 }
 
 // ——————————————————————— every token must be measured somewhere.

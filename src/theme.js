@@ -73,6 +73,9 @@ export const C = {
    * control and forced a re-derivation of the C2 ink override.
    */
   harborInk: '#34688C',
+  /** R1 (OWNER-RULINGS, 2026-09-20): `#34688C` ratified as a canonical token in its own
+   *  right — the gradient's END stop. Same value as harborInk, a different role. */
+  harborDeep: '#34688C',
 
   // ——— canonical: tertiary
   sand: '#E7D9BE',      // chips, and the calm advisory surfaces (offline, outbox)
@@ -232,7 +235,7 @@ export const NUMERALS = { fontVariantNumeric: 'tabular-nums' };
  * is what «restyle the app to the glass system» has to mean if the vocabulary
  * is doing any work at all.
  */
-export const RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24 };
+export const RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18 }; // glassWell: R11
 
 /**
  * Eight reading sizes (§3 + rulings 1–2). Line-height ≥ 1.3 governs PROSE —
@@ -463,15 +466,28 @@ const W = (a) => `rgba(255,255,255,${a})`;   // white is not a palette token
  * elsewhere — they are not, they are three specific skies.
  */
 export const GROUND = {
-  dawn: 'radial-gradient(120% 80% at 18% 0%, #F6E1C3 0%, rgba(246,225,195,0) 62%),'
-      + ' radial-gradient(100% 70% at 92% 8%, #EBD5E4 0%, rgba(235,213,228,0) 58%),'
-      + ` radial-gradient(130% 95% at 50% 100%, #DCE9F0 0%, rgba(220,233,240,0) 62%), ${C.shell}`,
+  /** v4 Dawn (R15) — amber · sand · harbor; the mauve stop is GONE. Verbatim from
+   *  `Masareef Glass PWA.dc.html` P3. The ground for the P-screens. */
+  dawn: 'radial-gradient(85% 45% at 10% 0%, #F2D3A6 0%, rgba(242,211,166,0) 70%),'
+      + ' radial-gradient(75% 40% at 100% 14%, #EADFCB 0%, rgba(234,223,203,0) 70%),'
+      + ' radial-gradient(110% 55% at 25% 100%, #B5D2E6 0%, rgba(181,210,230,0) 72%),'
+      + ' radial-gradient(70% 38% at 95% 72%, #C9E0EC 0%, rgba(201,224,236,0) 70%), #F3EEE5',
   tide: 'radial-gradient(110% 75% at 12% 0%, #D9E9F2 0%, rgba(217,233,242,0) 62%),'
       + ' radial-gradient(95% 65% at 96% 18%, #C9E1EE 0%, rgba(201,225,238,0) 58%),'
       + ` radial-gradient(120% 90% at 60% 100%, #E7EFF3 0%, rgba(231,239,243,0) 60%), ${C.shell}`,
   haze: 'radial-gradient(120% 80% at 80% 0%, #E9E1D2 0%, rgba(233,225,210,0) 60%),'
       + ` radial-gradient(100% 80% at 10% 30%, #E2EBF0 0%, rgba(226,235,240,0) 60%), ${C.shell}`,
 };
+
+/**
+ * Every colour a ground can show at full strength — its base and each stop's
+ * centre. The contrast suite (A4) composites each glass tier over the lightest
+ * and the darkest of these: blur averages the ground under a surface, so a stop
+ * centre is the worst case a surface can sit on.
+ */
+export const GROUND_PIXELS = Object.fromEntries(Object.entries(GROUND).map(([k, v]) => [
+  k, [...new Set(v.match(/#[0-9A-Fa-f]{6}/g))],
+]));
 
 /**
  * THE CROWN of each ground — the colour the top of the screen actually is.
@@ -489,77 +505,68 @@ export const GROUND = {
  * whoever edits a ground sees the colour its scrim must match, on the next line.
  */
 export const GROUND_CROWN = {
-  dawn: '#F6E1C3',   // the sand stop at 18% 0%
+  dawn: '#F2D3A6',   // the amber-sand stop at 10% 0% (v4)
   tide: '#D9E9F2',   // the harbor wash at 12% 0%
   haze: '#E9E1D2',   // the warm stop at 80% 0%
 };
 
 /**
- * 2 · SURFACES — four tiers, and elevation is blur plus a 1px specular top
- * edge, NOT a line border. Borders survive only where they mean something:
- * controls and advisory surfaces, which is the rule `C.line` already states.
+ * 2 · SURFACES — the v4 tiers (ARCHITECTURE A3, OWNER-RULINGS R13/R6/A15).
+ * THE single source: no view may carry a glass literal; it calls `glass(tier)`.
+ * Text sits only on `card` or `chip` (the opacity floor); `chrome` carries
+ * labels of 14px+/600+ only; `well` is pressed and never blurs.
  *
- * `frost` is a multiplier the display setting drives (Sheer 6 / As designed /
- * Deep frost 42). It is a FUNCTION rather than a constant so the setting can
- * change the whole system from one place; calling `GLASS.card()` with no
- * argument gives the designed weight.
+ * `f` is the frost factor (FROST — R10's setting): it scales every blur.
  */
 const blur = (px, sat, f = 1) =>
   `blur(${Math.round(px * f)}px)${sat ? ` saturate(${sat}%)` : ''}`;
 
 export const GLASS = {
-  /** Content home. white .66→.34, blur 26, sat 150. */
-  card: (f = 1) => ({
-    background: `linear-gradient(155deg, ${W(0.66)}, ${W(0.34)})`,
-    backdropFilter: blur(26, 150, f),
-    WebkitBackdropFilter: blur(26, 150, f),
-    border: `1px solid ${W(0.55)}`,
-    boxShadow: `0 10px 30px ${alpha(C.ink, 0.1)}, inset 0 1px 0 ${W(0.8)}`,
-    borderRadius: RADIUS.card,
-  }),
-  /** One step thinner. Lists, list-scale controls. */
-  row: (f = 1) => ({
-    background: `linear-gradient(155deg, ${W(0.5)}, ${W(0.26)})`,
-    backdropFilter: blur(18, 140, f),
-    WebkitBackdropFilter: blur(18, 140, f),
-    border: `1px solid ${W(0.45)}`,
-    boxShadow: `0 6px 18px ${alpha(C.ink, 0.07)}, inset 0 1px 0 ${W(0.7)}`,
-    borderRadius: RADIUS.row,
-  }),
-  /**
-   * Pressed INTO a card. The amount lives here, and so does the active nav
-   * tab — «you are here» and «this is the figure» are the same gesture in this
-   * system: the surface sinks rather than lifts.
-   */
-  well: () => ({
-    background: `linear-gradient(175deg, ${alpha(C.ink, 0.075)}, rgba(250,247,241,.28) 45%, ${W(0.42)})`,
-    boxShadow: `inset 0 2px 6px ${alpha(C.ink, 0.18)}, inset 0 -1px 2px ${W(0.75)}, 0 1px 0 ${W(0.65)}`,
-    border: `1px solid ${alpha(C.ink, 0.1)}`,
-    borderRadius: RADIUS.capsule,
-  }),
-  /**
-   * Offline, outbox, caveats, the old-expenses callout. KEEPS ITS EDGE BY LAW —
-   * this is the one tier the North Star's «plain cards lose their border» rule
-   * deliberately exempts, and the glass redesign does not touch that ruling.
-   */
-  advisory: (f = 1) => ({
-    background: `linear-gradient(160deg, ${alpha(C.sand, 0.72)}, ${alpha(C.sand, 0.42)})`,
-    backdropFilter: blur(14, null, f),
-    WebkitBackdropFilter: blur(14, null, f),
-    border: `1px solid ${alpha(C.line, 0.9)}`,
-    boxShadow: `inset 0 1px 0 ${W(0.6)}`,
-    borderRadius: RADIUS.sheet,
-  }),
-  /**
-   * When the ground is close in tone the white rim disappears and a glass
-   * control stops looking like a control. The smart edge adds an ink hairline
-   * UNDER the white one, so the boundary reads on light and dark grounds
-   * alike. Applied to segmented controls; use it anywhere an edge dissolves.
-   */
-  smartEdge: () => ({
-    border: `1px solid ${alpha(C.ink, 0.13)}`,
-    boxShadow: `inset 0 1px 0 ${W(0.85)}, 0 4px 12px ${alpha(C.ink, 0.08)}`,
-  }),
+  card:     { bg: `linear-gradient(155deg, ${W(0.72)}, ${W(0.40)})`, blur: 26, sat: 160,
+              rim: W(0.7), cast: `0 12px 32px ${alpha(C.ink, 0.12)}`, inset: `inset 0 1px 0 ${W(0.95)}`, radius: 'card' },
+  chip:     { bg: `linear-gradient(155deg, ${W(0.66)}, ${W(0.32)})`, blur: 18, sat: 150,
+              rim: W(0.75), cast: `0 4px 12px ${alpha(C.ink, 0.08)}`, radius: 'capsule' },
+  chrome:   { bg: `linear-gradient(160deg, ${W(0.55)}, ${W(0.26)})`, blur: 30, sat: 180,
+              rim: W(0.8), cast: `0 10px 30px ${alpha(C.ink, 0.16)}`, inset: `inset 0 1px 0 ${W(0.85)}`, radius: 'capsule' },
+  well:     { bg: `linear-gradient(175deg, ${alpha(C.ink, 0.08)}, ${W(0.30)})`,
+              inset: `inset 0 2px 5px ${alpha(C.ink, 0.14)}, inset 0 -1px 0 ${W(0.7)}`,
+              rim: alpha(C.ink, 0.1), radius: 'glassWell' },
+  /** Sand glass, blur pinned at 16 (A15). Offline, outbox, caveats, old expenses. */
+  advisory: { bg: `linear-gradient(165deg, ${W(0.5)}, ${alpha(C.sand, 0.75)} 45%, ${alpha(C.sand, 0.5)})`, blur: 16,
+              rim: 'rgba(210,190,150,.75)', cast: '0 3px 10px rgba(160,130,60,.1)', radius: 'sheet' },
+  /** The «اتحفظ ✓ — رجوع» undo toast (R19) — white text on dark glass. */
+  toast:    { bg: `linear-gradient(160deg, ${alpha(C.ink, 0.72)}, rgba(31,43,53,.62))`, blur: 24,
+              cast: `0 10px 30px ${alpha(C.ink, 0.22)}`, radius: 'capsule' },
+};
+
+/** A tier → a React style object. The only way a view gets glass. */
+export const glass = (tier, f = 1) => {
+  const t = GLASS[tier];
+  if (!t) throw new Error(`glass(): no such tier: ${tier}`);
+  // A5: the background reads a per-tier CSS variable first. styles.css sets it
+  // to a solid colour only when blur is unsupported or reduced transparency is
+  // asked for — so every glass surface falls back with no change in any view.
+  const s = { background: `var(--glass-solid-${tier}, ${t.bg})`, borderRadius: RADIUS[t.radius] };
+  if (t.blur) s.backdropFilter = s.WebkitBackdropFilter = blur(t.blur, t.sat, f);
+  if (t.rim) s.border = `1px solid ${t.rim}`;
+  const shadows = [t.cast, t.inset].filter(Boolean);
+  if (shadows.length) s.boxShadow = shadows.join(', ');
+  return s;
+};
+
+/**
+ * When the ground is close in tone the white rim disappears and a glass control
+ * stops looking like a control: an ink hairline under the white one. HANDOFF.
+ */
+export const SMART_EDGE = {
+  border: `1px solid ${alpha(C.ink, 0.13)}`,
+  boxShadow: `inset 0 1px 0 ${W(0.85)}, 0 4px 12px ${alpha(C.ink, 0.08)}`,
+};
+
+/** Canonical gradients (R1/R13): they START at the tokens; v4's lighter starts were illustrative. */
+export const GRADIENT = {
+  harbor: `linear-gradient(160deg, ${C.harbor}, ${C.harborDeep})`,
+  amber: `linear-gradient(160deg, ${C.amber}, #CF9A34)`,
 };
 
 /**

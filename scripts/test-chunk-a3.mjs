@@ -75,7 +75,7 @@ for (const file of files) {
   lines.forEach((ln, i) => {
     if (!RADIUS_DECL.test(ln)) return;
     rec.sites++;
-    if (ln.includes('RADIUS.')) { rec.token++; return; }
+    if (/RADIUS(\.|\[)/.test(ln)) { rec.token++; return; }   // RADIUS.x or RADIUS[key] — both are the token
     const context = lines.slice(Math.max(0, i - 4), i + 1).join('\n');
     if (EXEMPT.test(context)) { rec.exempt++; return; }
     rec.bad.push(`L${i + 1}: ${ln.trim().slice(0, 88)}`);
@@ -107,8 +107,9 @@ const theme = read('src/theme.js');
 // («Card — 26r», «Row — 20r» in the design file). `sheet` already equalled the
 // advisory radius and did not move. The pin moves WITH the ruling and never
 // ahead of it — that is what makes it a pin rather than a comment.
-ok(/export const RADIUS = \{ card: 26, row: 20, capsule: 999, inset: 8, sheet: 24 \}/.test(theme),
-  'A3.V theme.js — RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24 } (§3 + rulings 4, B4; glass scale 2026-08-28), verbatim');
+// 2026-10-09: `glassWell: 18` joins by OWNER-RULINGS R11 (the pressed well).
+ok(/export const RADIUS = \{ card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18 \}/.test(theme),
+  'A3.V theme.js — RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18 } (§3 + rulings 4, B4; glass scale 2026-08-28; R11), verbatim');
 ok(theme.includes('GEOMETRY EXEMPTION'),
   'A3.V theme.js — the GEOMETRY EXEMPTION doctrine is stated by name where the tokens live');
 

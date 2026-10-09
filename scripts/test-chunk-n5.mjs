@@ -23,7 +23,11 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { readFile } from 'node:fs/promises';
-import { SPACE, RADIUS, C } from '../src/theme.js';
+import { SPACE, RADIUS, C, GLASS, glass } from '../src/theme.js';
+
+// R0: the only legal edges and shadows are the glass recipes' own.
+const GLASS_RIMS = Object.keys(GLASS).map((t) => glass(t).border).filter(Boolean);
+const GLASS_CASTS = Object.keys(GLASS).map((t) => glass(t).boxShadow).filter(Boolean);
 
 const MARKER = 'CHUNK-N5-GREEN';
 
@@ -89,9 +93,11 @@ try {
     ok(s.includes(`border-radius:${RADIUS.card}px`), `N5.8 render — section ${i + 1} rides RADIUS.card`);
     ok(s.includes(`padding:${SPACE.cardPad}px`), `N5.8 render — section ${i + 1}'s inset is SPACE.cardPad`);
     // A2's law arrives at the new surfaces: luminance carries elevation.
-    ok(!/(?:^|;)border(?!-radius)[a-z-]*:/.test(s),
-      `N5.9 render — section ${i + 1} is BORDERLESS — a plain section taking an edge is A2's drift, reborn`);
-    ok(!/shadow/i.test(s), `N5.9 render — section ${i + 1} is shadowless`);
+    // R0 RE-CUT: an edge or a shadow is legal only as a glass recipe's own.
+    ok((s.match(/(?:^|;)border(?!-radius)[a-z-]*:[^;"]+/g) || []).every((b) => GLASS_RIMS.some((r) => b.includes(r))),
+      `N5.9 render — section ${i + 1} takes no edge but a glass rim (R0)`);
+    ok((s.match(/box-shadow:[^;"]+/g) || []).every((b) => GLASS_CASTS.some((c) => b.includes(c))),
+      `N5.9 render — section ${i + 1} casts no shadow but a glass recipe's (R0)`);
   });
 
   // — the white-card surfaces together (sections + the N3 card) number ≥3
@@ -100,7 +106,8 @@ try {
     `N5.10 render — ≥3 RADIUS.card surfaces on the shell (got ${whiteCards}): the card and the sections agree on one radius`);
 
   // — and nothing on the screen casts a shadow at all (elevation = luminance)
-  ok(!/box-shadow/.test(html), 'N5.11 render — no box-shadow anywhere on New');
+  ok((html.match(/box-shadow:[^;"]+/g) || []).every((b) => GLASS_CASTS.some((c) => b.includes(c))),
+    'N5.11 render — every shadow on New is a glass recipe\'s — none hand-rolled (R0)');
 
   // — a fresh install still gets the sectioned screen (the boxes are the
   //   screen's anatomy, not a reward for having history)

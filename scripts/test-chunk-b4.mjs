@@ -124,8 +124,9 @@ try {
     'B4.16 the advisory lip is RADIUS.sheet too — one step softer than the card it covers');
   ok(banner.includes('border:1px solid'),
     'B4.17 …and it KEEPS its meaning border — advisory surfaces stay bordered by name (A2\'s doctrine), the sheet did not shed it');
-  ok(!banner.includes('box-shadow'),
-    'B4.18 no shadow arrived with the sheet — luminance carries elevation (A2); the entrance is motion, not chrome');
+  // R0 RE-CUT: a shadow may arrive — but only the advisory recipe's own warm cast.
+  ok(!banner.includes('box-shadow') || banner.includes('rgba(160,130,60,.1)'),
+    'B4.18 any shadow on the advisory sheet is the advisory glass cast — never a hand-rolled one (R0)');
 } finally {
   await vite.close();
 }

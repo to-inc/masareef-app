@@ -179,3 +179,17 @@ nav button[aria-current="page"] {
     transition: none;
   }
 }
+
+/* ═══ A5 — GLASS FALLS BACK TO SOLID (OWNER-RULINGS R19, ARCHITECTURE A5) ═══
+   glass() in theme.js paints `var(--glass-solid-<tier>, <gradient>)`. These
+   variables exist ONLY here, only under the two conditions — so a phone that
+   cannot blur, or a person who asked iOS to reduce transparency, gets solid
+   surfaces with the same text contrast as the shipped solid app. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass-solid-card: #FFFFFF; --glass-solid-chip: #FFFFFF; --glass-solid-chrome: #FAF7F1;
+          --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass-solid-card: #FFFFFF; --glass-solid-chip: #FFFFFF; --glass-solid-chrome: #FAF7F1;
+          --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356; }
+}

@@ -81,8 +81,10 @@ function pinPlainCard(file, component, label) {
   const style = slice && cardRootStyle(slice);
   ok(style, `${label} — its C.card root is present (the site did not vanish)`);
   if (!style) return;
-  ok(!/shadow/i.test(style), `${label} — shadowless: luminance carries elevation, nothing else`);
-  ok(!BORDERED.test(style), `${label} — borderless: a plain card taking an edge is the drift A2 exists to catch`);
+  // R0 (2026-10-09) RE-CUT: «shadowless» is repealed. Elevation is the glass
+  // grammar now — and it comes from glass(tier) ONLY, never a hand-written shadow or edge.
+  ok(!/boxShadow:\s*[`'"]/.test(style), `${label} — no hand-rolled shadow: raised elevation comes from glass('card') only (R0)`);
+  ok(!/\bborder(?!Radius\b)[A-Za-z]*\s*:\s*[`'"]/.test(style), `${label} — no hand-rolled edge: a rim comes from the glass recipe (R0)`);
 }
 
 // ——— the enumerated plain-card sites, one pin each

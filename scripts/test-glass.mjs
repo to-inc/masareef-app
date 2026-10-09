@@ -23,7 +23,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GLASS, FROST, ATMOSPHERE, C } from '../src/theme.js';
+import { GLASS, glass, FROST, ATMOSPHERE, C } from '../src/theme.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = join(HERE, '..', 'src');
@@ -38,43 +38,70 @@ const walk = (dir) => readdirSync(dir).flatMap((f) => {
 const files = walk(SRC);
 const rel = (p) => p.slice(SRC.length + 1);
 
-// ——————————————————————————————————— 1. every blurring recipe carries both prefixes
-// A15's law, app side: the unprefixed property alone leaves Safari — which is
-// the only browser this app runs in — with no blur at all.
-const blurring = ['card', 'row', 'advisory', 'smartEdge'];
-for (const name of blurring) {
-  const fn = GLASS[name];
-  if (typeof fn !== 'function') { failures.push(`GLASS.${name} is missing`); continue; }
-  const s = fn(1);
-  if (!s.backdropFilter) continue;          // a recipe may legitimately not blur
+// ——————————————————————————————————— 1. the v4 tiers (ARCHITECTURE A3) exist, and every blur carries both prefixes
+// The unprefixed property alone leaves Safari — the only browser this app runs
+// in — with no blur at all.
+for (const name of ['card', 'chip', 'chrome', 'well', 'advisory', 'toast']) {
+  ok(!!GLASS[name], `GLASS.${name} — a v4 tier — is missing`);
+  if (!GLASS[name]) continue;
+  const s = glass(name);
+  if (!s.backdropFilter) continue;
   ok(s.WebkitBackdropFilter === s.backdropFilter,
-    `GLASS.${name} must emit -webkit-backdrop-filter identical to backdrop-filter`);
+    `glass('${name}') must emit -webkit-backdrop-filter identical to backdrop-filter`);
+}
+// R13: the card moved UP to .72/.40, blur 26, sat 160.
+ok(/rgba\(255,255,255,0\.72\).*rgba\(255,255,255,0\.4\)/.test(GLASS.card.bg) && GLASS.card.blur === 26 && GLASS.card.sat === 160,
+  'R13: GLASS.card is .72→.40, blur 26, sat 160');
+ok(GLASS.advisory.blur === 16, 'A15: the advisory blur is pinned at 16');
+let threw = false; try { glass('nope'); } catch { threw = true; }
+ok(threw, 'glass() refuses an unknown tier rather than returning a plausible nothing');
+
+// ——————————————————————————————————— 1b. A5: every translucent tier falls back to solid
+{
+  const css = readFileSync(join(HERE, '..', 'src', 'styles.css'), 'utf8');
+  const blocks = [
+    css.slice(css.indexOf('@supports not ((backdrop-filter')),
+    css.slice(css.indexOf('@media (prefers-reduced-transparency: reduce)')),
+  ];
+  ok(blocks.every((b) => b.length > 30), 'A5: styles.css has both fallbacks — no blur support, and reduced transparency');
+  for (const tier of ['card', 'chip', 'chrome', 'advisory', 'toast']) {
+    ok(glass(tier).background.startsWith(`var(--glass-solid-${tier},`),
+      `A5: glass('${tier}') paints through --glass-solid-${tier}, so the fallback can reach it`);
+    ok(blocks.every((b) => new RegExp(`--glass-solid-${tier}:\\s*#[0-9A-Fa-f]{6}`).test(b.slice(0, b.indexOf('}') + 1))),
+      `A5: both fallbacks give ${tier} a solid colour`);
+  }
 }
 
-// ——————————————————————————————————— 2. frost is a real factor, not a dead token
-// A22: frost must be TOKEN-DRIVEN. The design prototype drove it from a
-// `[style*="backdrop-filter"]` attribute selector, which matches zero elements
-// the moment recipes become shared tokens — it dies outright rather than
-// degrading. Here every recipe takes the factor, so this asserts it is consumed.
+// ——————————————————————————————————— 2. frost is a real factor, not a dead token (R10)
 const px = (s) => Number((s.backdropFilter.match(/blur\((\d+)px\)/) || [])[1]);
-for (const name of ['card', 'row', 'advisory']) {
-  const sheer = px(GLASS[name](FROST.sheer));
-  const designed = px(GLASS[name](FROST.designed));
-  const deep = px(GLASS[name](FROST.deep));
+for (const name of ['card', 'chip', 'chrome', 'advisory']) {
+  const sheer = px(glass(name, FROST.sheer));
+  const designed = px(glass(name, FROST.designed));
+  const deep = px(glass(name, FROST.deep));
   ok(sheer < designed && designed < deep,
-    `GLASS.${name} must scale its blur with the frost factor (got ${sheer} / ${designed} / ${deep})`);
+    `glass('${name}') must scale its blur with the frost factor (got ${sheer} / ${designed} / ${deep})`);
 }
 ok(FROST.designed === 1, 'FROST.designed must be the identity factor');
 
 // ——————————————————————————————————— 3. the Well does not blur, by specification
-// HANDOFF:27 gives the Well no blur, so frost skipping it is correct rather than
-// an omission. Asserted so a later "consistency" pass does not add one.
-ok(GLASS.well().backdropFilter === undefined,
-  'GLASS.well() must NOT blur — HANDOFF:27 specifies no blur for a pressed well');
+ok(glass('well').backdropFilter === undefined, 'the well must NOT blur — it is pressed, not frosted');
+ok(/1px solid/.test(glass('well').border || ''), 'the well carries its ink hairline');
 
-// A24, app side: the nav well carries HANDOFF:27's ink hairline.
-ok(/1px solid/.test(GLASS.well().border || ''),
-  'GLASS.well() must carry the ink hairline border (A24)');
+// ——————————————————————————————————— 3b. NO GLASS LITERAL IN A VIEW (A3)
+// A white-alpha gradient or a backdrop blur written in a view is a recipe that
+// drifts from the system — how «glass» shipped as solid white cards before.
+const literal = /rgba\(255,\s*255,\s*255,\s*\.?\d|backdropFilter:\s*['"`]blur/;
+const glassLiterals = [];
+for (const p of files) {
+  if (rel(p) === 'theme.js') continue;
+  readFileSync(p, 'utf8').split('\n').forEach((l, i) => { if (literal.test(l)) glassLiterals.push(`${rel(p)}:${i + 1}`); });
+}
+ok(literal.test("background: 'linear-gradient(155deg, rgba(255,255,255,.7), x)'") && literal.test("backdropFilter: 'blur(4px)'"),
+  'control: the literal detector sees a white-alpha gradient and a hand-written blur');
+// RESIDUE, not a veto, until each view is converted in R20 step 3 — the count may only fall.
+const GLASS_LITERAL_BUDGET = 5; // 2026-10-09: App nav blur + 4 white rims on harbor buttons
+ok(glassLiterals.length <= GLASS_LITERAL_BUDGET,
+  `glass literals in views grew past ${GLASS_LITERAL_BUDGET} — use glass(tier): ${glassLiterals.join(', ')}`);
 
 // ——————————————————————————————————— 4. THE A22 GUARD
 // No component may set a bare CSS `filter`. ATMOSPHERE is the only thing that

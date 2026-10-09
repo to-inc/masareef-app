@@ -131,8 +131,10 @@ ok(truncAt !== -1 && /B4b VERDICT: STATIC/.test(batch.slice(Math.max(0, truncAt 
 // ═══ 4. A2's law rides along — no hand-rolled chrome or motion in the three files ═══
 
 for (const [name, text] of [['ReceiptView', receipt], ['BatchReviewView', batch], ['App', app]]) {
-  ok(!/boxShadow|box-shadow/.test(text),
-    `B4b.16 ${name} carries no boxShadow — luminance carries elevation (A2); an entrance is motion, not chrome`);
+  // R0 RE-CUT: B4b «no box-shadow in App.jsx» is repealed (the nav takes its cast) —
+  // what survives is that a shadow comes from theme tokens, never a literal in the view.
+  ok(!/boxShadow:\s*[`'"]/.test(text),
+    `B4b.16 ${name} hand-writes no boxShadow — elevation comes from glass()/NAV tokens (R0)`);
   ok(!/@keyframes|animation:/.test(text),
     `B4b.17 ${name} hand-rolls no entrance of its own — B4's Sheet (and B2's keyed .view-in) are the only ways a surface arrives`);
 }

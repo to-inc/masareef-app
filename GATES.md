@@ -56,3 +56,10 @@ would have produced false results:
   CHECK: npm run check:glass
   EXPECT: /all \d+ glass checks passed/
   EVIDENCE: exit=0; shell=/bin/sh; cwd=/private/tmp/masareef-ship; path=64f7963a1548/18 entries; EXPECT=matched; output-sha256=27a46c5459334be9d9177e460f88aacf553e5de1720e06e32d4b13751de19500; output-bytes=96
+
+## Known residues — glass contrast (OWNER-RULINGS R0: logged, not blocking) · 2026-10-09
+Measured by `scripts/test-contrast.mjs` §A4 (each tier's thinnest stop composited
+over the lightest/darkest pixel of each ground). None is under 3:1.
+- muted (#5C6871) 15px on **card** glass over **dawn**'s darkest stop (#B5D2E6) — 4.39:1
+- muted (#5C6871) 15px on **chip** glass over **dawn**'s darkest stop — 4.22:1
+- white 16px on the **undo toast** over **tide** / **haze**'s lightest pixel — 4.43:1
