@@ -1250,9 +1250,15 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
         * the one place two scopes share a screen, each is named: the chart
         * card's header names the year, this line names the selection.
         */}
+      {/* A tapped bar narrows the year — said as a BUTTON that widens it again (Tarek,
+          2026-10-10: «where is the yearly data?» — a stray tap had scoped it to October,
+          and a grey caption was the only clue). */}
       {range && (
-        <div dir="auto" style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', margin: '6px 0 0' }}>
-          {rangeWords}
+        <div style={{ textAlign: 'center', margin: '6px 0 0' }}>
+          <button onClick={() => setRange(null)} className="catchip" dir="auto"
+            style={{ ...glass('chip'), minHeight: TAP, padding: '0 16px', fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>
+            {S.rangeShowAll(rangeWords)}
+          </button>
         </div>
       )}
       {/**

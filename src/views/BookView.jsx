@@ -4,13 +4,13 @@ import {
 } from '../theme.js';
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
-import { money, money2, moneyRound, amountWithCurrency } from '../lib/format.js';
+import { money, money2, moneyRound } from '../lib/format.js';
 import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
 import { fetchEntries } from '../api/index.js';
-import { findLookalikes, lookalikeCounts } from '../state/duplicates.js';
+import { findLookalikes, lookalikeCounts, likeness } from '../state/duplicates.js';
 import { PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
 import { Chip, LATIN, ISOLATE, SectionLabel, Rail, Sheet } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
@@ -685,7 +685,16 @@ export default function BookView({
         * list he reads, it is a scroll he abandons, and every one of them is one
         * tap away under «الشهر».
         */}
-      {period !== 'year' && !loadingRows && !loadError && <Lookalikes rows={rows} sheetUrl={sheetUrl} />}
+      {period !== 'year' && !loadingRows && !loadError && (
+        <Lookalikes rows={rows} sheetUrl={sheetUrl} onPick={(at) => {
+          // The panel and the list below are built from the SAME `rows`, so `at` names the
+          // list row; it opens there, scrolled into view, with its Edit and Delete.
+          const el = document.querySelector(`[data-at="${at}"]`);
+          if (!el) return;
+          setOpen(decodeURIComponent(el.dataset.rowkey));
+          setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 60);
+        }} />
+      )}
       {/**
         * The sort strip earns its place only when there is something to sort —
         * two rows have an order already, whatever it is.
@@ -1096,7 +1105,7 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
  * examined is the one he is looking at, so the card can never describe a month
  * he is not on.
  */
-function Lookalikes({ rows, sheetUrl }) {
+function Lookalikes({ rows, sheetUrl, onPick = null }) {
   const report = findLookalikes(rows);
   const counts = lookalikeCounts(report);
   if (!counts.groups) return null;              // the ordinary case is silence
@@ -1124,18 +1133,31 @@ function Lookalikes({ rows, sheetUrl }) {
           <div style={{ color: C.muted, fontSize: TYPE.label, fontWeight: 700 }}>
             {S.dupTier(g.tier)}
           </div>
-          {g.rows.map((r, i) => (
-            <div key={`${g.key}#${i}`} style={{
-              display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 5,
-            }}>
-              <span style={{ color: C.ink, fontSize: TYPE.label, ...ISOLATE }}>
-                {r.description || S.dupNoDescription}
-              </span>
-              <span style={{ color: C.ink, fontSize: TYPE.label, fontWeight: 700, ...NUMERALS, ...LATIN }}>
-                {amountWithCurrency(r.amount, r.currency)}
-              </span>
-            </div>
-          ))}
+          {g.rows.map((r, i) => {
+            // A row that resembles NONE of its group-mates shares only the day and the
+            // amount — said beside it, so «Same description» never covers it (field
+            // report 2026-10-10: «Lilla Floranna Stockmann» listed under two «HSL»).
+            const odd = g.rows.length > 2 && g.rows.every((o, j) => j === i || likeness(r, o) === 'different');
+            return (
+              <button key={`${g.key}#${i}`}
+                onClick={onPick ? () => onPick(r.at) : undefined} disabled={!onPick}
+                style={{
+                  // Tappable (Tarek, 2026-10-10: «why are these unclickable»): opens THIS row in
+                  // the list below, where Edit and Delete live — the panel still never decides.
+                  width: '100%', minHeight: TAP, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  gap: 10, marginTop: 2, padding: '0 2px', background: 'transparent', textAlign: 'start',
+                }}>
+                <span style={{ color: odd ? C.muted : C.ink, fontSize: TYPE.label, ...ISOLATE }}>
+                  {r.description || S.dupNoDescription}
+                  {odd && <span style={{ color: C.muted }}>{' '}{S.dupOdd}</span>}
+                </span>
+                <span style={{ color: C.ink, fontSize: TYPE.label, fontWeight: 700, whiteSpace: 'nowrap', ...NUMERALS, ...LATIN }}>
+                  {r.amount == null ? '—' : `${money2(r.amount)} ${unitFor(r.currency || HOME_CURRENCY)}`}
+                  {onPick && <span aria-hidden style={{ color: C.muted, fontWeight: 400 }}> ›</span>}
+                </span>
+              </button>
+            );
+          })}
         </div>
       ))}
 
@@ -2038,7 +2060,7 @@ function RowList({
 
         return (
           <div
-            key={key}
+            key={key} data-at={i} data-rowkey={encodeURIComponent(key)}
             style={{
               // v4 P3: rows share ONE glass card, parted by a white highlight line.
               borderTop: i === 0 && !phone.length ? 'none' : GLASS_DIVIDER,

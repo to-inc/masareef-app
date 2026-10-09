@@ -460,10 +460,12 @@ try {
     bookSrc.indexOf('function TodayHead('));
   ok(lookalikes.includes('href={sheetUrl}'),
     'the card\'s one exit is an anchor into his own sheet…');
-  ok(!lookalikes.includes('<button'),
-    '…and it renders no button at all — there is nothing here that acts on his book');
-  ok(!/onClick/.test(lookalikes),
-    'and no click handler either: a detector that could act is no longer a detector');
+  // Re-cut 2026-10-10 (R0): «why are these unclickable» — the rows now OPEN their list row (navigation only).
+  // The law the two pins guarded stands: nothing in this card acts on his book.
+  ok(!/removeEntry|fixCategory|editEntry|onEdit|onRemove|onConfirm|onOpenEdit/.test(lookalikes),
+    '…and nothing in it acts on his book — no edit, remove or file call anywhere in the card');
+  ok((lookalikes.match(/onClick=/g) || []).length === 1 && /onClick=\{onPick \? \(\) => onPick\(r\.at\) : undefined\}/.test(lookalikes),
+    'its one tap only OPENS the row in the list below (onPick) — a detector that points, never one that acts');
 
   // AND THE ORDINARY CASE IS SILENCE — the other direction, which is the one a
   // card that always rendered would pass.
