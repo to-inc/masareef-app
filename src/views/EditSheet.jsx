@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, NUMERALS, RADIUS, SPACE, TAP, TYPE } from '../theme.js';
+import { C, FONT_DISPLAY, NUMERALS, RADIUS, SPACE, TAP, TYPE, pinBottom, FULL_BLEED } from '../theme.js';
 import { S, monthByTab } from '../i18n/strings.js';
 import { Sheet, Chip, LATIN } from '../components/Primitives.jsx';
 import { CURRENCIES } from '../state/travel.js';
@@ -288,11 +288,11 @@ export default function EditSheet({
       <button
         onClick={onClose}
         aria-label={S.settingsClose}
-        style={{ position: 'fixed', inset: 0, zIndex: 44, background: 'transparent', cursor: 'default' }}
+        style={{ position: 'fixed', ...FULL_BLEED, zIndex: 44, background: 'transparent', cursor: 'default' }}
       />
       <div
         style={{
-          position: 'fixed', insetInline: 0, bottom: 0, zIndex: 45,
+          position: 'fixed', insetInline: 0, bottom: pinBottom(), zIndex: 45,
           borderRadius: `${RADIUS.sheet}px ${RADIUS.sheet}px 0 0`,
           overflow: 'hidden',
         }}

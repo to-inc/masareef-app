@@ -103,6 +103,18 @@ try {
   await page.evaluate(() => { const o = document.querySelector('.ground').parentElement; o.dataset.css = o.style.cssText; o.style.position = 'relative'; o.style.inset = ''; o.style.height = '100dvh'; });
   ok(!pinned(await fullscreen()), 'FULLSCREEN positive control FAILED — the 100dvh frame passed; the guard is blind');
   await page.evaluate(() => { const o = document.querySelector('.ground').parentElement; o.style.cssText = o.dataset.css; });
+  // ——— iOS 26 SHORTFALL (measured on his phone: screen 874, app 812, top inset 62). main.jsx
+  // writes the gap to --ios-gap; the frame and the bar must then reach the REAL bottom.
+  const gapProbe = async (px) => {
+    await page.evaluate((v) => document.documentElement.style.setProperty('--ios-gap', v), `${px}px`);
+    return page.evaluate(() => ({ frame: Math.round(document.querySelector('.ground').parentElement.getBoundingClientRect().bottom),
+      nav: Math.round(document.querySelector('nav').getBoundingClientRect().bottom), vh: innerHeight }));
+  };
+  const g0 = await gapProbe(0), g62 = await gapProbe(62);
+  ok(g62.frame === g0.vh + 62 && g62.nav === g0.nav + 62,
+    `IOSGAP with --ios-gap 62 the frame reaches the real bottom (${g62.frame} = ${g0.vh}+62) and the bar moves down with it (${g0.nav}→${g62.nav})`);
+  await gapProbe(0);
+  ok(g0.frame === g0.vh, `IOSGAP control: with no gap (every browser) nothing moves — frame ${g0.frame}/${g0.vh}`);
 
   // A row's description and its OWN metadata are siblings in the inner block;
   // the split is precisely them resolving to opposite start edges.

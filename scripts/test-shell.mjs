@@ -65,6 +65,9 @@ try {
 ok(/root\.style\.background = el\.style\.background;/.test(app) && /root\.style\.backgroundColor = el\.dataset\.edge;/.test(app)
   && /data-edge=\{GROUND_EDGE\[groundKey\]\}/.test(app) && /background: GROUND\[groundKey\],/.test(app),
   'S.25 the page behind the app wears the same ground — an edge iOS leaves uncovered shows the screen\'s colour, not paper');
+const mainSrc = read('src/main.jsx');
+ok(/function fitIosGap\(\)/.test(mainSrc) && /gap > 0 && gap <= 80/.test(mainSrc) && /standalone/.test(mainSrc),
+  'S.27 the iOS shortfall is MEASURED on the device (standalone only, ≤ 80pt, never a keyboard) into --ios-gap');
 ok(/define: \{ __APP_VERSION__: JSON\.stringify\(version\) \}/.test(read('vite.config.js')) && /S\.appVersion\(/.test(read('src/views/SettingsSheet.jsx')),
   'S.26 Settings shows the commit the build came from — «is my phone on the new version?» is read, not guessed');
 ok(/onDebugLog=\{supportsAction\(build, 'debuglog'\) \?/.test(app), 'S.23 App hands the handler over only when the server advertises `debuglog`');

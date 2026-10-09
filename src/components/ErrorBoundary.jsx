@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, RADIUS, TYPE, GLYPH } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, RADIUS, TYPE, GLYPH, FULL_BLEED } from '../theme.js';
 import { S } from '../i18n/strings.js';
 
 /**
@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component {
     return (
       <div
         style={{
-          position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
+          position: 'fixed', ...FULL_BLEED, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', gap: 14,
           background: C.shell, fontFamily: FONT_UI, color: C.ink, padding: 28, textAlign: 'center',
         }}

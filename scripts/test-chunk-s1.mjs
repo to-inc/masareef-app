@@ -147,8 +147,9 @@ ok(/import \{[^}]*\bLangToggle\b[^}]*\}/.test(sh) && /\bCurrencyToggle\b/.test(s
   'S1.20 BOTH controls are the Primitives\' own — they moved house; they were not re-implemented');
 {
   // The backdrop: a full-screen button, honestly labelled, that closes.
-  const backdrop = /aria-label=\{S\.settingsClose\}[\s\S]{0,220}position: 'fixed', inset: 0/.test(sh)
-    || /position: 'fixed', inset: 0[\s\S]{0,220}aria-label=\{S\.settingsClose\}/.test(sh);
+  // Re-cut 2026-10-10 (R0, E-017): bottom-pinned layers extend by the measured iOS shortfall (pinBottom / FULL_BLEED).
+  const backdrop = /aria-label=\{S\.settingsClose\}[\s\S]{0,220}position: 'fixed', \.\.\.FULL_BLEED/.test(sh)
+    || /position: 'fixed', \.\.\.FULL_BLEED[\s\S]{0,220}aria-label=\{S\.settingsClose\}/.test(sh);
   ok(backdrop && /onClick=\{onClose\}/.test(sh),
     'S1.21 the backdrop is a BUTTON with an honest name (MonthSheet\'s grammar) — the whole page behind the sheet is the way out');
   ok((sh.match(/onClick=\{onClose\}/g) || []).length >= 2 && /\{S\.settingsClose\}\s*<\/button>/.test(sh),

@@ -493,6 +493,17 @@ export const GROUND = {
  */
 export const STATUS_SHADE = 'linear-gradient(rgba(44,67,86,0.7), rgba(44,67,86,0.45) 60%, rgba(44,67,86,0))';
 
+/**
+ * THE iOS SHORTFALL (E-017, measured on his phone 2026-10-10: screen 874, app
+ * 812, top inset 62 — under BOTH status-bar styles). iOS 26 home-screen apps
+ * report a layout viewport short by the top inset while the web view itself is
+ * full height (the strip took the page's base colour). main.jsx measures the
+ * gap into --ios-gap — 0 in every browser and on any iOS that fixes this — and
+ * everything pinned to the bottom edge extends by it.
+ */
+export const pinBottom = (x = '0px') => `calc(${x} - var(--ios-gap, 0px))`;
+export const FULL_BLEED = { top: 0, left: 0, right: 0, bottom: pinBottom() };
+
 export const GROUND_EDGE = { dawn: '#CEDDE6', tide: '#EEF2F2', haze: '#FAF7F1' };
 
 /**
