@@ -479,6 +479,14 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
           );
         })}
       </div>
+      {/* E-008 (audit C2): the pill above is chart furniture at 10px; the
+          average is a FIGURE stated nowhere else, so it is said again in
+          readable prose, outside the geometry. */}
+      {counted.length > 0 && (
+        <div data-avg-prose style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>
+          {S.avg} {rangeWords ? `${rangeWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -875,7 +883,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
         }}
       >
         <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>{S.lensTitle}</span>
-        <span style={{ fontSize: 13, color: C.muted }}>{open ? '▾' : '▸'}</span>
+        <span aria-hidden="true" style={{ fontSize: TYPE.caption, color: C.muted }}>{open ? '▾' : '▸'}</span>
       </button>
 
       {open && (

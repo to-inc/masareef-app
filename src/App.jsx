@@ -1133,7 +1133,7 @@ export default function App() {
                   gap: 12, marginTop: 18, flexWrap: 'wrap',
                 }}>
                   {savedAt && (
-                    <span style={{ fontSize: 12.5, color: C.muted }}>
+                    <span style={{ fontSize: TYPE.label, color: C.muted }}>
                       {refreshState === 'failed' ? `${S.refreshFailed} · ` : ''}
                       {S.lastUpdated} <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{cairoClock(savedAt)}</span>
                     </span>
@@ -1252,7 +1252,7 @@ export default function App() {
       {USING_MOCK && (
         // geometry exemption (ruling 4): dev-only chrome — a 6px corner on a
         // ~16px badge Dad never sees; a surface token would clamp it to a pill.
-        <div style={{ position: 'fixed', top: 0, insetInlineStart: 0, background: C.conflictInk, color: C.onDark, fontSize: 10, fontWeight: 700, padding: '2px 6px', borderEndEndRadius: 6, zIndex: 50 }}>
+        <div style={{ position: 'fixed', top: 0, insetInlineStart: 0, background: C.conflictInk, color: C.onDark, fontSize: TYPE.caption, fontWeight: 700, padding: '2px 6px', borderEndEndRadius: 6, zIndex: 50 }}>
           MOCK
         </div>
       )}

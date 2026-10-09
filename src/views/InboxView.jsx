@@ -281,7 +281,7 @@ function StaleGroup({ rows, onConfirm, onOpenEdit, initialOpen = false }) {
         }}
       >
         {S.inboxOldTitle(remaining(rows))}
-        <div style={{ fontSize: 13, fontWeight: 500, color: C.muted, marginTop: 2 }}>
+        <div style={{ fontSize: TYPE.caption, fontWeight: 500, color: C.muted, marginTop: 2 }}>
           {open ? S.inboxOldHide : S.inboxOldBody}
         </div>
       </button>

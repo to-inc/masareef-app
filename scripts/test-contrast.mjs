@@ -179,7 +179,7 @@ check('harborInk on card — headings', C.harborInk, C.card, 21, true);
 check('harborInk on shell — headings', C.harborInk, C.shell, 23, true);
 check('harborInk on card — label-tier links and markers', C.harborInk, C.card, TYPE.label);
 check('harborInk on shell — label-tier links and markers', C.harborInk, C.shell, TYPE.label);
-check('harborInk on card — the editable-field marker', C.harborInk, C.card, 12.5, true);
+check('harborInk on card — the editable-field marker', C.harborInk, C.card, 15, true); // E-009: Field label 12.5 → TYPE.label
 /**
  * Negative control for the split: if `harbor` ever clears 4.5:1 as normal text
  * the split has stopped being necessary and this block should be re-derived

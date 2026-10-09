@@ -173,7 +173,7 @@ export default function BatchReviewView({
 
       {days.map((day) => (
         <div key={day.date || 'undated'}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, margin: '14px 2px 7px' }}>
+          <div style={{ fontSize: TYPE.label, fontWeight: 700, color: C.muted, margin: '14px 2px 7px' }}>
             <span style={LATIN}>{day.date || '—'}</span>
           </div>
           {day.rows.map((r) => (
@@ -213,7 +213,7 @@ export default function BatchReviewView({
         */}
       {truncated && (
         <p style={{
-          fontSize: 12.5, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
+          fontSize: TYPE.label, color: C.ink, background: C.sand, border: `1px solid ${C.line}`,
           borderRadius: RADIUS.row, padding: '9px 12px', marginTop: 12, textAlign: 'center', lineHeight: 1.6,
         }}>
           {S.batchTruncated(rows.length, totalSeen)}
@@ -477,7 +477,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                 above its meta, in both locales. */}
             {row.merchant_display || row.description || '—'}
           </span>
-          <span style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, color: C.muted, marginTop: 2 }}>
+          <span style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: TYPE.label, color: C.muted, marginTop: 2 }}>
             {/**
               * FOUR ANSWERS, FOUR SENTENCES. `duplicate` means WE wrote this row
               * on an earlier attempt — it is in his book. `book_duplicate` means
@@ -581,10 +581,10 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                   stand on their own rather than framing an empty space. */}
               {matchRow && (
                 <>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.conflictInk }}>{S.batchDupBookIntro}</div>
+                  <div style={{ fontSize: TYPE.caption, fontWeight: 600, color: C.conflictInk }}>{S.batchDupBookIntro}</div>
                   <div style={{
                     background: C.shell, border: `1px solid ${C.line}`, borderRadius: RADIUS.inset,
-                    padding: '9px 11px', fontSize: 13, marginTop: 6, lineHeight: 1.7, ...ISOLATE,
+                    padding: '9px 11px', fontSize: TYPE.caption, marginTop: 6, lineHeight: 1.7, ...ISOLATE,
                   }} dir="auto">
                     <span style={LATIN}>{matchRow.date}</span> · {matchRow.description} ·{' '}
                     <span style={LATIN}>{money(matchRow.amount)} {matchRow.currency}</span>

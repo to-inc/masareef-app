@@ -493,7 +493,7 @@ export default function ReceiptView({
             otherwise invisible until extraction quality is statistically bad. */}
         {debugOn() && shot && (
           <div style={{
-            fontSize: 12, fontFamily: 'ui-monospace, monospace', direction: 'ltr',
+            fontSize: TYPE.caption, fontFamily: 'ui-monospace, monospace', direction: 'ltr',
             padding: '6px 10px', borderRadius: RADIUS.inset, marginBottom: 10,
             background: shot.landscape ? C.conflictBg : C.shell,
             color: shot.landscape ? C.conflictInk : C.muted,
@@ -541,7 +541,7 @@ export default function ReceiptView({
             date, so we cannot say whether it is this one. Saying nothing would
             be the tidier lie. */}
         {dupUndated && !dup.book && (
-          <div style={{ fontSize: 13, color: C.muted, marginBottom: 10, lineHeight: 1.6 }}>
+          <div style={{ fontSize: TYPE.caption, color: C.muted, marginBottom: 10, lineHeight: 1.6 }}>
             {S.receiptDupUndated}
           </div>
         )}
@@ -648,7 +648,7 @@ export default function ReceiptView({
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 6, textAlign: 'center' }}>
+          <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6, textAlign: 'center' }}>
             {S.receiptCashSteer}
           </div>
         </div>
@@ -788,7 +788,7 @@ export function JobsList({ jobs, onReview, onRetry, onCancel }) {
   const held = cappedCount(jobs);
   return (
     <div style={{ width: '100%', maxWidth: 340, marginTop: 14, textAlign: 'start' }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, marginBottom: 6 }}>
+      <div style={{ fontSize: TYPE.caption, fontWeight: 700, color: C.muted, marginBottom: 6 }}>
         {S.jobsTitle(jobs.length)}
         {held > 0 && <span style={{ color: C.ink }}>{' · '}{S.jobsCapped(held)}</span>}
       </div>
@@ -949,7 +949,7 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
           >
             {name}
           </div>
-          <div style={{ fontSize: 12.5, fontWeight: stage === 'ready' ? 700 : 500,
+          <div style={{ fontSize: TYPE.label, fontWeight: stage === 'ready' ? 700 : 500,
             color: stage === 'failed' ? C.conflictInk : C.muted }}>
             {/* An UNKNOWN stage is never silently rendered as "waiting" — an
                 unnamed state is a state we do not understand, and saying so is
@@ -1086,7 +1086,7 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
 function Field({ label, editable, children }) {
   return (
     <div style={{ marginTop: 12 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 700, color: editable ? C.harborInk : C.ink, letterSpacing: '.02em' }}>
+      <div style={{ fontSize: TYPE.label, fontWeight: 700, color: editable ? C.harborInk : C.ink, letterSpacing: '.02em' }}>
         {label}{editable ? ' •' : ''}
       </div>
       {children}

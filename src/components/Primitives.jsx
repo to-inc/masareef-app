@@ -422,6 +422,7 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
             // its size bounded by that geometry; at caption(13) the pill grows
             // into the circle it annotates. The count is ruling 2's
             // badge-count duplicate — the Inbox itself carries every item.
+            // GEOMETRY EXEMPTION (ruling 2): the dock badge's count text at 11 — Owner's veto open.
             fontSize: 11, fontWeight: 700,
             borderRadius: RADIUS.capsule, padding: '1px 7px', ...LATIN,
           }}
