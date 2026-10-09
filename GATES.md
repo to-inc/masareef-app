@@ -63,7 +63,6 @@ over the lightest/darkest pixel of each ground). None is under 3:1.
 - muted (#5C6871) 15px on **card** glass over **dawn**'s darkest stop (#B5D2E6) — 4.39:1
 - muted (#5C6871) 15px on **chip** glass over **dawn**'s darkest stop — 4.22:1
 - white 16px on the **undo toast** over **tide** / **haze**'s lightest pixel — 4.43:1
-- **v4 bar (R16)** — chrome's thinnest stop (white .26) over what scrolls beneath, 14px labels:
-  over the harbor button: active ink 2.99:1 · inactive muted **1.66:1**; over the amber button:
-  active 5.72:1 · inactive 3.19:1; over the palette's darkest paint (amberInk text): 1.78 / **1.01:1**.
-  Blur averages toward lighter, so real frames sit between these and the ground pass (≥7.9:1 ink).
+- ~~**v4 bar (R16)** at v4's .55→.26: inactive label 1.66:1 over the harbor button, 1.01:1 over
+  the darkest paint~~ — **RESOLVED by Owner ruling 2026-10-09: chrome .94→.88.** Every bar label
+  now clears 4.5:1 over any paint (worst: inactive muted 4.59:1 over amberInk).

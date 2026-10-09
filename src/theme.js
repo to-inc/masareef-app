@@ -522,7 +522,12 @@ export const GLASS = {
               rim: W(0.7), cast: `0 12px 32px ${alpha(C.ink, 0.12)}`, inset: `inset 0 1px 0 ${W(0.95)}`, radius: 'card' },
   chip:     { bg: `linear-gradient(155deg, ${W(0.66)}, ${W(0.32)})`, blur: 18, sat: 150,
               rim: W(0.75), cast: `0 4px 12px ${alpha(C.ink, 0.08)}`, radius: 'capsule' },
-  chrome:   { bg: `linear-gradient(160deg, ${W(0.55)}, ${W(0.26)})`, blur: 30, sat: 180,
+  /** Owner ruling 2026-10-09 (after measuring R16): the BAR carries more white
+   *  than v4's .55→.26 — at .26 its grey labels fell to 1.66:1 over a harbor
+   *  button scrolling beneath. .94→.88 is the thinnest stop at which every
+   *  label clears 4.5:1 over ANY paint in the palette (measured: .84 and .86
+   *  still failed the darkest case). Still blurred, still frosted. */
+  chrome:   { bg: `linear-gradient(160deg, ${W(0.94)}, ${W(0.88)})`, blur: 30, sat: 180,
               rim: W(0.8), cast: `0 10px 30px ${alpha(C.ink, 0.16)}`, inset: `inset 0 1px 0 ${W(0.85)}`, radius: 'capsule' },
   well:     { bg: `linear-gradient(175deg, ${alpha(C.ink, 0.08)}, ${W(0.30)})`,
               inset: `inset 0 2px 5px ${alpha(C.ink, 0.14)}, inset 0 -1px 0 ${W(0.7)}`,

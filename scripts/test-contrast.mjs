@@ -268,10 +268,9 @@ decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a backg
  * the palette, so a darker token tightens this automatically. The blur is still
  * ignored on purpose: it can only average toward lighter, so this is the floor.
  *
- * R0: «the suite is a measurement, not a veto». Every pair here is RECORDED and
- * a shortfall is logged as a residue — including under 3:1, which is printed
- * loud, because the Owner ruled glass in knowing the bar would be thin, and the
- * number is what he needs to see, not a red build.
+ * A GATE, not a residue: measured at v4's .26 the grey labels fell to 1.66:1
+ * over a harbor button, and the Owner ruled (2026-10-09) the bar must read over
+ * anything — chrome .94→.88. A thinner bar fails here.
  */
 {
   const chromeThin = GLASS.chrome.bg.match(/rgba\([^)]+\)/g)
@@ -285,8 +284,9 @@ decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a backg
     const floor = isLarge(px, bold) ? 3 : 4.5;
     const v = ratio(fg, bar);
     if (v >= floor) { record('✅', where, fg, bar, px, v, floor); pass++; return; }
-    record('⚠️', where, fg, bar, px, v, floor); pass++;
-    flags.push(`RESIDUE (R0, logged not blocking)${v < 3 ? ' — UNDER 3:1 while it is over dark content' : ''} ${where}: ${fg} on ${bar} = ${v.toFixed(2)}:1, wants ${floor}:1`);
+    // Owner ruling 2026-10-09: the bar must read over ANYTHING — this is a gate, not a residue.
+    record('❌', where, fg, bar, px, v, floor);
+    failures.push(`${where}: ${fg} on ${bar} = ${v.toFixed(2)}:1, wants ${floor}:1 — the bar's chrome got too thin (Owner ruling: readable over any paint)`);
   };
   logged(`v4 bar — active label (ink 700) over ${darkest} scrolled beneath`, C.ink, NAV.label, true);
   logged(`v4 bar — inactive label (muted 600) over ${darkest} scrolled beneath`, C.muted, NAV.label, false);
@@ -296,8 +296,9 @@ decorative('the morning crown wash', C.mist, C.shell, 'nothing — it is a backg
     const over = '#' + [r, g, b].map((c, i) => Math.round(c * a + f[i] * (1 - a)).toString(16).padStart(2, '0')).join('');
     for (const [lab, fg, bold] of [['active (ink 700)', C.ink, true], ['inactive (muted 600)', C.muted, false]]) {
       const v = ratio(fg, over); seen.add(fg);
-      record(v >= 4.5 ? '✅' : '⚠️', `v4 bar — ${lab} label over ${what}`, fg, over, NAV.label, v, 4.5); pass++;
-      if (v < 4.5) flags.push(`RESIDUE (R0, logged not blocking) v4 bar — ${lab} label over ${what}: ${fg} on ${over} = ${v.toFixed(2)}:1, wants 4.5:1`);
+      record(v >= 4.5 ? '✅' : '❌', `v4 bar — ${lab} label over ${what}`, fg, over, NAV.label, v, 4.5);
+      if (v >= 4.5) pass++;
+      else failures.push(`v4 bar — ${lab} label over ${what}: ${fg} on ${over} = ${v.toFixed(2)}:1, wants 4.5:1 (Owner ruling)`);
     }
   }
   // Control: the composite must darken as the chrome thins — or this measures nothing.
