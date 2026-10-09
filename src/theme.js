@@ -491,7 +491,10 @@ export const GROUND = {
  * the top keeps white ≥ 4.5:1 over every ground's crown (computed: dawn peach
  * 5.19, paper 4.49, haze 4.93, tide 4.81), fading to nothing below the bar.
  */
-export const STATUS_SHADE = 'linear-gradient(rgba(44,67,86,0.7), rgba(44,67,86,0.45) 60%, rgba(44,67,86,0))';
+// Re-cut 2026-10-10 (his screenshot: the shade greyed the header). It now ends EXACTLY at the
+// status bar's edge, full strength through the icons' band (white ≥ 4.73:1 on every crown),
+// fading only across the bar's last 40% (icons' lower edge ≥ 3.0:1, the graphics bar).
+export const STATUS_SHADE = 'linear-gradient(rgba(44,67,86,0.72), rgba(44,67,86,0.72) 60%, rgba(44,67,86,0))';
 
 export const GROUND_EDGE = { dawn: '#CEDDE6', tide: '#EEF2F2', haze: '#FAF7F1' };
 

@@ -903,7 +903,7 @@ export default function App() {
           0 tall wherever there is no status-bar inset, so browsers never see it. */}
       <div aria-hidden className="status-shade" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, pointerEvents: 'none',
-        height: 'calc(env(safe-area-inset-top, 0px) * 1.25)', background: STATUS_SHADE,
+        height: 'env(safe-area-inset-top, 0px)', background: STATUS_SHADE,   // never past the bar: the header starts right below
       }} />
       <header
         style={{
