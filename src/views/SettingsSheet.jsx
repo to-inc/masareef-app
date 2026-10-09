@@ -271,6 +271,10 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
               ))}
             </div>
           </div>
+          {/* Which build this phone runs — the commit it was built from (E-017). */}
+          <div style={{ marginTop: SPACE.gap, textAlign: 'center', fontSize: TYPE.label, color: C.muted }} dir="ltr">
+            {S.appVersion(typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev')}
+          </div>
         </Sheet>
       </div>
     </>

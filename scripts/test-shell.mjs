@@ -61,6 +61,11 @@ try {
   ok(/dashed #A05446[^"]*min-height:48px|min-height:48px[^"]*dashed #A05446/.test(on), 'S.21 the dashed terracotta ghost, at 48px (R3: the 44 exception is withdrawn)');
   ok(!renderToStaticMarkup(createElement(JobsList, props)).includes(AR.debugLogSend), 'S.22 no handler, no button — a server without `debuglog` shows nothing');
 } finally { await vite.close(); }
+// ——— E-017: full screen on iPhone, and a version he can read
+ok(/ref=\{\(el\) => \{ if \(el\) document\.documentElement\.style\.background = el\.style\.background; \}\}/.test(app),
+  'S.25 the page behind the app wears the same ground — an edge iOS leaves uncovered shows the screen\'s colour, not paper');
+ok(/define: \{ __APP_VERSION__: JSON\.stringify\(version\) \}/.test(read('vite.config.js')) && /S\.appVersion\(/.test(read('src/views/SettingsSheet.jsx')),
+  'S.26 Settings shows the commit the build came from — «is my phone on the new version?» is read, not guessed');
 ok(/onDebugLog=\{supportsAction\(build, 'debuglog'\) \?/.test(app), 'S.23 App hands the handler over only when the server advertises `debuglog`');
 const dbgPayload = (app.match(/kind: 'debuglog'[\s\S]{0,200}?\}\s*\}\);/) || [''])[0];
 ok(dbgPayload.includes('clientHash') && !/base64|image/.test(dbgPayload), 'S.24 the queued log carries the image HASH, never the photo');

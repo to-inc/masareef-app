@@ -209,6 +209,7 @@ export const EN = {
   methodEvidence: (card, q) => (card ? `Card — the receipt shows «${q}»` : `Cash — the receipt says «${q}»`),
   methodFromHistory: 'How you usually pay here',
   alsoFiled: (n) => `Filed — and ${n} more from the same place`,
+  appVersion: (v) => `Version ${v}`,
   jobRetry: 'Try again',
   debugLogSend: '⚑ Send debug log',
   debugLogSent: '⚑ Log sent ✓',

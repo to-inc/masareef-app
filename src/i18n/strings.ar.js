@@ -213,6 +213,7 @@ export const AR = {
   methodEvidence: (card, q) => (card ? `فيزا — الإيصال فيه «${q}»` : `كاش — الإيصال فيه «${q}»`),
   methodFromHistory: 'زي ما بتدفع هنا عادةً',
   alsoFiled: (n) => `اتسجّلت — و${n} كمان من نفس المكان`,
+  appVersion: (v) => `النسخة ${v}`,
   jobRetry: 'جرّب تاني',
   debugLogSend: '⚑ ابعت سجل القراية',
   debugLogSent: '⚑ السجل اتبعت ✓',

@@ -870,7 +870,11 @@ export default function App() {
         fontSize: TYPE.row,
       }}
     >
-      <div aria-hidden className="ground" style={{
+      {/* E-017: the page behind the app wears the SAME ground, so any edge iOS leaves
+          uncovered (home-screen mode has sized the frame short before) shows the
+          screen's own colour, never the bare paper. A ref, not an effect: this
+          render sits below early returns, where a hook cannot go. */}
+      <div aria-hidden className="ground" ref={(el) => { if (el) document.documentElement.style.background = el.style.background; }} style={{
         position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none',
         background: needsSetup ? GROUND.haze
           : viewTab === 'book' || viewTab === 'inbox' ? GROUND.dawn

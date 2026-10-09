@@ -6,8 +6,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 // service worker scope and asset URLs break (WS5). Override with VITE_BASE.
 const base = process.env.VITE_BASE ?? '/masareef/';
 
+// The commit a build came from, shown at the foot of Settings — so «is my phone
+// on the new version?» is read off the screen, not guessed (E-017, 2026-10-10).
+import { execSync } from 'node:child_process';
+let version = 'dev';
+try { version = execSync('git rev-parse --short=7 HEAD', { encoding: 'utf8' }).trim(); } catch { /* no git: 'dev' */ }
+
 export default defineConfig({
   base,
+  define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [
     react(),
     VitePWA({
