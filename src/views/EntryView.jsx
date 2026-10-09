@@ -7,7 +7,7 @@ import { repeatChips } from '../state/repeats.js';
 import { isTravelling, toggleCurrency, HOME_CURRENCY } from '../state/travel.js';
 import { METHODS } from '../state/entryPayload.js';
 import { entryDefaultMethod } from '../state/settings.js';
-import { S, categoryLabel, markUnitFor } from '../i18n/strings.js';
+import { S, categoryLabel, unitFor } from '../i18n/strings.js';
 import { normalizeDigits } from '../lib/format.js';
 import { entryReady, pressKey } from '../state/entryDock.js';
 import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx';
@@ -225,7 +225,7 @@ export default function EntryView({
             style={{ ...glass('chip'), ...(isTravelling(currency) ? { background: SELECTED_TINT } : null),
               minHeight: TAP, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 6, color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}
           >
-            {markUnitFor(currency)}
+            {unitFor(currency)}
             {setCurrency && <span aria-hidden style={{ color: C.muted }}>▾</span>}
           </button>
           {onDictate && (
@@ -363,7 +363,7 @@ export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENC
       {S.entryLog}
       {ready && (
         <span style={{ fontSize: TYPE.body, fontWeight: 600 }}>
-          <span style={LATIN}>{amount}</span> {markUnitFor(currency)}{' · '}<span style={ISOLATE} dir="auto">{categoryLabel(cat)}</span>
+          <span style={LATIN}>{amount}</span> {unitFor(currency)}{' · '}<span style={ISOLATE} dir="auto">{categoryLabel(cat)}</span>
         </span>
       )}
     </button>

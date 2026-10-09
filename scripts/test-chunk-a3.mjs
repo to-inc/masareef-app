@@ -131,7 +131,8 @@ const batch = read('src/views/BatchReviewView.jsx');
   // attribute in source. A window reaching backward would sweep in the Row
   // wrapper's legitimate RADIUS.row and flip this control red for a reason
   // that has nothing to do with the checkbox.
-  const region = at === -1 ? '' : batch.slice(at, at + 700);
+  // 1400 since 2026-10-09: the 30px box now sits inside a 48pt button (R3), one style block further on.
+  const region = at === -1 ? '' : batch.slice(at, at + 1400);
   ok(at !== -1, 'A3.X control — the BatchReview tick checkbox still exists (role="checkbox")');
   ok(region && RADIUS_DECL.test(region) && !/borderRadius:\s*RADIUS\./.test(region),
     'A3.X control — the checkbox radius stays INLINE (geometry), never a surface token that would clamp it');

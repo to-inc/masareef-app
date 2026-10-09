@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { money2 } from '../lib/format.js';
 import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG } from '../theme.js';
-import { S, SWITCH_TO, DIR, unitFor, markUnitFor } from '../i18n/strings.js';
+import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
 /**
@@ -222,7 +222,7 @@ export function CurrencyToggle({ value, other, onFlip, subtle }) {
         ...LATIN,
       }}
     >
-      {value}
+      {unitFor(value)}
     </button>
   );
 }
@@ -341,7 +341,7 @@ export function UndoToast({ undo, onUndo }) {
         color: C.onDark,
       }}>
       <span style={{ fontSize: TYPE.body, fontWeight: 600 }}>
-        {S.savedUndo} <span style={LATIN}>{money2(undo.amount)}</span> {markUnitFor(undo.currency)}
+        {S.savedUndo} <span style={LATIN}>{money2(undo.amount)}</span> {unitFor(undo.currency)}
       </span>
       <button onClick={onUndo}
         style={{ minHeight: TAP, padding: '0 18px', borderRadius: RADIUS.capsule, background: TOAST_ACTION_BG, color: C.onDark, fontSize: TYPE.body, fontWeight: 700 }}>

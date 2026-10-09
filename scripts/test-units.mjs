@@ -60,10 +60,20 @@ try {
 
   // ——— ROW SCALE WEARS THE MARK (Tarek 2026-10-09, HANDOFF:61, G06 «85.00 €»)
   {
-    const { markUnitFor, unitFor } = await vite.ssrLoadModule('/src/i18n/strings.js');
-    ok(markUnitFor('EUR') === '€' && markUnitFor(HOME_CURRENCY) === S.currencyShort,
-      `${L} markUnitFor: euro is «€», home money keeps its mark «${S.currencyShort}»`);
-    ok(unitFor('EUR') === 'EUR', `${L} headline sentences (unitFor) still name the code`);
+    const { unitFor } = await vite.ssrLoadModule('/src/i18n/strings.js');
+    ok(unitFor('EUR') === '€' && unitFor(HOME_CURRENCY) === S.currencyShort,
+      `${L} unitFor: euro is «€», home money keeps its mark «${S.currencyShort}»`);
+    // The rest of the «EUR» spellings (Tarek 2026-10-09): Settings' currency button,
+    // chart captions, read-aloud labels — every one reads through unitFor.
+    const P = await vite.ssrLoadModule('/src/components/Primitives.jsx');
+    const tog = renderToStaticMarkup(createElement(P.CurrencyToggle, { value: 'EUR', other: 'EGP', onFlip() {}, subtle: true }));
+    ok(/>€<\/button>/.test(tog) && !/EUR/.test(tog), `${L} the Settings currency button reads «€», never «EUR»`);
+    const tog2 = renderToStaticMarkup(createElement(P.CurrencyToggle, { value: 'EGP', other: 'EUR', onFlip() {}, subtle: true }));
+    ok(tog2.includes(`aria-label="${S.readInUnit('€')}"`), `${L} its read-aloud label offers «€» («${S.readInUnit('€')}»)`);
+    const charts = readFileSync(join(SRC, 'components', 'Charts.jsx'), 'utf8');
+    ok(!/S\.chartUnit\((?!unitFor\(|unit\))/.test(charts) && /unit = unitFor\(HOME_CURRENCY\)/.test(charts)
+      && /const cardUnit = homeCards \? unitFor\(displayCurrency\) : unitFor\(HOME_CURRENCY\)/.test(charts) && S.chartUnit(unitFor('EUR')).includes('€'),
+      `${L} chart captions take their unit from unitFor — «${S.chartUnit(unitFor('EUR'))}»`);
     const BR = (await vite.ssrLoadModule('/src/views/BatchReviewView.jsx')).default;
     const r = (o) => ({ date: '2026-08-26', row_status: 'completed', payment_hint: 'card', category: 'Groceries', ...o });
     const html = renderToStaticMarkup(createElement(BR, { jobs: [{ sourceHash: 'u', entries: [

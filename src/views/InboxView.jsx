@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { C, FONT_DISPLAY, FONT_UI, NUMERALS, RADIUS, TAP, TYPE, glass, unitSize, SHEET } from '../theme.js';
-import { S, DIR, markUnitFor } from '../i18n/strings.js';
+import { S, DIR, unitFor } from '../i18n/strings.js';
 import { money2, amountWithCurrency } from '../lib/format.js';
 import { SectionLabel, Chip, LATIN, ISOLATE } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
@@ -529,7 +529,7 @@ function PendingCard({ item, outcome, onConfirm, onOpenEdit = null, onSkip = nul
       <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.amountReview, fontWeight: 650, lineHeight: 1.1, marginTop: 6, color: C.ink, ...NUMERALS, ...LATIN, textAlign: DIR === 'rtl' ? 'right' : 'left' }}>
         {p.amount == null ? '—' : money2(p.amount)}
         {p.amount != null && (
-          <span style={{ fontFamily: FONT_UI, fontSize: unitSize(TYPE.hero), fontWeight: 600, color: C.muted }}> {markUnitFor(p.currency || 'EGP')}</span>
+          <span style={{ fontFamily: FONT_UI, fontSize: unitSize(TYPE.hero), fontWeight: 600, color: C.muted }}> {unitFor(p.currency || 'EGP')}</span>
         )}
       </div>
 

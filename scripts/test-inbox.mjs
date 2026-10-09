@@ -511,8 +511,10 @@ try {
     eq(sent.tab, 'Aug', 'with the tab it came from');
     eq(sent.newCategory, 'Groceries', 'and the category he tapped');
     eq(sent.match, item.match, 'the match is the row as the server described it');
-    eq(Object.keys(sent).sort().join(','), 'match,newCategory,rowHint,tab',
-      'four fields exactly — an extra one is a contract change, not a convenience');
+    // Re-cut 2026-10-09 (E-015): `applySimilar` is the contract change, made on
+    // purpose — the server files the same merchant's other ❓ rows (only ❓ rows).
+    eq(Object.keys(sent).sort().join(','), 'applySimilar,match,newCategory,rowHint,tab',
+      'five fields exactly — applySimilar is a deliberate contract change (E-015), not a convenience');
 
     /**
      * A hint of 0 is what a row with no position would produce, and `locateRow_`

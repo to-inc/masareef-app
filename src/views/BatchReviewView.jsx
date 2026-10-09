@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
-import { S, categoryLabel, markUnitFor, headlineUnitFor } from '../i18n/strings.js';
+import { S, categoryLabel, unitFor, headlineUnitFor } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, money2 } from '../lib/format.js';
 import { isoToDmy } from '../lib/dates.js';
@@ -451,16 +451,25 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             aria-checked={ticked}
             aria-label={row.merchant_display || row.description || ''}
             style={{
+              // R3 (Tarek 2026-10-09): a 48pt target around the 30px box — the
+              // −9px margin keeps its footprint at 30, so the row does not move;
+              // the extra reach sits in the row's padding and the 11px gap.
+              flex: `0 0 ${TAP}px`, width: TAP, height: TAP, margin: -9, padding: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent',
+            }}
+          >
+            <span aria-hidden style={{
               // geometry exemption (ruling 4): a 30px checkbox — its radius is
               // bounded by its own dimensions, and a surface token would clamp
               // it toward a circle: an affordance change, not a style.
-              flex: '0 0 30px', height: 30, borderRadius: 8,
+              width: 30, height: 30, borderRadius: 8, boxSizing: 'border-box',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: `2px ${ticked ? 'solid' : 'dashed'} ${ticked ? C.harbor : C.line}`,
               background: ticked ? C.harbor : 'transparent',
               color: C.onDark, fontSize: 16, fontWeight: 700,
-            }}
-          >
-            {ticked ? '✓' : ''}
+            }}>
+              {ticked ? '✓' : ''}
+            </span>
           </button>
         ) : (
           <span style={{ flex: '0 0 30px', textAlign: 'center', color: C.muted, fontSize: TYPE.action }}>✕</span>
@@ -583,7 +592,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               read must not sit indistinguishable from pounds, because ticking
               it writes it as pounds (server rule: UNKNOWN → EGP). */}
           {row.amount == null ? '—'
-            : `${money2(Math.abs(row.amount))} ${row.currency === 'UNKNOWN' ? '؟' : markUnitFor(row.currency || 'EGP')}`}
+            : `${money2(Math.abs(row.amount))} ${row.currency === 'UNKNOWN' ? '؟' : unitFor(row.currency || 'EGP')}`}
         </span>
       </div>
 

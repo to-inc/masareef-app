@@ -53,10 +53,11 @@ export const CAPTAIN_INITIALS = LOCALE.CAPTAIN_INITIALS;
 export const SWITCH_TO = LOCALE.switchTo;
 
 /**
- * THE UNIT A CURRENCY IS WRITTEN AS (HANDOFF:57).
+ * THE UNIT A CURRENCY IS WRITTEN AS (HANDOFF:57, :61).
  *
- * Home money wears its MARK — «ج.م» / «E£». Foreign money keeps the code the
- * sheet writes, because that code is what he matches against his statement.
+ * Every currency wears its MARK: home money «ج.م» / «E£», the euro «€» (Tarek,
+ * 2026-10-09 — rows, headline totals, the currency chip, Settings, charts and
+ * read-aloud labels alike). A currency with no mark here keeps its code.
  *
  * It lives here rather than in a view because it is a question about LANGUAGE,
  * and because the first version lived in one view and was therefore missing
@@ -66,16 +67,9 @@ export const SWITCH_TO = LOCALE.switchTo;
  * It also fixes a script collision nobody had noticed: the Arabic caption is
  * `بالـ${cur}`, so passing the ISO code rendered «بالـEGP» — an Arabic prefix
  * welded to a Latin abbreviation, in a locale that has a perfectly good mark.
- */
-export const unitFor = (currency) => (currency === HOME_CURRENCY ? S.currencyShort : currency);
-
-/**
- * AMOUNTS WEAR THEIR CURRENCY'S MARK (HANDOFF:61, Tarek 2026-10-09): «€», as
- * G06 draws it — on rows and on headline totals alike. Home money is unchanged.
- * Sentences that NAME a unit and the currency chip keep `unitFor` (the code).
  * Only EUR travels today (travel.js CURRENCIES); a third currency adds its mark here.
  */
 const MARKS = { EUR: '€' };
-export const markUnitFor = (currency) => MARKS[currency] || unitFor(currency);
+export const unitFor = (currency) => (currency === HOME_CURRENCY ? S.currencyShort : (MARKS[currency] || currency));
 /** The statement total's unit: the mark, else the currency's word («جنيه»/EGP). */
 export const headlineUnitFor = (currency) => MARKS[currency] || S.currencyName(currency);

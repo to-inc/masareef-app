@@ -247,12 +247,13 @@ try {
       'S1.41 the ONE named section renders — currency & language, by name');
     ok(h.includes('>English<') || h.includes('English'),
       'S1.42 the LANGUAGE control is inside, labelled in the language it switches TO (English, under the Arabic default)');
-    ok(h.includes('>EGP<') || />\s*EGP\s*</.test(h),
-      'S1.43 the CURRENCY control is inside and states the unit he is IN (EGP)');
+    // Re-cut 2026-10-09 (R0): Tarek ruled every unit wears its mark — «€», «ج.م» — in sentences and controls too.
+    ok(h.includes(`>${AR.currencyShort}<`),
+      'S1.43 the CURRENCY control is inside and states the unit he is IN («ج.م»)');
     {
-      const wantAria = typeof AR.readInUnit === 'function' ? AR.readInUnit('EUR') : null;
+      const wantAria = typeof AR.readInUnit === 'function' ? AR.readInUnit('€') : null;
       ok(wantAria !== null && h.includes(`aria-label="${wantAria}"`),
-        'S1.44 …while its accessible name carries the ACTION («اقرا بالـEUR») — the 2026-08-25 currency-control ruling, intact at the new mount');
+        'S1.44 …while its accessible name carries the ACTION («اقرا بالـ€») — the 2026-08-25 currency-control ruling, intact at the new mount');
     }
     ok(str(AR, 'settingsCurrencyNote') !== null && h.includes(str(AR, 'settingsCurrencyNote')),
       'S1.45 the quiet caption renders beside the control it explains');
@@ -274,8 +275,8 @@ try {
       // abbreviation into an Arabic sentence. S1.47 is about the control
       // REORDERING rather than hard-coding, and that is unchanged.
       const wantAria = typeof AR.readInUnit === 'function' ? AR.readInUnit(AR.currencyShort) : null;
-      ok(h2.includes('EUR') && wantAria !== null && h2.includes(`aria-label="${wantAria}"`),
-        'S1.47 with EUR chosen the control states EUR and offers the way back to EGP — the mount reorders, it never hard-codes');
+      ok(h2.includes('>€<') && wantAria !== null && h2.includes(`aria-label="${wantAria}"`),
+        'S1.47 with EUR chosen the control states «€» and offers the way back to EGP — the mount reorders, it never hard-codes');
     }
   }
 } finally {

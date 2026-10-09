@@ -56,7 +56,7 @@ export const fixCategory = (args) => {
     return Promise.resolve({ ok: false, v: 1, error: 'row_changed', current: { ...(args.match || {}), category: was } });
   }
   MOCK_FILED.set(k, args.newCategory);
-  return Promise.resolve({ ok: true, v: 1, learned: false });
+  return Promise.resolve({ ok: true, v: 1, learned: false, ...(args && args.applySimilar ? { alsoFixed: 0, alsoRows: [] } : null) });
 };
 
 // Mock parity: offline, the real POST's fetch throws — so the mock throws too

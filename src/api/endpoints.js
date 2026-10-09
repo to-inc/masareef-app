@@ -20,8 +20,8 @@ export const summary = () => call({ action: 'summary' }, 'read');
  */
 export const entries = ({ y, m }) => call({ action: 'entries', y, m }, 'read');
 
-export const fixCategory = ({ tab, rowHint, match, newCategory }) =>
-  call({ action: 'fix_category', tab, rowHint, match, newCategory }, 'write');
+export const fixCategory = ({ tab, rowHint, match, newCategory, applySimilar }) =>
+  call({ action: 'fix_category', tab, rowHint, match, newCategory, ...(applySimilar ? { applySimilar: true } : null) }, 'write');
 
 export const manual = ({ amount, method, category, description, clientId, entryDate, currency }) =>
   call({ action: 'manual', amount, method, category, description, clientId, entryDate, currency }, 'write');

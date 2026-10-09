@@ -11,6 +11,7 @@ import * as queue from '../state/receiptQueue.js';
 import { createWorker } from '../state/receiptWorker.js';
 import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
+import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
 import { ISOLATE, SectionLabel, LATIN, Sheet } from '../components/Primitives.jsx';
 
@@ -68,7 +69,9 @@ export default function ReceiptView({
   const [amount, setAmount] = useState(initialReview ? String(initialReview.extraction.amount ?? '') : '');
   const [merchant, setMerchant] = useState('');
   const [dateStr, setDateStr] = useState(initialReview ? (initialReview.dateStr || '') : '');
-  const [method, setMethod] = useState('Cash');
+  // E-015: the SSR seam may carry the server's answer (`initialReview.res`).
+  const [pred, setPred] = useState(initialReview ? predOf(initialReview.res) : null);
+  const [method, setMethod] = useState(initialReview && initialReview.res ? startMethod(initialReview.res) : 'Cash');
   const [category, setCategory] = useState(initialReview ? (initialReview.category || null) : null);
   const [showAllCats, setShowAllCats] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -101,7 +104,7 @@ export default function ReceiptView({
     setShot(null); setExtraction(null); setDup({ sms: false, photo: false, book: null });
     setDupUndated(false);
     setOverrideDup(false); setAmount(''); setMerchant(''); setDateStr('');
-    setMethod(DEFAULT_METHOD); setCategory(null); setShowAllCats(false);
+    setMethod(DEFAULT_METHOD); setPred(null); setCategory(null); setShowAllCats(false);
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -137,7 +140,10 @@ export default function ReceiptView({
      * to Cash rather than being held, so the app can never post a method the
      * sheet would read as something else.
      */
-    setMethod(isMethod(res.defaultMethod) ? res.defaultMethod : DEFAULT_METHOD);
+    // E-015: the PREDICTED method first (card evidence on the receipt, then his
+    // habit at this merchant) — D19's default only when nothing better is known.
+    setMethod(startMethod(res));
+    setPred(predOf(res));
     setCategory(res.category || null);
     setShowAllCats(!res.category);
     /**
@@ -623,6 +629,12 @@ export default function ReceiptView({
             >
               {category ? <span dir="auto">{categoryLabel(category)}</span> : '—'}
             </div>
+            {/* E-015: where the guess came from — shown only while it is still the guess. */}
+            {pred && pred.categorySource && category === pred.category && (
+              <div data-pred="category" style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'right', marginTop: 2 }}>
+                {PRED_FROM()[pred.categorySource] || ''}
+              </div>
+            )}
           </Field>
 
           {/* Cash / Visa. Cash is the default and the steer explains why, so the
@@ -645,8 +657,14 @@ export default function ReceiptView({
               </button>
             ))}
           </div>
-          <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6, textAlign: 'center' }}>
-            {S.receiptCashSteer}
+          <div data-pred={pred && pred.methodSource && method === pred.method ? 'method' : undefined}
+            style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6, textAlign: 'center' }}>
+            {/* E-015: a predicted method says why; otherwise the D19 steer explains Cash. */}
+            {pred && pred.methodSource === 'receipt' && method === pred.method
+              ? <span dir="auto">{S.methodEvidence(method === 'Visa', pred.evidence || '')}</span>
+              : pred && pred.methodSource === 'history' && method === pred.method
+                ? S.methodFromHistory
+                : S.receiptCashSteer}
           </div>
         </div>
 
@@ -1025,6 +1043,11 @@ function JobRow({ job, onReview, onRetry, onCancel, onDebugLog }) {
     </div>
   );
 }
+
+/** E-015: the predictor's rungs, in his words. A function so `S` is read at render, after the language is set. */
+const PRED_FROM = () => ({
+  memory: S.predFromMemory, history: S.predFromHistory, similar: S.predFromSimilar, receipt: S.predFromReceipt,
+});
 
 // ——————————————————————————————— small pieces
 function Centered({ children }) {

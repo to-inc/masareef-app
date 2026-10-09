@@ -95,7 +95,8 @@ try {
   ok(typeof AR.foreignUnsized === 'function' && opened.includes(AR.foreignUnsized(2)),
     'A7.11 …and the unsized-money count is named — count 3 against one priced line is 2 we cannot size');
   const eurOpened = pb(week({ count: 2, byCurrency: { EUR: 200 } }), { displayCurrency: 'EUR', policyOpen: true });
-  ok(typeof AR.noCompareInUnit === 'function' && eurOpened.includes(AR.noCompareInUnit('EUR')),
+  // Re-cut 2026-10-09 (R0): Tarek ruled every unit wears its mark — «€», «ج.م» — in sentences and controls too.
+  ok(typeof AR.noCompareInUnit === 'function' && eurOpened.includes(AR.noCompareInUnit('€')),
     'A7.12 opened under a EUR lead, the no-history sentence is there too — each rule keeps its words');
 
   // ——— a period compared AGAINST a foreign one: suppressed, and it says so

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG,
 } from '../theme.js';
-import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor, markUnitFor } from '../i18n/strings.js';
+import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, money2, moneyRound, amountWithCurrency } from '../lib/format.js';
 import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand } from '../lib/series.js';
@@ -1227,7 +1227,7 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
           */}
         {/* R4's fixed ladder: 22px is the hero step (unitSize(TYPE.hero)); v4 P3 draws 20, R4 wins. */}
         <span style={{ fontSize: unitSize(TYPE.hero), fontFamily: FONT_UI, fontWeight: 600, color: C.muted }}>
-          {' '}{markUnitFor(lead.currency)}
+          {' '}{unitFor(lead.currency)}
         </span>
       </div>
       <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 10, display: 'flex', gap: 18, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1267,7 +1267,7 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
         <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
           {S.travelApartLead} · {asides.map((a) => (
             <span key={a.currency} style={{ marginInlineStart: 4 }}>
-              {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{money(a.amount)} {markUnitFor(a.currency)}</b>
+              {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{money(a.amount)} {unitFor(a.currency)}</b>
             </span>
           ))}
         </div>
@@ -1632,7 +1632,7 @@ export function PeriodBlock({
             * (`S.currency`); a foreign lead keeps its code, as the sheet does.
             */}
           <span style={{ fontSize: unitSize(TYPE.hero), fontFamily: FONT_UI, fontWeight: 600, color: C.muted }}>
-            {' '}{markUnitFor(lead.currency)}
+            {' '}{unitFor(lead.currency)}
           </span>
         </div>
         {/**
@@ -1660,7 +1660,7 @@ export function PeriodBlock({
               */}
             {asides.map((l) => (
               <span key={l.currency} style={{ marginInlineEnd: 10 }}>
-                {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {markUnitFor(l.currency)}</b>
+                {S.andAlso} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {unitFor(l.currency)}</b>
               </span>
             ))}
             {/* Money we know is there and cannot size — said, not implied, and
@@ -1677,7 +1677,7 @@ export function PeriodBlock({
               */}
             {remainder.map((l) => (
               <div key={`nc-${l.currency}`} style={{ fontSize: TYPE.label }}>
-                <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {markUnitFor(l.currency)}</b>
+                <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {unitFor(l.currency)}</b>
                 {' '}{S.notConverted}
               </div>
             ))}
@@ -1989,7 +1989,7 @@ function RowList({
           </span>
           <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
             {money2(r.amount)}
-            <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {markUnitFor(r.currency)}</span>
+            <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {unitFor(r.currency)}</span>
           </span>
         </div>
       ))}
@@ -2099,7 +2099,7 @@ function RowList({
                     (unitSize) governs it, and it is non-serif (A4). */}
                 {/* EVERY amount with its unit (v4 hard requirement) — «ج.م» too, not only foreign. */}
                 {row.amount != null
-                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {markUnitFor(row.currency || HOME_CURRENCY)}</span> : null}
+                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {unitFor(row.currency || HOME_CURRENCY)}</span> : null}
               </span>
             </button>
 

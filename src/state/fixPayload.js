@@ -48,6 +48,9 @@ export function confirmPayload(item, category) {
     rowHint: item.rowHint,
     match: item.match,
     newCategory: category,
+    // E-015: the same merchant's other ❓ rows in this month take the same
+    // category in the same instant (server: only ❓ rows, never a categorised one).
+    applySimilar: true,
   };
 }
 

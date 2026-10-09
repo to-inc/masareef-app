@@ -599,9 +599,11 @@ export default function App() {
     // Recharge» for a card fee): the sheet now holds the category he filed, so
     // the concurrency claim must say THAT, or the server rightly refuses it.
     const payload = confirmPayload(refileItem(item, settled[key]), category);
-    let outcome;
+    let outcome, also = 0;
     try {
-      outcome = outcomeFor(await fixCategory(payload), false, category);
+      const res = await fixCategory(payload);
+      also = (res && res.ok && res.alsoFixed) || 0;
+      outcome = outcomeFor(res, false, category);
     } catch {
       // Offline. Not age-gated: the server's concurrency guard makes a late
       // replay safe at any age (see state/outbox.js).
@@ -618,12 +620,13 @@ export default function App() {
      * refreshes once, at the end.
      */
     if (!opts.quiet) {
-      showToast(CONFIRM_TOAST[outcome.status] || S.genericError);
+      showToast(also > 0 ? S.alsoFiled(also) : (CONFIRM_TOAST[outcome.status] || S.genericError));
       // A success needs no refetch — the card already says what happened, and
       // nine of them in a row would be nine cold starts. Everything else means
-      // the sheet and the screen disagree, so go and look.
-      if (outcome.status !== 'done') refresh();
-    }
+      // the sheet and the screen disagree, so go and look. E-015: so does a fix
+      // that filed OTHER rows too — their cards must leave the queue.
+      if (outcome.status !== 'done' || also > 0) refresh();
+    } else if (also > 0) refresh();
     return outcome;
   };
 

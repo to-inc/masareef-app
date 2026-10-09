@@ -137,7 +137,11 @@ try {
   ok(!/payload\.dupAck = true;\s*\n\s*try/.test(src) || /if \(overrideDup\)/.test(src),
     'never unconditionally');
 
-  ok(/setMethod\(isMethod\(res\.defaultMethod\) \? res\.defaultMethod : DEFAULT_METHOD\)/.test(src),
+  // Re-cut 2026-10-09 (E-015): the method now opens on the server's PREDICTION
+  // (startMethod), and D19's default is its fallback — still server-decided,
+  // still validated through the wire vocabulary.
+  ok(/setMethod\(startMethod\(res\)\)/.test(src)
+    && /isMethod\(res && res\.defaultMethod\) \? res\.defaultMethod : DEFAULT_METHOD/.test(readFileSync(new URL('../src/state/predict.js', import.meta.url), 'utf8')),
     "the slip's method default comes from the SERVER (D19), validated through the wire vocabulary");
   ok(!/setMethod\('Cash'\)/.test(src), 'the hardcoded Cash default is gone from the extraction path');
 

@@ -111,7 +111,7 @@ export const EN = {
   entryCurrency: 'Currency',
   // The button names the currency it switches TO, never the one you are in —
   // the same rule as the language toggle.
-  currencyIn: (c) => (c === 'EGP' ? 'In EGP' : 'In EUR'),
+  currencyIn: (c) => (c === 'EGP' ? 'In E£' : 'In €'),
   // The heading when there is no shortcut row — in travel mode (A4).
   // ——— dictation (A5): tap the keyboard's own mic and say it.
   dictateShort: '🎙 Say it',
@@ -202,6 +202,13 @@ export const EN = {
   jobFailed: 'Did not work — try again',
   jobCapped: "That's today's limit — it continues tomorrow",
   jobsTitle: (n) => `${n} ${n === 1 ? 'photo' : 'photos'} in line`,
+  predFromMemory: 'You taught this one',
+  predFromHistory: 'From your book',
+  predFromSimilar: 'Like similar places in your book',
+  predFromReceipt: 'Read from the receipt',
+  methodEvidence: (card, q) => (card ? `Card — the receipt shows «${q}»` : `Cash — the receipt says «${q}»`),
+  methodFromHistory: 'How you usually pay here',
+  alsoFiled: (n) => `Filed — and ${n} more from the same place`,
   jobRetry: 'Try again',
   debugLogSend: '⚑ Send debug log',
   debugLogSent: '⚑ Log sent ✓',
