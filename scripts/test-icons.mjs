@@ -118,7 +118,10 @@ for (const t of STARTUP) {
 }
 const cfg = readFileSync(join(ROOT, 'vite.config.js'), 'utf8');
 ok(/globIgnores: \['\*\*\/icons\/startup-\*\.png'\]/.test(cfg), 'the ~4.5 MB of launch images are NEVER precached (iOS fetches its one at install)');
-ok(/name="apple-mobile-web-app-status-bar-style" content="default"/.test(html), 'the status bar is «default» — dark text over the light ground (A6)');
+// Re-cut 2026-10-10 (R0, E-017): Tarek chose «Full screen + top shade» — under «default» iOS gave the app
+// 812 of 874pt (short by the 62pt top inset); «black-translucent» is full screen, and STATUS_SHADE keeps the white icons readable.
+ok(/name="apple-mobile-web-app-status-bar-style" content="black-translucent"/.test(html), 'the status bar is translucent — the app gets the whole screen (E-017)');
+ok(/className="status-shade"/.test(readFileSync(join(ROOT, 'src', 'App.jsx'), 'utf8')), '…and the shade behind the white status icons is mounted');
 ok(/name="theme-color" content="#FAF7F1"/.test(html), 'the theme colour is the paper (A6)');
 
 const report = failures.length

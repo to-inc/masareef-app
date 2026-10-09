@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_EDGE, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_EDGE, STATUS_SHADE, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
 import { S, LOCALE, DIR } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -887,6 +887,13 @@ export default function App() {
       }} style={{
         position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none',
         background: GROUND[groundKey],
+      }} />
+      {/* E-017: the translucent status bar draws WHITE icons — this fade sits behind
+          them, above everything (sheets too), exactly the status bar's height.
+          0 tall wherever there is no status-bar inset, so browsers never see it. */}
+      <div aria-hidden className="status-shade" style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, pointerEvents: 'none',
+        height: 'calc(env(safe-area-inset-top, 0px) * 1.25)', background: STATUS_SHADE,
       }} />
       <header
         style={{

@@ -482,6 +482,17 @@ export const GROUND = {
  * is painted in the page's BASE colour, so the base must be the colour the
  * screen already ends in — paper under the blue Dawn read as a white bar (E-017).
  */
+/**
+ * THE STATUS-BAR SHADE (E-017, Tarek's choice 2026-10-10: «Full screen + top
+ * shade»). The home-screen app runs with a TRANSLUCENT status bar, the only way
+ * iOS gives it the whole screen (measured on his phone: screen 874, app 812 —
+ * short by exactly the 62pt top inset under the default style). iOS then draws
+ * the clock and battery WHITE, so a dark fade sits behind them: 0.7 of ink at
+ * the top keeps white ≥ 4.5:1 over every ground's crown (computed: dawn peach
+ * 5.19, paper 4.49, haze 4.93, tide 4.81), fading to nothing below the bar.
+ */
+export const STATUS_SHADE = 'linear-gradient(rgba(44,67,86,0.7), rgba(44,67,86,0.45) 60%, rgba(44,67,86,0))';
+
 export const GROUND_EDGE = { dawn: '#CEDDE6', tide: '#EEF2F2', haze: '#FAF7F1' };
 
 /**

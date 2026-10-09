@@ -11,9 +11,11 @@
     <!-- iOS uses this 180×180 link for the home-screen icon, not the manifest icons -->
     <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <!-- v4 A6: «default» — dark status text. black-translucent painted WHITE text,
-         which vanished over the light glass ground once the harbor header retired. -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- black-translucent (E-017, Tarek 2026-10-10). v4 A6 had chosen «default» for dark
+         icons over the light ground, but under it iOS gives the home-screen app 812 of 874pt
+         (short by the 62pt top inset) — the white strip. Translucent is full screen; its icons
+         are WHITE, so App.jsx paints STATUS_SHADE behind them (≥ 4.5:1 on every ground). -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="مصاريف" />
 
     <!-- v4 A6/R14: launch images from the AO helm (scripts/make-icons.mjs), one per
