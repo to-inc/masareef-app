@@ -62,7 +62,8 @@ try {
   ok(!renderToStaticMarkup(createElement(JobsList, props)).includes(AR.debugLogSend), 'S.22 no handler, no button — a server without `debuglog` shows nothing');
 } finally { await vite.close(); }
 // ——— E-017: full screen on iPhone, and a version he can read
-ok(/ref=\{\(el\) => \{ if \(el\) document\.documentElement\.style\.background = el\.style\.background; \}\}/.test(app),
+ok(/root\.style\.background = el\.style\.background;/.test(app) && /root\.style\.backgroundColor = el\.dataset\.edge;/.test(app)
+  && /data-edge=\{GROUND_EDGE\[groundKey\]\}/.test(app) && /background: GROUND\[groundKey\],/.test(app),
   'S.25 the page behind the app wears the same ground — an edge iOS leaves uncovered shows the screen\'s colour, not paper');
 ok(/define: \{ __APP_VERSION__: JSON\.stringify\(version\) \}/.test(read('vite.config.js')) && /S\.appVersion\(/.test(read('src/views/SettingsSheet.jsx')),
   'S.26 Settings shows the commit the build came from — «is my phone on the new version?» is read, not guessed');

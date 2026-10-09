@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_EDGE, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
 import { S, LOCALE, DIR } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -817,6 +817,10 @@ export default function App() {
   // the section header use, so the three can never disagree.
 
 
+  const groundKey = needsSetup ? 'haze'
+    : viewTab === 'book' || viewTab === 'inbox' ? 'dawn'
+    : viewTab === 'entry' ? 'tide' : 'haze';
+
   return (
     <div
       style={{
@@ -874,12 +878,15 @@ export default function App() {
           uncovered (home-screen mode has sized the frame short before) shows the
           screen's own colour, never the bare paper. A ref, not an effect: this
           render sits below early returns, where a hook cannot go. */}
-      <div aria-hidden className="ground" ref={(el) => { if (el) document.documentElement.style.background = el.style.background; }} style={{
+      <div aria-hidden className="ground" data-edge={GROUND_EDGE[groundKey]} ref={(el) => {
+        if (!el) return;
+        const root = document.documentElement;
+        root.style.background = el.style.background;
+        root.style.backgroundColor = el.dataset.edge;      // the base iOS paints below a short web view
+        document.body.style.backgroundColor = el.dataset.edge;
+      }} style={{
         position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none',
-        background: needsSetup ? GROUND.haze
-          : viewTab === 'book' || viewTab === 'inbox' ? GROUND.dawn
-          : viewTab === 'entry' ? GROUND.tide
-          : GROUND.haze,
+        background: GROUND[groundKey],
       }} />
       <header
         style={{

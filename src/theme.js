@@ -476,6 +476,15 @@ export const GROUND = {
 };
 
 /**
+ * THE BOTTOM EDGE of each ground — the average colour of its last 8 rows at
+ * 390×844, MEASURED in Chromium (2026-10-10), not picked. In an iOS home-screen
+ * app the web view can come up shorter than the screen; whatever lies below it
+ * is painted in the page's BASE colour, so the base must be the colour the
+ * screen already ends in — paper under the blue Dawn read as a white bar (E-017).
+ */
+export const GROUND_EDGE = { dawn: '#CEDDE6', tide: '#EEF2F2', haze: '#FAF7F1' };
+
+/**
  * Every colour a ground can show at full strength — its base and each stop's
  * centre. The contrast suite (A4) composites each glass tier over the lightest
  * and the darkest of these: blur averages the ground under a surface, so a stop

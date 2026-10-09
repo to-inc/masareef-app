@@ -251,12 +251,15 @@ await sweep('en', EN, (n) => n);
 // ═══ 5. SOURCE — one derivation, a named basis, no second entrance ═══
 {
   const view = src('src/views/BookView.jsx');
-  ok(/headlineWords\(cmp\.direction, names\.prev, 'last'\)/.test(view),
+  // Re-cut 2026-10-10 (R0): a euro book compares euro-to-euro (cmpShown picks ONE comparison per unit, and everything reads it).
+  ok(/headlineWords\(cmpShown\.direction, names\.prev, 'last'\)/.test(view),
     'E7.32 the call site NAMES its basis — \'last\' is the only comparison stage 1 has earned, stated where it is spent');
   const block = view.slice(view.indexOf('export function PeriodBlock'),
     view.indexOf('export function MonthScreen'));
-  ok((block.match(/comparisonOf\(/g) || []).length === 1,
-    'E7.33 the words and the percentage ride ONE comparisonOf — the mayCompare-gated one; a second derivation is how they drift apart');
+  ok((block.match(/comparisonOf\(/g) || []).length === 2
+    && /const cmpShown = compareInHome \? comparisonOf\(homeShown\.now, homeShown\.prevAt\) : \(cmp && leadsHome \? cmp : null\);/.test(block)
+    && /\{cmpShown\.pct\}%/.test(block) && !/\bcmp\.(pct|direction|prevAt)\b/.test(block),
+    'E7.33 the words and the percentage ride ONE chosen comparison (cmpShown) — one per unit, never re-derived where it is spent');
   ok(/import \{[^}]*\bSheet\b[^}]*\} from '\.\.\/components\/Primitives\.jsx'/.test(view),
     'E7.34 BookView imports the Sheet primitive — the adoption is a consumption, not a copy');
   ok(!/@keyframes|animation:/.test(view),

@@ -1536,7 +1536,19 @@ export function PeriodBlock({
    * The FIGURES never compress — asides and the unsized count are money, not
    * policy, and folding money away would spend honesty to buy calm.
    */
-  const policySuppressed = hasForeign(foreign) || hasForeign(prevForeign) || !leadsHome;
+  /**
+   * EURO AGAINST EURO (Tarek, 2026-10-10: «make it compare my euros like the
+   * cards»). When the headline leads in his reading unit and the server sends
+   * that unit's series, the comparison is euro-to-euro at the SAME POINT of the
+   * period — read off the same series the chart draws — so the foreign-money
+   * policy has nothing to refuse: there is no second unit in the sentence.
+   */
+  const hv = inReadingUnit(data, displayCurrency, HOME_CURRENCY);
+  const compareInHome = hv.inHome && useAllIn && lead.currency === displayCurrency;
+  const homeTotals = compareInHome ? periodTotals(hv.period, METRICS, {}) : null;
+  const homeShown = homeTotals ? (homeTotals[metric] || homeTotals.all) : null;
+  const cmpShown = compareInHome ? comparisonOf(homeShown.now, homeShown.prevAt) : (cmp && leadsHome ? cmp : null);
+  const policySuppressed = !compareInHome && (hasForeign(foreign) || hasForeign(prevForeign) || !leadsHome);
   const [whyOpen, setWhyOpen] = useState(!!policyOpen);
 
   /**
@@ -1548,7 +1560,7 @@ export function PeriodBlock({
    * percentage below rides. Same words in, same words out: there is no path
    * on which the head observes what the arithmetic refused.
    */
-  const headWords = cmp && leadsHome ? headlineWords(cmp.direction, names.prev, 'last') : null;
+  const headWords = cmpShown ? headlineWords(cmpShown.direction, names.prev, 'last') : null;
 
   /**
    * E3 — THE WINDOW, IN WORDS, DERIVED FROM THE SAME ARRAYS THE MATHS USED.
@@ -1722,7 +1734,7 @@ export function PeriodBlock({
           </Sheet>
         )}
 
-        {cmp && leadsHome ? (
+        {cmpShown ? (
           /**
            * The arithmetic detail under the words. Direction `same` states no
            * percentage — its whole sentence is the head's word-first line now
@@ -1730,13 +1742,13 @@ export function PeriodBlock({
            * screen — so this block renders only what the words do NOT carry:
            * the percentage with its «was» figure, and E3's window qualifier.
            */
-          (cmp.direction !== 'same' || windowLine) && (
+          (cmpShown.direction !== 'same' || windowLine) && (
           <div style={{ fontSize: TYPE.body, marginTop: 6 }}>
-            {cmp.direction === 'same'
+            {cmpShown.direction === 'same'
               ? null
               : (
                 <>
-                  {cmp.direction === 'down' ? S.lessThan(names.prev) : S.moreThan(names.prev)}{' '}
+                  {cmpShown.direction === 'down' ? S.lessThan(names.prev) : S.moreThan(names.prev)}{' '}
                   {/**
                     * A5 — NEUTRAL DELTAS (north-star §5: «deltas carry no
                     * moral color»; boundary 4). This bold used to turn
@@ -1745,8 +1757,8 @@ export function PeriodBlock({
                     * makes information into sin, and the words already carry
                     * the direction. Body ink, both directions, always.
                     */}
-                  <b style={{ color: C.ink, ...LATIN }}>{cmp.pct}%</b>
-                  <span style={{ color: C.muted, fontSize: TYPE.label }}> ({S.wasThen} <span style={LATIN}>{moneyRound(cmp.prevAt)}</span>)</span>
+                  <b style={{ color: C.ink, ...LATIN }}>{cmpShown.pct}%</b>
+                  <span style={{ color: C.muted, fontSize: TYPE.label }}> ({S.wasThen} <span style={LATIN}>{moneyRound(cmpShown.prevAt)}</span>)</span>
                 </>
               )}
             {/**

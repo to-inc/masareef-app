@@ -51,6 +51,19 @@ try {
   ok(!html.includes(S.chartHomeZero(S.currencyShort)), 'HS.6 the € week no longer says «Nothing in E£ this period — this chart counts in E£ only»');
   ok(html.includes(S.chartUnit('€')), `HS.7 the chart names its unit «${S.chartUnit('€')}»`);
   ok(/<svg[\s\S]*<path[^>]+d="M/.test(html), 'HS.8 …and draws a line (an SVG path is on the page)');
+  // ——— the HEADLINE compares euro to euro (Tarek, 2026-10-10: «compare my euros like the cards»)
+  const { PeriodBlock } = await vite.ssrLoadModule('/src/views/BookView.jsx');
+  const wk = { ...week, foreign: { count: 4, byCurrency: { EUR: 61.13 } }, prevForeign: { count: 11, byCurrency: { EUR: 280.31 } },
+    homeAgg: { currency: 'EUR', total: 61.13, unstamped: { count: 0, total: null, byCurrency: {} } },
+    prevHomeAgg: { currency: 'EUR', total: 280.31, unstamped: { count: 0, total: null, byCurrency: {} } } };
+  const head = (dc) => renderToStaticMarkup(createElement(PeriodBlock, {
+    data: wk, labels: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], liveIndex: 3, metric: 'all', setMetric() {},
+    names: { cur: 'This week', prev: 'Last week' }, showBars: true, footnote: null, offPlot: {}, displayCurrency: dc }));
+  const h = head('EUR');
+  ok(!h.includes(S.whyNoCompare), 'HS.11 the € headline no longer says «No comparison here — see why»');
+  ok(h.includes(S.lessThan('Last week')) && /<b[^>]*>\d+%<\/b>/.test(h), 'HS.12 …it says «less than Last week» with a percentage, euro to euro');
+  ok(new RegExp(`${S.wasThen}[^<]*<span[^>]*>143</span>`).test(h) && !new RegExp(`${S.wasThen}[^<]*<span[^>]*>280</span>`).test(h),
+    'HS.13 …measured at the SAME POINT of last week: through Wednesday 40+22+0+81.31 = 143, never the whole week\'s 280');
   const old = render('EGP');
   ok(old.includes(S.chartHomeZero(S.currencyShort)), 'HS.9 control: read in E£ the same week still tells the truth about its empty pound chart');
 } finally { await vite.close(); }

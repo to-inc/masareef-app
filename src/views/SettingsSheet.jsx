@@ -75,6 +75,18 @@ export function SettingsCog({ onOpen }) {
   );
 }
 
+/** «screen 393×852 · app 852 · safe 59/34» — what iOS gave the app, read off the device. */
+function screenFit() {
+  if (typeof window === 'undefined' || typeof document === 'undefined' || !document.body) return '';
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';
+  document.body.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const top = parseFloat(cs.paddingTop) || 0, bottom = parseFloat(cs.paddingBottom) || 0;
+  probe.remove();
+  return `screen ${screen.width}×${screen.height} · app ${Math.round(window.innerHeight)} · safe ${Math.round(top)}/${Math.round(bottom)}`;
+}
+
 export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose }) {
   const [look, setLook] = useState(() => getDisplay());
   /**
@@ -274,6 +286,9 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
           {/* Which build this phone runs — the commit it was built from (E-017). */}
           <div style={{ marginTop: SPACE.gap, textAlign: 'center', fontSize: TYPE.label, color: C.muted }} dir="ltr">
             {S.appVersion(typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev')}
+            {/* E-017 diagnostics: the screen against the space iOS actually gave the
+                app. A gap here IS the strip; one screenshot settles what to fix. */}
+            <div style={{ marginTop: 2 }}>{screenFit()}</div>
           </div>
         </Sheet>
       </div>
