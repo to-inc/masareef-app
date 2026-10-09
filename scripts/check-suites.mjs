@@ -196,7 +196,7 @@ import { dirname, join } from 'node:path';
  * the arity check — the same arithmetic the 24 dead-key deletion established
  * in reverse.
  */
-const EXPECTED_ASSERTIONS = 6091;
+const EXPECTED_ASSERTIONS = 6101;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -267,7 +267,7 @@ const SUITES = [
   'test-chunk-u1.mjs',
   'test-chunk-u4.mjs',
   'test-chunk-s2.mjs',
-  'test-chunk-u3.mjs', 'test-chunk-pred.mjs',
+  'test-chunk-u3.mjs', 'test-chunk-pred.mjs', 'test-chunk-home-series.mjs',
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));

@@ -184,3 +184,19 @@ export function typicalBand(monthTotals, currentMonthIndex1based) {
   };
   return { p25: q(0.25), p75: q(0.75), n: closed.length };
 }
+
+/**
+ * THE PERIOD IN HIS READING UNIT (Tarek, 2026-10-10: «the week and month are
+ * lacking diagrams»). `cur`/`prev` are EGP series by D8, so a euro book drew
+ * every chart empty. When the server sends `homeSeries` in the unit he reads
+ * in, the chart draws THAT — same shape, valued as the headline's homeAgg is,
+ * so the chart adds up to the number above it. Otherwise nothing changes.
+ * Returns { period, unit, inHome }.
+ */
+export function inReadingUnit(period, displayCurrency, homeCurrency) {
+  const hs = period && period.homeSeries;
+  if (!hs || !hs.cur || hs.currency !== displayCurrency || displayCurrency === homeCurrency) {
+    return { period, unit: homeCurrency, inHome: false };
+  }
+  return { period: { ...period, cur: hs.cur, prev: hs.prev }, unit: displayCurrency, inHome: true };
+}

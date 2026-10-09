@@ -278,7 +278,7 @@ await sweep('en', EN);
 
   const charts = await readFile(new URL('../src/components/Charts.jsx', import.meta.url), 'utf8');
   ok(/typeof S\.chartHomeZero === 'function'/.test(charts)
-    && /S\.priorityEmpty\(S\.chartUnit\(unitFor\(HOME_CURRENCY\)\)\)/.test(charts),
+    && /S\.priorityEmpty\(S\.chartUnit\(chartUnit\)\)/.test(charts),   // Re-cut 2026-10-10 (R0): the chart draws in his READING unit when the server sends it (inReadingUnit) — same rule, new names.
     'W1.28 the sentence is a GUARDED lookup — the proposed chartHomeZero key when i18n lands it, the owned-strings fallback until then');
 }
 

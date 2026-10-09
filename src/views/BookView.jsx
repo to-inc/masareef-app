@@ -5,7 +5,7 @@ import {
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, money2, moneyRound, amountWithCurrency } from '../lib/format.js';
-import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand } from '../lib/series.js';
+import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
@@ -1870,16 +1870,19 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
   const dayLabels = Array.from(
     { length: (data.month.cur.Visa || []).length }, (_, i) => String(i + 1),
   );
+  // The month's own stack draws in his reading unit too (see inReadingUnit).
+  const mv = inReadingUnit(data.month, displayCurrency, HOME_CURRENCY);
+  const yv = data.year ? inReadingUnit(data.year, displayCurrency, HOME_CURRENCY).period : null;
   const monthStack = (
     <MonthStack
-      cur={seriesFor(data.month.cur, metric)}
-      prev={seriesFor(data.month.prev, metric)}
+      cur={seriesFor(mv.period.cur, metric)}
+      prev={seriesFor(mv.period.prev, metric)}
       labels={dayLabels}
       liveIndex={today ? today.d - 1 : -1}
       color={(METRICS.find((x) => x.key === metric) || METRICS[0]).color}
       prevName={monthName(data.month.names.prev)}
-      labelled={!((undated?.Visa || 0) + (undated?.Cash || 0))}
-      band={data.year ? typicalBand(comb(data.year.cur.Visa, data.year.cur.Cash), today ? today.m : 13) : null}
+      labelled={mv.inHome || !((undated?.Visa || 0) + (undated?.Cash || 0))}
+      band={yv ? typicalBand(comb(yv.cur.Visa, yv.cur.Cash), today ? today.m : 13) : null}
     />
   );
 

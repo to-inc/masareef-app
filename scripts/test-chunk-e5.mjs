@@ -200,7 +200,9 @@ try {
       'E5.19 MonthScreen mounts MonthStack — the two panels are on the screen, not only in the export');
     ok(/stack=\{monthStack\}/.test(book),
       'E5.20 …threaded through PeriodBlock as the stack slot, so the month card swaps its chart instead of doubling it');
-    ok(/band=\{data\.year \? typicalBand\(comb\(data\.year\.cur\.Visa, data\.year\.cur\.Cash\), today \? today\.m : 13\) : null\}/.test(book),
+    // Re-cut 2026-10-10 (R0): the chart draws in his READING unit when the server sends it (inReadingUnit) — same rule, new names.
+    ok(/band=\{yv \? typicalBand\(comb\(yv\.cur\.Visa, yv\.cur\.Cash\), today \? today\.m : 13\) : null\}/.test(book)
+      && /const yv = data\.year \? inReadingUnit\(data\.year, displayCurrency, HOME_CURRENCY\)\.period : null;/.test(book),
       'E5.21 the band rides E6\'s pinned signature — comb over the year, the Cairo month index, 13 for a closed year, and honest null when the browsed payload has no year series');
     const charts = await readFile(new URL('../src/components/Charts.jsx', import.meta.url), 'utf8');
     ok(/\{stack \|\| \(/.test(charts),

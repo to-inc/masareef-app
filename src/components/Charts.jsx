@@ -3,7 +3,7 @@ import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
-import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape } from '../lib/series.js';
+import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape, inReadingUnit } from '../lib/series.js';
 import { rollup, groupOf } from '../lib/priorities.js';
 import { HOME_CURRENCY, homeMetricTotals } from '../state/display.js';
 import { LATIN, SectionLabel, NeutralDelta } from './Primitives.jsx';
@@ -995,9 +995,16 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
 // total of 0, so an EGP chart flat at zero would tell a foreign week as
 // «nothing happened». This component only ever RENDERS that verdict — the
 // doctrine lives where the inputs do, in views/BookView.jsx.
-export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads = false,
+export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot: rawOffPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads: rawZeroMisleads = false,
   /** D27 — the unit he is READING in; the cards follow it where the wire can. */
   displayCurrency = HOME_CURRENCY }) {
+  // The euro book's charts (2026-10-10): draw the series in his reading unit when
+  // the server sends it. Off-plot money and the «zero misleads» verdict are EGP
+  // facts, so in the home view there is neither — the money is ON the chart.
+  const { period: data, unit: chartCur, inHome } = inReadingUnit(raw, displayCurrency, HOME_CURRENCY);
+  const offPlot = inHome ? {} : rawOffPlot;
+  const homeZeroMisleads = inHome ? false : rawZeroMisleads;
+  const chartUnit = unitFor(chartCur);
   const color = METRICS.find((m) => m.key === metric).color;
   const cur = seriesFor(data.cur, metric);
   const prev = seriesFor(data.prev, metric);
@@ -1129,7 +1136,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
             */}
           {!homeZeroMisleads && (
           <span style={{ fontSize: TYPE.label, color: C.muted, whiteSpace: 'nowrap', ...LATIN }}>
-            {S.chartUnit(unitFor(HOME_CURRENCY))}
+            {S.chartUnit(chartUnit)}
           </span>
           )}
           {/**
@@ -1184,8 +1191,8 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
            */
           <p style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', lineHeight: 1.55, margin: '10px 8px 6px' }}>
             {typeof S.chartHomeZero === 'function'
-              ? S.chartHomeZero(unitFor(HOME_CURRENCY))
-              : S.priorityEmpty(S.chartUnit(unitFor(HOME_CURRENCY)))}
+              ? S.chartHomeZero(chartUnit)
+              : S.priorityEmpty(S.chartUnit(chartUnit))}
           </p>
         ) : !plottable ? (
           <p style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', lineHeight: 1.55, margin: '10px 8px 6px' }}>
@@ -1256,7 +1263,7 @@ export function PeriodSummary({ data, labels, liveIndex, metric, setMetric, peri
         */}
       <MetricCards metric={metric} setMetric={setMetric}
         computed={scoped || homeCards || computed}
-        unit={scoped ? unitFor(HOME_CURRENCY) : cardUnit}
+        unit={scoped ? chartUnit : cardUnit}
         comparable={comparable} prevName={periodNames.prev} />
       {footnote}
       {/**

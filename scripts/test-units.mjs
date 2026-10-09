@@ -71,7 +71,8 @@ try {
     const tog2 = renderToStaticMarkup(createElement(P.CurrencyToggle, { value: 'EGP', other: 'EUR', onFlip() {}, subtle: true }));
     ok(tog2.includes(`aria-label="${S.readInUnit('€')}"`), `${L} its read-aloud label offers «€» («${S.readInUnit('€')}»)`);
     const charts = readFileSync(join(SRC, 'components', 'Charts.jsx'), 'utf8');
-    ok(!/S\.chartUnit\((?!unitFor\(|unit\))/.test(charts) && /unit = unitFor\(HOME_CURRENCY\)/.test(charts)
+    // Re-cut 2026-10-10 (R0): the chart draws in his READING unit when the server sends it (inReadingUnit) — same rule, new names.
+    ok(!/S\.chartUnit\((?!unitFor\(|unit\)|chartUnit\))/.test(charts) && /const chartUnit = unitFor\(chartCur\);/.test(charts) && /unit = unitFor\(HOME_CURRENCY\)/.test(charts)
       && /const cardUnit = homeCards \? unitFor\(displayCurrency\) : unitFor\(HOME_CURRENCY\)/.test(charts) && S.chartUnit(unitFor('EUR')).includes('€'),
       `${L} chart captions take their unit from unitFor — «${S.chartUnit(unitFor('EUR'))}»`);
     const BR = (await vite.ssrLoadModule('/src/views/BatchReviewView.jsx')).default;
