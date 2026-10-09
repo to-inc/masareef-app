@@ -100,8 +100,14 @@ try {
   ok(!bare.includes(`aria-label="${AR.dictateShort}"`) && !bare.includes(`aria-label="${AR.receiptShort}"`),
     'P4.16 a mode whose handler is absent renders NO control (N4\'s dead-control law)');
   const abroad = render({ setCurrency: noop, currency: 'EUR' });
-  ok(/aria-pressed="true"[^>]*aria-label="[^"]*"[^>]*>EUR/.test(abroad) || /aria-pressed="true"[^>]*>EUR/.test(abroad),
-    'P4.17 abroad the currency chip names the unit he is IN and reads pressed (N4.13)');
+  // Re-cut 2026-10-09 (R0): Tarek ruled the chip wears the mark «€», not the code.
+  ok((/aria-pressed="true"[^>]*aria-label="[^"]*"[^>]*>€/.test(abroad) || /aria-pressed="true"[^>]*>€/.test(abroad)) && !/>EUR</.test(abroad),
+    'P4.17 abroad the currency chip names the unit he is IN («€») and reads pressed (N4.13)');
+
+  // ——— the dock's «سجّل» carries the amount in the unit's mark (Tarek 2026-10-09)
+  const { EntryDock } = await vite.ssrLoadModule('/src/views/EntryView.jsx');
+  const dock = renderToStaticMarkup(createElement(EntryDock, { amount: '240', cat: 'Eating out', onSubmit: noop, currency: 'EUR' }));
+  ok(/>240<\/span> €/.test(dock) && !/EUR/.test(dock), 'P4.26 abroad, «سجّل» reads «240 €» — the amount wears the mark');
 
   // ——— method: a pressed well with a raised choice
   const cash = html.slice(at(`>${AR.methodCash}<`) - 400, at(`>${AR.methodCash}<`));
