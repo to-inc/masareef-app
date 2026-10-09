@@ -151,6 +151,15 @@ export const editEntry = (args) => {
   return call(body, 'write');
 };
 
+/**
+ * G9 «⚑ Send debug log». The photo never travels: the server files its OWN
+ * trace for `clientHash`. Not in the mock's verb list, so under the mock the
+ * button is gated off and this answers the deployed doPost's exact sentence.
+ */
+export const sendDebugLog = ({ jobId, clientHash, reason, clientId }) =>
+  (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
+    : call({ action: 'debuglog', jobId, clientHash, reason, clientId }, 'write'));
+
 export const removeEntry = ({ tab, rowHint, match }) =>
   (USING_MOCK ? mockRemoveEntry({ tab, rowHint, match })
     : call({ action: 'remove_entry', tab, rowHint, match }, 'write'));

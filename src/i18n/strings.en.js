@@ -203,6 +203,9 @@ export const EN = {
   jobCapped: "That's today's limit — it continues tomorrow",
   jobsTitle: (n) => `${n} ${n === 1 ? 'photo' : 'photos'} in line`,
   jobRetry: 'Try again',
+  debugLogSend: '⚑ Send debug log',
+  debugLogSent: '⚑ Log sent ✓',
+  debugLogPrivacy: 'Only the reading log leaves the phone — never the photo.',
   jobsCapped: (n) => `${n} waiting for tomorrow`,
   // Every job card names itself: the shop once we have read one, the time it
   // was taken until then. "No name… that's terrible UX." — his words.

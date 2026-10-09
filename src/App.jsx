@@ -11,7 +11,7 @@ import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, TAP, glass,
 import { S, LOCALE, DIR } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
-import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, ping, USING_MOCK } from './api/index.js';
+import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, sendDebugLog, ping, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
 import { enqueue, flush, partition, remove as dropQueued, onPhone } from './state/outbox.js';
@@ -462,6 +462,7 @@ export default function App() {
     if (item.kind === 'manual') return postManual(item.payload);
     if (item.kind === 'fix_category') return fixCategory(item.payload);
     if (item.kind === 'receipt_confirm') return receiptConfirm(item.payload);
+    if (item.kind === 'debuglog') return sendDebugLog({ ...item.payload, clientId: item.id });
     return Promise.resolve({ ok: true });
   }, []);
 
@@ -971,6 +972,12 @@ export default function App() {
                     // change — same screen, other half.
                     onManual={() => pushDetail(() => setEntryMode('keypad'))}
                     onBatch={takeBatchJob}
+                    // G9: queued like every write — it leaves when the network does.
+                    onDebugLog={supportsAction(build, 'debuglog') ? (job) => {
+                      enqueue({ id: newClientId(), kind: 'debuglog', ageGated: false,
+                        payload: { jobId: String(job.id), clientHash: job.clientHash || '', reason: job.error || job.stage } });
+                      runOutbox();
+                    } : undefined}
                   />
                 )}
                 {tab === 'entry' && entryMode === 'batch' && (

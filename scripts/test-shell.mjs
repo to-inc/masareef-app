@@ -51,7 +51,19 @@ try {
   ok((html.match(/min-height:52px/g) || []).length === 2, 'S.17 both answers are 52px targets');
   ok(/role="dialog" aria-modal="true"/.test(html), 'S.18 it is a modal dialog to VoiceOver');
   ok(renderToStaticMarkup(createElement(IC)) === '', 'S.19 off iOS (this test runs in Node) it renders nothing');
+
+  // ——— G9: «⚑ Send debug log» — gated on the server's verb list, never carries the photo
+  const { JobsList } = await vite.ssrLoadModule('/src/views/ReceiptView.jsx');
+  const job = { id: 'j1', stage: 'failed', error: 'vision_failed', retryable: true, queuedAt: 1e12, clientHash: 'h', base64: '' };
+  const props = { jobs: [job], onReview() {}, onRetry() {}, onCancel() {} };
+  const on = renderToStaticMarkup(createElement(JobsList, { ...props, onDebugLog() {} }));
+  ok(on.includes(AR.debugLogSend) && on.includes(AR.debugLogPrivacy), 'S.20 a failed read offers «⚑» with its privacy line');
+  ok(/dashed #A05446[^"]*min-height:48px|min-height:48px[^"]*dashed #A05446/.test(on), 'S.21 the dashed terracotta ghost, at 48px (R3: the 44 exception is withdrawn)');
+  ok(!renderToStaticMarkup(createElement(JobsList, props)).includes(AR.debugLogSend), 'S.22 no handler, no button — a server without `debuglog` shows nothing');
 } finally { await vite.close(); }
+ok(/onDebugLog=\{supportsAction\(build, 'debuglog'\) \?/.test(app), 'S.23 App hands the handler over only when the server advertises `debuglog`');
+const dbgPayload = (app.match(/kind: 'debuglog'[\s\S]{0,200}?\}\s*\}\);/) || [''])[0];
+ok(dbgPayload.includes('clientHash') && !/base64|image/.test(dbgPayload), 'S.24 the queued log carries the image HASH, never the photo');
 
 if (failures.length) {
   console.log(`❌ CHUNK SHELL — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`);

@@ -48,7 +48,7 @@ const ERROR_TEXT = {
 };
 
 export default function ReceiptView({
-  onSaved, onManual, onBatch,
+  onSaved, onManual, onBatch, onDebugLog,
   /** SSR seam (house pattern): open straight onto a review card — no camera under SSR. */
   initialReview = null,
 }) {
@@ -719,7 +719,7 @@ export default function ReceiptView({
       <p style={{ color: C.muted, fontSize: TYPE.body, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
         {S.receiptIntro}
       </p>
-      <JobsList jobs={jobs} onReview={review} onRetry={retry} onCancel={cancelJob} />
+      <JobsList jobs={jobs} onReview={review} onRetry={retry} onCancel={cancelJob} onDebugLog={onDebugLog} />
       <label className="bigbtn" style={{ ...primaryBtn, display: 'inline-block', cursor: 'pointer' }}>
         {S.receiptStart}
         {/* `capture="environment"` opens the native camera directly. Deliberately
@@ -781,7 +781,7 @@ export default function ReceiptView({
  * "waiting" would imply five failures; one line saying how many are held until
  * tomorrow is the truth, and it is a system working rather than breaking.
  */
-export function JobsList({ jobs, onReview, onRetry, onCancel }) {
+export function JobsList({ jobs, onReview, onRetry, onCancel, onDebugLog }) {
   if (!jobs.length) return null;
   const held = cappedCount(jobs);
   return (
@@ -791,7 +791,7 @@ export function JobsList({ jobs, onReview, onRetry, onCancel }) {
         {held > 0 && <span style={{ color: C.ink }}>{' · '}{S.jobsCapped(held)}</span>}
       </div>
       {jobs.map((j) => (
-        <JobRow key={j.id} job={j} onReview={onReview} onRetry={onRetry} onCancel={onCancel} />
+        <JobRow key={j.id} job={j} onReview={onReview} onRetry={onRetry} onCancel={onCancel} onDebugLog={onDebugLog} />
       ))}
     </div>
   );
@@ -838,9 +838,10 @@ function jobLabel(job, stage) {
  * The STAGE comes from `effectiveStage`, never `job.stage` — that is what stops
  * a not-a-receipt from announcing itself as «جاهز — راجعه».
  */
-function JobRow({ job, onReview, onRetry, onCancel }) {
+function JobRow({ job, onReview, onRetry, onCancel, onDebugLog }) {
   const stage = effectiveStage(job);
   const [thumb, setThumb] = useState(null);
+  const [logged, setLogged] = useState(false);
 
   /**
    * The object URL is created in an effect and REVOKED when the row goes away.
@@ -911,6 +912,8 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
   if (stage === 'failed' && isActionable(job)) {
     actions.push({ key: 'retry', primary: false, label: S.jobRetry, onTap: () => onRetry(job) });
   }
+  // G9: every unread photo can be gathered — absent handler, absent control (N4).
+  const canLog = !!onDebugLog && (stage === 'failed' || stage === 'notReceipt');
 
   return (
     <div
@@ -1000,6 +1003,23 @@ function JobRow({ job, onReview, onRetry, onCancel }) {
               {a.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {canLog && (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <button
+            className="catchip"
+            disabled={logged}
+            onClick={() => { onDebugLog(job); setLogged(true); }}
+            style={{
+              minHeight: TAP, padding: '0 14px', borderRadius: RADIUS.capsule, background: 'transparent',
+              border: `1px dashed ${C.conflictInk}`, color: C.conflictInk, fontSize: TYPE.label, fontWeight: 700,
+            }}
+          >
+            {logged ? S.debugLogSent : S.debugLogSend}
+          </button>
+          <div style={{ fontSize: TYPE.label, color: C.muted }}>{S.debugLogPrivacy}</div>
         </div>
       )}
     </div>
