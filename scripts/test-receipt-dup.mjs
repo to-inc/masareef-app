@@ -15,6 +15,7 @@
  * error and nothing on screen. That is the one forbidden output, reached
  * through a truthy envelope.
  */
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
@@ -157,6 +158,32 @@ try {
   eq(typeof S.receiptDupBookMore, 'function', 'and the twin count is a template, not a bare number');
   ok(/355\.96|355/.test(String(S.receiptDupBookMore(2))) === false,
     'which names how many MORE there are, not the amount');
+
+  // ═══ E-012 — a receipt never silently takes TODAY's date ═══
+  // 30/9/2026: a stack of older receipts photographed in one sitting was filed
+  // as today — the card prefilled the camera moment when the printed date was
+  // unread. Now an unread date stays EMPTY, flagged, and blocks the save.
+  {
+    const { createElement } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const ex = (date) => ({ amount: 42, currency: 'EUR', merchant_display: 'Konstan', date, date_confidence: date ? 'high' : 'low', doc_type: 'receipt' });
+    const card = (date, dateStr) => renderToStaticMarkup(createElement(ReceiptView, {
+      onSaved() {}, onManual() {}, onBatch() {},
+      initialReview: { extraction: ex(date), dateStr, category: 'Eating out' },
+    }));
+    const saveOff = (h) => /<button[^>]*class="bigbtn"[^>]*disabled/.test(h);
+    const unread = card(null, '');
+    ok(unread.includes(S.receiptDateNeeded) && saveOff(unread),
+      'E012.1 an unread receipt date is EMPTY, says so, and Save is blocked — never today by default');
+    const typed = card(null, '14/9/2026');
+    ok(!typed.includes(S.receiptDateNeeded) && !saveOff(typed),
+      'E012.2 once he types the receipt\'s day, the warning goes and Save opens');
+    const bogus = card(null, '31/2/2026');
+    ok(bogus.includes(S.receiptDateNeeded) && saveOff(bogus), 'E012.3 an impossible date (31/2) is not a date');
+    const src = readFileSync(new URL('../src/views/ReceiptView.jsx', import.meta.url), 'utf8');
+    ok(!src.split('\n').some((l) => /setDateStr\(/.test(l) && /snapDate/.test(l)),
+      'E012.4 the card never pre-fills the camera moment (snapDate) as the purchase date');
+  }
 } finally {
   await vite.close();
 }

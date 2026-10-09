@@ -135,6 +135,7 @@ export const AR = {
   receiptAmount: 'المبلغ',
   receiptMerchant: 'المحل',
   receiptDate: 'التاريخ',
+  receiptDateNeeded: 'مقدرناش نقرا التاريخ — اكتب يوم الفاتورة (مثلاً 14/9/2026)',
   receiptCategory: 'النوع',
   receiptFromLibrary: 'من الصور',
   // WS4-Q — job stages. Words, never percentages: extraction is one opaque call

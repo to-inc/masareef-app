@@ -25,6 +25,14 @@ import { ISOLATE, SectionLabel, LATIN, Sheet } from '../components/Primitives.js
  * States: idle → working (S1) → review (S2 confident / S3 uncertain)
  *                             → notReceipt (S4) → queued (S5, offline).
  */
+// A date he can save: d/M/yyyy, real calendar day, digits normalised.
+const DMY_OK = (v) => {
+  const m = /^\s*(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})\s*$/.exec(normalizeDigits(String(v || '')));
+  if (!m) return false;
+  const d = +m[1], mo = +m[2], y = +m[3];
+  const t = new Date(Date.UTC(y, mo - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;
+};
 const ISO_TO_DMY = (iso) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
   return m ? `${Number(m[3])}/${Number(m[2])}/${m[1]}` : '';
@@ -42,8 +50,12 @@ const ERROR_TEXT = {
   'vision_failed': S.receiptFailed,
 };
 
-export default function ReceiptView({ onSaved, onManual, onBatch }) {
-  const [stage, setStage] = useState('idle');
+export default function ReceiptView({
+  onSaved, onManual, onBatch,
+  /** SSR seam (house pattern): open straight onto a review card — no camera under SSR. */
+  initialReview = null,
+}) {
+  const [stage, setStage] = useState(initialReview ? 'review' : 'idle');
   const [slow, setSlow] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingCount, setPendingCount] = useState(0);
@@ -51,16 +63,16 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
   const [reviewingId, setReviewingId] = useState(null);
 
   const [shot, setShot] = useState(null);          // { base64, clientHash, snapDate }
-  const [extraction, setExtraction] = useState(null);
+  const [extraction, setExtraction] = useState(initialReview ? initialReview.extraction : null);
   const [dup, setDup] = useState({ sms: false, photo: false, book: null });
   const [dupUndated, setDupUndated] = useState(false);
   const [overrideDup, setOverrideDup] = useState(false);
 
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(initialReview ? String(initialReview.extraction.amount ?? '') : '');
   const [merchant, setMerchant] = useState('');
-  const [dateStr, setDateStr] = useState('');
+  const [dateStr, setDateStr] = useState(initialReview ? (initialReview.dateStr || '') : '');
   const [method, setMethod] = useState('Cash');
-  const [category, setCategory] = useState(null);
+  const [category, setCategory] = useState(initialReview ? (initialReview.category || null) : null);
   const [showAllCats, setShowAllCats] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -103,9 +115,16 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
     setDupUndated(undatedHint(res));
     setAmount(e.amount == null ? '' : String(e.amount));
     setMerchant(e.merchant_display || e.merchant_latin || '');
-    // Printed date wins when the server judged it plausible; otherwise the day
-    // he took the photo. Either way it is on screen before he confirms.
-    setDateStr(ISO_TO_DMY(e.date) || ISO_TO_DMY(snapDate));
+    /**
+     * E-012 — THE PRINTED DATE, OR NOTHING. This used to fall back to
+     * `snapDate`, which is the moment he pressed the camera button, not the
+     * day of the purchase. Photographing a stack of older receipts in one
+     * sitting therefore dated every one of them TODAY (30/9/2026: 11 rows, 7
+     * of them doubles of rows already in his book). An unread date now stays
+     * EMPTY, the field opens for him, and the card will not save until the
+     * receipt's own date is in it.
+     */
+    setDateStr(ISO_TO_DMY(e.date) || '');
     /**
      * THE METHOD DEFAULT COMES FROM THE SERVER (D19).
      *
@@ -452,9 +471,10 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
   if (stage === 'review' && extraction) {
     const lowAmount = extraction.amount_confidence === 'low' || extraction.amount == null;
     const lowMerchant = extraction.merchant_confidence === 'low';
-    const lowDate = extraction.date_confidence === 'low';
+    const noDate = !DMY_OK(dateStr);
+    const lowDate = extraction.date_confidence === 'low' || noDate;
     const anyLow = lowAmount || lowMerchant || lowDate;
-    const ready = Number(normalizeDigits(amount)) > 0 && !!category && !saving;
+    const ready = Number(normalizeDigits(amount)) > 0 && !!category && !noDate && !saving;
     const blockedByDup = isBlocked(dup, overrideDup);
 
     return (
@@ -559,7 +579,16 @@ export default function ReceiptView({ onSaved, onManual, onBatch }) {
 
           <Field label={S.receiptDate} editable={lowDate}>
             {lowDate ? (
-              <input value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={inputStyle} dir="ltr" />
+              <>
+                <input
+                  value={dateStr} onChange={(e) => setDateStr(e.target.value)} dir="ltr"
+                  placeholder="d/m/2026" inputMode="numeric"
+                  style={noDate ? { ...inputStyle, borderColor: C.conflictInk } : inputStyle}
+                />
+                {noDate && (
+                  <div style={{ fontSize: TYPE.label, color: C.conflictInk, marginTop: 6 }}>{S.receiptDateNeeded}</div>
+                )}
+              </>
             ) : (
               <div style={{ fontSize: 16, ...LATIN }}>{dateStr}</div>
             )}

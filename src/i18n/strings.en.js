@@ -127,6 +127,7 @@ export const EN = {
   receiptAmount: 'Amount',
   receiptMerchant: 'Shop',
   receiptDate: 'Date',
+  receiptDateNeeded: "We couldn't read the date — type the day on the receipt (e.g. 14/9/2026)",
   receiptCategory: 'Category',
   receiptFromLibrary: 'From photos',
   jobQueued: 'In line',
