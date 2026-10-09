@@ -156,8 +156,15 @@ try {
    */
   ok(empty !== noCat && noCat !== done && done !== saving, 'four states, four renderings');
 
-  eq((done.match(/min-height:58px/g) || []).length, 1,
-    'and it is a full-width target, not a link — he presses this one-handed');
+  // Re-cut 2026-10 (E-003/E-004): the pin was the literal 58px; the PRINCIPLE
+  // is a full-width, one-handed target at or above the tap floor. 58→52 paid
+  // for a fixed category row in the bar without covering a key.
+  {
+    const btn = (done.match(/<button[^>]*class="bigbtn"[^>]*>/) || [''])[0];
+    const mh = Number((btn.match(/min-height:(\d+)px/) || [])[1]);
+    ok(/width:100%/.test(btn) && mh >= 48,
+      `and it is a full-width target at the tap floor, not a link — he presses this one-handed (min-height ${mh})`);
+  }
 } finally {
   await vite.close();
 }

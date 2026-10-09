@@ -1178,7 +1178,7 @@ export default function App() {
         <div style={{ flexShrink: 0, paddingBottom: `calc(${BAR_CLEARANCE}px + env(safe-area-inset-bottom))` }}>
           <EntryDock
             amount={entryAmount} cat={entryCat} currency={entryCurrency}
-            onSubmit={submitEntry} busy={entryBusy}
+            onSubmit={submitEntry} busy={entryBusy} setCat={setEntryCat}
           />
         </div>
       )}

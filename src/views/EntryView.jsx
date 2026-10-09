@@ -70,14 +70,29 @@ import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx
  * and the unit is stated — every remembered entry is EGP by construction
  * (state/repeats.js refuses anything else), so the unit is the pound, named.
  */
+/**
+ * E-003/E-004 — THE NUMBER BOX'S BUDGET. The keypad's last row («0», «⌫») must
+ * end above the pinned Save bar at scroll 0 on a 375×812 phone, AND the bar
+ * carries a fixed-height row (the hint, then the category chips) that never
+ * grows under his finger. That is ~27px more than the box had; it comes out
+ * of spacing (12→8 inside the box, 8→6 between keys), never out of a target:
+ * keys stay at TAP. Enforced in scripts/test-layout.mjs.
+ */
+const NUMBER_GAP = 8;
+
 function LikeBeforeCard({ entry, onFill }) {
   return (
     <button
       className="likecard catchip"
       onClick={() => onFill(entry)}
       style={{
-        display: 'block', width: '100%', textAlign: 'start',
-        minHeight: TAP, padding: SPACE.cardPad,
+        /* E-003: ONE LINE, not two. The two-line card (82px) pushed the
+           keypad's last row — «0» and «⌫» — 44px under the pinned Save bar,
+           on every visit after his first entry. Label and entry now share a
+           row (long descriptions still wrap); N3's card shape is unchanged. */
+        display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap',
+        width: '100%', textAlign: 'start',
+        minHeight: TAP, padding: '10px 16px',
         background: C.card, borderRadius: RADIUS.card,
         border: `1px solid ${C.line}`, color: C.ink,
       }}
@@ -85,8 +100,7 @@ function LikeBeforeCard({ entry, onFill }) {
     >
       <span
         style={{
-          display: 'block', fontSize: TYPE.label, fontWeight: 600,
-          color: C.muted, marginBottom: 4,
+          fontSize: TYPE.label, fontWeight: 600, color: C.muted,
         }}
       >
         {S.entryRepeats}
@@ -238,7 +252,7 @@ export default function EntryView({
           * through the same `fill` as the card — it does not submit.
           */}
         {repeats.length > 0 && (
-          <Rail style={{ gap: 7, marginBottom: SPACE.gap, paddingBottom: 2 }}>
+          <Rail style={{ gap: 7, marginBottom: NUMBER_GAP, paddingBottom: 2 }}>
             {repeats.map((q) => (
               <button
                 key={`${q.description}|${q.method}`}
@@ -302,7 +316,7 @@ export default function EntryView({
           * worse here than none, because this row would make it look chosen.
           */}
         {(onDictate || setCurrency || onCamera) && (
-          <div style={{ display: 'flex', gap: SPACE.gap, marginTop: SPACE.gap }}>
+          <div style={{ display: 'flex', gap: SPACE.gap, marginTop: NUMBER_GAP }}>
             {onDictate && (
               <button className="catchip" onClick={onDictate} style={MODE_STYLE}>
                 {S.dictateShort}
@@ -331,7 +345,7 @@ export default function EntryView({
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: SPACE.gap }} dir="ltr">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: NUMBER_GAP }} dir="ltr">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((k) => (
             <button
               key={k}
@@ -339,7 +353,7 @@ export default function EntryView({
               onClick={() => press(k)}
               aria-label={k === '⌫' ? S.keypadBackspace : k}
               style={{
-                padding: '12px 0', minHeight: 50, fontSize: TYPE.section, fontWeight: 600,
+                padding: '10px 0', minHeight: TAP, fontSize: TYPE.section, fontWeight: 600,
                 borderRadius: RADIUS.row, background: C.card, border: `1px solid ${C.line}`, color: C.ink,
               }}
             >
@@ -468,7 +482,7 @@ export default function EntryView({
  * before it is a row in his book. That line is where «جارٍ الحفظ…» lives too: a
  * write in flight is a fact about the ENTRY, not a new name for the button.
  */
-export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENCY }) {
+export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENCY, setCat = null }) {
   const state = dockState({ amount, cat });
   const ready = entryReady({ amount, cat, busy });
 
@@ -485,27 +499,56 @@ export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENC
   return (
     <div
       style={{
-        flexShrink: 0, padding: '8px 16px 12px', background: C.shell,
+        flexShrink: 0, padding: '6px 16px 10px', background: C.shell,
         borderTop: `1px solid ${C.line}`,
       }}
     >
+      {/**
+        * E-004 — THE QUESTION AND ITS ANSWERS IN ONE PLACE. The bar said
+        * «choose a category» while every category chip sat below the keypad,
+        * 100px+ under the fold: the screen's second decision was never on the
+        * screen. While the bar asks, it carries his six usual categories itself;
+        * the full list stays below for anything else.
+        */}
       {/* The narration, beside the button — never on it. `aria-live` sits here
           because this is the text that changes; the verb below never does. */}
       <div
         aria-live="polite"
         style={{
-          textAlign: 'center', fontSize: TYPE.label, color: C.muted,
-          fontWeight: 600, marginBottom: 6, ...NUMERALS,
+          // E-004: ONE FIXED-HEIGHT SLOT for the hint and, while the bar asks
+          // for a category, the chips themselves — so the bar never grows and
+          // never covers a key mid-amount.
+          minHeight: TAP, marginBottom: 4, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', textAlign: 'center',
+          fontSize: TYPE.label, color: C.muted, fontWeight: 600, ...NUMERALS,
         }}
       >
-        {status}
+        {state === 'needCategory' && !busy && setCat ? (
+          <Rail style={{ gap: 7, width: '100%' }}>
+            {SHORT_LIST.map((c) => (
+              <button
+                key={c}
+                className="catchip"
+                onClick={() => setCat(c)}
+                style={{
+                  padding: '9px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
+                  fontWeight: 600, flex: '0 0 auto', whiteSpace: 'nowrap',
+                  background: C.card, border: `1px solid ${C.line}`, color: C.ink, ...ISOLATE,
+                }}
+                dir="auto"
+              >
+                {categoryLabel(c)}
+              </button>
+            ))}
+          </Rail>
+        ) : status}
       </div>
       <button
         className="bigbtn"
         disabled={!ready}
         onClick={onSubmit}
         style={{
-          width: '100%', minHeight: 58, padding: '14px 0', borderRadius: RADIUS.row,
+          width: '100%', minHeight: 52, padding: '11px 0', borderRadius: RADIUS.row,
           // Sand when resting — a control at rest, not furniture (`line` made
           // it read as a dead bar); muted ink on it clears 4.10:1 at
           // TYPE.action bold, above the 3:1 large-text floor.

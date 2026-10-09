@@ -138,6 +138,50 @@ try {
   ok(Math.abs(split.descStart - split.metaStart) > 20,
     'positive control FAILED: re-adding dir="auto" did not split the Coffee row '
     + `(desc@${split.descStart} vs meta@${split.metaStart}) — the guard cannot detect the defect it exists for`);
+
+  // ═══ E-003 / E-004 — THE NEW SCREEN'S KEYPAD AND ITS SECOND QUESTION ═══
+  // With a «like before» card (every visit after his first entry), «0» and «⌫»
+  // sat 44px under the pinned Save bar; and the bar asked «choose a category»
+  // with every category chip below the fold. Now: the keypad's last row ends
+  // above the bar at scroll 0, the bar carries the categories while it asks,
+  // and it does NOT grow when they appear — a bar that grew covered «0» after
+  // the first digit, so «60» could not be typed.
+  for (const lang of ['ar', 'en']) {
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    await ctx.addInitScript((l) => {
+      localStorage.setItem('masareef.lang', l);
+      localStorage.setItem('masareef.repeats.v1', JSON.stringify([{ description: 'قهوة', category: 'Eating out', method: 'Cash', amount: 60, currency: 'EGP' }]));
+    }, lang);
+    const pg = await ctx.newPage();
+    await pg.goto(url, { waitUntil: 'networkidle' });
+    await pg.getByRole('button', { name: /^(جديد|New)$/ }).first().click();
+    await pg.waitForSelector('[aria-label="0"]');
+    const geo = () => pg.evaluate(() => {
+      const save = document.querySelector('button.bigbtn');
+      const dock = save.parentElement;
+      return {
+        dockTop: Math.round(dock.getBoundingClientRect().top),
+        key0: Math.round(document.querySelector('[aria-label="0"]').getBoundingClientRect().bottom),
+        chips: dock.querySelectorAll('button.catchip').length,
+        scroll: document.querySelector('main').scrollTop,
+      };
+    });
+    const before = await geo();
+    ok(before.scroll === 0 && before.key0 <= before.dockTop,
+      `E003 [${lang}] with a «like before» card, «0» ends above the Save bar at scroll 0 — key@${before.key0} vs bar@${before.dockTop}`);
+    await pg.locator('[aria-label="6"]').click();
+    const after = await geo();
+    ok(after.chips === 6, `E004 [${lang}] after the first digit the bar offers the six categories itself — got ${after.chips}`);
+    ok(after.dockTop === before.dockTop && after.key0 <= after.dockTop,
+      `E004 [${lang}] …and the bar does not grow: «0» stays tappable mid-amount — bar ${before.dockTop}→${after.dockTop}, key@${after.key0}`);
+    if (lang === 'ar') {
+      // POSITIVE CONTROL: a taller card must push «0» under the bar, and the check must see it.
+      await pg.evaluate(() => { document.querySelector('.likecard').style.minHeight = '140px'; });
+      const ctl = await geo();
+      ok(ctl.key0 > ctl.dockTop, `E003 positive control FAILED — a 140px card did not push «0» under the bar (key@${ctl.key0} vs bar@${ctl.dockTop}); the guard is blind`);
+    }
+    await ctx.close();
+  }
 } finally {
   if (browser) await browser.close();
   await server.close();
