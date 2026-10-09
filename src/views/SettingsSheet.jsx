@@ -84,7 +84,8 @@ function screenFit() {
   const cs = getComputedStyle(probe);
   const top = parseFloat(cs.paddingTop) || 0, bottom = parseFloat(cs.paddingBottom) || 0;
   probe.remove();
-  return `screen ${screen.width}×${screen.height} · app ${Math.round(window.innerHeight)} · safe ${Math.round(top)}/${Math.round(bottom)}`;
+  const gap = getComputedStyle(document.documentElement).getPropertyValue('--ios-gap').trim() || '0px';
+  return `screen ${screen.width}×${screen.height} · app ${Math.round(window.innerHeight)} · safe ${Math.round(top)}/${Math.round(bottom)} · gap ${parseInt(gap, 10) || 0}`;
 }
 
 export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose }) {
