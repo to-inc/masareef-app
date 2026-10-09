@@ -75,7 +75,7 @@ export const PRIORITY_GROUPS = [
       'Groceries', 'Utilities', 'Internet', 'Telephone', 'Gas',
       'Elect. Recharge', 'Water. Recharge', 'Taxes and fines', 'Car',
       'Transportation', 'Villa', 'omara2 al behar',
-      'InstaPay - Services', 'InstaPay - Purchases',
+      'InstaPay - Services', 'InstaPay - Purchases', 'Rent',
     ],
   },
   /**

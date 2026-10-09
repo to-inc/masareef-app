@@ -693,6 +693,7 @@ const CATEGORY_AR = {
   Leisure: 'ترفيه/خروجات',
   Sports: 'رياضة',
   Hobbies: 'هوايات',
+  Rent: 'إيجار',
 };
 
 /**

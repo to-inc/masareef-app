@@ -73,6 +73,9 @@ export const CATEGORIES = [
    * ships both halves in one sitting; this list is staged for that hour.
    */
   'Leisure', 'Sports', 'Hobbies',
+  // E-016 (2026-10-09): rent was filed under Villa until this rode the paste
+  // that put it in CONFIG.EXTRA_CATEGORIES (nine → ten) — same rule as above.
+  'Rent',
 ];
 
 // The six that cover most of his spending — shown before "أنواع تانية…".
