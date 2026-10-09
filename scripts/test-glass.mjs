@@ -41,7 +41,7 @@ const rel = (p) => p.slice(SRC.length + 1);
 // ——————————————————————————————————— 1. the v4 tiers (ARCHITECTURE A3) exist, and every blur carries both prefixes
 // The unprefixed property alone leaves Safari — the only browser this app runs
 // in — with no blur at all.
-for (const name of ['card', 'chip', 'chrome', 'well', 'advisory', 'toast']) {
+for (const name of ['card', 'chip', 'chrome', 'well', 'advisory', 'toast', 'raised', 'alert']) {
   ok(!!GLASS[name], `GLASS.${name} — a v4 tier — is missing`);
   if (!GLASS[name]) continue;
   const s = glass(name);
@@ -64,7 +64,7 @@ ok(threw, 'glass() refuses an unknown tier rather than returning a plausible not
     css.slice(css.indexOf('@media (prefers-reduced-transparency: reduce)')),
   ];
   ok(blocks.every((b) => b.length > 30), 'A5: styles.css has both fallbacks — no blur support, and reduced transparency');
-  for (const tier of ['card', 'chip', 'chrome', 'advisory', 'toast']) {
+  for (const tier of ['card', 'chip', 'chrome', 'advisory', 'toast', 'raised', 'alert']) {
     ok(glass(tier).background.startsWith(`var(--glass-solid-${tier},`),
       `A5: glass('${tier}') paints through --glass-solid-${tier}, so the fallback can reach it`);
     ok(blocks.every((b) => new RegExp(`--glass-solid-${tier}:\\s*#[0-9A-Fa-f]{6}`).test(b.slice(0, b.indexOf('}') + 1))),

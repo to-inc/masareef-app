@@ -262,7 +262,9 @@ export const AR = {
   periodYear: 'السنة',
   // ——— «الدفتر» (M1): «اليوم» و«الأخير» بقوا حاجة واحدة بأربع مستويات.
   tabBook: 'الدفتر',
-  todayCount: (n) => `${n} ${n === 1 ? 'حاجة' : 'حاجات'} النهاردة`,
+  todaySpent: 'صرفت النهاردة', // v4 P3 hero caption
+  uncatCount: (n) => `${n} من غير نوع`,
+  uncatAction: 'صنّفهم ←',
   // الفلوس بعملة تانية بتتعد لوحدها — مش بتتجمع مع الجنيه (D8).
   travelApart: 'لوحدها',
   /**
@@ -413,7 +415,7 @@ export const AR = {
   sectionAgainst: (prev) => `مقابل ${prev}`,
   sectionByMethod: 'حسب طريقة الدفع',
   // السطر اللي من غير نوع بقى زرار في كل مكان بيظهر فيه (M6).
-  rowNeedsCategory: '؟ دوس للنوع',
+  rowNeedsCategory: 'من غير نوع', // v4 P3
   // A2: الصف ده اتصنّف لوحده من الذاكرة — مش إنت اللي اخترته.
   rowAuto: '· لوحده',
   rowAutoTitle: 'النوع ده اتحط تلقائي من الذاكرة — دوس لو عايز تغيّره',
@@ -537,6 +539,7 @@ export const AR = {
 
   // ——— the manual refresh (D16c). A BUTTON, never a gesture.
   refresh: 'حدّث',
+  synced: 'اتحدث', // the sync pill: «اتحدث 9:40» (v4 P3)
   refreshing: 'بيحدّث…',
   refreshFailed: 'مانفعش يحدّث — جرّب تاني',
 
@@ -555,7 +558,6 @@ export const AR = {
   settingsCurrencyNote: 'بتحدد أنهي عملة تيجي الأول في أرقام الدفتر — مفيش أي تحويل، كل عملة بأرقامها زي ما هي.',
 
   offline: 'مفيش نت — دي آخر بيانات محفوظة',
-  lastUpdated: 'آخر تحديث',
   saving: 'جارٍ الحفظ…',
   saved: 'اتسجل ✓',
   // نتيجة الدفعة (M4). كل كارت بيقول لوحده حصله إيه؛ دول بيلخّصوا الجولة.

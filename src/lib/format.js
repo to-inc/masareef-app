@@ -58,6 +58,12 @@ export function money(n) {
   return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
 
+/** Two decimals, always — the ledger's reading form (v4 P3: «60.00 ج.م»). */
+export function money2(n) {
+  if (isAbsent(n)) return ABSENT;
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function moneyRound(n) {
   if (isAbsent(n)) return ABSENT;
   return Math.round(Number(n)).toLocaleString('en-US');

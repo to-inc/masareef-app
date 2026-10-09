@@ -78,18 +78,20 @@ function sheetStyle(slice) {
 
 const header = app.slice(app.indexOf('<header'), app.indexOf('</header>'));
 ok(header.length > 0, 'S1.1 the header is findable in App.jsx');
-ok(header.includes('today_cairo'),
-  'S1.2 the header still tells the day — the date survives the declutter');
+// v4 P3 RE-CUT (2026-10-09): the header is title · cog · sync pill. The date left
+// with the harbor slab; «صرفت النهاردة» names the day's figure where it stands.
+ok(/tab === 'book' \? S\.tabBook/.test(header),
+  'S1.2 the header names the screen (v4 P3) — the title floats where the date and wordmark were');
 ok(/<SettingsCog/.test(header),
   'S1.3 the cog rides the header — the door into settings is on every screen');
 ok(/<RefreshButton/.test(header),
   'S1.4 the refresh button survives beside it (test-refresh\'s machinery untouched)');
 {
-  const d = header.indexOf('today_cairo');
+  const d = header.indexOf('S.tabBook');
   const c = header.indexOf('<SettingsCog');
   const r = header.indexOf('<RefreshButton');
   ok(d !== -1 && c !== -1 && r !== -1 && d < c && c < r,
-    'S1.5 the ruled order holds: date · cog · refresh');
+    'S1.5 the order holds: title · cog · sync pill (v4 P3)');
 }
 ok(!/<LangToggle|<CurrencyToggle/.test(header),
   'S1.6 the header carries no stray toggles — decluttered is decluttered');
@@ -104,8 +106,8 @@ ok(/settingsOpen && !needsSetup[\s\S]{0,120}<SettingsSheet/.test(app),
   'S1.9 the sheet mounts behind its own open state, shell-level — never inside a tab');
 ok(!/tab === '[a-z]+' &&\s*[\s\S]{0,60}<Settings(Cog|Sheet)/.test(app),
   'S1.10 neither the cog nor the sheet is gated on a tab — that would strand him wherever he happens to be');
-ok(/S\.lastUpdated/.test(app),
-  'S1.11 the footer stamp survives the declutter — «آخر تحديث» is not what moved');
+ok(/savedAt=\{savedAt\}/.test(header),
+  'S1.11 «when was this read» survives — it moved from the footer into the sync pill (v4 P3, R19)');
 
 // ═══ 3. N1b'S LAW AT THE NEW MOUNT — flip instantly, no reload, persisted ═══
 
@@ -284,4 +286,4 @@ if (failures.length) {
   console.log(`❌ CHUNK S1 — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`);
   process.exit(1);
 }
-console.log(`✅ ${MARKER} · ${pass} checks · the header keeps date · cog · refresh, and both reading controls live behind the cog on B4's one sheet`);
+console.log(`✅ ${MARKER} · ${pass} checks · the header is title · cog · sync pill (v4 P3), and both reading controls live behind the cog on B4's one sheet`);

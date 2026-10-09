@@ -145,7 +145,9 @@ try {
   ok(tF.includes('Nile Star Market'), 'N7.16 the essentials row survives its own filter');
   ok(!tF.includes('Pharmacy Dawa') && !tF.includes('Harbour Cafe'),
     'N7.17 the other groups\' rows are filtered out — the chips actually FILTER');
-  ok(typeof AR.rowNeedsCategory !== 'string' || !tF.includes(AR.rowNeedsCategory),
+  // The ROW is what must be absent — «من غير نوع» (v4) also names the day's
+  // uncategorised count in the alert row above the list, which is not a row.
+  ok(!tF.includes('Mystery'),
     'N7.18 a ❓ row belongs to NO group — a filter may not adopt money nobody has placed');
   {
     const label = typeof AR.lensGroup === 'function' ? AR.lensGroup('essentials') : '';

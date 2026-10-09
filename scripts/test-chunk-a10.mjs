@@ -43,7 +43,8 @@ const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
  * own gate pins the token and the two collapse together at wave end.
  */
 const heroOf = (html) => {
-  const m = html.match(new RegExp(`font-size:(?:${TYPE.hero}|42)px[^"]*"[^>]*>([^<]*)<`));
+  // v4 P3: the Today hero is TYPE.heroBook (58).
+  const m = html.match(new RegExp(`font-size:(?:${TYPE.heroBook}|${TYPE.hero}|42)px[^"]*"[^>]*>([^<]*)<`));
   return m ? m[1] : null;
 };
 
@@ -84,7 +85,9 @@ try {
    */
   ok(fText.includes(AR.andAlso) && new RegExp(`0\\s*${AR.currencyShort}`).test(fText),
     'A10.3 the true EGP zero stands BESIDE the money as the aside — stated, never alone, never hidden');
-  ok((fText.match(/\d+\.\d\d/g) || []).every((n) => n === '42.87'),
+  // v4 P3 prints the split with two decimals, so the payload's own Visa/Cash 0
+  // reads «0.00» — still a figure the payload carried, not arithmetic.
+  ok((fText.match(/\d+\.\d\d/g) || []).every((n) => n === '42.87' || n === '0.00'),
     'A10.4 no figure appears that the payload did not carry — emphasis, never arithmetic (Boundary 8)');
 
   // ——— a real-EGP day: the number does not mislead, so nothing moves

@@ -82,9 +82,10 @@ ok(found.length === 0, `text below ${FLOOR}px that is neither a token nor declar
       `E-008 the chart average is also said at ${TYPE.label}px outside the chart geometry — got ${prose ? prose[1] : 'nothing'}`);
     ok(!/data-geometry[^>]*data-avg-prose|data-avg-prose[^>]*data-geometry/.test(html), 'E-008 …and that line is not itself geometry');
   } finally { await vite.close(); }
-  const app = readFileSync('src/App.jsx', 'utf8');
-  const footer = app.slice(app.indexOf('{savedAt && ('), app.indexOf('{savedAt && (') + 200);
-  ok(/fontSize: TYPE\.label/.test(footer), 'E-007 «Last updated» renders at TYPE.label');
+  // E-007 re-cut (v4): «Last updated» now lives in the header's sync pill.
+  const prims = readFileSync('src/components/Primitives.jsx', 'utf8');
+  const pill = prims.slice(prims.indexOf('export function RefreshButton'), prims.indexOf('export function SectionLabel'));
+  ok(/fontSize: TYPE\.label/.test(pill) && /S\.synced/.test(pill), 'E-007 the «updated HH:MM» line (the sync pill) renders at TYPE.label');
 }
 
 if (failures.length) {

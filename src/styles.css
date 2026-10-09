@@ -151,9 +151,11 @@ textarea {
    surfaces with the same text contrast as the shipped solid app. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root { --glass-solid-card: #FFFFFF; --glass-solid-chip: #FFFFFF; --glass-solid-chrome: #FAF7F1;
-          --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356; }
+          --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356;
+          --glass-solid-raised: #FFFFFF; --glass-solid-alert: #FDF1EE; }
 }
 @media (prefers-reduced-transparency: reduce) {
   :root { --glass-solid-card: #FFFFFF; --glass-solid-chip: #FFFFFF; --glass-solid-chrome: #FAF7F1;
-          --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356; }
+          --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356;
+          --glass-solid-raised: #FFFFFF; --glass-solid-alert: #FDF1EE; }
 }

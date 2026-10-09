@@ -173,7 +173,8 @@ try {
       monthCats: [], pending: [],
     },
   }));
-  eq(heroOf(today), '100', 'A4.14 the Today hero rides TYPE.hero too — anatomy everywhere, not per-screen');
+  // v4 P3 (2026-10-09): the Today hero is TYPE.heroBook (58) — still a token, never a raw px.
+  eq((today.match(new RegExp(`font-size:${TYPE.heroBook}px[^"]*"[^>]*>([^<]*)<`)) || [])[1], '100', 'A4.14 the Today hero rides TYPE.heroBook (v4 P3) — a token, not a per-screen px');
   const todayUnit = styleOfContent(today, AR.currencyShort);
   ok(!!todayUnit && todayUnit.includes(`font-size:${UNIT_PX}px`) && todayUnit.includes('-apple-system'),
     'A4.15 and its unit is inline, floored, non-serif — «ج.م» rides the figure, not the meta line');

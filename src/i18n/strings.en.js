@@ -245,7 +245,9 @@ export const EN = {
   periodYear: 'Year',
   // ——— The Book (M1): Today and Recent became one thing at four zooms.
   tabBook: 'Book',
-  todayCount: (n) => `${n} ${n === 1 ? 'thing' : 'things'} today`,
+  todaySpent: 'Spent today', // v4 P3 hero caption
+  uncatCount: (n) => `${n} with no category`,
+  uncatAction: 'File them →',
   // Foreign money is counted on its own — never added into the EGP sum (D8).
   travelApart: 'on its own',
   /**
@@ -407,7 +409,7 @@ export const EN = {
   sectionAgainst: (prev) => `Against ${prev}`,
   sectionByMethod: 'By method',
   // A row with no category is a door wherever it appears (M6).
-  rowNeedsCategory: '? tap to file',
+  rowNeedsCategory: 'No category', // v4 P3
   // A2: filed from the merchant memory — he never chose it.
   rowAuto: '· by itself',
   rowAutoTitle: 'This category came from memory, not from you — tap to change it',
@@ -532,6 +534,7 @@ export const EN = {
 
   // ——— the manual refresh (D16c). A BUTTON, never a gesture.
   refresh: 'Refresh',
+  synced: 'Updated', // the sync pill: «Updated 9:40» (v4 P3)
   refreshing: 'Refreshing…',
   refreshFailed: 'Could not refresh — try again',
 
@@ -549,7 +552,6 @@ export const EN = {
   settingsCurrencyNote: "Chooses which unit leads the Book's figures — nothing is converted; each currency keeps its own numbers.",
 
   offline: 'No network — this is the last saved data',
-  lastUpdated: 'Last updated',
   saving: 'Saving…',
   saved: 'Logged ✓',
   // The batch's result (M4). Each card still states its own outcome; these

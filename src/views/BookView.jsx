@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize,
+  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT,
 } from '../theme.js';
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
-import { money, moneyRound, amountWithCurrency } from '../lib/format.js';
+import { money, money2, moneyRound, amountWithCurrency } from '../lib/format.js';
 import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
@@ -442,7 +442,7 @@ export default function BookView({
         // paints the label above the pill.
         flex: 1, minHeight: TAP, padding: '11px 0', borderRadius: RADIUS.capsule,
         background: 'transparent', position: 'relative',
-        color: period === key ? C.onDark : C.ink,
+        color: period === key ? C.ink : C.muted,
         fontSize: TYPE.label, fontWeight: period === key ? 700 : 600,
       }}
     >
@@ -455,7 +455,8 @@ export default function BookView({
       {/* The closed month, handed over on the first of the next one (W-6). */}
       <LogCard prevLog={data.month && data.month.prevLog} todayCairo={today} />
 
-      <div style={{ display: 'flex', position: 'relative', background: C.card, border: `1px solid ${C.line}`, borderRadius: RADIUS.capsule, padding: 4, marginBottom: 14, gap: 2 }}>
+      {/* v4 P3: the track is a pressed glass well; the selected period a raised white capsule. */}
+      <div style={{ display: 'flex', position: 'relative', ...glass('well'), borderRadius: RADIUS.capsule, padding: 4, marginBottom: 14, gap: 2 }}>
         {/**
           * B1 — THE SLIDING HARBOR PILL (north-star §4.2: the highest-leverage
           * motion in the app — he switches periods constantly). ONE indicator
@@ -475,7 +476,7 @@ export default function BookView({
           style={{
             position: 'absolute', top: 4, bottom: 4, insetInlineStart: 4,
             width: `calc((100% - ${8 + (periods.length - 1) * 2}px) / ${periods.length})`,
-            borderRadius: RADIUS.capsule, background: C.harbor,
+            ...glass('raised'),
             transform: `translateX(calc(${(DIR === 'rtl' ? -1 : 1) * activeIdx} * (100% + 2px)))`,
             transition: reducedMotion ? 'none' : `transform ${MOTION.move}ms ${MOTION.easeOut}`,
           }}
@@ -649,10 +650,9 @@ export default function BookView({
                   minHeight: TAP, padding: '0 14px', borderRadius: RADIUS.capsule,
                   whiteSpace: 'nowrap', flex: '0 0 auto',
                   display: 'inline-flex', alignItems: 'center',
-                  background: active ? C.harbor : C.card,
-                  border: `1px solid ${active ? C.harbor : C.line}`,
-                  color: active ? C.onDark : C.ink,
-                  fontSize: TYPE.label, fontWeight: active ? 700 : 500,
+                  // v4: a glass chip; chosen = the harbor tint + ink 700, as on the bar.
+                  ...glass('chip'), ...(active ? { background: SELECTED_TINT } : null),
+                  color: C.ink, fontSize: TYPE.label, fontWeight: active ? 700 : 500,
                 }}
               >
                 <span aria-hidden="true" style={{ marginInlineEnd: 6 }}>{PRIORITY_ICONS[g.key]}</span>
@@ -688,10 +688,8 @@ export default function BookView({
                 // A3: 34 -> TAP. Three <button aria-pressed> sort controls; the
                 // senior touch floor governs them like any other control.
                 minHeight: TAP, padding: '4px 12px', borderRadius: RADIUS.capsule, fontSize: TYPE.label,
-                fontWeight: 600,
-                background: sortBy === k ? C.harbor : C.card,
-                color: sortBy === k ? C.onDark : C.ink,
-                border: `1px solid ${sortBy === k ? C.harbor : C.line}`,
+                ...glass('chip'), ...(sortBy === k ? { background: SELECTED_TINT } : null),
+                color: C.ink, fontWeight: sortBy === k ? 700 : 600,
               }}
             >
               {S.sortName(k)}
@@ -1194,8 +1192,11 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
   const leadsHome = lead.currency === HOME_CURRENCY;
 
   return (
-    <div style={{ textAlign: 'center', padding: '2px 0 16px' }}>
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
+    <div style={{ textAlign: 'center', padding: '14px 0 16px' }}>
+      {/* v4 P3: the caption names the figure; «N things today» is gone — the
+          big number is the only hero. */}
+      <div style={{ fontSize: TYPE.label, fontWeight: 600, color: C.muted }}>{S.todaySpent}</div>
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.heroBook, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.1, marginTop: 4 }}>
         {money(lead.amount)}
         {/**
           * A4 — the unit rides the figure: inline, NON-serif, muted, at the
@@ -1204,14 +1205,12 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
           * forbids. EGP keeps its word («جنيه»/EGP, `S.currency`); a foreign
           * lead keeps its code, exactly as his sheet writes it (D8).
           */}
+        {/* R4's fixed ladder: 22px is the hero step (unitSize(TYPE.hero)); v4 P3 draws 20, R4 wins. */}
         <span style={{ fontSize: unitSize(TYPE.hero), fontFamily: FONT_UI, fontWeight: 600, color: C.muted }}>
           {' '}{unitFor(lead.currency)}
         </span>
       </div>
-      <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 3 }}>
-        {S.todayCount((entries || []).length)}
-      </div>
-      <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 7, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+      <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 10, display: 'flex', gap: 18, justifyContent: 'center', flexWrap: 'wrap' }}>
         {/**
           * A5 (HANDOFF:56): the unit rides these two as well. They read as a
           * pair with the hero above them, and the hero may be in ANOTHER
@@ -1219,9 +1218,9 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
           * "Card 0  Cash 0", with nothing to say the 0 was EGP. The law has no
           * exception clause, and this is the site that proves why.
           */}
-        <span>{S.metricVisa} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(totals.Visa)}</b>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{/* geometry exemption (ruling 4): an 8px legend square, its 2px corner bounded by its size */}<span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: C.harbor }} />{S.metricVisa} <b style={{ color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN }}>{money2(totals.Visa)}</b>
           <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{S.currencyShort}</span></span>
-        <span>{S.metricCash} <b style={{ color: C.ink, ...LATIN }}>{moneyRound(totals.Cash)}</b>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{/* geometry exemption (ruling 4): an 8px legend square, its 2px corner bounded by its size */}<span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: C.muted }} />{S.metricCash} <b style={{ color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN }}>{money2(totals.Cash)}</b>
           <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{S.currencyShort}</span></span>
       </div>
       {/* Only when there IS one. A day with no foreign spending says nothing
@@ -1296,15 +1295,18 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
       )}
 
       {unknown > 0 && (
+        // v4 P3: one 56px terracotta-glass row — the count at the start, the action at the end.
         <button
           onClick={onGoToInbox}
+          aria-label={S.todayNeedCategory(unknown)}
           style={{
-            marginTop: 12, minHeight: TAP, borderRadius: RADIUS.row, padding: '9px 16px',
-            background: C.conflictBg, border: `1px solid ${C.conflictLine}`,
-            color: C.conflictInk, fontSize: TYPE.label, fontWeight: 700,
+            ...glass('alert'), marginTop: 22, minHeight: 56, width: '100%', padding: '0 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+            color: C.conflictInk, fontWeight: 700,
           }}
         >
-          {S.todayNeedCategory(unknown)}
+          <span style={{ fontSize: TYPE.body }}>{S.uncatCount(unknown)}</span>
+          <span style={{ fontSize: TYPE.label }}>{S.uncatAction}</span>
         </button>
       )}
     </div>
@@ -1944,7 +1946,7 @@ function RowList({
   }
 
   return (
-    <div>
+    <div style={{ ...glass('card'), overflow: 'hidden' }}>
       {rows.map((rawRow, i) => {
         /**
          * The settle key carries the row's CONTENT, because a row here has no
@@ -1977,15 +1979,16 @@ function RowList({
           <div
             key={key}
             style={{
-              background: gap ? C.shell : C.card, border: `1px solid ${gap ? C.conflictLine : C.line}`,
-              borderRadius: RADIUS.row, marginBottom: 8, opacity: inert ? 0.62 : 1, transition: 'opacity .2s ease',
+              // v4 P3: rows share ONE glass card, parted by a white highlight line.
+              borderTop: i === 0 ? 'none' : GLASS_DIVIDER,
+              opacity: inert ? 0.62 : 1, transition: 'opacity .2s ease',
             }}
           >
             <button
               onClick={() => setOpen(isOpen ? null : key)}
               aria-expanded={isOpen}
               style={{
-                width: '100%', minHeight: TAP, padding: '12px 14px', textAlign: 'start',
+                width: '100%', minHeight: 68, padding: '10px 16px', textAlign: 'start',
                 background: 'transparent', display: 'grid', gap: 4,
                 gridTemplateColumns: '1fr auto', alignItems: 'center',
               }}
@@ -2006,16 +2009,18 @@ function RowList({
                 <span style={{ fontSize: TYPE.body, fontWeight: 600, ...ISOLATE, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {row.description}
                 </span>
-                {/* Row meta — one of ruling 2's NAMED caption sites: the date,
-                    chip and category annotate the description above them. */}
-                <span style={{ fontSize: TYPE.caption, color: C.muted, display: 'flex', gap: 8, alignItems: 'center' }}>
+                {/* v4 P3: plain «category · method», muted (no chip); an uncategorised
+                    row says so in terracotta — its prompt still at the prose floor. */}
+                <span style={{ fontSize: TYPE.caption, color: gap ? C.conflictInk : C.muted, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                   {showDate && <span style={LATIN}>{row.date}</span>}
-                  <Chip kind={row.method} small label={row.method === 'Visa' ? S.metricVisa : S.metricCash} />
+                  {showDate && <span aria-hidden>·</span>}
                   {gap
                     // The door's PROMPT is an action he must read, not meta —
                     // it stays at the prose floor even inside the caption row.
-                    ? <span style={{ color: C.harborInk, fontWeight: 700, fontSize: TYPE.label }}>{S.rowNeedsCategory}</span>
-                    : <span style={{ color: C.ink }} dir="auto">{categoryLabel(row.category)}</span>}
+                    ? <span style={{ fontWeight: 700, fontSize: TYPE.label }}>{S.rowNeedsCategory}</span>
+                    : <span style={ISOLATE}>{categoryLabel(row.category)}</span>}
+                  <span aria-hidden>·</span>
+                  <span style={gap ? { fontWeight: 700 } : undefined}>{row.method === 'Visa' ? S.metricVisa : S.metricCash}</span>
                   {/**
                     * HE NEVER CHOSE THIS ONE (finding A2, re-scoped).
                     *
@@ -2042,12 +2047,13 @@ function RowList({
               </span>
               {/* An unpriced row renders —, never 0: a figure he never wrote. */}
               <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
-                {row.amount == null ? '—' : money(row.amount)}
+                {row.amount == null ? '—' : money2(row.amount)}
                 {/* The currency is a UNIT beside a value, not an annotation —
                     it is the only place saying EUR, so ruling 5's floor
                     (unitSize) governs it, and it is non-serif (A4). */}
-                {row.amount != null && row.currency && row.currency !== 'EGP'
-                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, color: C.muted }}> {row.currency}</span> : null}
+                {/* EVERY amount with its unit (v4 hard requirement) — «ج.م» too, not only foreign. */}
+                {row.amount != null
+                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {unitFor(row.currency || HOME_CURRENCY)}</span> : null}
               </span>
             </button>
 

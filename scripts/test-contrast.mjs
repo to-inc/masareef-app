@@ -195,7 +195,7 @@ else failures.push('negative control: harbor cleared 4.5:1 as text on the shell 
  * light stop measures 3.66:1 and fails every text size on the bar. The check
  * below is what makes that a caught mistake rather than a shipped one.
  */
-check('white on the header bar — its lightest stop', C.onDark, C.harbor, TYPE.caption);
+// (retired 2026-10-09 with the harbor header — R0 retires B5; the header is ink on the ground now)
 // The batch advisory's Review pill rides the same gradient, at TYPE.label.
 check('white on the Review pill — its lightest stop', C.onDark, C.harbor, TYPE.label);
 check('white on harbor — primary button', C.onDark, C.harbor, 18.5, true);
@@ -408,6 +408,10 @@ for (const [ground, pixels] of Object.entries(GROUND_PIXELS)) {
       residue(`ink on ${tier} glass over ${ground} (${end})`, C.ink, bg, TYPE.body);
       residue(`muted on ${tier} glass over ${ground} (${end})`, C.muted, bg, TYPE.label);
     }
+    // v4 P3 tiers that carry text: the uncategorised row (terracotta on alert
+    // glass) and the selected period (ink on the raised capsule).
+    residue(`terracotta on alert glass over ${ground} (${end})`, C.conflictInk, over(thinnest(GLASS.alert.bg), px0), TYPE.body, true);
+    residue(`ink on the raised capsule over ${ground} (${end})`, C.ink, over(thinnest(GLASS.raised.bg), px0), TYPE.label, true);
     // chrome carries 14px+/600+ labels only (A3) — measured at that floor.
     residue(`ink label on chrome over ${ground} (${end})`, C.ink, over(thinnest(GLASS.chrome.bg), px0), 14, false);
   }

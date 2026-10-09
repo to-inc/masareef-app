@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { Sheet, LangToggle, CurrencyToggle, SectionLabel } from '../components/Primitives.jsx';
 import { otherDisplayCurrency } from '../state/display.js';
@@ -58,9 +58,9 @@ export function SettingsCog({ onOpen }) {
       style={{
         minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: 'transparent',
-        border: '1px solid rgba(255,255,255,.45)',
-        color: '#fff', fontSize: ICON.control, fontWeight: 700,
+        // v4: header controls are ink on glass (R0 retired the harbor header).
+        ...glass('chip'),
+        color: C.ink, fontSize: ICON.control, fontWeight: 700,
       }}
     >
       {/**

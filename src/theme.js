@@ -257,7 +257,7 @@ export const RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, gl
  * type does not shrink; come back with evidence if geometry genuinely breaks.
  */
 export const TYPE = {
-  hero: 40, display: 34, section: 22, action: 19, row: 17, body: 16, label: 15,
+  hero: 40, heroBook: 58, display: 34, title: 24, section: 22, action: 19, row: 17, body: 16, label: 15, // heroBook: v4 P3
   caption: 13,
 };
 
@@ -535,12 +535,23 @@ export const GLASS = {
   /** Sand glass, blur pinned at 16 (A15). Offline, outbox, caveats, old expenses. */
   advisory: { bg: `linear-gradient(165deg, ${W(0.5)}, ${alpha(C.sand, 0.75)} 45%, ${alpha(C.sand, 0.5)})`, blur: 16,
               rim: 'rgba(210,190,150,.75)', cast: '0 3px 10px rgba(160,130,60,.1)', radius: 'sheet' },
+  /** A raised capsule INSIDE a well — the selected period (v4 P3). No blur: it sits on glass. */
+  raised:   { bg: `linear-gradient(160deg, ${W(0.95)}, ${W(0.7)})`,
+              cast: `0 4px 12px ${alpha(C.ink, 0.14)}`, inset: `inset 0 1px 0 ${W(1)}`, radius: 'capsule' },
+  /** Terracotta glass — the uncategorised row (v4 P3). Text: conflictInk. v4 draws .85→.5;
+   *  at .5 terracotta measured 4.16:1 over dawn's darkest stop — .9→.8 clears 4.5 (4.61). */
+  alert:    { bg: `linear-gradient(160deg, ${alpha(C.conflictBg, 0.9)}, ${alpha(C.conflictBg, 0.8)})`, blur: 18,
+              rim: alpha(C.conflictLine, 0.95), cast: `0 4px 12px ${alpha(C.conflictInk, 0.08)}`,
+              inset: `inset 0 1px 0 ${W(0.8)}`, radius: 'glassWell' },
   /** The «اتحفظ ✓ — رجوع» undo toast (R19) — white text on dark glass. */
   toast:    { bg: `linear-gradient(160deg, ${alpha(C.ink, 0.72)}, rgba(31,43,53,.62))`, blur: 24,
               cast: `0 10px 30px ${alpha(C.ink, 0.22)}`, radius: 'capsule' },
 };
 
 /** A tier → a React style object. The only way a view gets glass. */
+/** The white highlight line between rows of one glass card (v4 P3) — not a grey rule. */
+export const GLASS_DIVIDER = `1px solid ${W(0.6)}`;
+
 export const glass = (tier, f = 1) => {
   const t = GLASS[tier];
   if (!t) throw new Error(`glass(): no such tier: ${tier}`);
@@ -594,6 +605,9 @@ export const STATE_BOX = {
  * Geometry is the P3 artboard's: 70 tall, 6 inner padding and gap, 20 from the
  * screen sides, 28 from the bottom (never inside the home-indicator safe area).
  */
+/** «This one is chosen» on glass (v4): harbor at .13 behind ink 700 — the bar's active tab, a picked chip. */
+export const SELECTED_TINT = alpha(C.harbor, 0.13);
+
 export const NAV = {
   height: 70,
   pad: 6,
@@ -603,7 +617,7 @@ export const NAV = {
   newFlex: 1.15,
   /** Side-tab label: chrome carries 14px+/600+ labels only (A3). */
   label: 14,
-  activeTint: alpha(C.harbor, 0.13),
+  activeTint: SELECTED_TINT,
   /** The «جديد» pill's own cast — the harbor glow under a filled control. */
   newCast: `0 6px 16px ${alpha(C.harbor, 0.35)}`,
 };

@@ -70,7 +70,8 @@ for (const lang of ['ar', 'en']) {
       let html;
       try { html = renderToStaticMarkup(createElement(BookView, { data: wire, initialPeriod: period })); }
       catch (e) { failures.push(`[${lang}] ${period} threw: ${e.message}`); continue; }
-      const hero = heroOf(html, TYPE.hero);
+      // v4 P3: the Today hero is TYPE.heroBook (58); the period heroes stay TYPE.hero.
+      const hero = heroOf(html, period === 'today' ? TYPE.heroBook : TYPE.hero);
       const holdsMoney = period === 'today'
         ? (Number(wire.today?.totals?.Visa || 0) + Number(wire.today?.totals?.Cash || 0)) > 0
         : egpOf(wire[period]) > 0 || Number(wire[period]?.homeAgg?.total || 0) > 0;

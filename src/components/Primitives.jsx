@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT } from '../theme.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass } from '../theme.js';
 import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
@@ -239,27 +239,36 @@ export function CurrencyToggle({ value, other, onFlip, subtle }) {
  * where it was. See state/refresh.js: a refresh that failed must never look like
  * one that succeeded.
  */
-export function RefreshButton({ state, onPress }) {
+/**
+ * THE SYNC PILL (v4 P3, OWNER-RULINGS R19) — the refresh control IS the
+ * freshness line: a glass chip at the 48pt floor saying when the book was last
+ * read («اتحدث 9:40»), with a dot that tells the state at a glance — green
+ * fresh, terracotta when the last refresh failed. Busy, the dot becomes the
+ * spinning ↻ and the word says «Refreshing…». Tapping it refreshes.
+ */
+export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t }) {
   const busy = state === 'busy';
   const failed = state === 'failed';
+  const words = busy ? S.refreshing : (savedAt && !failed ? S.synced : S.refresh);
   return (
     <button
       onClick={onPress}
       disabled={busy}
-      aria-label={busy ? S.refreshing : S.refresh}
+      aria-label={busy ? S.refreshing : (failed ? S.refreshFailed : S.refresh)}
       aria-busy={busy ? 'true' : undefined}
       style={{
-        minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: 'transparent',
-        border: `1px solid ${failed ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.45)'}`,
-        color: '#fff', fontSize: ICON.control, fontWeight: 700,
-        opacity: busy ? 0.6 : 1,
+        ...glass('chip'), minHeight: TAP, minWidth: TAP, padding: '0 16px',
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        color: C.ink, fontSize: TYPE.label, fontWeight: 600,
       }}
     >
-      <span className={busy ? 'spin' : undefined} style={{ display: 'inline-block', lineHeight: 1 }}>
-        {failed ? '↻!' : '↻'}
-      </span>
+      {busy
+        ? <span className="spin" aria-hidden style={{ display: 'inline-block', lineHeight: 1 }}>↻</span>
+        : <span aria-hidden style={{ width: 8, height: 8, borderRadius: RADIUS.capsule, background: failed ? C.conflictInk : C.settledInk }} />}
+      {words}
+      {savedAt && !busy && !failed && (
+        <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{clock(savedAt)}</span>
+      )}
     </button>
   );
 }

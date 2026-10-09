@@ -66,8 +66,9 @@ try {
   const pillMatch = html.match(/<div aria-hidden="true"[^>]*style="([^"]*translateX[^"]*)"/);
   const pill = pillMatch ? pillMatch[1] : null;
   ok(!!pill, 'B1.6 a translateX-positioned pill renders inside the period control');
-  ok(!!pill && pill.toUpperCase().includes(C.harbor.toUpperCase()),
-    'B1.7 …filled harbor — selection is harbor\'s job, and this is selection moving');
+  // v4 P3 RE-CUT: the selected period is a RAISED white glass capsule in a pressed well, ink 700.
+  ok(!!pill && /rgba\(255,255,255,0\.95\)/.test(pill) && !pill.toUpperCase().includes(C.harbor.toUpperCase()),
+    'B1.7 …raised white glass (v4 P3) — not the retired harbor fill');
   ok(!!pill && pill.includes(`border-radius:${RADIUS.capsule}px`),
     'B1.8 …in the control\'s own capsule radius');
   ok(!!pill && pill.includes(`transition:transform ${MOTION.move}ms ${MOTION.easeOut}`),

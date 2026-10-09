@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_CROWN, RADIUS, SPACE, TYPE, NAV, glass } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, glass } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -58,11 +58,6 @@ import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
  */
 const BAR_CLEARANCE = NAV.bottom + NAV.height + SPACE.gap;
 
-/** A theme hex at an alpha — the token stays the single source of the rgb. */
-const withAlpha = (hex, a) => {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  return `rgba(${r},${g},${b},${a})`;
-};
 
 /**
  * The app shell.
@@ -788,7 +783,6 @@ export default function App() {
   // B5: the ground the header scrim dissolves into — the same condition the
   // shell's own background reads four lines below, so the strip can never
   // fade toward a colour the page is not actually painting.
-  const scrimGround = needsSetup ? GROUND_CROWN.haze : tab === 'book' ? GROUND_CROWN.dawn : tab === 'entry' ? GROUND_CROWN.tide : GROUND_CROWN.haze;
 
   // The badge counts what is still HIS to do — same predicate the buttons and
   // the section header use, so the three can never disagree.
@@ -840,90 +834,23 @@ export default function App() {
       <header
         style={{
           /**
-           * THE HEADER IS GLASS-ADJACENT NOW, not a flat slab (UI pass
-           * 2026-08-30). It was the one surface still painted a single
-           * `harbor` while everything beneath it is glass over a gradient
-           * ground, and it read as a different app.
-           *
-           * `harbor → harborInk`, both canonical, and the direction matters:
-           * the LIGHTEST point is what white text has to clear, and it is
-           * `harbor` at 4.53:1 — enough for the 13px date. The design's own
-           * `#4E8CB4 → #34688C` pair was drawn first and rejected here: white
-           * on `#4E8CB4` measures 3.66:1, which fails every text size on this
-           * bar. test-contrast pins the light stop so this cannot drift back.
-           *
-           * AND NO CAST. A drop shadow was drawn here and refused by B5.10 and
-           * B4b.16 on a law this app already holds: «elevation by gradient
-           * light, not by a floating dark» (A2). The gradient IS the
-           * elevation — that is the whole point of it — and a shadow under it
-           * would be the second, cheaper answer to the same question.
+           * v4 (OWNER-RULINGS R0 retires B5): no harbor slab and no scrim. The
+           * screen's name floats on the ground in ink, and the header controls
+           * are ink on glass — the sync pill (R19: it IS the refresh control,
+           * and it says when the book was last read) and the settings cog.
            */
-          background: `linear-gradient(160deg, ${C.harbor}, ${C.harborInk})`,
-          color: C.onDark,
-
-          padding: `calc(12px + env(safe-area-inset-top)) 20px 12px`,
+          padding: `calc(4px + env(safe-area-inset-top)) 20px 0`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
-          // B5: the anchor for the scrim below. The header never scrolls (a
-          // flexShrink:0 sibling of the scroll box), so a child hung from its
-          // hem is fixed-in-effect — without guessing a height that moves
-          // with the safe-area inset and the system font.
-          position: 'relative',
+          color: C.ink,
         }}
       >
-        <span style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650 }}>{S.appName}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {data && (
-            // A8: `opacity: 0.75` deleted. A group dimmer on the one line
-            // that says WHICH DAY the figures below belong to; muted-on-glass
-            // is already the thinnest pair on this screen without it.
-            /**
-             * 12.5px was not a tier at all. `caption` was the first fix and it
-             * was wrong: caption is legal ONLY for something that DUPLICATES
-             * information available elsewhere, and the date appears nowhere
-             * else on any screen. Sole-source prose takes the label floor.
-             */
-            <span style={{ fontSize: TYPE.label, direction: 'ltr' }}>
-              {`${data.today_cairo.d}/${data.today_cairo.m}/${data.today_cairo.y}`}
-            </span>
-          )}
-          {/**
-            * S1 — date · cog · refresh, and that is the WHOLE header now.
-            * The cog is the door to the once-in-a-while controls (language,
-            * display currency) that used to ride the footer of every tab;
-            * it is quiet chrome in RefreshButton's exact dress, never amber.
-            * In the header because the header renders on every tab — the
-            * same every-screen requirement that placed the toggles here
-            * once, now costing one quiet button instead of two controls.
-            */}
-          {!needsSetup && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
-          {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} />}
+        <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.title, fontWeight: 650 }}>
+          {needsSetup ? S.appName : tab === 'book' ? S.tabBook : tab === 'entry' ? S.tabEntry : S.tabInbox}
         </span>
-        {/**
-          * B5 — THE HEADER SCRIM (nav-F5). A gradient strip under the
-          * header's hem, so content scrolling beneath dissolves into the
-          * page's own ground instead of guillotining against the harbor
-          * edge. FURNITURE, not a shadow (A2: nothing floats): it is the
-          * ground's colour breathing downward, drawn with the scrim's ground
-          * token at full and at zero alpha — never a dark laid over the page.
-          *
-          * `scrimGround` is tab-aware because the Book paints the morning
-          * crown (mist at the hem) where every other tab paints shell — a
-          * strip that always dissolved to shell would hang a cream veil over
-          * a blue-tinted morning. aria-hidden + pointerEvents:none: VoiceOver
-          * announces the heading, and no tap near the refresh button can land
-          * on furniture.
-          */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', top: '100%', insetInline: 0,
-            // one sibling gap of dissolve — deeper reads as a wash over his
-            // rows, shallower reads as a rendering seam
-            height: SPACE.gap,
-            background: `linear-gradient(180deg, ${scrimGround} 0%, ${withAlpha(scrimGround, 0)} 100%)`,
-            pointerEvents: 'none', zIndex: 10,
-          }}
-        />
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {!needsSetup && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
+          {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} />}
+        </span>
       </header>
 
       {/* minHeight:0 lets a flex child actually shrink so overflow-y works */}
@@ -1085,17 +1012,7 @@ export default function App() {
                   * The two controls stay independent siblings there (D23),
                   * exactly as they were here.
                   */}
-                <footer style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 12, marginTop: 18, flexWrap: 'wrap',
-                }}>
-                  {savedAt && (
-                    <span style={{ fontSize: TYPE.label, color: C.muted }}>
-                      {refreshState === 'failed' ? `${S.refreshFailed} · ` : ''}
-                      {S.lastUpdated} <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{cairoClock(savedAt)}</span>
-                    </span>
-                  )}
-                </footer>
+                {/* «Last updated» moved into the header's sync pill (v4 P3, R19). */}
               </div>
             )}
           </>
