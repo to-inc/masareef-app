@@ -48,8 +48,13 @@ export const fixCategory = (args) => (USING_MOCK
     : { ok: true, v: 1, learned: false })
   : live.fixCategory(args));
 
+// Mock parity: offline, the real POST's fetch throws — so the mock throws too
+// (the outbox's «waiting for the network» path must be reachable in mock).
 export const postManual = (args) =>
-  USING_MOCK ? Promise.resolve({ ok: true, v: 1 }) : live.manual(args);
+  USING_MOCK
+    ? (typeof navigator !== 'undefined' && navigator.onLine === false
+      ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve({ ok: true, v: 1 }))
+    : live.manual(args);
 
 export const ping = () => (USING_MOCK
   ? Promise.resolve({

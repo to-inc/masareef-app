@@ -560,6 +560,10 @@ export const GLASS = {
 /** The white highlight line between rows of one glass card (v4 P3) — not a grey rule. */
 export const GLASS_DIVIDER = `1px solid ${W(0.6)}`;
 
+/** v4 P5 — the undo toast's action, and a row still on the phone (sand wash). */
+export const TOAST_ACTION_BG = W(0.16);
+export const PHONE_ROW_BG = `linear-gradient(90deg, ${alpha(C.sand, 0)}, ${alpha(C.sand, 0.5)})`;
+
 /** v4 P4 — the entry sheet's furniture. */
 export const SHEET = {
   top: 64,                                   // the sheet's top edge below the status bar

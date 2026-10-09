@@ -76,28 +76,3 @@ export function manualPayload({ amount, method, category, description, clientId,
   };
 }
 
-/**
- * The optimistic line on Today, which must credit the column he CHOSE.
- *
- * Written as a function rather than inline in the handler for the reason
- * `applyCategoryToToday` was: the old inline version added to `totals.Cash`
- * unconditionally. Under a chooser that is no longer an optimistic display, it
- * is a false one — his card expense would land under Cash on the very screen
- * headed «مصاريف النهاردة — زي ما هي في الشيت بالظبط», until the next refresh
- * quietly disagreed with it.
- *
- * Returns a new object; the input is never mutated.
- */
-export function applyEntryToToday(today, entry) {
-  if (!today || !entry || !isMethod(entry.method)) return today;
-  const amount = Number(entry.amount);
-  if (!isFinite(amount)) return today;
-  return {
-    ...today,
-    entries: [...(today.entries || []), entry],
-    totals: {
-      ...today.totals,
-      [entry.method]: (today.totals?.[entry.method] || 0) + amount,
-    },
-  };
-}

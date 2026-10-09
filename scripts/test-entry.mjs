@@ -24,7 +24,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { readFile } from 'node:fs/promises';
 import {
-  METHODS, DEFAULT_METHOD, isMethod, manualPayload, applyEntryToToday,
+  METHODS, DEFAULT_METHOD, isMethod, manualPayload,
 } from '../src/state/entryPayload.js';
 import { AR } from '../src/i18n/strings.ar.js';
 import { EN } from '../src/i18n/strings.en.js';
@@ -114,40 +114,30 @@ eq(AR.methodCash === 'Cash', false, '…in either direction');
 }
 
 /**
- * ——————————————————————— THE OPTIMISTIC LINE MUST CREDIT THE COLUMN HE CHOSE.
- *
- * The old handler added to `totals.Cash` unconditionally, which was correct only
- * while the screen was cash-only. Under a chooser it is a false number on the
- * screen headed «مصاريف النهاردة — زي ما هي في الشيت بالظبط».
- *
- * Both directions are fixtured because either alone passes the wrong answer: a
- * version hardcoded to Cash passes the Cash case, and one hardcoded to Visa
- * passes the Visa case.
+ * ——————————————————————— v4 P5 (R19, A7): THE UNDO WINDOW LIVES IN THE OUTBOX.
+ * The optimistic insert (applyEntryToToday) is RETIRED: it folded unsent money
+ * into the sheet's figures silently. A new entry is enqueued at once with
+ * `holdUntil`; flush must not send it inside the window, and must after it.
  */
 {
-  const today = () => ({ entries: [{ description: 'old', amount: 5 }], totals: { Visa: 100, Cash: 20 } });
-
-  const visa = applyEntryToToday(today(), { method: 'Visa', amount: 60, description: 'Coffee' });
-  eq(visa.totals.Visa, 160, 'a card entry moves the card total…');
-  eq(visa.totals.Cash, 20, '…and leaves cash exactly where it was');
-
-  const cash = applyEntryToToday(today(), { method: 'Cash', amount: 60, description: 'Guards' });
-  eq(cash.totals.Cash, 80, 'a cash entry moves the cash total…');
-  eq(cash.totals.Visa, 100, '…and leaves the card alone');
-
-  eq(visa.entries.length, 2, 'the row joins the list he is looking at');
-  eq(visa.entries[1].description, 'Coffee', 'as the row he just wrote');
-
-  const input = today();
-  applyEntryToToday(input, { method: 'Visa', amount: 60 });
-  eq(input.totals.Visa, 100, 'the input is never mutated — React state is replaced, not edited');
-  eq(input.entries.length, 1, 'and its list is untouched too');
-
-  const bad = today();
-  eq(applyEntryToToday(bad, { method: 'Card', amount: 60 }), bad,
-    'an unrecognised method changes NOTHING rather than guessing a column');
-  eq(applyEntryToToday(bad, { method: 'Visa', amount: NaN }), bad,
-    'and an unreadable amount is not added as 0 — honest render, at the totals');
+  const mem = new Map();
+  globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const ob = await import('../src/state/outbox.js');
+  const now = 1_000_000;
+  ob.enqueue({ id: 'held', kind: 'manual', ageGated: true, payload: { amount: 240 }, holdUntil: now + 6000, queuedAt: now });
+  const sentIds = [];
+  const send = async (i) => { sentIds.push(i.id); return { ok: true }; };
+  await ob.flush(send, now + 1000);
+  eq(sentIds.length, 0, 'P5.1 inside the undo window the outbox sends NOTHING — «رجوع» can still take it back');
+  eq(ob.onPhone(now + 1000)[0].held, true, 'P5.2 …and the Book is told the row is held, not lost');
+  await ob.flush(send, now + 6001);
+  eq(sentIds.join(), 'held', 'P5.3 once the window passes, the same flush sends it');
+  eq(ob.onPhone(now + 7000).length, 0, 'P5.4 …and a sent row is no longer on the phone');
+  ob.enqueue({ id: 'undone', kind: 'manual', ageGated: true, payload: { amount: 77 }, holdUntil: now + 6000, queuedAt: now });
+  ob.remove('undone');
+  await ob.flush(send, now + 7000);
+  ok(!sentIds.includes('undone'), 'P5.5 an entry taken back with «رجوع» is never sent');
+  delete globalThis.localStorage;
 }
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
@@ -249,7 +239,34 @@ try {
 {
   const appSrc = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
   ok(/manualPayload\(\{/.test(appSrc), 'the entry builds its payload in the named place…');
-  ok(/applyEntryToToday\(d\.today,/.test(appSrc), '…and its optimistic line in the other one');
+  // v4 P5 RE-CUT: no optimistic line — the entry is enqueued with an undo hold.
+  ok(/enqueue\(\{ id: clientId, kind: 'manual', ageGated: true, payload, holdUntil: Date\.now\(\) \+ UNDO_MS \}\)/.test(appSrc),
+    '…and goes straight into the outbox, held for the undo window (R19)');
+  ok(!/applyEntryToToday/.test(appSrc), 'the silent optimistic insert is gone from the shell');
+  ok(/dropQueued\(undo\.id\)/.test(appSrc), '«رجوع» removes the held entry from the outbox');
+  // The rows still on the phone credit the column he chose — both directions
+  // fixtured (a version hardcoded to one column passes one case).
+  {
+    const { createServer: cs } = await import('vite');
+    const { createElement: ce } = await import('react');
+    const { renderToStaticMarkup: rs } = await import('react-dom/server');
+    const v = await cs({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
+    try {
+      const BookView = (await v.ssrLoadModule('/src/views/BookView.jsx')).default;
+      const data = { today_cairo: { y: 2026, m: 8, d: 17 }, today: { entries: [], totals: { Visa: 100, Cash: 20 } },
+        week: { cur: { Visa: [1], Cash: [1] }, prev: { Visa: [1], Cash: [1] } }, month: { cur: { Visa: [1], Cash: [1] }, prev: { Visa: [1], Cash: [1] }, names: { cur: 'August', prev: 'July' } },
+        year: { cur: { Visa: [1], Cash: [1] }, prev: { Visa: [1], Cash: [1] } }, monthCats: [], pending: [] };
+      const row = (method, amount) => ({ id: method + amount, kind: 'manual', held: false, payload: { method, amount, category: 'Gifts', description: 'x', entryDate: '17/8/2026', currency: 'EGP' } });
+      const visa = rs(ce(BookView, { data, phoneRows: [row('Visa', 60)] }));
+      const cash = rs(ce(BookView, { data, phoneRows: [row('Cash', 60)] }));
+      ok(visa.includes('>160.00<') && visa.includes('>20.00<'), 'P5.6 a card entry on the phone moves the card figure and leaves cash where it was');
+      ok(cash.includes('>80.00<') && cash.includes('>100.00<'), 'P5.7 a cash one moves cash and leaves the card alone');
+      ok(/data-not-in-sheet[^>]*>[^<]*60\.00/.test(visa) && (visa.match(/data-on-phone/g) || []).length === 1,
+        'P5.8 and the sum still on the phone is NAMED under the hero, with its row marked in the list');
+      const nan = rs(ce(BookView, { data, phoneRows: [row('Visa', NaN)] }));
+      ok(nan.includes('>100.00<') && !/data-not-in-sheet/.test(nan), 'P5.9 an unreadable amount is not added as 0 — honest render, at the totals');
+    } finally { await v.close(); }
+  }
   ok(!/method: 'Cash'/.test(appSrc), 'the hardcoded method is GONE from the handler');
   ok(!/totals\.Cash \+ amount/.test(appSrc), 'and so is the hardcoded cash total');
   ok(/setEntryMethod\(DEFAULT_METHOD\)/.test(appSrc),

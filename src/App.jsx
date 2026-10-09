@@ -14,12 +14,15 @@ import { createRefresher, resultState } from './state/refresh.js';
 import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, ping, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
-import { enqueue, flush, partition, remove as dropQueued } from './state/outbox.js';
+import { enqueue, flush, partition, remove as dropQueued, onPhone } from './state/outbox.js';
 import {
   cardKey, outcomeFor, reconcile, remaining, pruneSettled, applyCategoryToToday,
 } from './state/inboxOutcomes.js';
 import { confirmPayload, editPayload } from './state/fixPayload.js';
-import { DEFAULT_METHOD, manualPayload, applyEntryToToday } from './state/entryPayload.js';
+import { DEFAULT_METHOD, manualPayload } from './state/entryPayload.js';
+
+/** v4 P5 (R19): the undo window — the outbox holds a new entry this long before sending it. */
+const UNDO_MS = 6000;
 import { entryReady } from './state/entryDock.js';
 import { openingTab, cairoHourOf } from './state/opening.js';
 import { remember } from './state/repeats.js';
@@ -34,7 +37,7 @@ import {
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
-import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon, TrayIcon, PlusIcon } from './components/Primitives.jsx';
+import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon, TrayIcon, PlusIcon, UndoToast } from './components/Primitives.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
@@ -132,6 +135,11 @@ export default function App() {
    */
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [staleQueue, setStaleQueue] = useState([]);
+  // v4 P5: rows still on the phone (held for undo, or waiting for the network),
+  // and the 6-second «اتحفظ ✓ — رجوع» toast that can still take one back.
+  const [phoneRows, setPhoneRows] = useState(() => onPhone());
+  const [undo, setUndo] = useState(null);
+  const undoTimer = useRef(null);
   // What became of each card he confirmed, keyed by `cardKey`. This is the
   // record whose absence let a refetch resurrect a card he had already done.
   const [settled, setSettled] = useState({});
@@ -445,9 +453,10 @@ export default function App() {
   }, []);
 
   const runOutbox = useCallback(async () => {
-    const { sent } = await flush(sendQueued);
-    setStaleQueue(partition().stale);
-    if (sent > 0) refresh();
+    const res = await flush(sendQueued);
+    setStaleQueue(partition().stale); setPhoneRows(onPhone());
+    if (res.sent > 0) refresh();
+    return res;
   }, [sendQueued, refresh]);
 
   /**
@@ -514,7 +523,7 @@ export default function App() {
       setTab(openingTab(hour, hasDay));
     }
     setBooted(true);
-    setStaleQueue(partition().stale);
+    setStaleQueue(partition().stale); setPhoneRows(onPhone());
     refresh();
     runOutbox();
     /**
@@ -696,78 +705,55 @@ export default function App() {
    * wire value can never be the button's label, and Today credits the column he
    * chose rather than always crediting Cash.
    */
-  const submitEntry = async () => {
-    /**
-     * ONE readiness rule, read from `state/entryDock.js` — the same value the
-     * pinned button's `disabled` reads. This handler used to carry its own
-     * second, subtly different version of the same test, which accepted a "0"
-     * that the view's own check rejected. scripts/test-dock.mjs greps this file
-     * for that expression, so the sentence describing it deliberately does not
-     * spell it.
-     */
+  /**
+   * v4 P5 (R19, A7) — UNDO REPLACES CONFIRM. «سجّل» puts the entry in the OUTBOX
+   * at once, held for UNDO_MS: closing the app inside those six seconds loses
+   * nothing (it is already persisted), and «رجوع» takes it back out before it
+   * ever leaves the phone. When the hold ends the outbox sends it; with no
+   * network it simply stays queued and the Book shows it, marked with a clock.
+   * It is NEVER folded silently into the sheet's figures (the old optimistic
+   * insert did exactly that) — the Book names its sum instead.
+   */
+  const submitEntry = () => {
     if (!entryReady({ amount: entryAmount, cat: entryCat, busy: entryBusy })) return;
     const amount = parseFloat(entryAmount);
-
     const clientId = newClientId();
     const payload = manualPayload({
-      amount,
-      method: entryMethod,
-      category: entryCat,
-      description: entryDesc,
-      clientId,
-      entryDate: cairoDateStr(),
-      currency: entryCurrency,
+      amount, method: entryMethod, category: entryCat, description: entryDesc,
+      clientId, entryDate: cairoDateStr(), currency: entryCurrency,
     });
+    const restore = { amount: entryAmount, desc: entryDesc, cat: entryCat, method: entryMethod, currency: entryCurrency };
+    enqueue({ id: clientId, kind: 'manual', ageGated: true, payload, holdUntil: Date.now() + UNDO_MS });
+    setPhoneRows(onPhone());
+    setEntryAmount(''); setEntryDesc(''); setEntryCat(null); setEntryMethod(DEFAULT_METHOD);
+    setTab('book');
+    clearTimeout(undoTimer.current);
+    setUndo({ id: clientId, amount, currency: entryCurrency, restore });
+    undoTimer.current = setTimeout(async () => {
+      setUndo(null);
+      // «زي امبارح» learns the entry only once it is really kept.
+      remember({ description: payload.description, category: payload.category, method: payload.method, amount, currency: restore.currency });
+      const r = await runOutbox();
+      if (r && r.dropped) showToast(S.genericError);
+    }, UNDO_MS);
+  };
 
-    setEntryBusy(true);
-    setData((d) => (d ? {
-      ...d,
-      today: applyEntryToToday(d.today, {
-        date: payload.entryDate, description: payload.description,
-        method: payload.method, category: payload.category,
-        amount, currency: 'EGP',
-      }),
-    } : d));
-
-    try {
-      const res = await postManual(payload);
-      if (res?.ok) {
-        showToast(S.saved);
-        refresh();
-      } else {
-        showToast(S.genericError);
-      }
-    } catch {
-      // Offline. It is his money either way — queue it and say so honestly
-      // rather than claiming it was saved.
-      enqueue({ id: clientId, kind: 'manual', ageGated: true, payload });
-      showToast(S.queued);
-    } finally {
-      setEntryBusy(false);
-      /**
-       * Recorded AFTER the write is accepted, never on the tap (finding A3).
-       * A chip offering to repeat something that failed to reach his sheet would
-       * be the app remembering an expense he does not have.
-       */
-      remember({
-        description: payload.description, category: payload.category,
-        method: payload.method, amount: Number(payload.amount), currency: entryCurrency,
-      });
-      setEntryAmount('');
-      setEntryDesc('');
-      setEntryCat(null);
-      // Back to Cash, deliberately. A sticky Card would file his next cash
-      // expense into the card column on a screen he has stopped reading.
-      setEntryMethod(DEFAULT_METHOD);
-      setTab('book');
-    }
+  const undoEntry = () => {
+    clearTimeout(undoTimer.current);
+    if (!undo) return;
+    dropQueued(undo.id);
+    setPhoneRows(onPhone());
+    const r = undo.restore;
+    setEntryAmount(r.amount); setEntryDesc(r.desc); setEntryCat(r.cat); setEntryMethod(r.method);
+    setUndo(null);
+    setEntryMode('keypad'); setTab('entry');
   };
 
   const sendStale = async (item) => {
     try {
       const res = await sendQueued(item);
       if (res?.ok || res?.error) dropQueued(item.id);
-      setStaleQueue(partition().stale);
+      setStaleQueue(partition().stale); setPhoneRows(onPhone());
       refresh();
       showToast(S.saved);
     } catch {
@@ -777,7 +763,7 @@ export default function App() {
 
   const dropStale = (item) => {
     dropQueued(item.id);
-    setStaleQueue(partition().stale);
+    setStaleQueue(partition().stale); setPhoneRows(onPhone());
   };
 
   if (!booted) return null;
@@ -863,7 +849,7 @@ export default function App() {
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!needsSetup && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
-          {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} />}
+          {!needsSetup && <RefreshButton state={refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
         </span>
       </header>
 
@@ -952,6 +938,7 @@ export default function App() {
                 {viewTab === 'book' && (
                   <BookView
                     data={data}
+                    phoneRows={phoneRows}
                     settled={settled}
                     /**
                       * HOW MANY EXPENSES ARE WAITING, UNLOGGED — on a screen he
@@ -1006,6 +993,7 @@ export default function App() {
       </main>
 
       <Toast message={toast} />
+      <UndoToast undo={undo} onUndo={undoEntry} />
 
       {/**
         * S1 — the Settings sheet, mounted at the SHELL so it opens over any

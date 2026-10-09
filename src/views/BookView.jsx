@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT,
+  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG,
 } from '../theme.js';
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
@@ -101,7 +101,7 @@ export const PRIORITY_ICONS = { essentials: '🏠', health: '🩺', joy: '🎈',
 
 export default function BookView({
   data, settled = {}, onEdit, onGoToInbox, onBusyChange, onRowRemoved = null,
-  unsettledBatch = 0, onOpenBatch,
+  unsettledBatch = 0, onOpenBatch, phoneRows = [],
   /**
    * N7 — the filter's seed, for the same reason PeriodBlock takes
    * `policyOpen`: the chips live behind taps SSR cannot make, and a suite
@@ -423,6 +423,18 @@ export default function BookView({
     ? sorted.filter((r) => groupOf(r && r.category) === priorityFilter)
     : sorted;
 
+  /**
+   * v4 P5 — ROWS STILL ON THE PHONE (held for undo, or waiting for the network).
+   * Today only, and only on the live day — never under a browsed month. They are
+   * drawn marked and their sum is NAMED in the hero, not folded in silently.
+   */
+  const phone = period === 'today' && !browsing ? phoneRows.map((i) => {
+    const p = i.payload || {};
+    return {
+      id: i.id, held: !!i.held, description: p.description || categoryLabel(p.category), category: p.category,
+      method: p.method, amount: Number(p.amount), currency: p.currency || 'EGP', date: p.entryDate || p.dateStr,
+    };
+  }) : [];
   const periods = bookPeriods();
   const activeIdx = Math.max(0, periods.indexOf(period));
   /** N6 — the current month IS the live screen; any other month browses. */
@@ -493,7 +505,7 @@ export default function BookView({
       <div key={browsing ? `${browsing.y}-${browsing.m}` : period} className="view-in">
       {period === 'today' && (
         <TodayHead
-          totals={data.today.totals} entries={data.today.entries} onGoToInbox={onGoToInbox}
+          totals={data.today.totals} entries={data.today.entries} onGoToInbox={onGoToInbox} phone={phone}
           unsettledBatch={unsettledBatch} onOpenBatch={onOpenBatch}
         />
       )}
@@ -717,7 +729,7 @@ export default function BookView({
       )}
       {period !== 'year' && !loadingRows && !loadError && (
         <RowList
-          rows={rows} settled={settled} onEdit={editThenBust}
+          rows={rows} settled={settled} onEdit={editThenBust} phone={phone}
           open={open} setOpen={setOpen}
           canEdit={canEdit} onOpenEdit={openEditSheet} edited={editedRows}
           /**
@@ -1156,7 +1168,16 @@ function Lookalikes({ rows, sheetUrl }) {
   );
 }
 
-function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBatch }) {
+function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch = 0, onOpenBatch, phone = [] }) {
+  // v4 P5: EGP money still on the phone joins the day's figure — and the caption
+  // under the hero says exactly how much of it has not reached the sheet.
+  const onPhoneEgp = phone.filter((r) => r.currency === 'EGP' && isFinite(r.amount));
+  const notYet = onPhoneEgp.reduce((a, r) => a + r.amount, 0);
+  const totals = {
+    ...sheetTotals,
+    Visa: Number(sheetTotals?.Visa || 0) + onPhoneEgp.filter((r) => r.method === 'Visa').reduce((a, r) => a + r.amount, 0),
+    Cash: Number(sheetTotals?.Cash || 0) + onPhoneEgp.filter((r) => r.method !== 'Visa').reduce((a, r) => a + r.amount, 0),
+  };
   const egp = egpTotalOf(totals);
   const travel = travelOf(entries);
   const unknown = (entries || []).filter((e) => needsCategory(e)).length;
@@ -1223,6 +1244,11 @@ function TodayHead({ totals, entries, onGoToInbox, unsettledBatch = 0, onOpenBat
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{/* geometry exemption (ruling 4): an 8px legend square, its 2px corner bounded by its size */}<span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: C.muted }} />{S.metricCash} <b style={{ color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN }}>{money2(totals.Cash)}</b>
           <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{S.currencyShort}</span></span>
       </div>
+      {notYet > 0 && (
+        <div data-not-in-sheet style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>
+          {S.notInSheetYet(`${money2(notYet)} ${unitFor('EGP')}`)}
+        </div>
+      )}
       {/* Only when there IS one. A day with no foreign spending says nothing
           about foreign spending — the silence is the ordinary case. */}
       {leadsHome && travel.length > 0 && (
@@ -1925,10 +1951,10 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
  * nothing is repeated six times.
  */
 function RowList({
-  rows, settled, onEdit, open, setOpen, tabName, showDate, emptyTitle, emptyBody,
+  rows, settled, onEdit, open, setOpen, tabName, showDate, emptyTitle, emptyBody, phone = [],
   canEdit = false, onOpenEdit = null, edited = null,
 }) {
-  if (!rows.length) {
+  if (!rows.length && !phone.length) {
     return (
       <div style={{ textAlign: 'center', paddingTop: 60 }}>
         {emptyTitle && (
@@ -1947,6 +1973,26 @@ function RowList({
 
   return (
     <div style={{ ...glass('card'), overflow: 'hidden' }}>
+      {phone.map((r, i) => (
+        // v4 P5: a row still on the phone — sand wash, a clock, and what will
+        // happen to it. Not a button: there is no sheet row to open yet.
+        <div key={r.id} data-on-phone style={{ minHeight: 68, padding: '10px 16px', display: 'grid', gridTemplateColumns: '1fr auto',
+          alignItems: 'center', gap: 4, background: PHONE_ROW_BG, borderTop: i === 0 ? 'none' : GLASS_DIVIDER }}>
+          <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: TYPE.body, fontWeight: 600, ...ISOLATE }}>{r.description}</span>
+            <span style={{ fontSize: TYPE.caption, color: C.muted, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+              <span style={ISOLATE}>{categoryLabel(r.category)}</span>
+              <span aria-hidden>·</span>
+              <span>{r.held ? S.cardSaving : S.willSendOnline}</span>
+            </span>
+          </span>
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
+            {money2(r.amount)}
+            <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {unitFor(r.currency)}</span>
+          </span>
+        </div>
+      ))}
       {rows.map((rawRow, i) => {
         /**
          * The settle key carries the row's CONTENT, because a row here has no
@@ -1980,7 +2026,7 @@ function RowList({
             key={key}
             style={{
               // v4 P3: rows share ONE glass card, parted by a white highlight line.
-              borderTop: i === 0 ? 'none' : GLASS_DIVIDER,
+              borderTop: i === 0 && !phone.length ? 'none' : GLASS_DIVIDER,
               opacity: inert ? 0.62 : 1, transition: 'opacity .2s ease',
             }}
           >

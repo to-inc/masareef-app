@@ -71,7 +71,9 @@ export function partition(now = Date.now()) {
  * never fix. Transport failures leave it queued for the next attempt.
  */
 export async function flush(send, now = Date.now()) {
-  const { fresh } = partition(now);
+  // v4 P5 (R19, A7): an item still inside its undo window (`holdUntil`) is not
+  // sent yet — «رجوع» removes it from the queue before it ever leaves the phone.
+  const fresh = partition(now).fresh.filter((i) => !(i.holdUntil > now));
   // `dropped` and `retrying` are counted SEPARATELY on purpose. Both leave the
   // happy path, but they mean opposite things to the person holding the phone:
   // a dropped item is finished and needs no further thought, while a retrying
@@ -99,4 +101,16 @@ export async function flush(send, now = Date.now()) {
     }
   }
   return { sent, dropped, retrying, settled: sent + dropped };
+}
+
+/**
+ * THE ROWS STILL ON THE PHONE (v4 P5) — appended entries (`manual`,
+ * `receipt_confirm`) that have not reached his sheet: held for undo, or waiting
+ * for the network. The Book shows them, marked, and says their sum plainly; it
+ * never folds them into the sheet's figures silently.
+ */
+export function onPhone(now = Date.now()) {
+  return readAll()
+    .filter((i) => i.kind === 'manual' || i.kind === 'receipt_confirm')
+    .map((i) => ({ ...i, held: i.holdUntil > now }));
 }

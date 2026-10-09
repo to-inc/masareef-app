@@ -56,6 +56,11 @@ export const EN = {
   // Short on purpose: this line shares its row with three buttons (voice,
   // currency, receipt), and a longer heading wrapped and pushed the category
   // chips below the fold.
+  waitingNet: (n) => `${n} waiting for signal`, // v4 P5 sync pill
+  notInSheetYet: (x) => `${x} hasn't reached the sheet yet`,
+  willSendOnline: 'Will be logged when you are back online',
+  savedUndo: 'Saved ✓',
+  undo: 'Undo',
   reviewLikely: 'Probably:', // v4 P6
   reviewOrElse: 'Or…',
   reviewSkip: 'Leave it for later',

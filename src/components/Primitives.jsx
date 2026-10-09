@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass } from '../theme.js';
+import { money2 } from '../lib/format.js';
+import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG } from '../theme.js';
 import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 
@@ -246,9 +247,26 @@ export function CurrencyToggle({ value, other, onFlip, subtle }) {
  * fresh, terracotta when the last refresh failed. Busy, the dot becomes the
  * spinning ↻ and the word says «Refreshing…». Tapping it refreshes.
  */
-export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t }) {
+export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t, waiting = 0 }) {
   const busy = state === 'busy';
   const failed = state === 'failed';
+  /**
+   * v4 P5 (R19): with entries still on the phone the pill turns SAND and says
+   * how many wait for the network («1 مستني النت») — the same control, a third
+   * state. It still refreshes (and so retries the queue) when tapped.
+   */
+  if (waiting > 0 && !busy) {
+    return (
+      <button onClick={onPress} aria-label={`${S.waitingNet(waiting)} — ${S.refresh}`}
+        style={{ ...glass('advisory'), borderRadius: RADIUS.capsule, minHeight: TAP, minWidth: TAP, padding: '0 16px',
+          display: 'inline-flex', alignItems: 'center', gap: 8, color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+          <path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0" /><path d="M3 3l18 18" />
+        </svg>
+        <span style={LATIN}>{S.waitingNet(waiting)}</span>
+      </button>
+    );
+  }
   const words = busy ? S.refreshing : (savedAt && !failed ? S.synced : S.refresh);
   return (
     <button
@@ -270,6 +288,32 @@ export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t
         <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{clock(savedAt)}</span>
       )}
     </button>
+  );
+}
+
+/**
+ * THE UNDO TOAST (v4 P5, R19) — the one dark surface in the app. «اتحفظ ✓ 240 ج.م»
+ * and a 48px «رجوع» that takes the entry back out of the outbox before it is
+ * sent. Floats above the tab bar; gone after the undo window.
+ */
+export function UndoToast({ undo, onUndo }) {
+  if (!undo) return null;
+  return (
+    <div role="status" aria-live="polite" className="sheet-in"
+      style={{
+        ...glass('toast'), position: 'fixed', zIndex: 35, left: NAV.inset, right: NAV.inset,
+        bottom: `calc(max(${NAV.bottom}px, env(safe-area-inset-bottom)) + ${NAV.height + 14}px)`,
+        minHeight: 60, padding: '0 8px 0 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        color: C.onDark,
+      }}>
+      <span style={{ fontSize: TYPE.body, fontWeight: 600 }}>
+        {S.savedUndo} <span style={LATIN}>{money2(undo.amount)}</span> {unitFor(undo.currency)}
+      </span>
+      <button onClick={onUndo}
+        style={{ minHeight: TAP, padding: '0 18px', borderRadius: RADIUS.capsule, background: TOAST_ACTION_BG, color: C.onDark, fontSize: TYPE.body, fontWeight: 700 }}>
+        {S.undo}
+      </button>
+    </div>
   );
 }
 
