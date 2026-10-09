@@ -5,7 +5,8 @@ import { Sheet, Chip, LATIN } from '../components/Primitives.jsx';
 import { CURRENCIES } from '../state/travel.js';
 import { normalizeDigits, money } from '../lib/format.js';
 import { parseSheetDate } from '../state/recent.js';
-import { editEntry } from '../api/index.js';
+import { editEntry, removeEntry } from '../api/index.js';
+import { outcomeForRemove } from '../state/removeOutcome.js';
 
 /**
  * U1 — THE EDIT SHEET (Owner field ruling 2026-08-27, the VR case: a booked
@@ -170,7 +171,26 @@ function SnapshotRow({ row }) {
   );
 }
 
-export default function EditSheet({ item, onClose, onSaved, initialDraft = null, initialStatus = null }) {
+export default function EditSheet({
+  item, onClose, onSaved, initialDraft = null, initialStatus = null,
+  /**
+   * E-011 — «Remove this row». Offered only when the server advertises
+   * `remove_entry` (§3.9, fail closed). TWO taps: the first asks, the second
+   * removes — a senior's stray tap must never cost a row. The server MOVES the
+   * row to the sheet's Removed tab; nothing is erased.
+   */
+  canRemove = false, onRemoved = null, initialRemove = null,
+}) {
+  const [rm, setRm] = useState(initialRemove);
+  const remove = async () => {
+    if (rm === null) { setRm('confirm'); return; }
+    setRm({ status: 'saving' });
+    let res = null; let threw = false;
+    try { res = await removeEntry({ tab: item.tab, rowHint: item.rowHint, match: item.match }); } catch { threw = true; }
+    const out = outcomeForRemove(res, threw);
+    setRm(out);
+    if (out.status === 'done' && onRemoved) onRemoved(item);
+  };
   const match0 = (item && item.match) || {};
   /**
    * The BASELINE is the row as last SEEN — the concurrency claim. Adopting a
@@ -445,6 +465,38 @@ export default function EditSheet({ item, onClose, onSaved, initialDraft = null,
                 </div>
               )}
             </>
+          )}
+
+          {/* ═══ E-011: remove — two taps, moved not erased ═══ */}
+          {canRemove && !settled && !(rm && rm.status === 'done') && (
+            <>
+              {rm === 'confirm' && (
+                <div style={{ fontSize: TYPE.label, color: C.conflictInk, textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>
+                  {S.removeConfirm}
+                </div>
+              )}
+              <button
+                onClick={remove}
+                disabled={!!(rm && rm.status === 'saving')}
+                style={{
+                  width: '100%', minHeight: TAP, marginTop: rm === 'confirm' ? 8 : 16, borderRadius: RADIUS.row,
+                  background: rm === 'confirm' ? C.conflictInk : C.card,
+                  color: rm === 'confirm' ? C.onDark : C.conflictInk,
+                  border: `1px solid ${C.conflictInk}`,
+                  fontSize: TYPE.label, fontWeight: 700,
+                }}
+              >
+                {rm === 'confirm' ? S.removeYes : S.dupPairRemove}
+              </button>
+              {rm && rm.status === 'gone' && refusalLine(S.editNotFound)}
+              {rm && (rm.status === 'failed' || rm.status === 'engine' || rm.status === 'conflict') && refusalLine(S.genericError)}
+              {rm && rm.status === 'offline' && refusalLine(S.genericError)}
+            </>
+          )}
+          {rm && rm.status === 'done' && (
+            <div style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'center', marginTop: 16 }}>
+              {S.dupPairRemoved}
+            </div>
           )}
         </Sheet>
       </div>

@@ -284,6 +284,8 @@ export const EN = {
   dupPairBody: 'Two rows alike in the book. Choose which one to remove — the other stays as it is.',
   dupPairRemove: 'Remove this row',
   dupPairRemoved: "Removed — moved to the sheet's Removed tab",
+  removeConfirm: "Remove this row? It moves to the sheet's Removed tab, so it can be brought back.",
+  removeYes: 'Yes, remove it',
   dupPairSurvives: 'and the other stays as it is ✓',
   dupPairFailed: 'It was not removed — try again',
   dupPairGone: 'That row is not in the sheet now — it may already be gone',

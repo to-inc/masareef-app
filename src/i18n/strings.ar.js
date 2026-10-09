@@ -298,6 +298,8 @@ export const AR = {
   dupPairBody: 'صفّين شبه بعض في الدفتر. اختار اللي يتشال — والتاني بيفضل زي ما هو.',
   dupPairRemove: 'شيل الصف ده',
   dupPairRemoved: 'اتشال — راح لتبويب Removed في الشيت',
+  removeConfirm: 'نشيل الصف ده؟ هيروح لتبويب Removed في الشيت، وممكن يرجع.',
+  removeYes: 'أيوه، شيله',
   dupPairSurvives: 'والتاني فاضل زي ما هو ✓',
   dupPairFailed: 'ما اتشالش — جرّب تاني',
   dupPairGone: 'الصف مش موجود في الشيت دلوقتي — يمكن اتشال قبل كده',

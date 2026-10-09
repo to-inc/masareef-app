@@ -728,6 +728,25 @@ try {
       pending: [card], settled: {}, onConfirm: () => {}, build: { actions: ['edit_entry'] }, initialEditing: card,
     }));
     ok(open.includes('عدّل الصف') && open.includes('15.5') && !withEdit.includes('عدّل الصف'), 'E002.4 tapping it opens the edit sheet on THAT row');
+    // ——— E-011: «Remove this row» in the edit sheet — two taps, moved not erased.
+    const both = { actions: ['edit_entry', 'remove_entry'] };
+    const sheet = (extra) => renderToStaticMarkup(createElement(InboxView, {
+      pending: [card], settled: {}, onConfirm: () => {}, build: both, initialEditing: card, ...extra,
+    }));
+    const idle = sheet({});
+    ok(idle.includes('>شيل الصف ده</button>'), 'E011.1 the edit sheet offers «شيل الصف ده» when the server advertises remove_entry');
+    ok(!open.includes('>شيل الصف ده</button>'), 'E011.2 …and nothing when it does not (edit_entry only)');
+    ok(!idle.includes('أيوه، شيله'), 'E011.3 the first tap only ASKS — no «yes» before he has seen the question');
+    ok(/min-height:48px[^"]*"[^>]*>شيل الصف ده</.test(idle), 'E011.4 …at the senior tap floor');
+    {
+      const ES = (await vite.ssrLoadModule('/src/views/EditSheet.jsx')).default;
+      const asked = renderToStaticMarkup(createElement(ES, { item: card, onClose: () => {}, onSaved: () => {}, canRemove: true, initialRemove: 'confirm' }));
+      ok(asked.includes('نشيل الصف ده؟') && asked.includes('Removed') && asked.includes('>أيوه، شيله</button>'),
+        'E011.5 the second step states where the row goes (the Removed tab) and offers «أيوه، شيله»');
+      const done = renderToStaticMarkup(createElement(ES, { item: card, onClose: () => {}, onSaved: () => {}, canRemove: true, initialRemove: { status: 'done' } }));
+      ok(done.includes('اتشال') && !done.includes('>أيوه، شيله</button>'), 'E011.6 once removed it says so, and the button is gone');
+    }
+
   }
 } finally {
   await vite.close();

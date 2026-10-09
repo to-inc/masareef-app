@@ -100,7 +100,7 @@ function useReducedMotion() {
 export const PRIORITY_ICONS = { essentials: '🏠', health: '🩺', joy: '🎈', projects: '🧰' };
 
 export default function BookView({
-  data, settled = {}, onEdit, onGoToInbox, onBusyChange,
+  data, settled = {}, onEdit, onGoToInbox, onBusyChange, onRowRemoved = null,
   unsettledBatch = 0, onOpenBatch,
   /**
    * N7 — the filter's seed, for the same reason PeriodBlock takes
@@ -807,6 +807,13 @@ export default function BookView({
           item={editing.item}
           onClose={() => setEditing(null)}
           onSaved={(entry) => onEditSaved(editing.key, entry)}
+          canRemove={supportsAction(build, 'remove_entry')}
+          onRemoved={() => {
+            // E-011 — the removed row's month is no longer what was cached.
+            if (browsing) monthCache.current.delete(`${browsing.y}_${browsing.m}`);
+            setEditing(null);
+            if (onRowRemoved) onRowRemoved();
+          }}
         />
       )}
     </div>

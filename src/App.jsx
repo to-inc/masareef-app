@@ -1098,6 +1098,7 @@ export default function App() {
                     })}
                     onOpenBatch={() => pushDetail(() => { setEntryMode('batch'); setTab('entry'); })}
                     onEdit={editRecent}
+                    onRowRemoved={refresh}
                     onGoToInbox={() => setTab('inbox')}
                     onBusyChange={(fn) => { recentLoader.current = fn; }}
                   />

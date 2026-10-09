@@ -9,6 +9,7 @@ import { findLookalikes } from '../state/duplicates.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { removeEntry } from '../api/index.js';
 import EditSheet from './EditSheet.jsx';
+import { outcomeForRemove } from '../state/removeOutcome.js';
 
 /**
  * The Inbox is where the 5-second law is won or lost. Each card is one purchase
@@ -78,18 +79,7 @@ export function pairDiffs(a, b) {
  * voice door's era taught what a client does about a verb the server lacks:
  * say so, honestly, and light nothing that can only fail.
  */
-export function outcomeForRemove(res, threw) {
-  if (threw) return { status: 'offline' };
-  if (res && res.ok === true) return { status: 'done' };
-  const code = (res && res.error) || 'unknown';
-  if (code === 'unknown_action') return { status: 'engine' };
-  if (code === 'row_changed') {
-    const cur = res && res.current;
-    return { status: 'conflict', current: cur && typeof cur === 'object' ? cur : null };
-  }
-  if (code === 'row_not_found') return { status: 'gone' };
-  return { status: 'failed', error: code };
-}
+export { outcomeForRemove } from '../state/removeOutcome.js';
 
 export default function InboxView({
   pending, settled = {}, onConfirm, onConfirmMany,
@@ -112,6 +102,9 @@ export default function InboxView({
   initialEditing = null,
 }) {
   const [editing, setEditing] = useState(initialEditing);
+  // E-011 — rows he removed from the edit sheet leave the list at once; the
+  // refetch (`onEdited`) then makes it the server's word, not ours.
+  const [removedHere, setRemovedHere] = useState(() => new Set());
   const canEdit = supportsAction(build, 'edit_entry');
   const openEdit = canEdit ? (item) => setEditing(item) : null;
   /**
@@ -128,7 +121,7 @@ export default function InboxView({
       .filter((o) => o && o.status === 'done' && o.removedKey)
       .map((o) => o.removedKey),
   );
-  const rows = reconcile(pending, settled).filter((r) => !removedKeys.has(r.key));
+  const rows = reconcile(pending, settled).filter((r) => !removedKeys.has(r.key) && !removedHere.has(r.key));
 
   const canRemove = supportsAction(build, 'remove_entry');
   const resolvePair = async (pair, removeIdx) => {
@@ -261,6 +254,12 @@ export default function InboxView({
           item={editing}
           onClose={() => setEditing(null)}
           onSaved={() => { if (onEdited) onEdited(); }}
+          canRemove={canRemove}
+          onRemoved={(it) => {
+            setRemovedHere((s) => new Set(s).add(cardKey(it)));
+            setEditing(null);
+            if (onEdited) onEdited();
+          }}
         />
       )}
     </div>
