@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { C, TAP, RADIUS, TYPE } from '../theme.js';
+import { C, TAP, RADIUS, TYPE, glass, GRADIENT } from '../theme.js';
 import { S } from '../i18n/strings.js';
 
 /**
@@ -46,8 +46,8 @@ export default function DictateView({ onSend, onCancel, busy }) {
 
   return (
     <div>
-      <div style={{ fontSize: 19, fontWeight: 650, marginBottom: 6 }}>{S.dictateTitle}</div>
-      <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, margin: '0 0 14px' }}>
+      {/* G07: the title lives in the shell's header now, beside its 48px ← (R9). */}
+      <p style={{ fontSize: TYPE.label, color: C.muted, lineHeight: 1.7, margin: '0 0 14px' }}>
         {S.dictateBody}
       </p>
 
@@ -59,8 +59,9 @@ export default function DictateView({ onSend, onCancel, busy }) {
         rows={3}
         dir="auto"
         style={{
-          width: '100%', fontSize: 19, lineHeight: 1.6, padding: '14px 16px',
-          borderRadius: RADIUS.row, border: `1px solid ${C.line}`, background: C.card,
+          // G07 (v4 tokens): the words go on a glass card.
+          ...glass('card'), borderRadius: RADIUS.row,
+          width: '100%', fontSize: TYPE.action, lineHeight: 1.6, padding: '14px 16px', boxSizing: 'border-box',
           color: C.ink, fontFamily: 'inherit', resize: 'none',
         }}
       />
@@ -83,7 +84,7 @@ export default function DictateView({ onSend, onCancel, busy }) {
              * enforces that. Two ambers is two "the one important button on the
              * screen", which is none.
              */
-            background: ready && !busy ? C.harbor : C.line,
+            background: ready && !busy ? GRADIENT.harbor : C.line,
             color: ready && !busy ? C.onDark : C.ink,
             fontSize: TYPE.action, fontWeight: 700,
           }}
@@ -94,8 +95,8 @@ export default function DictateView({ onSend, onCancel, busy }) {
           className="catchip"
           onClick={onCancel}
           style={{
-            flex: 1, minHeight: TAP, borderRadius: RADIUS.row, background: C.card,
-            border: `1px solid ${C.line}`, color: C.ink, fontSize: 16, fontWeight: 600,
+            ...glass('chip'), flex: 1, minHeight: TAP, borderRadius: RADIUS.row,
+            color: C.ink, fontSize: TYPE.body, fontWeight: 600,
           }}
         >
           {S.dictateCancel}

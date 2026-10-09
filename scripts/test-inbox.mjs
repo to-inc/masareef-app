@@ -244,6 +244,30 @@ try {
   const mod = await vite.ssrLoadModule('/src/views/InboxView.jsx');
   const InboxView = mod.default;
   const { isSwipe } = mod;
+  // ═══ FIELD REPORT 2026-10-09 — a card fee filed as «Elect. Recharge» could not
+  // be changed: a logged card locked its buttons, and a second pick sent the
+  // stale «❓» claim the server refuses. Both halves, pinned.
+  {
+    const { refileItem } = await vite.ssrLoadModule('/src/state/fixPayload.js');
+    const it = { tab: 'Sep', rowHint: '23/9/2026|65', match: { description: 'Revolut Ultra fee', category: '❓', amount: 65 } };
+    ok(refileItem(it, null) === it, 'RF.1 a first filing sends the row exactly as he saw it');
+    ok(refileItem(it, { status: 'done', category: 'Elect. Recharge' }).match.category === 'Elect. Recharge',
+      'RF.2 a RE-file claims the category the sheet holds now — the one he filed — or the server refuses it');
+    ok(refileItem(it, { status: 'conflict', category: 'Car' }) === it, 'RF.3 only a LOGGED card changes the claim');
+    const api = await vite.ssrLoadModule('/src/api/index.js');
+    const args = (cat, now) => ({ tab: 'Sep', rowHint: 'rf|1', match: { category: now }, newCategory: cat });
+    const first = await api.fixCategory(args('Elect. Recharge', '❓'));
+    const stale = await api.fixCategory(args('Personal expenses', '❓'));
+    const fresh = await api.fixCategory(args('Personal expenses', 'Elect. Recharge'));
+    ok(first.ok && stale.error === 'row_changed' && fresh.ok,
+      'RF.4 mock parity: the mock refuses a re-file with a stale claim (as the server does) and accepts the current one');
+    const filedHtml = renderToStaticMarkup(createElement(InboxView, {
+      pending: [{ ...row('Jun', 3, { description: 'OLD FEE' }), stale: true }],
+      settled: { [cardKey({ ...row('Jun', 3, { description: 'OLD FEE' }), stale: true })]: { status: 'done', category: 'Car' } },
+      onConfirm: () => {}, initialStaleOpen: true }));
+    ok(filedHtml.includes(AR.recategorize) && !/class="catchip"[^>]*disabled/.test(filedHtml),
+      'RF.5 a logged card stays correctable — its buttons are live under «غيّر النوع لو غلط»');
+  }
   // ═══ v4 P6 — «سيبها لبعدين»: the skipped card goes to the END, nothing is written.
   { const { focusQueue } = mod; const k = (x) => ({ key: x });
     const order = (n, sk) => focusQueue(n.map(k), sk).map((r) => r.key).join('');
@@ -567,8 +591,8 @@ try {
    * never asserted to be wired.
    */
   const appSrc = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
-  ok(/confirmPayload\(item, category\)/.test(appSrc),
-    'the Inbox confirm calls the builder…');
+  ok(/confirmPayload\(refileItem\(item, settled\[key\]\), category\)/.test(appSrc),
+    'the Inbox confirm calls the builder… (through refileItem, so a re-file claims the current category)');
   ok(/editPayload\(item, category\)/.test(appSrc),
     '…and the Recent edit calls the other one');
   ok(!/newCategory: category \}/.test(appSrc),

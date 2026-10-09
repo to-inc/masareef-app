@@ -3,7 +3,6 @@ import { C, TAP, RADIUS, TYPE, GRADIENT, alpha, glass } from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { ISOLATE, LATIN } from './Primitives.jsx';
-import { needsHim } from '../state/inboxOutcomes.js';
 
 /**
  * Choosing a category for a row that is ALREADY in his sheet, and saying what
@@ -102,7 +101,12 @@ export function CategoryActions({ guess, outcome, onPick }) {
    * the guessed card has always offered exactly this shortlist.
    */
   const [showAll, setShowAll] = useState(false);
-  const inert = !needsHim(outcome);
+  // Filed is NOT final: a logged card stays tappable so a mis-tap can be put
+  // right where it happened (field report 2026-10-09: a card fee filed as
+  // «Elect. Recharge» could not be changed). Only a write IN FLIGHT or queued
+  // locks the buttons — a double-write is the thing to prevent, not a correction.
+  const inert = !!outcome && (outcome.status === 'saving' || outcome.status === 'queued');
+  const filed = !!outcome && outcome.status === 'done';
 
   // v4 P6: «غالبًا:» + ONE 64px guess, then «ولا…» + a 2×2 grid of 52px
   // alternatives — three categories and «more». Without a guess, the grid
@@ -112,8 +116,8 @@ export function CategoryActions({ guess, outcome, onPick }) {
   const label = (t) => <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, margin: '18px 0 8px' }}>{t}</div>;
   return (
     <div style={{ opacity: inert ? 0.45 : 1 }}>
-      {guess && label(S.reviewLikely)}
-      {guess && (
+      {guess && !filed && label(S.reviewLikely)}
+      {guess && !filed && (
         <button
           className="bigbtn"
           onClick={() => onPick(guess)}
@@ -131,7 +135,7 @@ export function CategoryActions({ guess, outcome, onPick }) {
           <span style={{ fontSize: TYPE.caption, fontWeight: 500, ...ISOLATE }} dir="auto">{guess}</span>
         </button>
       )}
-      {label(guess ? S.reviewOrElse : S.entryNeedCategory)}
+      {label(filed ? S.recategorize : guess ? S.reviewOrElse : S.entryNeedCategory)}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {shown.map((c) => (
           <button

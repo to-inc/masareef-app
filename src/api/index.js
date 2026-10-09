@@ -42,11 +42,22 @@ export const fetchEntries = (ref) => (USING_MOCK ? mockEntries(ref) : live.entri
 // MOCK PARITY: the server resolves `tab` by its 3-letter name and refuses
 // anything else; a mock that accepted any tab hid the «September» edit bug.
 const MOCK_TABS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-export const fixCategory = (args) => (USING_MOCK
-  ? Promise.resolve(MOCK_TABS.indexOf(String((args && args.tab) || '').trim()) === -1
-    ? { ok: false, v: 1, error: 'row_not_found' }
-    : { ok: true, v: 1, learned: false })
-  : live.fixCategory(args));
+// Mock parity: the real server checks the category it is told the row holds
+// (optimistic concurrency). The mock remembers what it filed each row as, and
+// refuses a second write that claims anything else — so a re-file that forgets
+// the current category fails HERE, not first in his hand.
+const MOCK_FILED = new Map();
+export const fixCategory = (args) => {
+  if (!USING_MOCK) return live.fixCategory(args);
+  if (MOCK_TABS.indexOf(String((args && args.tab) || '').trim()) === -1) return Promise.resolve({ ok: false, v: 1, error: 'row_not_found' });
+  const k = `${args.tab}|${args.rowHint}`;
+  const was = MOCK_FILED.get(k);
+  if (was !== undefined && (args.match && args.match.category) !== was) {
+    return Promise.resolve({ ok: false, v: 1, error: 'row_changed', current: { ...(args.match || {}), category: was } });
+  }
+  MOCK_FILED.set(k, args.newCategory);
+  return Promise.resolve({ ok: true, v: 1, learned: false });
+};
 
 // Mock parity: offline, the real POST's fetch throws — so the mock throws too
 // (the outbox's «waiting for the network» path must be reachable in mock).

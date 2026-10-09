@@ -31,6 +31,17 @@
  * over by the server in `pending[].rowHint` and echoed back untouched — the
  * client never computes, adjusts or invents it.
  */
+/**
+ * A RE-FILE from the review card (field report 2026-10-09). Once a row is
+ * logged its sheet cell holds the category he filed, so a second pick must
+ * claim THAT category or the server's concurrency guard rightly refuses it.
+ * `prev` is the card's settled outcome.
+ */
+export function refileItem(item, prev) {
+  return prev && prev.status === 'done' && prev.category
+    ? { ...item, match: { ...item.match, category: prev.category } } : item;
+}
+
 export function confirmPayload(item, category) {
   return {
     tab: item.tab,

@@ -66,6 +66,7 @@ export const EN = {
   willSendOnline: 'Will be logged when you are back online',
   savedUndo: 'Saved ✓',
   undo: 'Undo',
+  recategorize: 'Change it if that was wrong', // a filed card can still be corrected
   reviewLikely: 'Probably:', // v4 P6
   reviewOrElse: 'Or…',
   reviewSkip: 'Leave it for later',
@@ -115,6 +116,9 @@ export const EN = {
   // ——— dictation (A5): tap the keyboard's own mic and say it.
   dictateShort: '🎙 Say it',
   dictateTitle: 'Say the expense',
+  receiptTitle: 'Receipt', // G05 header (R9)
+  batchTitle: 'Review the statement', // G06 header (R9)
+  back: 'Back to the entry',
   dictateBody: 'Tap the microphone on your keyboard and say the amount and what it was — like "50 pounds coffee".',
   dictatePlaceholder: '50 coffee',
   dictateSend: 'Log it',

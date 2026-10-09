@@ -48,7 +48,8 @@ ok(/flexShrink: 0/.test(header), 'B5.1 the header does not scroll — a flexShri
 ok(!/background:/.test(header.slice(0, header.indexOf('>'))) && !/C\.harbor/.test(header),
   'B5.2 no harbor slab: the header paints no background of its own — it floats on the ground (R0)');
 ok(/color: C\.ink/.test(header), 'B5.3 the header speaks ink, not white-on-harbor (R0)');
-ok(!/aria-hidden/.test(header) && !/top: '100%'/.test(header) && !/scrimGround/.test(app),
+// (aria-hidden alone is not the scrim — the R9 ← glyph is legitimately hidden; its button speaks.)
+ok(!/top: '100%'/.test(header) && !/scrimGround/.test(app) && !/linear-gradient\(180deg/.test(header),
   'B5.4 the scrim is gone — no strip hangs under the header, and its ground variable is not left behind');
 ok(/fontFamily: FONT_DISPLAY, fontSize: TYPE\.title/.test(header), 'B5.5 the screen\'s name is the display face at TYPE.title (24, v4 P3)');
 ok(/viewTab === 'book' \? S\.tabBook/.test(header), 'B5.6 the title names the screen he is on — the one under the entry sheet when it is open (v4 P3/P4)');

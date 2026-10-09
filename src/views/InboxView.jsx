@@ -504,7 +504,9 @@ export function focusQueue(needing, skipped) {
  */
 function PendingCard({ item, outcome, onConfirm, onOpenEdit = null, onSkip = null, focus = false }) {
   const p = item.match;
-  const inert = !needsHim(outcome);
+  // Dimmed only while a write is in flight or queued — a LOGGED card stays at
+  // full strength, because it can still be changed (CategoryActions).
+  const inert = !!outcome && (outcome.status === 'saving' || outcome.status === 'queued');
   return (
     <div
       className="card-in"

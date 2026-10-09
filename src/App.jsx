@@ -7,8 +7,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
-import { S, LOCALE } from './i18n/strings.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
+import { S, LOCALE, DIR } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
 import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, ping, USING_MOCK } from './api/index.js';
@@ -18,7 +18,7 @@ import { enqueue, flush, partition, remove as dropQueued, onPhone } from './stat
 import {
   cardKey, outcomeFor, reconcile, remaining, pruneSettled, applyCategoryToToday,
 } from './state/inboxOutcomes.js';
-import { confirmPayload, editPayload } from './state/fixPayload.js';
+import { confirmPayload, refileItem, editPayload } from './state/fixPayload.js';
 import { DEFAULT_METHOD, manualPayload } from './state/entryPayload.js';
 
 /** v4 P5 (R19): the undo window — the outbox holds a new entry this long before sending it. */
@@ -582,7 +582,10 @@ export default function App() {
     // appending here counted every confirmed purchase twice.
     setData((d) => (d ? { ...d, today: applyCategoryToToday(d.today, item.match, category) } : d));
 
-    const payload = confirmPayload(item, category);
+    // A RE-FILE (he picked again after it was logged — a mis-tap, «Elect.
+    // Recharge» for a card fee): the sheet now holds the category he filed, so
+    // the concurrency claim must say THAT, or the server rightly refuses it.
+    const payload = confirmPayload(refileItem(item, settled[key]), category);
     let outcome;
     try {
       outcome = outcomeFor(await fixCategory(payload), false, category);
@@ -785,6 +788,10 @@ export default function App() {
   const sheetOpen = dockShown;
   const viewTab = sheetOpen ? underTab.current : tab;
   const closeEntry = () => setTab(underTab.current);
+  // R9: which capture-flow screen is up (they are full screens, not the sheet).
+  const captureMode = !needsSetup && tab === 'entry' && entryMode !== 'keypad' ? entryMode : null;
+  // ← keeps a statement's draft (leaveBatch); receipt and dictation return to the keypad sheet.
+  const leaveCapture = () => (captureMode === 'batch' ? leaveBatch() : pushDetail(() => setEntryMode('keypad')));
 
   // B5: the ground the header scrim dissolves into — the same condition the
   // shell's own background reads four lines below, so the strip can never
@@ -852,12 +859,27 @@ export default function App() {
           color: C.ink,
         }}
       >
-        <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.title, fontWeight: 650 }}>
-          {needsSetup ? S.appName : viewTab === 'book' ? S.tabBook : viewTab === 'entry' ? S.tabEntry : S.tabInbox}
+        {/* R9: the capture flow's own screens (receipt, statement, dictation) get a
+            48px ← back to the entry sheet, and their own name as the title. */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          {captureMode && (
+            <button onClick={leaveCapture} aria-label={S.back}
+              style={{ ...glass('chip'), minHeight: TAP, minWidth: TAP, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink, fontSize: TYPE.section, flexShrink: 0 }}>
+              <span aria-hidden>{DIR === 'rtl' ? '→' : '←'}</span>
+            </button>
+          )}
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.title, fontWeight: 650, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {needsSetup ? S.appName
+              : captureMode === 'receipt' ? S.receiptTitle
+                : captureMode === 'batch' ? S.batchTitle
+                  : captureMode === 'dictate' ? S.dictateTitle
+                    : viewTab === 'book' ? S.tabBook : viewTab === 'entry' ? S.tabEntry : S.tabInbox}
+          </span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {!needsSetup && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
-          {!needsSetup && <RefreshButton state={reading > 0 ? 'busy' : refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
+          {/* R9: a capture screen's header is ← + its name only (G05–G07) — the title needs the room. */}
+          {!needsSetup && !captureMode && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
+          {!needsSetup && !captureMode && <RefreshButton state={reading > 0 ? 'busy' : refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
         </span>
       </header>
 

@@ -75,6 +75,7 @@ export const AR = {
   willSendOnline: 'هيتسجل لما النت يرجع',
   savedUndo: 'اتحفظ ✓',
   undo: 'رجوع',
+  recategorize: 'غيّر النوع لو غلط', // a filed card can still be corrected
   reviewLikely: 'غالبًا:', // v4 P6
   reviewOrElse: 'ولا…',
   reviewSkip: 'سيبها لبعدين',
@@ -124,6 +125,9 @@ export const AR = {
   // ——— الإملاء (A5): دوس على الميكروفون بتاع الكيبورد وقول المبلغ والحاجة.
   dictateShort: '🎙 بالصوت',
   dictateTitle: 'قول المصروف',
+  receiptTitle: 'فاتورة', // G05 header (R9)
+  batchTitle: 'راجع الكشف', // G06 header (R9)
+  back: 'رجوع للتسجيل',
   dictateBody: 'دوس على الميكروفون في الكيبورد وقول المبلغ والحاجة — زي «٥٠ جنيه قهوة».',
   dictatePlaceholder: '٥٠ جنيه قهوة',
   dictateSend: 'سجّل',

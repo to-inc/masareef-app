@@ -172,6 +172,31 @@ try {
       `E010 positive control FAILED — fill:both did not push the sheet under the bar (onSave=${c.onSave} sheet@${c.bottom}); the guard is blind`);
   }
 
+  // ═══ R9 — THE CAPTURE SCREENS' ← HEADER, driven for real ═══
+  // A name used and never imported (TAP) crashed the dictation screen and no
+  // render suite could see it — none mounts the shell in these modes. So walk
+  // them: open each from the sheet, see «← name», go back, and fail on ANY
+  // page error along the way.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    await ctx.addInitScript(() => localStorage.setItem('masareef.lang', 'en'));
+    const pg = await ctx.newPage();
+    const errs = []; pg.on('pageerror', (e) => errs.push(e.message));
+    await pg.goto(url, { waitUntil: 'networkidle' });
+    for (const [mode, name, title] of [['dictate', /Say it/, 'Say the expense'], ['receipt', /Receipt/, 'Receipt']]) {
+      await pg.getByRole('button', { name: /^New$/ }).first().click(); await pg.waitForTimeout(500);
+      await pg.locator('[role=dialog]').getByRole('button', { name }).first().click(); await pg.waitForTimeout(600);
+      if (errs.length) { ok(false, `R9 [${mode}] opening it threw: ${JSON.stringify(errs)}`); break; }
+      const head = await pg.evaluate(() => document.querySelector('header')?.innerText || '');
+      ok(head.includes(title) && /[←→]/.test(head), `R9 [${mode}] the screen opens under «← ${title}» (got ${JSON.stringify(head.slice(0, 40))})`);
+      await pg.getByRole('button', { name: /^Back to the entry$/ }).click(); await pg.waitForTimeout(500);
+      ok(await pg.evaluate(() => !!document.querySelector('[role=dialog]')), `R9 [${mode}] ← returns to the entry sheet`);
+      await pg.locator('[role=dialog]').getByRole('button', { name: /^Close$/ }).first().click(); await pg.waitForTimeout(300);
+    }
+    ok(errs.length === 0, `R9 no page error walking the capture screens — got ${JSON.stringify(errs)}`);
+    await ctx.close();
+  }
+
   // ═══ E-003 / E-004 — THE NEW SCREEN'S KEYPAD AND ITS SECOND QUESTION ═══
   // With a «like before» card (every visit after his first entry), «0» and «⌫»
   // sat 44px under the pinned Save bar; and the bar asked «choose a category»
