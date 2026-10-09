@@ -566,6 +566,8 @@ export const GLASS_DIVIDER = `1px solid ${W(0.6)}`;
 
 /** v4 P5 — the undo toast's action, and a row still on the phone (sand wash). */
 export const TOAST_ACTION_BG = W(0.16);
+/** A text field's edge on white — muted at .8, 3.71:1 (WCAG 1.4.11 wants 3:1; .7 gave a bare 3.04). C.line was ≈1.3:1. */
+export const FIELD_EDGE = alpha(C.muted, 0.8);
 /** v4 P8 — loading placeholders: warm blocks that hold the layout steady. Not text. */
 export const SKELETON = { strong: '#ECE5D8', row: '#F0EBE1', faint: '#F4F0E8' };
 export const PHONE_ROW_BG = `linear-gradient(90deg, ${alpha(C.sand, 0)}, ${alpha(C.sand, 0.5)})`;

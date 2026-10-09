@@ -34,7 +34,7 @@
  * the SAME token by reference — a declared size that cannot drift from the
  * size the component actually renders.
  */
-import { C, METHOD, TYPE, GLASS, GROUND_PIXELS, NAV, SHEET } from '../src/theme.js';
+import { C, METHOD, TYPE, GLASS, GROUND_PIXELS, NAV, SHEET, FIELD_EDGE } from '../src/theme.js';
 
 let pass = 0;
 const failures = [];
@@ -446,6 +446,13 @@ ok_composite: {
   const clear = over('rgba(255,255,255,0.05)', d), card = over(thinnest(GLASS.card.bg), d);
   if (luminance(clear) < luminance(card)) pass++;
   else failures.push('A4 control FAILED: compositing ignores the tier alpha — the glass measurement is blind');
+}
+
+// ——————————————————————— G08: a text field's edge on white (WCAG 1.4.11 — a GATE).
+{
+  const edge = FIELD_EDGE.match(/[\d.]+/g).map(Number);
+  const hex = '#' + [0, 1, 2].map((i) => Math.round(edge[i] * edge[3] + 255 * (1 - edge[3])).toString(16).padStart(2, '0')).join('');
+  checkUi('G08 text-field edge on the white field and card (FIELD_EDGE composited)', hex, C.card);
 }
 
 // ——————————————————————— every token must be measured somewhere.

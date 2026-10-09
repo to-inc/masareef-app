@@ -70,9 +70,11 @@ textarea {
   outline-offset: 2px;
 }
 
-.catchip:active,
-.bigbtn:active,
-.quickchip:active {
+/* A disabled control never «presses» — a greyed «سجّل» that shrinks under a
+   thumb reads as having done something. */
+.catchip:not(:disabled):active,
+.bigbtn:not(:disabled):active,
+.quickchip:not(:disabled):active {
   transform: scale(0.96);
 }
 

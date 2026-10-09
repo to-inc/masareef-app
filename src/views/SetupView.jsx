@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, RADIUS, TYPE } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS, TYPE, glass, GRADIENT, FIELD_EDGE } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { LangToggle } from '../components/Primitives.jsx';
 import { probe } from '../api/client.js';
@@ -51,10 +51,13 @@ export default function SetupView({ onDone }) {
     }
   };
 
+  // G08 (v4 tokens): solid white fields — text he types goes on paper, not glass —
+  // with an edge that clears 3:1 against them (WCAG 1.4.11). The old C.line edge
+  // measured ~1.3:1: on a phone in daylight the boxes were barely there.
   const field = {
-    width: '100%', padding: '14px 14px', borderRadius: RADIUS.row,
-    border: `1.5px solid ${C.line}`, background: C.card, color: C.ink,
-    fontSize: 16, outline: 'none', marginTop: 6,
+    width: '100%', boxSizing: 'border-box', padding: '14px 14px', borderRadius: RADIUS.row,
+    border: `1.5px solid ${FIELD_EDGE}`, background: C.card, color: C.ink,
+    fontSize: TYPE.body, outline: 'none', marginTop: 6,
   };
 
   return (
@@ -63,12 +66,16 @@ export default function SetupView({ onDone }) {
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
         <LangToggle subtle />
       </div>
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk }}>
+      {/* G08 (v4): titles are ink at TYPE.title, as on every v4 screen. */}
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.title, fontWeight: 650, color: C.ink }}>
         {S.setupTitle}
       </div>
-      <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, margin: '8px 0 18px' }}>
+      <p style={{ fontSize: TYPE.label, color: C.muted, lineHeight: 1.7, margin: '8px 0 18px' }}>
         {S.setupBody}
       </p>
+
+      {/* G08: the three fields and the action sit on ONE glass card. */}
+      <div style={{ ...glass('card'), padding: '18px 16px 16px' }}>
 
       <label style={{ display: 'block', fontSize: TYPE.label, fontWeight: 600, color: C.muted }}>
         {S.setupUrl}
@@ -131,13 +138,14 @@ export default function SetupView({ onDone }) {
         disabled={state === 'testing'}
         style={{
           marginTop: 18, width: '100%', minHeight: 56, padding: '16px 0', borderRadius: RADIUS.row,
-          background: state === 'testing' ? C.line : C.harbor,
+          background: state === 'testing' ? C.line : GRADIENT.harbor,
           color: state === 'testing' ? C.muted : C.onDark,
           fontSize: TYPE.action, fontWeight: 700,
         }}
       >
         {state === 'testing' ? S.setupTesting : S.setupTest}
       </button>
+      </div>
     </div>
   );
 }

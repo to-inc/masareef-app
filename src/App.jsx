@@ -1077,7 +1077,7 @@ export default function App() {
               <span aria-hidden style={{ width: 40, height: 5, borderRadius: 3, background: SHEET.handle }} />
             </div>
             <div data-sheet-body style={{
-              flex: 1, minHeight: 0, overflowY: 'auto', padding: `6px 20px calc(${SHEET.saveHeight + SHEET.saveBottom + SPACE.gap}px + env(safe-area-inset-bottom))`,
+              flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: `6px 20px calc(${SHEET.saveHeight + SHEET.saveBottom + SPACE.gap}px + env(safe-area-inset-bottom))`,
             }}>
               <EntryView
                     onClose={closeEntry}

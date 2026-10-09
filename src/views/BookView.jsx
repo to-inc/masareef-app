@@ -1025,7 +1025,7 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
           ...glass('sheet'), // the Sheet primitive owns its lip radius
           padding: `6px ${SPACE.gutter}px calc(${SPACE.cardPad}px + env(safe-area-inset-bottom, 0px) + ${RADIUS.sheet}px)`,
           marginBottom: -RADIUS.sheet,
-          maxHeight: '70vh', overflowY: 'auto',
+          maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
           // The lift off the page — an ink-tinted veil, no new hue (§3).
           boxShadow: '0 -12px 32px rgba(44, 67, 86, 0.18)',
         }}

@@ -304,7 +304,7 @@ export default function EditSheet({
             background: C.shell, border: `1px solid ${C.line}`,
             padding: `6px ${SPACE.gutter}px calc(${SPACE.cardPad}px + env(safe-area-inset-bottom, 0px) + ${RADIUS.sheet}px)`,
             marginBottom: -RADIUS.sheet,
-            maxHeight: '82vh', overflowY: 'auto',
+            maxHeight: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
             boxShadow: '0 -12px 32px rgba(44, 67, 86, 0.18)',
           }}
         >

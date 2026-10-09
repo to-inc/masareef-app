@@ -72,6 +72,24 @@ ok(threw, 'glass() refuses an unknown tier rather than returning a plausible not
   }
 }
 
+// ——————————————————————————————————— 1c. overlays contain their scroll; disabled never presses
+{
+  // Every scrolling OVERLAY (a capped sheet, or the entry sheet's body) contains
+  // its scroll — past its end, a drag must not move the screen behind it.
+  const overlays = [];
+  for (const p of files) {
+    readFileSync(p, 'utf8').split('\n').forEach((l, i) => {
+      if (/overflowY: 'auto'/.test(l) && /maxHeight|SHEET\.saveHeight/.test(l)) overlays.push([rel(p), i + 1, l]);
+    });
+  }
+  ok(overlays.length >= 4, `the four scrolling overlays are found (got ${overlays.length})`);
+  const leaky = overlays.filter(([, , l]) => !/overscrollBehavior: 'contain'/.test(l)).map(([f, n]) => `${f}:${n}`);
+  ok(leaky.length === 0, `a scrolling overlay must set overscrollBehavior: 'contain' — leaks at ${leaky.join(', ')}`);
+  const css = readFileSync(join(HERE, '..', 'src', 'styles.css'), 'utf8');
+  ok(/\.bigbtn:not\(:disabled\):active/.test(css) && !/^\.bigbtn:active/m.test(css),
+    'a disabled control never «presses» — the press scale excludes :disabled');
+}
+
 // ——————————————————————————————————— 2. frost is a real factor, not a dead token (R10)
 const px = (s) => Number((s.backdropFilter.match(/blur\((\d+)px\)/) || [])[1]);
 for (const name of ['card', 'chip', 'chrome', 'advisory']) {
