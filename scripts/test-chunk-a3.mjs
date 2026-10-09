@@ -108,8 +108,9 @@ const theme = read('src/theme.js');
 // advisory radius and did not move. The pin moves WITH the ruling and never
 // ahead of it — that is what makes it a pin rather than a comment.
 // 2026-10-09: `glassWell: 18` joins by OWNER-RULINGS R11 (the pressed well).
-ok(/export const RADIUS = \{ card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18 \}/.test(theme),
-  'A3.V theme.js — RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18 } (§3 + rulings 4, B4; glass scale 2026-08-28; R11), verbatim');
+// 2026-10-09: `sheetTall: 34` joins with the v4 P4 entry sheet's lip.
+ok(/export const RADIUS = \{ card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18, sheetTall: 34 \}/.test(theme),
+  'A3.V theme.js — RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18, sheetTall: 34 } (§3 + rulings 4, B4; R11; v4 P4), verbatim');
 ok(theme.includes('GEOMETRY EXEMPTION'),
   'A3.V theme.js — the GEOMETRY EXEMPTION doctrine is stated by name where the tokens live');
 
@@ -154,8 +155,10 @@ const batch = read('src/views/BatchReviewView.jsx');
   const entry = read('src/views/EntryView.jsx');
   const at = entry.indexOf("{amount || '0'}");
   ok(at !== -1, "A3.P amount display — EntryView still renders the main amount ({amount || '0'}); the site did not vanish");
-  ok(at !== -1 && entry.slice(Math.max(0, at - 900), at).includes('RADIUS.capsule'),
-    'A3.P amount display — its container carries RADIUS.capsule within the enclosing style (the capsule the chunk names)');
+  // v4 P4 RE-CUT: the amount stands bare on the sheet (68px, with a caret) — the
+  // capsule moved to the currency chip right under it, which IS its unit.
+  ok(at !== -1 && /S\.currencyIn\(toggleCurrency\(currency\)\)[\s\S]{0,300}glass\('chip'\)/.test(entry.slice(at)),
+    'A3.P amount display — its unit sits in a glass capsule right under it (v4 P4)');
 }
 
 if (failures.length) {

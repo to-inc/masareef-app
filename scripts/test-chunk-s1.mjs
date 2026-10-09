@@ -80,7 +80,7 @@ const header = app.slice(app.indexOf('<header'), app.indexOf('</header>'));
 ok(header.length > 0, 'S1.1 the header is findable in App.jsx');
 // v4 P3 RE-CUT (2026-10-09): the header is title · cog · sync pill. The date left
 // with the harbor slab; «صرفت النهاردة» names the day's figure where it stands.
-ok(/tab === 'book' \? S\.tabBook/.test(header),
+ok(/viewTab === 'book' \? S\.tabBook/.test(header),
   'S1.2 the header names the screen (v4 P3) — the title floats where the date and wordmark were');
 ok(/<SettingsCog/.test(header),
   'S1.3 the cog rides the header — the door into settings is on every screen');

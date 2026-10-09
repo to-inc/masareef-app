@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import {
-  C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, SPACE, unitSize,
+  C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, SPACE, unitSize, glass, GRADIENT, SELECTED_TINT, SHEET,
 } from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { repeatChips } from '../state/repeats.js';
 import { isTravelling, toggleCurrency, HOME_CURRENCY } from '../state/travel.js';
 import { METHODS } from '../state/entryPayload.js';
 import { entryDefaultMethod } from '../state/settings.js';
-import { S, categoryLabel } from '../i18n/strings.js';
+import { S, categoryLabel, unitFor } from '../i18n/strings.js';
 import { normalizeDigits } from '../lib/format.js';
-import { entryReady, dockState, pressKey } from '../state/entryDock.js';
+import { entryReady, pressKey } from '../state/entryDock.js';
 import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx';
 
 /**
@@ -70,80 +70,10 @@ import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx
  * and the unit is stated — every remembered entry is EGP by construction
  * (state/repeats.js refuses anything else), so the unit is the pound, named.
  */
-/**
- * E-003/E-004 — THE NUMBER BOX'S BUDGET. The keypad's last row («0», «⌫») must
- * end above the pinned Save bar at scroll 0 on a 375×812 phone, AND the bar
- * carries a fixed-height row (the hint, then the category chips) that never
- * grows under his finger. That is ~27px more than the box had; it comes out
- * of spacing (12→8 inside the box, 8→6 between keys), never out of a target:
- * keys stay at TAP. Enforced in scripts/test-layout.mjs.
- */
-const NUMBER_GAP = 8;
-
-function LikeBeforeCard({ entry, onFill }) {
-  return (
-    <button
-      className="likecard catchip"
-      onClick={() => onFill(entry)}
-      style={{
-        /* E-003: ONE LINE, not two. The two-line card (82px) pushed the
-           keypad's last row — «0» and «⌫» — 44px under the pinned Save bar,
-           on every visit after his first entry. Label and entry now share a
-           row (long descriptions still wrap); N3's card shape is unchanged. */
-        display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap',
-        width: '100%', textAlign: 'start',
-        minHeight: TAP, padding: '10px 16px',
-        background: C.card, borderRadius: RADIUS.card,
-        border: `1px solid ${C.line}`, color: C.ink,
-      }}
-      dir="auto"
-    >
-      <span
-        style={{
-          fontSize: TYPE.label, fontWeight: 600, color: C.muted,
-        }}
-      >
-        {S.entryRepeats}
-      </span>
-      <span
-        style={{
-          display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap',
-          fontSize: TYPE.row, fontWeight: 700,
-        }}
-      >
-        {/* His own descriptions are Arabic; direction decided per run. */}
-        <span style={ISOLATE} dir="auto">{entry.description}</span>
-        <span style={{ whiteSpace: 'nowrap' }}>
-          <span style={{ ...LATIN, ...NUMERALS }}>{entry.amount}</span>
-          {' '}
-          <span style={{ color: C.muted, fontWeight: 500 }}>{S.currencyName('EGP')}</span>
-        </span>
-        {entry.category ? (
-          <span dir="auto" style={{ color: C.muted, fontWeight: 600 }}>
-            {'· '}{categoryLabel(entry.category)}
-          </span>
-        ) : null}
-      </span>
-    </button>
-  );
-}
-
-/**
- * N4 — one skin for the three mode buttons, stated once so the second and third
- * cannot drift from the first. `flex: 1` shares the row evenly; TYPE.label
- * keeps the words above the prose floor while staying visibly secondary to the
- * TYPE.hero number they sit under; TAP is the senior touch floor — demoted is a
- * place in the hierarchy, never a smaller target.
- */
-const MODE_STYLE = {
-  flex: 1, minHeight: TAP, padding: '0 10px', borderRadius: RADIUS.row,
-  background: C.card, border: `1px solid ${C.line}`, color: C.ink,
-  fontSize: TYPE.label, fontWeight: 600, whiteSpace: 'nowrap',
-};
 
 export default function EntryView({
   amount, setAmount, desc, setDesc, cat, setCat, method, setMethod, onCamera,
-  currency = HOME_CURRENCY, setCurrency, onDictate,
+  currency = HOME_CURRENCY, setCurrency, onDictate, onClose = null,
 }) {
   // Opened once, stays open for the visit. Collapsing it back under him between
   // entries is the shape-changing-while-you-reach problem the Inbox avoids too.
@@ -221,352 +151,223 @@ export default function EntryView({
     // before the trip forced Card, and only his own tap moves it again.
   }, [travelling]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * v4 P4 (R17) — THE SHEET'S BODY, thumb-first, top to bottom:
+   *   ✕ · the «زي امبارح» repeat chip
+   *   the amount (68, with a harbor caret) · currency / mic / camera, 48px each
+   *   cash | card in a pressed well · the category chips · the keypad
+   * The amber «سجّل» is NOT here: EntryDock pins it at the safe-area bottom,
+   * and it carries the amount and category, so no summary line is drawn.
+   */
   return (
-    /**
-     * N5 — the screen is a column of boxed sections with ONE stated gap
-     * (SPACE.cardPad, the 16–20px the north star names), ending on a
-     * SPACE.section breath so the last chips never sit flush against the dock.
-     */
-    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.cardPad, paddingBottom: SPACE.section }}>
-      {/* N3 — the fastest complete action, first, when it honestly exists. */}
-      {last && <LikeBeforeCard entry={last} onFill={fill} />}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        {onClose ? (
+          <button onClick={onClose} aria-label={S.settingsClose}
+            style={{ minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule, background: 'transparent', color: C.muted, fontSize: TYPE.section }}>
+            ✕
+          </button>
+        ) : <span />}
+        {last ? (
+          <button className="likecard catchip" onClick={() => fill(last)}
+            style={{ ...glass('chip'), minHeight: TAP, padding: '0 16px 0 14px', display: 'flex', alignItems: 'center', gap: 8,
+              color: C.ink, fontSize: TYPE.label, fontWeight: 600, maxWidth: '78%' }}>
+            <span style={{ whiteSpace: 'nowrap' }}>{S.likeYesterday}:</span>
+            <span style={{ ...ISOLATE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dir="auto">{last.description}</span>
+            <b style={{ ...LATIN, ...NUMERALS }}>{last.amount}</b>
+          </button>
+        ) : null}
+      </div>
 
-      {/**
-        * SECTION ONE — THE NUMBER. Rail of accelerators, the hero capsule, the
-        * input modes, the keypad: everything that produces the amount, in one
-        * white box (A2: no border, no shadow — luminance carries it).
-        */}
-      <section style={{ background: C.card, borderRadius: RADIUS.card, padding: SPACE.cardPad }}>
-        {/**
-          * The label only when the card is not already saying it: a second
-          * «زي قبل كده» four lines under the first is a heading talking to a
-          * heading. Travelling (no repeats at all) keeps the short title.
-          */}
-        {!last && (
-          <SectionLabel>{repeats.length ? S.entryRepeats : S.entryTitleShort}</SectionLabel>
-        )}
-        {/**
-          * ONE ROW, scrolled sideways — not a wrap (S2). These are ACCELERATORS:
-          * his own last entries with their amounts (finding A3), padded with the
-          * hand-written presets so a fresh install is never bare. A chip FILLS —
-          * through the same `fill` as the card — it does not submit.
-          */}
-        {repeats.length > 0 && (
-          <Rail style={{ gap: 7, marginBottom: NUMBER_GAP, paddingBottom: 2 }}>
-            {repeats.map((q) => (
-              <button
-                key={`${q.description}|${q.method}`}
-                className="quickchip"
-                onClick={() => fill(q)}
-                aria-pressed={desc === q.description}
-                style={{
-                  padding: '9px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
-                  flex: '0 0 auto', whiteSpace: 'nowrap',
-                  background: desc === q.description ? C.mist : C.card,
-                  border: `1px solid ${desc === q.description ? C.harbor : C.line}`,
-                  color: desc === q.description ? C.harbor : C.ink,
-                  fontWeight: 600,
-                }}
-                dir="auto"
-              >
-                {/* His own descriptions are Arabic and the presets are Latin, so
-                    the direction is decided per chip rather than forced. */}
-                <span style={ISOLATE} dir="auto">{q.description}</span>
-                {q.amount != null && (
-                  <>
-                    {' '}
-                    <span style={{ color: C.muted, fontWeight: 500, ...LATIN, ...NUMERALS }}>
-                      {q.amount}
-                    </span>
-                  </>
-                )}
-              </button>
-            ))}
-          </Rail>
-        )}
+      {/* First visits have no «yesterday» — the quick descriptions stand in for it. */}
+      {!last && repeats.length > 0 && (
+        <Rail style={{ gap: 7, paddingBottom: 2 }}>
+          {repeats.map((q) => (
+            <button
+              key={`${q.description}|${q.method}`}
+              className="quickchip"
+              onClick={() => fill(q)}
+              aria-pressed={desc === q.description}
+              style={{
+                ...glass('chip'), ...(desc === q.description ? { background: SELECTED_TINT } : null),
+                padding: '0 14px', minHeight: TAP, fontSize: TYPE.label, flex: '0 0 auto', whiteSpace: 'nowrap',
+                color: C.ink, fontWeight: desc === q.description ? 700 : 600,
+              }}
+              dir="auto"
+            >
+              <span style={ISOLATE} dir="auto">{q.description}</span>
+              {q.amount != null && (<>{' '}<span style={{ color: C.muted, fontWeight: 500, ...LATIN, ...NUMERALS }}>{q.amount}</span></>)}
+            </button>
+          ))}
+        </Rail>
+      )}
 
-        {/**
-          * THE EMPTY AMOUNT IS `muted`, NOT `line` (finding S2) — the number is
-          * this screen's one subject and must be visible before he types it.
-          * TYPE.hero with its unit at unitSize(TYPE.hero) — the §3 anatomy.
-          *
-          * THE CAPSULE CONTAINER (A3's named pin, vis-F6): the number sits in a
-          * soft full-round surface — RADIUS.capsule. Inside a white section the
-          * luminance step INVERTS: the capsule is a shell-coloured well in the
-          * card, the same one-step elevation grammar read the other way up.
-          */}
+      <div style={{ textAlign: 'center', padding: '2px 0' }}>
         <div
-          style={{
-            textAlign: 'center', fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: TYPE.hero, fontWeight: 650,
-            color: amount ? C.ink : C.muted, padding: '8px 16px',
-            background: C.shell, borderRadius: RADIUS.capsule,
-          }}
+          data-amount
+          // What the muted «0» SHOWS, said to VoiceOver in words.
+          aria-label={amount ? undefined : S.entryNeedAmount}
+          style={{ fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: TYPE.amountEntry, fontWeight: 650, lineHeight: 1, color: amount ? C.ink : C.muted }}
           dir="ltr"
         >
-          {amount || '0'} <span style={{ fontSize: unitSize(TYPE.hero), color: C.muted }}>{S.currencyName(currency)}</span>
+          {amount || '0'}
+          {/* the harbor caret (v4 P4) — a 3px capsule */}
+          <span aria-hidden style={{ display: 'inline-block', width: 3, height: '0.8em', background: C.harbor, marginLeft: 4, verticalAlign: '-0.05em', borderRadius: RADIUS.capsule }} />
         </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+          {/* The unit IS this chip — every amount names its unit (v4); tapping it switches currency. */}
+          <button
+            className="catchip"
+            onClick={setCurrency ? () => setCurrency(toggleCurrency(currency)) : undefined}
+            disabled={!setCurrency}
+            aria-pressed={isTravelling(currency)}
+            aria-label={setCurrency ? S.currencyIn(toggleCurrency(currency)) : S.currencyName(currency)}
+            style={{ ...glass('chip'), ...(isTravelling(currency) ? { background: SELECTED_TINT } : null),
+              minHeight: TAP, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 6, color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}
+          >
+            {unitFor(currency)}
+            {setCurrency && <span aria-hidden style={{ color: C.muted }}>▾</span>}
+          </button>
+          {onDictate && (
+            <button className="catchip" onClick={onDictate} aria-label={S.dictateShort}
+              style={{ ...glass('chip'), minHeight: TAP, minWidth: TAP, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink }}>
+              <MicIcon />
+            </button>
+          )}
+          {onCamera && (
+            <button className="catchip" onClick={onCamera} aria-label={S.receiptShort}
+              style={{ ...glass('chip'), minHeight: TAP, minWidth: TAP, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink }}>
+              <CameraIcon />
+            </button>
+          )}
+        </div>
+      </div>
 
-        {/**
-          * N4 — THE INPUT MODES, under the number they serve. Dictation (A5:
-          * the keyboard's own mic, since Web Speech is broken in standalone),
-          * the currency switch (A4: always visible, states the unit he is IN —
-          * the 2026-08-25 ruling), and the receipt camera (M1: a receipt is a
-          * way of making an entry, not a place). Icon PLUS word, each of them;
-          * each offered only where its handler exists — a dead control is
-          * worse here than none, because this row would make it look chosen.
-          */}
-        {(onDictate || setCurrency || onCamera) && (
-          <div style={{ display: 'flex', gap: SPACE.gap, marginTop: NUMBER_GAP }}>
-            {onDictate && (
-              <button className="catchip" onClick={onDictate} style={MODE_STYLE}>
-                {S.dictateShort}
-              </button>
-            )}
-            {setCurrency && (
-              <button
-                className="catchip"
-                onClick={() => setCurrency(toggleCurrency(currency))}
-                aria-pressed={isTravelling(currency)}
-                style={{
-                  ...MODE_STYLE,
-                  background: isTravelling(currency) ? C.harbor : C.card,
-                  border: `1px solid ${isTravelling(currency) ? C.harbor : C.line}`,
-                  color: isTravelling(currency) ? C.onDark : C.ink,
-                }}
-              >
-                <span aria-hidden="true">💱</span> {S.currencyIn(currency)}
-              </button>
-            )}
-            {onCamera && (
-              <button className="catchip" onClick={onCamera} style={MODE_STYLE}>
-                {S.receiptShort}
-              </button>
-            )}
-          </div>
+      <div style={{ display: 'flex', ...glass('well'), borderRadius: RADIUS.capsule, padding: 4, gap: 4 }} role="group" aria-label={S.entryMethod}>
+        {METHODS.map((m) => (
+          <button
+            key={m}
+            className="catchip"
+            onClick={() => setMethod(m)}
+            aria-pressed={method === m}
+            style={{
+              flex: 1, minHeight: TAP, fontSize: TYPE.body,
+              ...(method === m ? glass('raised') : { background: 'transparent', borderRadius: RADIUS.capsule }),
+              color: method === m ? C.ink : C.muted, fontWeight: method === m ? 700 : 600,
+            }}
+          >
+            {methodLabel(m)}
+          </button>
+        ))}
+      </div>
+
+      {/* One swipeable row (the Rail's edge fade says it continues) — six wrapped
+          chips made the sheet too tall for «0» to clear «سجّل» (the E-003 law).
+          «كل الأنواع» unfolds the full list below as a wrapped grid. */}
+      <Rail role="group" aria-label={cat ? categoryLabel(cat) : S.entryNeedCategory} style={{ gap: 8, paddingBottom: 2, flexWrap: showAll ? 'wrap' : 'nowrap' }}>
+        {(showAll ? CATEGORIES : SHORT_LIST).concat(!showAll && cat && SHORT_LIST.indexOf(cat) === -1 ? [cat] : []).map((c) => (
+          <button
+            key={c}
+            className="catchip"
+            onClick={() => setCat(cat === c ? null : c)}
+            aria-pressed={cat === c}
+            style={{
+              ...glass('chip'),
+              ...(cat === c ? { background: SELECTED_TINT, border: SHEET.pickedRim } : null),
+              padding: '0 16px', minHeight: TAP, fontSize: TYPE.body, fontWeight: cat === c ? 700 : 600,
+              color: C.ink, display: 'inline-flex', alignItems: 'center', flex: '0 0 auto', whiteSpace: 'nowrap', ...ISOLATE,
+            }}
+            dir="auto"
+          >
+            {cat === c ? '✓ ' : ''}{categoryLabel(c)}
+          </button>
+        ))}
+        {!showAll && (
+          <button
+            className="catchip"
+            onClick={() => setShowAll(true)}
+            style={{
+              padding: '0 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
+              background: 'transparent', border: `1px dashed ${C.harbor}`, color: C.harborInk, fontWeight: 600,
+              flex: '0 0 auto', whiteSpace: 'nowrap',
+            }}
+          >
+            {S.more}
+          </button>
         )}
+      </Rail>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: NUMBER_GAP }} dir="ltr">
-          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((k) => (
-            <button
-              key={k}
-              className="catchip"
-              onClick={() => press(k)}
-              aria-label={k === '⌫' ? S.keypadBackspace : k}
-              style={{
-                padding: '10px 0', minHeight: TAP, fontSize: TYPE.section, fontWeight: 600,
-                borderRadius: RADIUS.row, background: C.card, border: `1px solid ${C.line}`, color: C.ink,
-              }}
-            >
-              {k}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/**
-        * SECTION TWO — THE ROW'S WORDS: how he paid, and what it was. The
-        * method chooser follows the number now (dockState asks for the amount
-        * first, so the screen agrees with the dock's own order).
-        */}
-      <section style={{ background: C.card, borderRadius: RADIUS.card, padding: SPACE.cardPad }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: SPACE.gap }} role="group" aria-label={S.entryMethod}>
-          {METHODS.map((m) => (
-            <button
-              key={m}
-              className="catchip"
-              onClick={() => setMethod(m)}
-              aria-pressed={method === m}
-              style={{
-                flex: 1, minHeight: TAP, padding: '12px 0', borderRadius: RADIUS.row,
-                fontSize: TYPE.row, fontWeight: 700,
-                background: method === m ? C.harbor : C.card,
-                color: method === m ? C.onDark : C.ink,
-                border: `1px solid ${method === m ? C.harbor : C.line}`,
-              }}
-            >
-              {methodLabel(m)}
-            </button>
-          ))}
-        </div>
-
-        {/**
-          * SIX AND «أنواع تانية…», which is the shape the Inbox card already uses.
-          *
-          * It was `CATEGORIES.slice(0, 12)` — five rows, 272px, of which one row
-          * cleared the fold. Six is two rows, it fits above the pinned button, and
-          * the chosen one is always visible whichever list is showing. The full
-          * twenty-seven are one tap away and stay open once opened.
-          */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {(showAll ? CATEGORIES : SHORT_LIST).map((c) => (
-            <button
-              key={c}
-              className="catchip"
-              onClick={() => setCat(cat === c ? null : c)}
-              aria-pressed={cat === c}
-              style={{
-                padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
-                background: cat === c ? C.harbor : C.card,
-                color: cat === c ? C.onDark : C.ink,
-                border: `1px solid ${cat === c ? C.harbor : C.line}`,
-                /* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is categoryLabel(c) — the category chip, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */
-                ...ISOLATE,
-              }}
-              dir="auto"
-            >
-              {cat === c ? '✓ ' : ''}{categoryLabel(c)}
-            </button>
-          ))}
-          {/**
-            * The chosen category must never be hidden by the list it is not in. A
-            * quick chip can set a category outside the six (Taqa → Elect. Recharge),
-            * and «النوع» disappearing the moment he picks it is the P1 bug from the
-            * receipt card, spelled on another screen.
-            */}
-          {!showAll && cat && SHORT_LIST.indexOf(cat) === -1 && (
-            <button
-              className="catchip"
-              onClick={() => setCat(null)}
-              aria-pressed
-              style={{
-                padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.body, fontWeight: 600,
-                /* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is categoryLabel(cat) — the selected category, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */
-                background: C.harbor, color: C.onDark, border: `1px solid ${C.harbor}`, ...ISOLATE,
-              }}
-              dir="auto"
-            >
-              ✓ {categoryLabel(cat)}
-            </button>
-          )}
-          {!showAll && (
-            <button
-              className="catchip"
-              onClick={() => setShowAll(true)}
-              style={{
-                padding: '11px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
-                background: 'transparent', border: `1px dashed ${C.harbor}`,
-                color: C.harborInk, fontWeight: 600,
-              }}
-            >
-              {S.more}
-            </button>
-          )}
-        </div>
-      </section>
+      {/* R7: the keypad is a digit grid, so it is deliberately dir="ltr"; ⌫ sits bottom-right beside the digit it deletes. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }} dir="ltr">
+        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((k) => (
+          <button
+            key={k}
+            className="catchip key"
+            onClick={() => press(k)}
+            aria-label={k === '⌫' ? S.keypadBackspace : k}
+            style={{
+              ...glass('chip'), borderRadius: RADIUS.glassWell,
+              minHeight: 56, fontSize: k === '⌫' ? TYPE.title : TYPE.key, fontWeight: 500,
+              color: k === '⌫' ? C.muted : C.ink,
+            }}
+          >
+            {k}
+          </button>
+        ))}
+      </div>
     </div>
+  );
+}
+
+/** v4 P4 — the mic and the camera, 22px stroke icons. Verbatim from the artboard. */
+function MicIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false">
+      <rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </svg>
+  );
+}
+function CameraIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" />
+    </svg>
   );
 }
 
 /**
- * THE PINNED SUBMIT (finding S1) — rendered by the shell, not by the scroll.
- *
- * It lives in THIS file rather than in App.jsx for a reason the suite enforces:
- * the warm accent token is licensed at most ONCE PER VIEW FILE (Planner 4's
- * per-screen reading), and the reference below is this screen's once
- * (scripts/test-contrast.mjs counts them by name, so this sentence deliberately
- * does not spell it). The one warm action on this screen is the one that writes
- * a row to his book; moving the button to another file would have carried the
- * accent with it and quietly relicensed it for general use.
- *
- * ONE VERB, BOTH STATES (A9, north-star §4.1). The button's label is `S.entryLog`
- * and nothing else, in every state — resting, ready, even mid-save. A button that
- * narrates its precondition is a system talking; what changes between states is
- * the FILL and the INK (sand+muted resting → amber+rim ready), which is how a
- * physical control says «not yet» without changing what it is for.
- *
- * WHAT IT SAYS STILL MATTERS — it moved, it did not die. `dockState` names the
- * step he is missing and the STATUS LINE above the button states it («اكتب
- * المبلغ» → «اختار النوع»), so a resting button is never a puzzle about which of
- * two things is absent. When the entry is ready the same line echoes the whole
- * row — amount, currency, category — the last chance to notice a wrong category
- * before it is a row in his book. That line is where «جارٍ الحفظ…» lives too: a
- * write in flight is a fact about the ENTRY, not a new name for the button.
+ * v4 P4 (R17) — THE AMBER «سجّل», pinned at the safe-area bottom of the sheet.
+ * Ready, it REPEATS the amount and the category («سجّل 240 ج.م · Eating out»),
+ * so the summary line that sat above it is gone (R17).
+ * At rest — and while a write is in flight — it says only its verb (A9 stands:
+ * a button never narrates its own precondition). What is missing is already on
+ * the sheet: the muted «0», and no ✓ on any category.
  */
-export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENCY, setCat = null }) {
-  const state = dockState({ amount, cat });
+export function EntryDock({ amount, cat, onSubmit, busy, currency = HOME_CURRENCY }) {
   const ready = entryReady({ amount, cat, busy });
-
-  const status = busy ? S.saving
-    : state === 'needAmount' ? S.entryNeedAmount
-      : state === 'needCategory' ? S.entryNeedCategory
-        : (
-          <>
-            <span style={LATIN}>{amount}</span> {S.currencyName(currency)}
-            {' · '}<span dir="auto">{categoryLabel(cat)}</span>
-          </>
-        );
-
   return (
-    <div
+    <button
+      className="bigbtn"
+      disabled={!ready}
+      onClick={onSubmit}
+      aria-busy={busy ? 'true' : undefined}
       style={{
-        flexShrink: 0, padding: '6px 16px 10px', background: C.shell,
-        borderTop: `1px solid ${C.line}`,
+        width: '100%', minHeight: SHEET.saveHeight, borderRadius: RADIUS.capsule,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap',
+        ...(ready
+          ? { background: GRADIENT.amber, border: `1px solid ${C.amberRim}`, color: C.amberInk, boxShadow: SHEET.saveCast }
+          : { ...glass('chip'), color: C.muted }),
+        fontSize: TYPE.action, fontWeight: 700, ...NUMERALS,
       }}
     >
-      {/**
-        * E-004 — THE QUESTION AND ITS ANSWERS IN ONE PLACE. The bar said
-        * «choose a category» while every category chip sat below the keypad,
-        * 100px+ under the fold: the screen's second decision was never on the
-        * screen. While the bar asks, it carries his six usual categories itself;
-        * the full list stays below for anything else.
-        */}
-      {/* The narration, beside the button — never on it. `aria-live` sits here
-          because this is the text that changes; the verb below never does. */}
-      <div
-        aria-live="polite"
-        style={{
-          // E-004: ONE FIXED-HEIGHT SLOT for the hint and, while the bar asks
-          // for a category, the chips themselves — so the bar never grows and
-          // never covers a key mid-amount.
-          minHeight: TAP, marginBottom: 4, display: 'flex', alignItems: 'center',
-          justifyContent: 'center', textAlign: 'center',
-          fontSize: TYPE.label, color: C.muted, fontWeight: 600, ...NUMERALS,
-        }}
-      >
-        {state === 'needCategory' && !busy && setCat ? (
-          <Rail style={{ gap: 7, width: '100%' }}>
-            {SHORT_LIST.map((c) => (
-              <button
-                key={c}
-                className="catchip"
-                onClick={() => setCat(c)}
-                style={{
-                  padding: '9px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
-                  fontWeight: 600, flex: '0 0 auto', whiteSpace: 'nowrap',
-                  background: C.card, border: `1px solid ${C.line}`, color: C.ink, ...ISOLATE,
-                }}
-                dir="auto"
-              >
-                {categoryLabel(c)}
-              </button>
-            ))}
-          </Rail>
-        ) : status}
-      </div>
-      <button
-        className="bigbtn"
-        disabled={!ready}
-        onClick={onSubmit}
-        style={{
-          width: '100%', minHeight: 52, padding: '11px 0', borderRadius: RADIUS.row,
-          // Sand when resting — a control at rest, not furniture (`line` made
-          // it read as a dead bar); muted ink on it clears 4.10:1 at
-          // TYPE.action bold, above the 3:1 large-text floor.
-          background: ready ? C.amber : C.sand,
-          // The rim, not a darker fill — see theme.js `amberRim`. Amber's edge
-          // against the cream shell is 2.10:1; WCAG 1.4.11 asks 3:1 of the
-          // control's BOUNDARY, which is what this supplies without restating
-          // the Owner's ruled accent.
-          border: `1px solid ${ready ? C.amberRim : C.line}`,
-          color: ready ? C.amberInk : C.muted,
-          fontSize: TYPE.action, fontWeight: 700,
-        }}
-      >
-        {S.entryLog}
-      </button>
-    </div>
+      {S.entryLog}
+      {ready && (
+        <span style={{ fontSize: TYPE.body, fontWeight: 600 }}>
+          <span style={LATIN}>{amount}</span> {unitFor(currency)}{' · '}<span style={ISOLATE} dir="auto">{categoryLabel(cat)}</span>
+        </span>
+      )}
+    </button>
   );
 }
 
-// Re-exported so a caller never writes its own copy of the readiness rule.
 export { entryReady };

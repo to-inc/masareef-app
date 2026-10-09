@@ -135,13 +135,16 @@ try {
   const done = dock({ amount: '60', cat: 'Eating out' });
   const saving = dock({ amount: '60', cat: 'Eating out', busy: true });
 
-  ok(empty.includes(AR.entryNeedAmount), 'with nothing entered it asks for the amount, in words');
-  ok(noCat.includes(AR.entryNeedCategory), 'with an amount it asks for the category');
-  ok(!noCat.includes(AR.entryNeedAmount), 'and stops asking for what it already has');
+  // v4 P4 RE-CUT (R17 deletes the line beside the button; A9 keeps prompts OFF
+  // it): the missing step shows on the SHEET — muted «0», no ✓ (test-chunk-a9
+  // A9.7). The dock itself says only its verb until it can save.
+  ok(empty.includes(AR.entryLog) && !empty.includes(AR.entryNeedAmount), 'with nothing entered it says only its verb — the sheet shows what is missing');
+  ok(noCat.includes(AR.entryLog) && !noCat.includes(AR.entryNeedCategory), 'with an amount, still only its verb');
+  ok(!noCat.includes(AR.entryNeedAmount), 'and never asks for what it already has');
   ok(done.includes('60'), 'when ready it shows the amount…');
   ok(done.includes(L('Eating out')), '…and the category, so the whole row is legible before it is written');
   ok(done.includes(AR.entryLog), '…under the verb');
-  ok(saving.includes(AR.saving), 'a write in flight says so');
+  ok(/aria-busy="true"/.test(saving), 'a write in flight says so — aria-busy on the button (the undo toast, R19, says it on screen)');
 
   // The disabled attribute and the label must agree — they read one value.
   ok(/disabled/.test(empty), 'not ready is disabled');
@@ -154,7 +157,7 @@ try {
    * identically in all three would pass every `includes` above if the strings
    * happened to be substrings of one another.
    */
-  ok(empty !== noCat && noCat !== done && done !== saving, 'four states, four renderings');
+  ok(empty === noCat && noCat !== done && done !== saving, 'resting is one rendering whichever step is missing (A9); ready and saving each differ');
 
   // Re-cut 2026-10 (E-003/E-004): the pin was the literal 58px; the PRINCIPLE
   // is a full-width, one-handed target at or above the tap floor. 58→52 paid
@@ -187,12 +190,15 @@ try {
    * entries now, padded with the old hand-written presets — but the ordering
    * this asserts is the S2 one and is unchanged.
    */
+  // v4 P4 RE-CUT (R17): the sheet reads repeat chip → amount → method → CATEGORIES
+  // → keypad. The categories moved ABOVE the keypad so the thumb picks one before
+  // typing; the keypad stays last, right above «سجّل».
   const iQuick = view.indexOf('repeats.map');
+  const iCats = view.indexOf('SHORT_LIST).concat');
   const iKeys = view.indexOf("'1', '2', '3'");
-  const iCats = view.indexOf('CATEGORIES.slice');
   ok(iQuick > -1 && iKeys > -1 && iCats > -1, 'the three blocks are all still there');
   ok(iQuick < iKeys, 'the one-tap chips are ABOVE the keypad — they set description AND category');
-  ok(iKeys < iCats, 'and the categories follow the keypad, as before');
+  ok(iCats < iKeys, 'and the categories sit above the keypad (v4 P4) — the keypad is last, beside «سجّل»');
 
   // The submit is not in the scrolling body any more.
   ok(/export function EntryDock/.test(view), 'the submit is its own component…');

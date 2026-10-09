@@ -235,7 +235,7 @@ export const NUMERALS = { fontVariantNumeric: 'tabular-nums' };
  * is what «restyle the app to the glass system» has to mean if the vocabulary
  * is doing any work at all.
  */
-export const RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18 }; // glassWell: R11
+export const RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, glassWell: 18, sheetTall: 34 }; // glassWell: R11 · sheetTall: v4 P4
 
 /**
  * Eight reading sizes (§3 + rulings 1–2). Line-height ≥ 1.3 governs PROSE —
@@ -257,7 +257,7 @@ export const RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, gl
  * type does not shrink; come back with evidence if geometry genuinely breaks.
  */
 export const TYPE = {
-  hero: 40, heroBook: 58, display: 34, title: 24, section: 22, action: 19, row: 17, body: 16, label: 15, // heroBook: v4 P3
+  hero: 40, heroBook: 58, amountEntry: 68, display: 34, key: 26, title: 24, section: 22, action: 19, row: 17, body: 16, label: 15, // heroBook: v4 P3
   caption: 13,
 };
 
@@ -543,6 +543,12 @@ export const GLASS = {
   alert:    { bg: `linear-gradient(160deg, ${alpha(C.conflictBg, 0.9)}, ${alpha(C.conflictBg, 0.8)})`, blur: 18,
               rim: alpha(C.conflictLine, 0.95), cast: `0 4px 12px ${alpha(C.conflictInk, 0.08)}`,
               inset: `inset 0 1px 0 ${W(0.8)}`, radius: 'glassWell' },
+  /** The entry SHEET (v4 P4, R17): paper-tinted glass over a dimmed screen. v4 draws
+   *  .62→.48; at .48 the ✕ and the «more» chip measured 3.78/3.96:1 over dimmed dawn.
+   *  .88→.78 is the thinnest that clears 4.5:1 (the Owner's readability ruling, applied
+   *  as for the bar). Measured in test-contrast §P4. */
+  sheet:    { bg: `linear-gradient(180deg, ${alpha(C.shell, 0.88)}, ${alpha(C.shell, 0.78)})`, blur: 34, sat: 180,
+              inset: `inset 0 1px 0 ${W(0.9)}`, radius: 'sheetTall' },
   /** The «اتحفظ ✓ — رجوع» undo toast (R19) — white text on dark glass. */
   toast:    { bg: `linear-gradient(160deg, ${alpha(C.ink, 0.72)}, rgba(31,43,53,.62))`, blur: 24,
               cast: `0 10px 30px ${alpha(C.ink, 0.22)}`, radius: 'capsule' },
@@ -551,6 +557,17 @@ export const GLASS = {
 /** A tier → a React style object. The only way a view gets glass. */
 /** The white highlight line between rows of one glass card (v4 P3) — not a grey rule. */
 export const GLASS_DIVIDER = `1px solid ${W(0.6)}`;
+
+/** v4 P4 — the entry sheet's furniture. */
+export const SHEET = {
+  top: 64,                                   // the sheet's top edge below the status bar
+  dim: alpha('#1F2B35', 0.18),              // the screen behind, dimmed
+  handle: '#CFC8BA',                        // the 40×5 grab bar
+  pickedRim: `1.5px solid ${alpha(C.harbor, 0.75)}`, // a chosen category chip's edge
+  saveBottom: 30,                           // the amber «سجّل» above the home indicator
+  saveHeight: 62,
+  saveCast: `0 12px 28px ${alpha(C.amber, 0.4)}, inset 0 1px 0 ${W(0.55)}`,
+};
 
 export const glass = (tier, f = 1) => {
   const t = GLASS[tier];

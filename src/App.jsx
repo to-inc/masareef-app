@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * transition that looks broken only on the devices that support it.
  */
 import { flushSync } from 'react-dom';
-import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, glass } from './theme.js';
+import { C, FONT_DISPLAY, FONT_UI, GROUND, RADIUS, SPACE, TYPE, NAV, glass, SHEET } from './theme.js';
 import { S, LOCALE } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
@@ -77,6 +77,14 @@ export default function App() {
   const [booted, setBooted] = useState(false);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [tab, setTab] = useState('inbox');
+  /**
+   * v4 P4 (R17): «جديد» is a SHEET over the screen he came from, not a screen
+   * of its own. `underTab` remembers that screen so it stays drawn (dimmed)
+   * behind the sheet, and closing the sheet returns him to it.
+   */
+  const underTab = useRef('book');
+  useEffect(() => { if (tab !== 'entry') underTab.current = tab; }, [tab]);
+  const swipeY = useRef(null); // the sheet's swipe-down start (hooks stay above every early return)
   /**
    * THE ﹢ TAB HAS TWO MODES (finding M1). «فاتورة» was a whole destination
    * holding one button; a receipt is a way of making an entry, not a place, so
@@ -779,6 +787,10 @@ export default function App() {
   // disagree with what is actually there (the badge's one-predicate rule,
   // applied to layout).
   const dockShown = !needsSetup && data && tab === 'entry' && entryMode === 'keypad';
+  // The entry sheet is open exactly when the keypad would have been the screen.
+  const sheetOpen = dockShown;
+  const viewTab = sheetOpen ? underTab.current : tab;
+  const closeEntry = () => setTab(underTab.current);
 
   // B5: the ground the header scrim dissolves into — the same condition the
   // shell's own background reads four lines below, so the strip can never
@@ -822,8 +834,8 @@ export default function App() {
          * built from palette hues instead of one linear ramp.
          */
         background: needsSetup ? GROUND.haze
-          : tab === 'book' ? GROUND.dawn
-          : tab === 'entry' ? GROUND.tide
+          : viewTab === 'book' ? GROUND.dawn
+          : viewTab === 'entry' ? GROUND.tide
           : GROUND.haze,
         fontFamily: FONT_UI,
         color: C.ink,
@@ -845,7 +857,7 @@ export default function App() {
         }}
       >
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.title, fontWeight: 650 }}>
-          {needsSetup ? S.appName : tab === 'book' ? S.tabBook : tab === 'entry' ? S.tabEntry : S.tabInbox}
+          {needsSetup ? S.appName : viewTab === 'book' ? S.tabBook : viewTab === 'entry' ? S.tabEntry : S.tabInbox}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!needsSetup && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
@@ -862,7 +874,7 @@ export default function App() {
           // rise clear of translucent chrome. Exactly when the bar is there:
           // with the EntryDock up its wrapper carries the clearance instead,
           // and the setup screen has no bar to clear at all.
-          padding: !needsSetup && !dockShown
+          padding: !needsSetup
             ? `16px 16px calc(${BAR_CLEARANCE}px + env(safe-area-inset-bottom))`
             : '16px',
         }}
@@ -886,40 +898,12 @@ export default function App() {
                 * territory and deliberately do not re-key — two entrance
                 * systems on one swap is theatre, which is banned.
                 */
-              <div key={tab} className="view-in">
-                {tab === 'inbox' && (
+              <div key={viewTab} className="view-in">
+                {viewTab === 'inbox' && (
                   <InboxView
                     pending={data.pending} settled={settled}
                     onConfirm={confirmPending} onConfirmMany={confirmMany}
                     onEdited={refresh}
-                  />
-                )}
-                {tab === 'entry' && entryMode === 'keypad' && (
-                  <EntryView
-                    amount={entryAmount} setAmount={setEntryAmount}
-                    desc={entryDesc} setDesc={setEntryDesc}
-                    cat={entryCat} setCat={setEntryCat}
-                    method={entryMethod} setMethod={setEntryMethod}
-                    currency={entryCurrency}
-                    /**
-                      * The toggle is offered only where the write can honour it
-                      * — same rule as the dictation button, and for a worse
-                      * reason: a dead control does nothing, this one would post
-                      * a wrong number and report success.
-                      */
-                    setCurrency={supportsCurrency(build, AWAY_CURRENCY)
-                      ? (c) => setStoredCurrency(persistCurrency(c))
-                      : undefined}
-                    onCamera={() => pushDetail(() => setEntryMode('receipt'))}
-                    /**
-                      * SHOWN ONLY IF THE SERVER KNOWS THE VERB. Absent
-                      * capability list ⇒ no button, which is the state of the
-                      * backend serving right now. It lights up on its own the
-                      * moment V20 publishes `voice`; there is no flag to flip.
-                      */
-                    onDictate={supportsAction(build, 'voice')
-                      ? () => pushDetail(() => setEntryMode('dictate'))
-                      : undefined}
                   />
                 )}
                 {tab === 'entry' && entryMode === 'dictate' && (
@@ -963,7 +947,7 @@ export default function App() {
                     onLeave={leaveBatch}
                   />
                 )}
-                {tab === 'book' && (
+                {viewTab === 'book' && (
                   <BookView
                     data={data}
                     settled={settled}
@@ -1042,23 +1026,74 @@ export default function App() {
         * ~200px below the fold on the one screen the five-second law is about.
         * It is a sibling of the tab bar, so it is on screen from the first frame.
         */}
-      {dockShown && (
-        /**
-          * C1: the dock sits ABOVE the floating bar — its wrapper reserves
-          * BAR_CLEARANCE the way the scroll box does on every other screen,
-          * so the submit is never buried under translucent chrome. The gap
-          * beneath the strip is the shell showing through, with the capsule
-          * floating in it.
-          */
-        <div style={{ flexShrink: 0, paddingBottom: `calc(${BAR_CLEARANCE}px + env(safe-area-inset-bottom))` }}>
-          <EntryDock
-            amount={entryAmount} cat={entryCat} currency={entryCurrency}
-            onSubmit={submitEntry} busy={entryBusy} setCat={setEntryCat}
-          />
-        </div>
+      {sheetOpen && (
+        <>
+          {/* The screen he came from, dimmed — tapping it closes the sheet. */}
+          <button aria-label={S.settingsClose} onClick={closeEntry}
+            style={{ position: 'fixed', inset: 0, zIndex: 40, background: SHEET.dim, cursor: 'default' }} />
+          <div
+            role="dialog" aria-modal="true" aria-label={S.tabEntry} className="view-in"
+            onTouchStart={(e) => { const t = e.touches[0]; swipeY.current = t ? { x: t.clientX, y: t.clientY } : null; }}
+            onTouchEnd={(e) => {
+              // Swipe down to close (v4 P4) — mostly vertical, 80px+, and only
+              // from the top of the sheet's scroll so a scroll back up never closes it.
+              const st = swipeY.current; swipeY.current = null;
+              const c = e.changedTouches[0]; const body = e.currentTarget.querySelector('[data-sheet-body]');
+              if (!st || !c || (body && body.scrollTop > 0)) return;
+              const dy = c.clientY - st.y; const dx = Math.abs(c.clientX - st.x);
+              if (dy >= 80 && dy >= 2 * dx) closeEntry();
+            }}
+            style={{
+              position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 41,
+              top: `calc(${SHEET.top}px + env(safe-area-inset-top))`,
+              ...glass('sheet'), borderRadius: `${RADIUS.sheetTall}px ${RADIUS.sheetTall}px 0 0`,
+              display: 'flex', flexDirection: 'column',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+              {/* geometry exemption (ruling 4): the 40×5 grab bar, its corner bounded by its height */}
+              <span aria-hidden style={{ width: 40, height: 5, borderRadius: 3, background: SHEET.handle }} />
+            </div>
+            <div data-sheet-body style={{
+              flex: 1, minHeight: 0, overflowY: 'auto', padding: `6px 20px calc(${SHEET.saveHeight + SHEET.saveBottom + SPACE.gap}px + env(safe-area-inset-bottom))`,
+            }}>
+              <EntryView
+                    onClose={closeEntry}
+                    amount={entryAmount} setAmount={setEntryAmount}
+                    desc={entryDesc} setDesc={setEntryDesc}
+                    cat={entryCat} setCat={setEntryCat}
+                    method={entryMethod} setMethod={setEntryMethod}
+                    currency={entryCurrency}
+                    /**
+                      * The toggle is offered only where the write can honour it
+                      * — same rule as the dictation button, and for a worse
+                      * reason: a dead control does nothing, this one would post
+                      * a wrong number and report success.
+                      */
+                    setCurrency={supportsCurrency(build, AWAY_CURRENCY)
+                      ? (c) => setStoredCurrency(persistCurrency(c))
+                      : undefined}
+                    onCamera={() => pushDetail(() => setEntryMode('receipt'))}
+                    /**
+                      * SHOWN ONLY IF THE SERVER KNOWS THE VERB. Absent
+                      * capability list ⇒ no button, which is the state of the
+                      * backend serving right now. It lights up on its own the
+                      * moment V20 publishes `voice`; there is no flag to flip.
+                      */
+                    onDictate={supportsAction(build, 'voice')
+                      ? () => pushDetail(() => setEntryMode('dictate'))
+                      : undefined}
+                  />
+            </div>
+            <div style={{ position: 'absolute', left: 20, right: 20, bottom: `max(${SHEET.saveBottom}px, env(safe-area-inset-bottom))` }}>
+              <EntryDock amount={entryAmount} cat={entryCat} currency={entryCurrency} onSubmit={submitEntry} busy={entryBusy} />
+            </div>
+          </div>
+        </>
       )}
 
-      {!needsSetup && (
+      {/* v4 P4: the bar hides while the entry sheet is open (R17). */}
+      {!needsSetup && !sheetOpen && (
         <nav
           style={{
             position: 'fixed', zIndex: 30,

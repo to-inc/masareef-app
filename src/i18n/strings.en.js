@@ -59,7 +59,7 @@ export const EN = {
   // Short on purpose: this line shares its row with three buttons (voice,
   // currency, receipt), and a longer heading wrapped and pushed the category
   // chips below the fold.
-  entryRepeats: 'Like before',
+  likeYesterday: 'Like yesterday', // v4 P4 repeat chip (R17)
   entryLog: 'Log it',
   // The pinned button names the step he is missing rather than just greying (S1).
   entryNeedAmount: 'Enter the amount',
@@ -100,7 +100,6 @@ export const EN = {
   // the same rule as the language toggle.
   currencyIn: (c) => (c === 'EGP' ? 'In EGP' : 'In EUR'),
   // The heading when there is no shortcut row — in travel mode (A4).
-  entryTitleShort: 'New expense',
   // ——— dictation (A5): tap the keyboard's own mic and say it.
   dictateShort: '🎙 Say it',
   dictateTitle: 'Say the expense',

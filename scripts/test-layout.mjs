@@ -189,14 +189,22 @@ try {
     await pg.goto(url, { waitUntil: 'networkidle' });
     await pg.getByRole('button', { name: /^(جديد|New)$/ }).first().click();
     await pg.waitForSelector('[aria-label="0"]');
+    await pg.waitForTimeout(500); // the sheet rises 8px on entry (.view-in) — measure it at rest
+    // v4 P4: «جديد» is a sheet; «سجّل» is pinned at its bottom, and the
+    // categories sit ON the sheet above the keypad. Measure the button itself.
     const geo = () => pg.evaluate(() => {
-      const save = document.querySelector('button.bigbtn');
-      const dock = save.parentElement;
+      // Scoped to the sheet: the screen underneath (Inbox, on launch) has its own .bigbtn.
+      const sheet = document.querySelector('[role=dialog]');
+      const save = sheet.querySelector('button.bigbtn');
+      const body = sheet.querySelector('[data-sheet-body]');
+      const vis = [...sheet.querySelectorAll('[role=group] button.catchip')].filter((b) => {
+        const r = b.getBoundingClientRect(); return r.bottom <= save.getBoundingClientRect().top && r.top >= 0 && r.right > 0 && r.left < innerWidth;
+      });
       return {
-        dockTop: Math.round(dock.getBoundingClientRect().top),
+        dockTop: Math.round(save.getBoundingClientRect().top),
         key0: Math.round(document.querySelector('[aria-label="0"]').getBoundingClientRect().bottom),
-        chips: dock.querySelectorAll('button.catchip').length,
-        scroll: document.querySelector('main').scrollTop,
+        chips: vis.length,
+        scroll: body.scrollTop,
       };
     });
     const before = await geo();
@@ -204,14 +212,14 @@ try {
       `E003 [${lang}] with a «like before» card, «0» ends above the Save bar at scroll 0 — key@${before.key0} vs bar@${before.dockTop}`);
     await pg.locator('[aria-label="6"]').click();
     const after = await geo();
-    ok(after.chips === 6, `E004 [${lang}] after the first digit the bar offers the six categories itself — got ${after.chips}`);
+    ok(after.chips >= 3, `E004 [${lang}] the categories are on screen at rest, above «سجّل» (v4 P4: on the sheet, not in the bar) — got ${after.chips} visible`);
     ok(after.dockTop === before.dockTop && after.key0 <= after.dockTop,
       `E004 [${lang}] …and the bar does not grow: «0» stays tappable mid-amount — bar ${before.dockTop}→${after.dockTop}, key@${after.key0}`);
     if (lang === 'ar') {
       // POSITIVE CONTROL: a taller card must push «0» under the bar, and the check must see it.
-      await pg.evaluate(() => { document.querySelector('.likecard').style.minHeight = '140px'; });
+      await pg.evaluate(() => { document.querySelector('.likecard').style.minHeight = '260px'; });
       const ctl = await geo();
-      ok(ctl.key0 > ctl.dockTop, `E003 positive control FAILED — a 140px card did not push «0» under the bar (key@${ctl.key0} vs bar@${ctl.dockTop}); the guard is blind`);
+      ok(ctl.key0 > ctl.dockTop, `E003 positive control FAILED — a 260px card did not push «0» under the bar (key@${ctl.key0} vs bar@${ctl.dockTop}); the guard is blind`);
     }
     await ctx.close();
   }

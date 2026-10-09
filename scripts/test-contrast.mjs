@@ -34,7 +34,7 @@
  * the SAME token by reference — a declared size that cannot drift from the
  * size the component actually renders.
  */
-import { C, METHOD, TYPE, GLASS, GROUND_PIXELS, NAV } from '../src/theme.js';
+import { C, METHOD, TYPE, GLASS, GROUND_PIXELS, NAV, SHEET } from '../src/theme.js';
 
 let pass = 0;
 const failures = [];
@@ -414,6 +414,16 @@ for (const [ground, pixels] of Object.entries(GROUND_PIXELS)) {
     residue(`ink on the raised capsule over ${ground} (${end})`, C.ink, over(thinnest(GLASS.raised.bg), px0), TYPE.label, true);
     // chrome carries 14px+/600+ labels only (A3) — measured at that floor.
     residue(`ink label on chrome over ${ground} (${end})`, C.ink, over(thinnest(GLASS.chrome.bg), px0), 14, false);
+  }
+}
+// v4 P4 — the ENTRY SHEET: paper glass over the screen he came from, dimmed.
+// Text drawn straight on it: the dashed «more» chip (harborInk) and the ✕ (muted).
+for (const [ground, pixels] of Object.entries(GROUND_PIXELS)) {
+  for (const [end, px0] of ends(pixels)) {
+    const dimmed = over(SHEET.dim, px0);
+    const sheetBg = over(thinnest(GLASS.sheet.bg), dimmed);
+    residue(`harborInk «more» on the entry sheet over dimmed ${ground} (${end})`, C.harborInk, sheetBg, TYPE.label);
+    residue(`muted ✕ on the entry sheet over dimmed ${ground} (${end})`, C.muted, sheetBg, TYPE.section);
   }
 }
 // The toast is white on dark glass: its worst case is the LIGHTEST ground.

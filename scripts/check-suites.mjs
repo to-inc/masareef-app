@@ -196,7 +196,7 @@ import { dirname, join } from 'node:path';
  * the arity check — the same arithmetic the 24 dead-key deletion established
  * in reverse.
  */
-const EXPECTED_ASSERTIONS = 5679;
+const EXPECTED_ASSERTIONS = 5626;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -237,9 +237,8 @@ const SUITES = [
   'test-chunk-a9.mjs',
   'test-chunk-a10.mjs',
   'test-chunk-a12.mjs',
-  'test-chunk-n3.mjs',
-  'test-chunk-n4.mjs',
-  'test-chunk-n5.mjs',
+  // N3/N4/N5 retired 2026-10-09 — v4 P4 redrew the New screen; their surviving laws live in test-chunk-p4.mjs
+  'test-chunk-p4.mjs',
   'test-chunk-n6.mjs',
   'test-chunk-n7.mjs',
   'test-chunk-e3.mjs',

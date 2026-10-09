@@ -48,8 +48,10 @@ const view = await readFile(new URL('../src/views/EntryView.jsx', import.meta.ur
 
 // ——— A9.1 the screen's ONE warm reference, in source (test-contrast counts
 //     per file; this gate states the same law where A9 lives)
-eq((view.match(/C\.amber\b/g) || []).length, 1,
-  'A9.1 exactly one C.amber reference in EntryView.jsx — the commit, nothing else');
+// v4 P4 RE-CUT: the warm action is GRADIENT.amber (it starts at C.amber, R13).
+eq((view.match(/GRADIENT\.amber\b/g) || []).length, 1,
+  'A9.1 exactly one GRADIENT.amber reference in EntryView.jsx — the commit, nothing else');
+ok(!/C\.amber\b/.test(view), 'A9.1b and no bare C.amber fill beside it');
 
 // ——— A9.2 retokenization: no ad-hoc reading sizes or surface radii survive
 ok(!/fontSize:\s*[\d.]/.test(view),
@@ -57,14 +59,14 @@ ok(!/fontSize:\s*[\d.]/.test(view),
 ok(!/borderRadius:\s*\d/.test(view),
   'A9.2b no numeric borderRadius literal — every surface radius is a RADIUS token');
 for (const token of [
-  'RADIUS.capsule', 'RADIUS.row', 'TYPE.action', 'TYPE.hero', 'TYPE.label', 'unitSize(TYPE.hero)',
+  'RADIUS.capsule', 'RADIUS.glassWell', 'TYPE.action', 'TYPE.amountEntry', 'TYPE.label', 'TYPE.key',
 ]) {
   ok(view.includes(token), `A9.2c the file consumes ${token}`);
 }
 
 // ——— A9.3 the button's child is the verb KEY, in source — not a ternary
-ok(/\{S\.entryLog\}\s*<\/button>/.test(view),
-  'A9.3 the button closes on {S.entryLog} — one i18n key is the whole label');
+ok(/>\s*\{S\.entryLog\}\s*\{ready && \(/.test(view),
+  'A9.3 the button OPENS on {S.entryLog} — the verb is one i18n key; only the ready state adds the entry (R17)');
 
 // ——— the four states, rendered
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
@@ -94,7 +96,9 @@ try {
 
   // ——— A9.5 ONE VERB — the label string never changes
   eq(b.noCat.inner, b.empty.inner, 'A9.5a resting label identical whichever step is missing');
-  eq(b.done.inner, b.empty.inner, 'A9.5b ready keeps the SAME label — only the fill may change');
+  // R17: ready, the verb CARRIES the entry — «سجّل 60 ج.م · أكل بره».
+  ok(b.done.inner.startsWith(AR.entryLog) && b.done.inner.includes('60') && b.done.inner.includes(L('Eating out')),
+    'A9.5b ready: the same verb, now carrying the amount and the category (R17)');
   eq(b.saving.inner, b.empty.inner, 'A9.5c and a write in flight does not rewrite the verb either');
   ok(b.empty.inner.includes(AR.entryLog), 'A9.5d and that one label IS the verb');
 
@@ -110,16 +114,19 @@ try {
 
   // ——— A9.7 …but the dock still states the step BESIDE it (test-dock's law,
   //     kept: identity may never be bought by deleting the words)
-  ok(empty.replace(b.empty.whole, '').includes(AR.entryNeedAmount),
-    'A9.7a the empty dock still names the missing amount, beside the button');
-  ok(noCat.replace(b.noCat.whole, '').includes(AR.entryNeedCategory),
-    'A9.7b and the missing category');
-  const doneAside = done.replace(b.done.whole, '');
-  ok(doneAside.includes('60') && doneAside.includes(L('Eating out')),
-    'A9.7c when ready the whole entry is legible beside the button — the last look before it is a row');
+  // R17 deleted the summary line beside the button. What is missing is on the
+  // SHEET instead: an empty amount reads a muted «0», and no category wears ✓.
+  const sheet = (p) => renderToStaticMarkup(createElement(EntryView, {
+    amount: '', setAmount: noop, desc: '', setDesc: noop, cat: null, setCat: noop, method: 'Cash', setMethod: noop, ...p,
+  }));
+  const blank = sheet({});
+  ok(/data-amount="true"[^>]*color:#5C6871[^>]*>0</.test(blank) && blank.includes(`aria-label="${AR.entryNeedAmount}"`),
+    'A9.7a an empty amount reads as a muted «0» on the sheet — the missing step is visible without words');
+  ok(!blank.includes('✓'), 'A9.7b and no category wears ✓ until one is chosen');
+  ok(sheet({ cat: 'Eating out' }).includes('✓ '), 'A9.7c …and the chosen one does');
 
   // ——— A9.8 the fill and ink are what vary: sand+muted resting, amber+rim ready
-  ok(b.empty.attrs.includes(C.sand), 'A9.8a resting fill is sand');
+  ok(b.empty.attrs.includes('rgba(255,255,255,0.66)'), 'A9.8a resting fill is quiet glass (v4), not amber');
   ok(b.empty.attrs.includes(C.muted), 'A9.8b resting ink is muted');
   ok(!empty.includes(C.amber), 'A9.8c no amber anywhere on the resting dock');
   ok(b.done.attrs.includes(C.amber), 'A9.8d ready fill is the one warm action');
@@ -142,10 +149,10 @@ try {
   const at = body.indexOf('Baskerville');
   ok(at !== -1, 'A9.10a the display-face amount is still there');
   const hero = at === -1 ? '' : body.slice(at);
-  ok(hero.slice(0, Math.max(0, hero.indexOf('>'))).includes(`font-size:${TYPE.hero}px`),
-    'A9.10b the amount renders at TYPE.hero');
-  ok(hero.slice(0, Math.max(0, hero.indexOf('</div>'))).includes(`font-size:${unitSize(TYPE.hero)}px`),
-    'A9.10c and its unit at unitSize(TYPE.hero) — 0.55× the value, floored at the prose floor');
+  ok(hero.slice(0, Math.max(0, hero.indexOf('>'))).includes(`font-size:${TYPE.amountEntry}px`),
+    'A9.10b the amount renders at TYPE.amountEntry (68, v4 P4)');
+  ok(/aria-pressed="false"[^>]*>ج\.م/.test(body) || body.includes('>ج.م<'),
+    'A9.10c and its unit is named right under it — the currency chip IS the unit (v4: every amount with its unit)');
 } finally {
   await vite.close();
 }

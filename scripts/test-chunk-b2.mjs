@@ -81,8 +81,10 @@ ok(rule && !/opacity/.test(rule),
 }
 
 // ——— the shell APPLIES it, keyed — an entrance nothing triggers is theatre that never opens
-ok(/key=\{tab\} className="view-in"/.test(app),
-  'B2.9 App.jsx wraps the swapped view in key={tab} + .view-in — remount on tab change is what replays the entrance');
+// v4 P4: keyed on viewTab — the screen ON SCREEN (the one under the entry sheet
+// when it is open), so opening «جديد» does not replay the page underneath.
+ok(/key=\{viewTab\} className="view-in"/.test(app),
+  'B2.9 App.jsx wraps the swapped view in key={viewTab} + .view-in — remount on a real screen change replays the entrance');
 
 // ——— the old raw seconds are gone; the surviving classes ride the vocabulary
 for (const literal of ['0.28s', '0.18s', '0.15s', '0.08s']) {
