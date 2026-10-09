@@ -348,6 +348,11 @@ export default function ReceiptView({
         setReviewingId(null);
         onSaved?.(S.saved);
         reset();
+      } else if (res && res.error === 'bad_date') {
+        // E-012: the server refused the date (not this book's year, or no tab
+        // for that month) instead of writing today. The card STAYS, the date
+        // empties, and the field asks for the receipt's own day.
+        setDateStr('');
       } else {
         setErrorMsg(S.genericError);
         setStage('error');
