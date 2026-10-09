@@ -4,6 +4,7 @@ import { S } from '../i18n/strings.js';
 import { LangToggle } from '../components/Primitives.jsx';
 import { probe } from '../api/client.js';
 import { setCreds } from '../state/secret.js';
+import { askBadgeOnce } from '../state/badge.js';
 
 /**
  * First-run credential entry. TAREK-FACING — Dad should never see this screen.
@@ -40,6 +41,9 @@ export default function SetupView({ onDone }) {
       const res = await probe(url.trim(), secret.trim());
       if (res?.ok) {
         setCreds(secret.trim(), url.trim(), sheet.trim());
+        // R19: the ONE permission ask — on this tap, because iOS badges the
+        // icon only with it. The app never sends a notification.
+        await askBadgeOnce();
         onDone();
         return;
       }
@@ -145,6 +149,9 @@ export default function SetupView({ onDone }) {
       >
         {state === 'testing' ? S.setupTesting : S.setupTest}
       </button>
+      <div style={{ fontSize: TYPE.caption, color: C.muted, marginTop: 10, lineHeight: 1.6, textAlign: 'center' }}>
+        {S.setupBadgeNote}
+      </div>
       </div>
     </div>
   );

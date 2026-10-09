@@ -39,6 +39,7 @@ import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
 import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon, TrayIcon, PlusIcon, UndoToast, UpdatePrompt } from './components/Primitives.jsx';
 import { useUpdatePrompt } from './state/update.js';
+import InstallCoach from './components/InstallCoach.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
@@ -482,7 +483,13 @@ export default function App() {
    * pure-function suite or an SSR render can see, which is precisely why this
    * project's rule is that a change is not done until it has been opened.
    */
-  const pendingCount = remaining(reconcile(data?.pending, settled));
+  /**
+   * OWNER-RULINGS B8 (R5): the badge counts rows awaiting a category in the
+   * CURRENT period — the old-expenses backlog is excluded (it has its own row
+   * on the review screen, with its own count). The review screen's «1 من N»
+   * counts the same queue, so the tab badge, the icon badge and the progress agree.
+   */
+  const pendingCount = remaining(reconcile((data?.pending || []).filter((p) => !p.stale), settled));
 
   /**
    * THE SAME COUNT, ON THE HOME-SCREEN ICON (finding A6).
@@ -492,10 +499,11 @@ export default function App() {
    * counter on the icon would be the badge-vs-headline contradiction arriving
    * where he sees it before the app is even open.
    *
-   * Passive by construction: no permission prompt, no push server, no
-   * notification. It appears when something is waiting and clears itself when
-   * nothing is — the automatic PROMPT the Fogg model wants, without the nagging
-   * CLAUDE.md #5 forbids.
+   * No push server and NO notification, ever (R19). iOS shows an app badge only
+   * after notification permission is granted, so Setup asks for it ONCE, on his
+   * tap, saying why (R19 rules this is not nagging). It appears when something is
+   * waiting and clears itself when nothing is — the automatic PROMPT the Fogg
+   * model wants, without the nagging CLAUDE.md #5 forbids.
    */
   useEffect(() => { setBadge(pendingCount); }, [pendingCount]);
 
@@ -1024,6 +1032,8 @@ export default function App() {
 
       <Toast message={toast} />
       <UndoToast undo={undo} onUndo={undoEntry} />
+      {/* v4 P2: iOS Safari only, never inside the installed app (state/installCoach.js). */}
+      <InstallCoach />
       {/* R19: never while the entry sheet is open — and the undo toast has the floor first. */}
       {update.waiting && !sheetOpen && !undo && <UpdatePrompt onUpdate={update.apply} />}
 

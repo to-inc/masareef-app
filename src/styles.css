@@ -75,7 +75,7 @@ textarea {
 .catchip:not(:disabled):active,
 .bigbtn:not(:disabled):active,
 .quickchip:not(:disabled):active {
-  transform: scale(0.96);
+  transform: scale(0.98); /* ARCHITECTURE A6 (signed): .98 — a press, not a squash */
 }
 
 .catchip,

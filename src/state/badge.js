@@ -63,3 +63,17 @@ export function setBadge(count) {
     return false;
   }
 }
+
+/**
+ * R19 — THE ONE PERMISSION ASK, made from Setup on his tap. iOS shows an app
+ * badge only with notification permission; nothing here ever SENDS one. Asked
+ * at most once: «default» is the only state that asks, so a granted or a
+ * refused answer is never re-asked.
+ */
+export async function askBadgeOnce() {
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'default') return false;
+    await Notification.requestPermission();
+    return true;
+  } catch { return false; }
+}

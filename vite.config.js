@@ -14,7 +14,7 @@ export default defineConfig({
       // v4 A6/R19: a new build WAITS and the app asks («نسخة جديدة جاهزة») —
       // autoUpdate could reload under a half-typed amount. See src/state/update.js.
       registerType: 'prompt',
-      includeAssets: ['icons/*.png'],
+      includeAssets: ['icons/apple-touch-icon-180.png', 'icons/icon-*.png', 'icons/maskable-*.png'],
       manifest: {
         name: 'مصاريف',
         short_name: 'مصاريف',
@@ -36,6 +36,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,woff2,png,svg}'],
+        // The launch images (~4.5 MB) are fetched by iOS once, at install —
+        // never precached into every phone on every update.
+        globIgnores: ['**/icons/startup-*.png'],
         // The Apps Script origin is NEVER cached. Every call is a POST (which
         // Workbox would not cache anyway) but this makes the intent explicit and
         // survives any future GET: the sheet is the source of truth, and a

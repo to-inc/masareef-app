@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Masareef — the AO helm (v4 mark 2a, OWNER-RULINGS R14). Full-bleed dawn
+       ground (the OS rounds the corners); the mark at 78%, so its farthest point
+       (a spoke tip, 53u from centre → 41.3u) sits inside the maskable safe
+       circle (40% of 120 = 48u). One master serves icon and maskable alike. -->
+  <defs>
+    <radialGradient id="sand" cx="10%" cy="0%" r="85%"><stop offset="0%" stop-color="#F2D3A6"/><stop offset="70%" stop-color="#F2D3A6" stop-opacity="0"/></radialGradient>
+    <radialGradient id="tide" cx="100%" cy="100%" r="85%"><stop offset="0%" stop-color="#B5D2E6"/><stop offset="70%" stop-color="#B5D2E6" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="120" height="120" fill="#F3EEE5"/>
+  <rect width="120" height="120" fill="url(#sand)"/>
+  <rect width="120" height="120" fill="url(#tide)"/>
+  <g id="mark" transform="translate(13.2 13.2) scale(0.78)">
+    <circle cx="60" cy="60" r="40" fill="none" stroke="#D9A441" stroke-width="9"/>
+    <path d="M60 7v10M60 103v10M7 60h10M103 60h10" stroke="#3E7CA6" stroke-width="5" stroke-linecap="round"/>
+    <path d="M43 83 L60 33 L77 83" fill="none" stroke="#2C4356" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <path id="crossbar" d="M49 67 h22" stroke="#3E7CA6" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

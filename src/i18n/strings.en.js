@@ -545,6 +545,14 @@ export const EN = {
 
   // ——— the sheet's address, on the setup screen (A7) — optional.
   setupSheet: 'Sheet link (optional)',
+  coachTitle: 'Put Masareef on your home screen', // v4 P2 install coach
+  coachBody: 'So it opens like any other app',
+  coachStep1: 'Tap the Share button below',
+  coachStep2: 'Choose «Add to Home Screen»',
+  coachStep3: 'Tap «Add» at the top right',
+  coachGotIt: 'Got it',
+  coachLater: 'Later',
+  setupBadgeNote: 'We ask once, only so the review count can show on the app icon — we never send notifications.',
   setupSheetHint: 'Shows the "Open the sheet" button. Leave it empty and no button appears.',
 
   // ——— the manual refresh (D16c). A BUTTON, never a gesture.

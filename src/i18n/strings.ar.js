@@ -550,6 +550,14 @@ export const AR = {
 
   // ——— رابط الشيت في شاشة الإعداد (A7) — اختياري.
   setupSheet: 'رابط الشيت (اختياري)',
+  coachTitle: 'حط مصاريف على الشاشة', // v4 P2 install coach
+  coachBody: 'عشان تفتح زي أي أبلكيشن',
+  coachStep1: 'دوس على زرار المشاركة تحت',
+  coachStep2: 'اختار «إضافة إلى الشاشة الرئيسية»',
+  coachStep3: 'دوس «إضافة» فوق على الشمال',
+  coachGotIt: 'فهمت',
+  coachLater: 'بعدين',
+  setupBadgeNote: 'هنطلب إذن مرة واحدة بس عشان عدد المراجعة يظهر على أيقونة التطبيق — عمرنا ما هنبعت إشعارات.',
   setupSheetHint: 'عشان يظهر زرار «افتح الشيت». سيبه فاضي ومش هيظهر.',
 
   // ——— the manual refresh (D16c). A BUTTON, never a gesture.
