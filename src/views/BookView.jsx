@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG,
 } from '../theme.js';
-import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
+import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor, rowUnitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, money2, moneyRound, amountWithCurrency } from '../lib/format.js';
 import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand } from '../lib/series.js';
@@ -1989,7 +1989,7 @@ function RowList({
           </span>
           <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
             {money2(r.amount)}
-            <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {unitFor(r.currency)}</span>
+            <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {rowUnitFor(r.currency)}</span>
           </span>
         </div>
       ))}
@@ -2099,7 +2099,7 @@ function RowList({
                     (unitSize) governs it, and it is non-serif (A4). */}
                 {/* EVERY amount with its unit (v4 hard requirement) — «ج.م» too, not only foreign. */}
                 {row.amount != null
-                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {unitFor(row.currency || HOME_CURRENCY)}</span> : null}
+                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {rowUnitFor(row.currency || HOME_CURRENCY)}</span> : null}
               </span>
             </button>
 

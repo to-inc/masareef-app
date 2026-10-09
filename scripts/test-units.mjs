@@ -57,6 +57,23 @@ try {
   const L = `[${lang}]`;
   const mod = await vite.ssrLoadModule('/src/views/BookView.jsx');
   const BookView = mod.default;
+
+  // ——— ROW SCALE WEARS THE MARK (Tarek 2026-10-09, HANDOFF:61, G06 «85.00 €»)
+  {
+    const { rowUnitFor, unitFor } = await vite.ssrLoadModule('/src/i18n/strings.js');
+    ok(rowUnitFor('EUR') === '€' && rowUnitFor(HOME_CURRENCY) === S.currencyShort,
+      `${L} rowUnitFor: euro is «€», home money keeps its mark «${S.currencyShort}»`);
+    ok(unitFor('EUR') === 'EUR', `${L} headline sentences (unitFor) still name the code`);
+    const BR = (await vite.ssrLoadModule('/src/views/BatchReviewView.jsx')).default;
+    const r = (o) => ({ date: '2026-08-26', row_status: 'completed', payment_hint: 'card', category: 'Groceries', ...o });
+    const html = renderToStaticMarkup(createElement(BR, { jobs: [{ sourceHash: 'u', entries: [
+      r({ merchant_display: 'TAXI', amount: 85, currency: 'EUR' }), r({ merchant_display: 'CARREFOUR', amount: 1204, currency: 'EGP' }),
+    ] }], expired: null, busy: false, results: null, onConfirm() {}, onResnap() {}, onDiscard() {}, onLeave() {} }));
+    // The row only — the headline total above the list names the code by design.
+    const taxi = html.slice(html.indexOf('>TAXI<'), html.indexOf('>CARREFOUR<'));
+    ok(taxi.length > 0 && /85\.00 €</.test(taxi) && !/85\.00 EUR</.test(taxi), `${L} a statement row in euro reads «85.00 €», not «85.00 EUR»`);
+    ok(html.includes(`1,204.00 ${S.currencyShort}<`), `${L} a home row keeps «${S.currencyShort}»`);
+  }
   const day = (over = {}) => ({
     date: '29/8/2026', description: 'S-MARKET VALLILA', method: 'Visa',
     category: 'Groceries', amount: 100, currency: 'EGP', ...over,

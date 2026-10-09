@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
-import { S, categoryLabel, unitFor } from '../i18n/strings.js';
+import { S, categoryLabel, rowUnitFor } from '../i18n/strings.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { money, money2 } from '../lib/format.js';
 import { isoToDmy } from '../lib/dates.js';
@@ -583,7 +583,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               read must not sit indistinguishable from pounds, because ticking
               it writes it as pounds (server rule: UNKNOWN → EGP). */}
           {row.amount == null ? '—'
-            : `${money2(Math.abs(row.amount))} ${row.currency === 'UNKNOWN' ? '؟' : unitFor(row.currency || 'EGP')}`}
+            : `${money2(Math.abs(row.amount))} ${row.currency === 'UNKNOWN' ? '؟' : rowUnitFor(row.currency || 'EGP')}`}
         </span>
       </div>
 

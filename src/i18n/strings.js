@@ -68,3 +68,12 @@ export const SWITCH_TO = LOCALE.switchTo;
  * welded to a Latin abbreviation, in a locale that has a perfectly good mark.
  */
 export const unitFor = (currency) => (currency === HOME_CURRENCY ? S.currencyShort : currency);
+
+/**
+ * ROW SCALE (HANDOFF:61, Tarek 2026-10-09): a row's amount wears its currency's
+ * MARK — «€», as G06 draws it — where the code would be noise beside a figure
+ * already in his hand. Headline sentences and the currency chip keep `unitFor`.
+ * Only EUR travels today (travel.js CURRENCIES); a third currency adds its mark here.
+ */
+const MARKS = { EUR: '€' };
+export const rowUnitFor = (currency) => MARKS[currency] || unitFor(currency);
