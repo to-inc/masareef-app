@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, TAP, RADIUS, TYPE } from '../theme.js';
+import { C, TAP, RADIUS, TYPE, GRADIENT, alpha, glass } from '../theme.js';
 import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { ISOLATE, LATIN } from './Primitives.jsx';
@@ -104,82 +104,64 @@ export function CategoryActions({ guess, outcome, onPick }) {
   const [showAll, setShowAll] = useState(false);
   const inert = !needsHim(outcome);
 
+  // v4 P6: «غالبًا:» + ONE 64px guess, then «ولا…» + a 2×2 grid of 52px
+  // alternatives — three categories and «more». Without a guess, the grid
+  // simply leads. «more» unfolds the whole list in the same two columns.
+  const rest = (showAll ? CATEGORIES : SHORT_LIST).filter((c) => c !== guess);
+  const shown = showAll ? rest : rest.slice(0, guess ? 3 : 5);
+  const label = (t) => <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, margin: '18px 0 8px' }}>{t}</div>;
   return (
-    <>
+    <div style={{ opacity: inert ? 0.45 : 1 }}>
+      {guess && label(S.reviewLikely)}
       {guess && (
         <button
           className="bigbtn"
           onClick={() => onPick(guess)}
           disabled={inert}
           style={{
-            marginTop: 12, width: '100%', minHeight: 56, padding: '10px 0',
-            borderRadius: RADIUS.row, background: C.harbor, color: C.onDark,
-            /**
-             * TYPE.action (ruling 1): THIS is the site the token was ruled
-             * for — the Inbox one-tap guess, the most-used tap in the app.
-             * It shipped at 18.5; «stays ≥19» is not negotiable downward.
-             */
-            fontSize: TYPE.action, fontWeight: 700, opacity: inert ? 0.45 : 1,
+            width: '100%', minHeight: 64, padding: '8px 0', borderRadius: RADIUS.row,
+            background: GRADIENT.harbor, boxShadow: `0 8px 20px ${alpha(C.harbor, 0.3)}`, color: C.onDark,
+            fontSize: TYPE.action, fontWeight: 700,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          {/* Arabic label, with the frozen value underneath in small type
-              (finding M2). Both, on this button only: it is 56px tall, it is
-              the tap he makes most, and seeing the two together is what lets
-              him check the app against his own sheet during the changeover. */}
+          {/* Arabic label, with the frozen value underneath (finding M2) — seeing
+              the two together is what lets him check the app against his sheet. */}
           <span>✓ {categoryLabel(guess)}</span>
-          {/* A9 (glass audit Tier 1). Three changes, one line:
-              · 12 → TYPE.caption. 12 is below the caption rung; this string is
-                caption-LEGAL because it duplicates the Arabic label above it,
-                but legal at 13, not at 12.
-              · `opacity: 0.72` deleted. White on harbor measures 4.53:1, which
-                clears the floor — but 0.72 of it composites toward the harbor
-                behind it and drops the pair to ~3.3. The dimmer was the whole
-                defect; the hierarchy against the 19px/700 line above is
-                carried by size and weight, which is where it belongs.
-              · LATIN → ISOLATE. Same bidi isolation, without the hard
-                `direction: ltr`. `dir="auto"` on the element already resolves
-                a Latin category name correctly, and the forced direction is
-                what mis-parents the string in an RTL row. */}
           <span style={{ fontSize: TYPE.caption, fontWeight: 500, ...ISOLATE }} dir="auto">{guess}</span>
         </button>
       )}
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10, opacity: inert ? 0.45 : 1 }}>
-        {(showAll ? CATEGORIES : SHORT_LIST)
-          .filter((c) => c !== guess)
-          .map((c) => (
-            <button
-              key={c}
-              className="catchip"
-              onClick={() => onPick(c)}
-              disabled={inert}
-              style={{
-                padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,
-                background: C.shell, border: `1px solid ${C.line}`,
-                /* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is categoryLabel(c) — the category chip, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */
-                fontSize: TYPE.label, fontWeight: 500, color: C.ink, ...ISOLATE,
-              }}
-              dir="auto"
-            >
-              {categoryLabel(c)}
-            </button>
-          ))}
+      {label(guess ? S.reviewOrElse : S.entryNeedCategory)}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {shown.map((c) => (
+          <button
+            key={c}
+            className="catchip"
+            onClick={() => onPick(c)}
+            disabled={inert}
+            style={{
+              ...glass('chip'), borderRadius: RADIUS.glassWell, minHeight: 52, padding: '6px 10px',
+              fontSize: TYPE.body, fontWeight: 600, color: C.ink, ...ISOLATE,
+            }}
+            dir="auto"
+          >
+            {categoryLabel(c)}
+          </button>
+        ))}
         {!showAll && (
           <button
             className="catchip"
             onClick={() => setShowAll(true)}
             disabled={inert}
             style={{
-              padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule,
-              background: 'transparent', border: `1px dashed ${C.harbor}`,
-              fontSize: TYPE.label, color: C.harborInk, fontWeight: 600,
+              minHeight: 52, borderRadius: RADIUS.glassWell, background: 'transparent',
+              border: `1px dashed ${C.harbor}`, fontSize: TYPE.label, color: C.harborInk, fontWeight: 600,
             }}
           >
             {S.more}
           </button>
         )}
       </div>
-    </>
+    </div>
   );
 }

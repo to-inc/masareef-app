@@ -412,6 +412,9 @@ for (const [ground, pixels] of Object.entries(GROUND_PIXELS)) {
     // glass) and the selected period (ink on the raised capsule).
     residue(`terracotta on alert glass over ${ground} (${end})`, C.conflictInk, over(thinnest(GLASS.alert.bg), px0), TYPE.body, true);
     residue(`ink on the raised capsule over ${ground} (${end})`, C.ink, over(thinnest(GLASS.raised.bg), px0), TYPE.label, true);
+    // v4 P6: the older-expenses row — ink title and muted sub-line on sand advisory glass.
+    residue(`ink on advisory glass over ${ground} (${end})`, C.ink, over(thinnest(GLASS.advisory.bg), px0), TYPE.label, true);
+    residue(`muted on advisory glass over ${ground} (${end})`, C.muted, over(thinnest(GLASS.advisory.bg), px0), TYPE.caption);
     // chrome carries 14px+/600+ labels only (A3) — measured at that floor.
     residue(`ink label on chrome over ${ground} (${end})`, C.ink, over(thinnest(GLASS.chrome.bg), px0), 14, false);
   }

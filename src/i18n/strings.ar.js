@@ -37,7 +37,6 @@ export const AR = {
   // ——— inbox
   inboxEmptyTitle: 'كله متسجّل',
   inboxEmptyBody: 'أي شراء بالفيزا هيظهر هنا أول ما البنك يبعت الرسالة.',
-  inboxWaiting: (n) => `${n} ${n === 1 ? 'عملية مستنية' : 'عمليات مستنية'} — دوس على النوع عشان يتسجل`,
   // Months-old rows live behind one card so today's two purchases aren't buried
   // under forty of them. Nothing is hidden — it opens on a tap.
   inboxOldTitle: (n) => (n ? `مصاريف قديمة (${n})` : 'مصاريف قديمة'),
@@ -45,14 +44,12 @@ export const AR = {
   inboxOldHide: 'اقفلها',
   more: 'أنواع تانية…',
   // الزرار اللي بيقفل الصفوف اللي إحنا عارفينها كلها مرة واحدة (M4).
-  inboxBatch: (n) => `سجّل الـ${n} اللي عارفينهم`,
   travel: '✈ سفر',
 
   // ——— what happened to a card he tapped (WS3-C, 2026-08-03).
   // Every one of these is the SERVER's answer, never the tap. The category name
   // is rendered separately, in a Latin-isolated span, so it never joins an
   // Arabic sentence and comes out reordered.
-  inboxAllDone: 'كله اتسجل ✓',
   cardSaving: 'بيتسجل…',
   cardDone: 'اتسجل ✓',
   cardAlready: 'اتسجّلت خلاص ✓',
@@ -68,6 +65,11 @@ export const AR = {
   // تحت بقى بيقول الخطوة الناقصة بنفسه، والترتيب على الشاشة اتغيّر (S1/S2).
   // قصيرة عن قصد: السطر ده بيشارك مكانه مع تلات زراير (صوت/عملة/فاتورة)،
   // والعنوان الطويل كان بيلفّ لسطرين ويدفع أنواع المصاريف تحت الطيّة.
+  reviewLikely: 'غالبًا:', // v4 P6
+  reviewOrElse: 'ولا…',
+  reviewSkip: 'سيبها لبعدين',
+  reviewProgress: (i, n) => `${i} من ${n}`,
+  reviewDone: 'خلصت ✓',
   likeYesterday: 'زي امبارح', // v4 P4 repeat chip (R17)
   entryLog: 'سجّل',
   // الزرار المثبّت بيسمّي الخطوة الناقصة بدل ما يبقى رمادي وبس (S1).

@@ -91,7 +91,13 @@ function pinPlainCard(file, component, label) {
 pinPlainCard('src/components/Charts.jsx', 'CategoryCompare', 'A2.1 Charts/CategoryCompare');
 pinPlainCard('src/components/Charts.jsx', 'PeriodSummary', 'A2.2 Charts/PeriodSummary');
 pinPlainCard('src/components/LogCard.jsx', 'LogCard', 'A2.3 LogCard');
-pinPlainCard('src/views/InboxView.jsx', 'PendingCard', 'A2.4 Inbox/PendingCard');
+// v4 P6 (R0 re-cut): the review card is GLASS — its surface, edge and cast come
+// from glass('card') and nothing hand-written rides beside it.
+{
+  const slice = componentSlice(src('src/views/InboxView.jsx'), 'PendingCard') || '';
+  ok(/\.\.\.glass\('card'\)/.test(slice), 'A2.4 Inbox/PendingCard — the review card is glass(\'card\') (v4 P6)');
+  ok(!/boxShadow:\s*[`'"]/.test(slice) && !/background: C\.card/.test(slice), 'A2.4 …with no hand-rolled shadow or solid fill beside it');
+}
 pinPlainCard('src/views/ReceiptView.jsx', 'ReceiptView', 'A2.5 Receipt/main card');
 pinPlainCard('src/views/ReceiptView.jsx', 'JobRow', 'A2.6 Receipt/JobRow');
 pinPlainCard('src/views/BookView.jsx', 'Lookalikes', 'A2.7 Book/Lookalikes group card');

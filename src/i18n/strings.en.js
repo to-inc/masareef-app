@@ -33,17 +33,14 @@ export const EN = {
   // ——— inbox
   inboxEmptyTitle: 'All logged',
   inboxEmptyBody: 'Any card purchase shows up here as soon as the bank texts.',
-  inboxWaiting: (n) => `${n} ${n === 1 ? 'purchase' : 'purchases'} waiting — tap a category to log it`,
   inboxOldTitle: (n) => (n ? `Older expenses (${n})` : 'Older expenses'),
   inboxOldBody: 'From previous months — still without a category.',
   inboxOldHide: 'Close',
   more: 'More categories…',
   // The button that settles every row we already know, in one tap (M4).
-  inboxBatch: (n) => `Log the ${n} we know`,
   travel: '✈ travel',
 
   // ——— what became of a tap. Every one is the SERVER's answer, never the tap.
-  inboxAllDone: 'All logged ✓',
   cardSaving: 'Logging…',
   cardDone: 'Logged ✓',
   cardAlready: 'Already logged ✓',
@@ -59,6 +56,11 @@ export const EN = {
   // Short on purpose: this line shares its row with three buttons (voice,
   // currency, receipt), and a longer heading wrapped and pushed the category
   // chips below the fold.
+  reviewLikely: 'Probably:', // v4 P6
+  reviewOrElse: 'Or…',
+  reviewSkip: 'Leave it for later',
+  reviewProgress: (i, n) => `${i} of ${n}`,
+  reviewDone: 'All done ✓',
   likeYesterday: 'Like yesterday', // v4 P4 repeat chip (R17)
   entryLog: 'Log it',
   // The pinned button names the step he is missing rather than just greying (S1).

@@ -257,7 +257,7 @@ export const RADIUS = { card: 26, row: 20, capsule: 999, inset: 8, sheet: 24, gl
  * type does not shrink; come back with evidence if geometry genuinely breaks.
  */
 export const TYPE = {
-  hero: 40, heroBook: 58, amountEntry: 68, display: 34, key: 26, title: 24, section: 22, action: 19, row: 17, body: 16, label: 15, // heroBook: v4 P3
+  hero: 40, heroBook: 58, amountEntry: 68, amountReview: 48, display: 34, key: 26, title: 24, section: 22, action: 19, row: 17, body: 16, label: 15, // heroBook: v4 P3
   caption: 13,
 };
 
@@ -549,6 +549,8 @@ export const GLASS = {
    *  as for the bar). Measured in test-contrast §P4. */
   sheet:    { bg: `linear-gradient(180deg, ${alpha(C.shell, 0.88)}, ${alpha(C.shell, 0.78)})`, blur: 34, sat: 180,
               inset: `inset 0 1px 0 ${W(0.9)}`, radius: 'sheetTall' },
+  /** The card BEHIND the focus card (v4 P6) — it only says «more are waiting». No text on it. */
+  peek:     { bg: W(0.35), blur: 14, rim: W(0.6), radius: 'card' },
   /** The «اتحفظ ✓ — رجوع» undo toast (R19) — white text on dark glass. */
   toast:    { bg: `linear-gradient(160deg, ${alpha(C.ink, 0.72)}, rgba(31,43,53,.62))`, blur: 24,
               cast: `0 10px 30px ${alpha(C.ink, 0.22)}`, radius: 'capsule' },

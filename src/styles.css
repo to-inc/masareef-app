@@ -153,11 +153,11 @@ textarea {
   :root { --glass-solid-card: #FFFFFF; --glass-solid-chip: #FFFFFF; --glass-solid-chrome: #FAF7F1;
           --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356;
           --glass-solid-raised: #FFFFFF; --glass-solid-alert: #FDF1EE;
-          --glass-solid-sheet: #FAF7F1; }
+          --glass-solid-sheet: #FAF7F1; --glass-solid-peek: #FFFFFF; }
 }
 @media (prefers-reduced-transparency: reduce) {
   :root { --glass-solid-card: #FFFFFF; --glass-solid-chip: #FFFFFF; --glass-solid-chrome: #FAF7F1;
           --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356;
           --glass-solid-raised: #FFFFFF; --glass-solid-alert: #FDF1EE;
-          --glass-solid-sheet: #FAF7F1; }
+          --glass-solid-sheet: #FAF7F1; --glass-solid-peek: #FFFFFF; }
 }

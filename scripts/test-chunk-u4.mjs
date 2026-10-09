@@ -281,8 +281,9 @@ async function sweep(lang, L) {
       ok(t.includes(kw(L, 'dupPairRemoved') || '∅'), `U4.r14 [${lang}] the resolution says what happened — moved to Removed, never vanished`);
       ok(t.includes(kw(L, 'dupPairSurvives') || '∅'), `U4.r15 [${lang}] …and that the other row STAYS — the Owner's clause, on the card`);
       eq(count(html, `>${removeWord}<`), 0, `U4.r16 [${lang}] a resolved pair offers no further decision`);
-      ok(t.includes(kw(L, 'inboxWaiting', 1) || '∅') && !t.includes(kw(L, 'inboxWaiting', 2) || '∅'),
-        `U4.r17 [${lang}] the headline counts the SCREEN — the removed row leaves the list it is counted by`);
+      // v4 P6: the count is the focus queue's «1 من N» — the removed row leaves it.
+      ok(t.includes(kw(L, 'reviewProgress', 1, 1) || '∅') && !t.includes(kw(L, 'reviewProgress', 1, 2) || '∅'),
+        `U4.r17 [${lang}] the progress counts the SCREEN — the removed row leaves the queue it is counted by («1 من 1»)`);
 
       for (const [status, key] of [['failed', 'dupPairFailed'], ['engine', 'dupNeedsEngine'], ['gone', 'dupPairGone'], ['offline', 'editOffline']]) {
         const h = render({ build: { actions: ['remove_entry'] }, initialPairOutcomes: { [pk]: { status } } });

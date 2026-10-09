@@ -833,8 +833,10 @@ export default function App() {
          * `GROUND.dawn`, which is the same idea with the mist and the crown both
          * built from palette hues instead of one linear ramp.
          */
+        // v4 R15: Dawn is the ground of the P-screens — Book AND the review
+        // queue (P3, P6). The capture flow's own screens keep Tide (R9).
         background: needsSetup ? GROUND.haze
-          : viewTab === 'book' ? GROUND.dawn
+          : viewTab === 'book' || viewTab === 'inbox' ? GROUND.dawn
           : viewTab === 'entry' ? GROUND.tide
           : GROUND.haze,
         fontFamily: FONT_UI,

@@ -244,6 +244,13 @@ try {
   const mod = await vite.ssrLoadModule('/src/views/InboxView.jsx');
   const InboxView = mod.default;
   const { isSwipe } = mod;
+  // ═══ v4 P6 — «سيبها لبعدين»: the skipped card goes to the END, nothing is written.
+  { const { focusQueue } = mod; const k = (x) => ({ key: x });
+    const order = (n, sk) => focusQueue(n.map(k), sk).map((r) => r.key).join('');
+    ok(order(['a', 'b', 'c'], []) === 'abc', 'P6.1 the queue keeps the rows\' own order');
+    ok(order(['a', 'b', 'c'], ['a']) === 'bca', 'P6.2 skipping the focus card moves it to the end — the next one comes up');
+    ok(order(['a', 'b', 'c'], ['a', 'b']) === 'cab', 'P6.3 skips queue up in the order he made them');
+    ok(order(['b', 'c'], ['a', 'b']) === 'cb', 'P6.4 a skipped row he has since filed simply drops out — a skip never resurrects it'); }
 
   const render = (pend, sett) =>
     renderToStaticMarkup(createElement(InboxView, { pending: pend, settled: sett, onConfirm: () => {} }));
@@ -256,7 +263,7 @@ try {
   const withStatus = (o) => render(one, { [keyOne]: o });
 
   const untouched = render(one, {});
-  ok(buttons(untouched) > 6, 'an untouched card offers its categories');
+  ok(buttons(untouched) >= 6, 'an untouched card offers its categories (v4 P6: a 2×2+ grid and «more»)');
   eq(disabled(untouched), 0, 'and every one of them is live');
   eq(untouched, render(one, { [keyOne]: undefined }),
     'a card with no outcome renders exactly as it always did — no drift for the ordinary case');
@@ -269,8 +276,9 @@ try {
    * two assertions, because either alone is satisfied by the wrong answer.
    */
   const done = withStatus({ status: 'done', category: 'Team' });
-  eq(buttons(done), buttons(untouched), 'a confirmed card is the same height — nothing is removed');
-  eq(disabled(done), buttons(done), 'and every button on it is dead');
+  // v4 P6 (R18) RE-CUT: one at a time — a confirmed card LEAVES the focus.
+  eq(buttons(done), 0, 'a confirmed card leaves the focus — no control for it remains to double-tap');
+  ok(text(done).includes(AR.reviewDone), 'and the screen says he is done');
 
   const saving = withStatus({ status: 'saving', category: 'Team' });
   eq(disabled(saving), buttons(saving), 'a card in flight is dead too — no double-write from a double-tap');
@@ -284,8 +292,8 @@ try {
     'a conflicted card is still tappable');
   eq(disabled(withStatus({ status: 'failed', category: 'Car', error: 'internal' })), 0,
     'and so is a failed one');
-  eq(disabled(withStatus({ status: 'queued', category: 'Car' })), buttons(untouched),
-    'a queued card is inert — it will send itself');
+  { const q = withStatus({ status: 'queued', category: 'Car' });
+    ok(buttons(q) === 0 && text(q).includes(AR.cardQueued), 'a queued card leaves the focus too — it will send itself, and the screen says so'); }
 
   /**
    * ——— THE WORDS, ASSERTED ON THE STRIP ITSELF.
@@ -323,8 +331,10 @@ try {
    * checked below appears in the strip and nowhere else on the screen.
    */
   const live = (html) => (html.match(/aria-live="polite"/g) || []).length;
-  eq(live(untouched), 0, 'an untouched card announces nothing');
-  eq(live(done), 1, 'a settled card has exactly one live region — the strip is mounted');
+  // v4 P6: the «1 من N» line is the one live region while he files; when the
+  // queue empties, the finished line takes its place.
+  eq(live(untouched), 1, 'an untouched queue has exactly one live region — the progress line');
+  eq(live(done), 1, 'and an emptied one has exactly one — the finished line');
   const confCard = withStatus({ status: 'conflict', category: 'Car', sheetCategory: 'Groceries' });
   ok(text(confCard).includes('النوع اتغير في الشيت'),
     'and the right outcome reaches it — a sentence that exists nowhere else on the screen');
@@ -359,13 +369,17 @@ try {
    */
   const three = [row('Aug', 14), row('Aug', 15, { description: 'ALI M**** S' }), row('Aug', 16, { description: 'SARA T**** K' })];
   const twoLeft = render(three, { [cardKey(three[0])]: { status: 'done', category: 'Team' } });
-  ok(text(twoLeft).includes('2 عمليات مستنية'), 'the header counts the two he has left');
-  ok(!text(twoLeft).includes('3 عمليات'), 'not the three still on screen');
+  ok(text(twoLeft).includes(AR.reviewProgress(2, 3)), 'the progress says «2 من 3» once he filed the first');
+  // Read from the progress line down: the three rows share a day and an amount,
+  // so the look-alike notice ABOVE the focus names all three by design.
+  { const focusText = text(twoLeft).slice(text(twoLeft).indexOf(AR.reviewProgress(2, 3)));
+    ok(focusText.includes('ALI M**** S') && !focusText.includes('SARA T**** K') && !focusText.includes('MOHAMED G**** R'),
+      'and shows ONE card — the next one, not the filed one and not the one after'); }
   const mapOf = (over = {}) => Object.fromEntries(
     three.map((p, i) => [cardKey(p), over[i] || { status: 'done', category: 'Team' }]));
   const allDone = render(three, mapOf());
-  ok(text(allDone).includes('كله اتسجل ✓'), 'and when none are left it says so');
-  ok(!text(allDone).includes('0 عمليات'), 'rather than announcing zero waiting operations');
+  ok(text(allDone).includes(AR.reviewDone), 'and when none are left it says so');
+  ok(!text(allDone).includes(AR.reviewProgress(4, 3)), 'rather than counting past the end');
 
   /**
    * ——— AND THE ✓ HEADLINE HAS TO BE EARNED.
@@ -379,11 +393,11 @@ try {
    * shipped, which is the only reason it is here.
    */
   const lastInFlight = render(three, mapOf({ 2: { status: 'saving', category: 'Team' } }));
-  ok(!text(lastInFlight).includes('كله اتسجل ✓'),
+  ok(!text(lastInFlight).includes(AR.reviewDone),
     'a write still in flight does not earn the ✓ headline');
   ok(text(lastInFlight).includes('بيتسجل…'), 'it says what is actually happening');
   const lastQueued = render(three, mapOf({ 2: { status: 'queued', category: 'Team' } }));
-  ok(!text(lastQueued).includes('كله اتسجل ✓'),
+  ok(!text(lastQueued).includes(AR.reviewDone),
     'and neither does one waiting for the network — that row is explicitly unwritten');
   ok(text(lastQueued).includes('هيتسجّل أول ما النت يرجع'), 'which is said instead');
 
@@ -396,12 +410,13 @@ try {
    * a CSS background they are skipped entirely. That is the whole reason the
    * brief specified a background, so it is asserted rather than trusted.
    */
-  ok(untouched.includes('background-image:url(&quot;data:image/svg+xml,'),
-    'the divider is painted as a background image');
-  ok(!/[·—]{1}\s*—/.test(text(untouched).replace(/—\s*دوس/g, '')),
-    'and never as text a screen reader would read out');
-  ok(untouched.includes('%233E7CA6'),
-    'its beads are drawn in harbor, from the palette rather than a literal');
+  // v4 P6: the queue has no section heading any more; the beaded divider lives on
+  // SectionLabel, which the duplicate pairs and the Book still use — test it there.
+  { const { SectionLabel } = await vite.ssrLoadModule('/src/components/Primitives.jsx');
+    const lab = renderToStaticMarkup(createElement(SectionLabel, null, 'x'));
+    ok(lab.includes('background-image:url(&quot;data:image/svg+xml,'), 'the divider is painted as a background image');
+    ok(!/[·—]{1}\s*—/.test(text(lab)), 'and never as text a screen reader would read out');
+    ok(lab.includes('%233E7CA6'), 'its beads are drawn in harbor, from the palette rather than a literal'); }
 
   // ——— both doors, one handler: the green button and every chip confirm the
   // same way. A second path here is a second place for this bug to come back.
@@ -585,8 +600,9 @@ try {
     pending: [{ ...row('Aug', 14), guess: 'Groceries' }], settled: {}, onConfirm: () => {},
   }));
 
-  eq(chipNames(unguessed).length, SHORT_LIST.length,
-    'an un-guessed card opens with the shortlist, not the whole schema');
+  // v4 P6: the grid is 2×N — without a guess, five of the shortlist and «more».
+  eq(chipNames(unguessed).length, 5,
+    'an un-guessed card opens with five of the shortlist in the grid, not the whole schema');
   ok(chipNames(unguessed).length < CATEGORIES.length,
     'and that is strictly fewer than every category — the assertion above must be able to fail');
   ok(unguessed.includes(AR.more),
@@ -608,8 +624,8 @@ try {
   ok(withGuess.includes('>Groceries<'), '…with the value his sheet holds printed under it');
   eq(chipNames(withGuess).filter((c) => c === 'Groceries').length, 0,
     '…but never twice — the chip grid drops whatever the green button already says');
-  eq(chipNames(withGuess).length, SHORT_LIST.length - 1,
-    'so a guessed card shows one chip fewer than an un-guessed one');
+  eq(chipNames(withGuess).length, 3,
+    'and a guessed card shows THREE alternatives — «ولا…» + the 2×2 grid with «more» (v4 P6)');
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
@@ -633,10 +649,9 @@ try {
     }));
     // The badge's own arithmetic, from the module the shell reads.
     eq(remaining(reconcile(mixed, {})), 4, 'four rows still need him');
-    ok(html.includes(AR.inboxWaiting(4)),
-      'and the headline says four — the same number the tab badge shows');
-    ok(!html.includes(AR.inboxWaiting(2)),
-      'not two, which is what it said while it counted only the unfolded ones');
+    // v4 P6: the progress counts the fresh queue («1 من 2») and the older group
+    // counts its own — 2 + 2 is the badge's 4, and both halves are on screen.
+    ok(html.includes(AR.reviewProgress(1, 2)), 'the progress counts the fresh queue — «1 من 2»');
     // And the folded group still declares its own share, so 2 + 2 = 4 on screen.
     ok(html.includes(AR.inboxOldTitle(2)),
       'with the folded rows counted where they are folded, so the arithmetic is visible');
@@ -688,35 +703,13 @@ try {
     const guessed = (n) => Array.from({ length: n }, (_, i) => ({
       ...row('Aug', 20 + i, { description: `SHOP ${i}` }), guess: 'Groceries',
     }));
+    // R18: the bulk «سجّل الـN اللي عارفينهم» is DROPPED in focus mode — pinned by
+    // its LITERAL copy (a deleted feature stays deleted; a removed key proves nothing).
     const withBatch = renderToStaticMarkup(createElement(InboxView, {
       pending: guessed(3), settled: {}, onConfirm: () => {}, onConfirmMany: () => {},
     }));
-    ok(withBatch.includes(AR.inboxBatch(3)), 'three rows the app knows offers to settle all three');
-
-    const one = renderToStaticMarkup(createElement(InboxView, {
-      pending: guessed(1), settled: {}, onConfirm: () => {}, onConfirmMany: () => {},
-    }));
-    ok(!one.includes(AR.inboxBatch(1)),
-      'but ONE is not a batch — it is the card\'s own green button, one line further down');
-
-    /**
-     * AND IT COUNTS ONLY WHAT IT WILL SEND. A label of 3 over a run that settles
-     * 2 is the badge-vs-headline contradiction (S3) reappearing on a button that
-     * writes to his sheet.
-     */
-    const mixed = [...guessed(2), row('Aug', 30, { description: 'UNKNOWN SHOP' })];
-    const mixedHtml = renderToStaticMarkup(createElement(InboxView, {
-      pending: mixed, settled: {}, onConfirm: () => {}, onConfirmMany: () => {},
-    }));
-    ok(mixedHtml.includes(AR.inboxBatch(2)),
-      'with two known and one unknown it offers TWO — never the un-guessed row (D5)');
-    ok(!mixedHtml.includes(AR.inboxBatch(3)), 'and never the whole list');
-
-    // No handler, no button — the Book renders the same picker and has no batch.
-    const noHandler = renderToStaticMarkup(createElement(InboxView, {
-      pending: guessed(3), settled: {}, onConfirm: () => {},
-    }));
-    ok(!noHandler.includes(AR.inboxBatch(3)), 'and a caller that offers no batch handler gets no button');
+    ok(!withBatch.includes('اللي عارفينهم') && (withBatch.match(/class="bigbtn"/g) || []).length === 1,
+      'R18: even with a batch handler and three known rows, no bulk button — only the focus card\'s own guess');
   }
 
   ok(!unguessed.includes('<details'), 'no disclosure triangle on the card any more');

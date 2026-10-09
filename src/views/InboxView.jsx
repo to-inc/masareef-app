@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
-import { C, FONT_DISPLAY, NUMERALS, RADIUS, TAP, TYPE } from '../theme.js';
-import { S } from '../i18n/strings.js';
-import { money, amountWithCurrency } from '../lib/format.js';
+import { C, FONT_DISPLAY, FONT_UI, NUMERALS, RADIUS, TAP, TYPE, glass, unitSize, SHEET } from '../theme.js';
+import { S, DIR, unitFor } from '../i18n/strings.js';
+import { money2, amountWithCurrency } from '../lib/format.js';
 import { SectionLabel, Chip, LATIN, ISOLATE } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
-import { cardKey, reconcile, remaining, needsHim, headlineFor, batchable } from '../state/inboxOutcomes.js';
+import { cardKey, reconcile, remaining, needsHim, headlineFor } from '../state/inboxOutcomes.js';
 import { findLookalikes } from '../state/duplicates.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { removeEntry } from '../api/index.js';
@@ -103,6 +103,8 @@ export default function InboxView({
   initialStaleOpen = false, // SSR seam: render the older group unfolded
 }) {
   const [editing, setEditing] = useState(initialEditing);
+  // v4 P6: «سيبها لبعدين» moves a card to the END of the queue; it writes nothing.
+  const [skipped, setSkipped] = useState([]);
   // E-011 — rows he removed from the edit sheet leave the list at once; the
   // refetch (`onEdited`) then makes it the server's word, not ours.
   const [removedHere, setRemovedHere] = useState(() => new Set());
@@ -182,51 +184,22 @@ export default function InboxView({
    * two cards, plus «مصاريف قديمة (2)» right under them, equals the four the
    * badge claims.
    */
-  const head = headlineFor(rows);
-  // The batch's contents, from the shared rule — the button's label counts the
-  // very list it will send, so the two cannot disagree.
-  const batch = onConfirmMany ? batchable(fresh) : [];
-  const HEADLINE = {
-    waiting: S.inboxWaiting(head.count),
-    saving: S.cardSaving,
-    queued: S.cardQueued,
-    done: S.inboxAllDone,
-  };
+  /**
+   * v4 P6 (R18) — REVIEW ONE AT A TIME. The queue is the fresh rows that still
+   * need him, in their own order, with anything he skipped moved to the end.
+   * Filing the focus card settles it and the next one slides in. The bulk
+   * «file all N» button is DROPPED in focus mode (R18).
+   */
+  const needing = fresh.filter((r) => needsHim(r.outcome));
+  const queue = focusQueue(needing, skipped);
+  const current = queue[0] || null;
+  const total = fresh.length;
+  const position = total - needing.length + 1;
+  const head = headlineFor(fresh);
+  const FINISHED = { saving: S.cardSaving, queued: S.cardQueued, done: S.reviewDone, waiting: S.reviewDone };
 
   return (
     <div>
-      {/* Rendered whenever there is anything at all — a month where every
-          outstanding row is old still has a headline, and it still counts them. */}
-      {rows.length > 0 && <SectionLabel>{HEADLINE[head.kind]}</SectionLabel>}
-
-      {/**
-        * THE BATCH (finding M4). Offered only when it saves him something: at one
-        * row it is the same tap as the card's own green button, one row further
-        * down, so it is noise. From two it is the difference between an evening
-        * pass and a queue.
-        *
-        * It never appears on rows the app has not earned — `batchable` excludes
-        * anything without a server guess (D5) — so this button can only ever do
-        * what the green buttons under it would have done.
-        */}
-      {batch.length > 1 && (
-        <button
-          className="bigbtn"
-          onClick={() => onConfirmMany(batch.map((r) => r.item))}
-          style={{
-            width: '100%', minHeight: 52, borderRadius: RADIUS.row, marginBottom: 14,
-            background: C.harbor, color: C.onDark, fontSize: 17, fontWeight: 700,
-          }}
-        >
-          ✓ {S.inboxBatch(batch.length)}
-        </button>
-      )}
-
-      {/**
-        * U4 — the duplicate pairs, above the ordinary cards: a pair is money
-        * possibly counted TWICE, which outranks a missing category. The
-        * ordinary case — no pairs — renders nothing at all.
-        */}
       {(dup.pairs.length > 0 || dup.bigGroups.length > 0) && (
         <div style={{ marginBottom: 6 }}>
           <SectionLabel>{S.dupPairTitle}</SectionLabel>
@@ -245,9 +218,43 @@ export default function InboxView({
         </div>
       )}
 
-      {fresh.map((row) => (
-        <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} onOpenEdit={openEdit} />
-      ))}
+      {total > 0 && current && (
+        <>
+          {/* «1 من 3» and its dots — where he is, never a score. */}
+          <div aria-live="polite" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, fontSize: TYPE.label, color: C.muted, fontWeight: 600 }}>
+            {S.reviewProgress(Math.min(position, total), total)}
+            {total <= 8 && (
+              <span aria-hidden style={{ display: 'flex', gap: 5 }}>
+                {fresh.map((r, i) => (
+                  // geometry exemption (ruling 4): progress dots — a 6px pill, its corner bounded by its height
+                  <span key={r.key} style={{ width: i === Math.min(position, total) - 1 ? 18 : 6, height: 6, borderRadius: 3, background: i === Math.min(position, total) - 1 ? C.harbor : SHEET.handle }} />
+                ))}
+              </span>
+            )}
+          </div>
+          <div style={{ position: 'relative', paddingTop: 22 }}>
+            {queue.length > 1 && (
+              // The card behind says «more are waiting» — nothing else.
+              <div aria-hidden style={{ ...glass('peek'), position: 'absolute', insetInline: 14, top: 34, bottom: -12 }} />
+            )}
+            <PendingCard
+              key={current.key}
+              item={current.item}
+              outcome={current.outcome}
+              onConfirm={onConfirm}
+              onOpenEdit={openEdit}
+              onSkip={queue.length > 1 ? () => setSkipped((sk) => [...sk.filter((k) => k !== current.key), current.key]) : null}
+              focus
+            />
+          </div>
+        </>
+      )}
+      {total > 0 && !current && (
+        <div aria-live="polite" style={{ textAlign: 'center', padding: '40px 0 24px', fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk }}>
+          {FINISHED[head.kind]}
+        </div>
+      )}
+
       {stale.length > 0 && <StaleGroup rows={stale} onConfirm={onConfirm} onOpenEdit={openEdit} initialOpen={initialStaleOpen} />}
 
       {editing && (
@@ -270,20 +277,23 @@ export default function InboxView({
 function StaleGroup({ rows, onConfirm, onOpenEdit, initialOpen = false }) {
   const [open, setOpen] = useState(initialOpen);
   return (
-    <div style={{ marginTop: 8 }}>
+    <div style={{ marginTop: 14 }}>
+      {/* v4 P6: one 56px sand-glass row; the WHOLE row is the target (R3) — the
+          chevron is decoration. It opens the drawer of older expenses. */}
       <button
         className="catchip"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         style={{
-          width: '100%', minHeight: 56, borderRadius: RADIUS.row, padding: '12px 16px',
-          background: open ? C.mist : C.card, border: `1px dashed ${C.harbor}`,
-          color: C.harborInk, fontSize: 16, fontWeight: 700, textAlign: 'start',
+          ...glass('advisory'), borderRadius: RADIUS.glassWell, width: '100%', minHeight: 56, padding: '8px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, color: C.ink, textAlign: 'start',
         }}
       >
-        {S.inboxOldTitle(remaining(rows))}
-        <div style={{ fontSize: TYPE.caption, fontWeight: 500, color: C.muted, marginTop: 2 }}>
-          {open ? S.inboxOldHide : S.inboxOldBody}
-        </div>
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: TYPE.label, fontWeight: 700 }}>{S.inboxOldTitle(remaining(rows))}</span>
+          <span style={{ fontSize: TYPE.caption, fontWeight: 500, color: C.muted }}>{open ? S.inboxOldHide : S.inboxOldBody}</span>
+        </span>
+        <span aria-hidden style={{ fontSize: TYPE.row, fontWeight: 700, color: C.muted }}>{open ? '⌄' : DIR === 'rtl' ? '‹' : '›'}</span>
       </button>
       {open && (
         <div style={{ marginTop: 12 }}>
@@ -475,101 +485,78 @@ function GroupCard({ group }) {
   );
 }
 
-function PendingCard({ item, outcome, onConfirm, onOpenEdit = null }) {
+/**
+ * THE REVIEW QUEUE (v4 P6): rows that still need him, in their own order, with
+ * the ones he skipped moved to the END in the order he skipped them. Pure — the
+ * skip writes nothing anywhere; it only changes what comes next.
+ */
+export function focusQueue(needing, skipped) {
+  return [
+    ...needing.filter((r) => !skipped.includes(r.key)),
+    ...skipped.map((k) => needing.find((r) => r.key === k)).filter(Boolean),
+  ];
+}
+
+/**
+ * ONE EXPENSE ON A GLASS CARD (v4 P6). Method · date, the shop, the amount with
+ * its unit, then the picker (the guess, then «ولا…» and the 2×2 grid). In focus
+ * mode the card closes on «سيبها لبعدين» (skip — writes nothing) beside «عدّل».
+ */
+function PendingCard({ item, outcome, onConfirm, onOpenEdit = null, onSkip = null, focus = false }) {
   const p = item.match;
-
-  /**
-   * The buttons live in `components/CategoryPicker.jsx` — the SAME component the
-   * Recent list uses, because tapping a category here and tapping one there are
-   * the same act on the same sheet cell. Two copies would be two places for the
-   * outcome states to drift.
-   */
   const inert = !needsHim(outcome);
-
   return (
     <div
       className="card-in"
       style={{
-        background: C.card, borderRadius: RADIUS.card, padding: 16, marginBottom: 14,
-        opacity: inert ? 0.62 : 1,
-        transition: 'opacity .2s ease',
+        ...glass('card'), position: 'relative', padding: focus ? '26px 22px 18px' : 18, marginBottom: 14,
+        opacity: inert ? 0.62 : 1, transition: 'opacity .2s ease',
       }}
     >
-      {/**
-        * THE MERCHANT LEADS (finding M3).
-        *
-        * The amount used to be set at 30px with the merchant at 17.5px under it.
-        * But the question this card asks is "what KIND of purchase was this?",
-        * and only the merchant answers it — the amount is context. He is not
-        * deciding anything about 860; he is deciding about Nile Star Market.
-        *
-        * The two also swapped places for a second reason: at 30px the amount
-        * plus a 56px guess button plus twenty-seven chips made one card taller
-        * than the viewport. Merchant-leading with the amount beside it puts three
-        * cards on screen where there were one and a half, which is what makes the
-        * evening pass feel like a pass rather than a queue.
-        */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-        {/* A10 (glass audit Tier 2): LATIN -> ISOLATE. HANDOFF:61 reserves direction:ltr for amounts, dates, the status bar and URLs. This is p.description — the bank SMS merchant, often Arabic, which is none of those and reaches this element in Arabic. LATIN's direction:ltr also silently defeated the dir="auto" on the same element. Same defect the file documents at Primitives.jsx:17 as «قهوة60». */}
-        <div style={{ fontSize: 19, fontWeight: 650, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...ISOLATE }} dir="auto">
-          {p.description}
-        </div>
-        {/* A row he never priced has NO amount. Rendering money(null) as "0"
-            would state a figure he never wrote — the same lie the unpriced
-            counter exists to prevent. Show the absence instead. */}
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 650, color: C.ink, flexShrink: 0, ...LATIN, ...NUMERALS }}>
-          {p.amount == null ? '—' : money(p.amount)}{' '}
-          {/* caption (ruling 2): a unit suffix duplicates the amount beside it */}
-          {p.amount != null && <span style={{ fontSize: TYPE.caption, color: C.muted, fontWeight: 500 }}>{p.currency}</span>}
-        </div>
-      </div>
-
       {/* caption (ruling 2): row meta — method chip, date, travel flag — restates the row */}
-      <div style={{ fontSize: TYPE.caption, color: C.muted, marginTop: 5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ fontSize: TYPE.caption, color: C.muted, fontWeight: 600, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <Chip kind={p.method} small label={p.method === 'Visa' ? S.metricVisa : S.metricCash} />
         <span style={LATIN}>{p.date}</span>
-        {/* Only a REAL foreign currency is travel. An unpriced row has
-            currency null, and `null !== 'EGP'` would mislabel it. */}
+        {/* Only a REAL foreign currency is travel; an unpriced row has currency null. */}
         {p.currency && p.currency !== 'EGP' ? <span>{S.travel}</span> : null}
+      </div>
+      <div style={{ fontSize: TYPE.section, fontWeight: 650, marginTop: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...ISOLATE }} dir="auto">
+        {p.description}
+      </div>
+      {/* A row he never priced has NO amount: «—», never a «0» he never wrote. */}
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.amountReview, fontWeight: 650, lineHeight: 1.1, marginTop: 6, color: C.ink, ...NUMERALS, ...LATIN, textAlign: DIR === 'rtl' ? 'right' : 'left' }}>
+        {p.amount == null ? '—' : money2(p.amount)}
+        {p.amount != null && (
+          <span style={{ fontFamily: FONT_UI, fontSize: unitSize(TYPE.hero), fontWeight: 600, color: C.muted }}> {unitFor(p.currency || 'EGP')}</span>
+        )}
       </div>
 
       <OutcomeNote outcome={outcome} />
 
       <CategoryActions guess={item.guess} outcome={outcome} onPick={(c) => onConfirm(item, c)} />
 
-      {/* E-002 — fix the amount, currency, method, date or wording in place.
-          Gated fail-closed on the server advertising `edit_entry` (§3.7). */}
-      {onOpenEdit && (
-        <button
-          onClick={() => onOpenEdit(item)}
-          style={{
-            width: '100%', minHeight: TAP, marginTop: 10, borderRadius: RADIUS.row,
-            background: C.card, border: `1px solid ${C.line}`,
-            color: C.harborInk, fontSize: TYPE.label, fontWeight: 700,
-          }}
-        >
-          {S.editOpen}
-        </button>
+      {(onSkip || onOpenEdit) && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          {onSkip && (
+            <button onClick={onSkip}
+              style={{ flex: 1, minHeight: TAP, background: 'transparent', color: C.muted, fontSize: TYPE.label, fontWeight: 600, borderRadius: RADIUS.capsule }}>
+              {S.reviewSkip}
+            </button>
+          )}
+          {/* E-002 — fix the amount, currency, method, date or wording in place.
+              Gated fail-closed on the server advertising `edit_entry` (§3.7). */}
+          {onOpenEdit && (
+            <button
+              onClick={() => onOpenEdit(item)}
+              style={{ flex: 1, minHeight: TAP, borderRadius: RADIUS.capsule, background: 'transparent', color: C.harborInk, fontSize: TYPE.label, fontWeight: 700 }}
+            >
+              {S.editOpen}
+            </button>
+          )}
+        </div>
       )}
-
-      {/**
-        * «الرسالة الأصلية» IS GONE (finding S10).
-        *
-        * The prototype showed the original bank SMS here, which was a real
-        * "show your work" gesture. The row now comes from the sheet instead, so
-        * what the disclosure actually revealed was `Aug · #14` — a tab name and
-        * a row index. That is a developer's breadcrumb: it names a place he
-        * cannot go, in a vocabulary he does not use, and it sat on the card he
-        * taps most often in the app.
-        *
-        * The honest version of the same gesture is «افتح الشيت» at the foot of
-        * the book, where it opens the actual file. This card keeps the amount,
-        * the merchant and the date — which is everything the sheet row holds.
-        */}
     </div>
   );
 }
 
-// Re-exported so a caller never has a reason to write its own copy of the key
-// rule — one definition, asserted in scripts/test-inbox.mjs.
 export { cardKey };
