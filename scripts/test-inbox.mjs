@@ -243,6 +243,7 @@ const vite = await createServer({ server: { middlewareMode: true }, appType: 'cu
 try {
   const mod = await vite.ssrLoadModule('/src/views/InboxView.jsx');
   const InboxView = mod.default;
+  const { isSwipe } = mod;
 
   const render = (pend, sett) =>
     renderToStaticMarkup(createElement(InboxView, { pending: pend, settled: sett, onConfirm: () => {} }));
@@ -650,6 +651,9 @@ try {
     const oneFiled = renderToStaticMarkup(createElement(InboxView, {
       pending: mixed, settled: { [cardKey(olds[0])]: { status: 'done' } }, onConfirm: () => {} }));
     ok(oneFiled.includes(AR.inboxOldTitle(1)), 'E005.2 …and filing one of two says 1');
+    // ═══ E-006 — a diagonal scroll over a duplicate pair removed a row.
+    ok(isSwipe(80, 10) && !isSwipe(80, 70) && !isSwipe(40, 0),
+      'E006.1 only a mostly-sideways drag of 56px+ removes — a diagonal scroll (80 across, 70 down) does not');
     // ═══ The unfolded group used to throw (`openEdit` undefined inside StaleGroup).
     let threw = null, opened = '';
     try {

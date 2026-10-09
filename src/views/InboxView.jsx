@@ -306,6 +306,9 @@ function StaleGroup({ rows, onConfirm, onOpenEdit, initialOpen = false }) {
  * buttons are the floor. No colour celebrates and nothing counts a streak:
  * resolving a duplicate is bookkeeping.
  */
+/** A horizontal swipe of at least 56px that moved at least twice as far across as down. */
+export const isSwipe = (dx, dy) => dx >= 56 && dx >= 2 * dy;
+
 function PairCard({ pair, outcome, canRemove, onRemove }) {
   const touch = useRef(null);
   const [a, b] = pair.items;
@@ -316,14 +319,18 @@ function PairCard({ pair, outcome, canRemove, onRemove }) {
 
   const start = (idx) => (e) => {
     const t = e.touches && e.touches[0];
-    touch.current = { idx, x: t ? t.clientX : 0 };
+    touch.current = { idx, x: t ? t.clientX : 0, y: t ? t.clientY : 0 };
   };
   const end = (idx) => (e) => {
     const t = touch.current;
     touch.current = null;
     if (!t || t.idx !== idx || !offerButtons) return;
     const c = e.changedTouches && e.changedTouches[0];
-    if (c && Math.abs(c.clientX - t.x) >= 56) onRemove(idx);
+    // E-006: a swipe is mostly sideways. A diagonal scroll travels as far down
+    // as across, and used to remove a row on its way past.
+    const dx = c ? Math.abs(c.clientX - t.x) : 0;
+    const dy = c ? Math.abs(c.clientY - t.y) : 0;
+    if (isSwipe(dx, dy)) onRemove(idx);
   };
 
   const advisory = (words) => (
