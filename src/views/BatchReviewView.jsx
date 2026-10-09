@@ -466,30 +466,42 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
           <span style={{ flex: '0 0 30px', textAlign: 'center', color: C.muted, fontSize: TYPE.action }}>✕</span>
         )}
 
-        <TitleTag
-          onClick={canOpen ? onToggleOpen : undefined}
-          aria-expanded={canOpen ? isOpen : undefined}
-          style={{ flex: 1, minWidth: 0, textAlign: 'start', background: 'transparent', padding: 0 }}
-        >
-          <span style={{
-            // maxWidth: inside a <button> a block child sizes to its TEXT, not
-            // to the button — the name overflowed under the method chip, hidden
-            // while the chip was opaque and shown through it once it was glass.
-            display: 'block', maxWidth: '100%', fontSize: TYPE.body, fontWeight: 600,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...ISOLATE,
-          }}>
-            {/* Printed AS THE BANK PRINTED IT, truncation included — that is what
-                lets him match this list against the picture in his hand.
-                UX pass 2026-08-30: `dir="auto"` REMOVED, same defect and same fix
-                as the Book ledger row. The bank prints merchant names in Latin,
-                so `dir="auto"` resolved this block LTR and drifted it to the row's
-                LEFT while its own status/category meta stayed at the RIGHT — one
-                batch row split across the card. ISOLATE still orders the glyphs;
-                inheriting the paragraph direction puts the name at the start edge,
-                above its meta, in both locales. */}
-            {row.merchant_display || row.description || '—'}
-          </span>
-          <span style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: TYPE.label, color: C.muted, marginTop: 2 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* G06: the name owns the first line; its hit area is padded out to the
+              48pt floor and pulled back with a negative margin, so the row does
+              not grow. It is the row's one keyboard / VoiceOver door to open. */}
+          <TitleTag
+            onClick={canOpen ? onToggleOpen : undefined}
+            aria-expanded={canOpen ? isOpen : undefined}
+            style={{ display: 'block', width: '100%', textAlign: 'start', background: 'transparent',
+              padding: canOpen ? '13px 0' : 0, margin: canOpen ? '-13px 0' : 0 }}
+          >
+            <span style={{
+              // maxWidth: inside a <button> a block child sizes to its TEXT, not
+              // to the button — the name overflowed under the method chip, hidden
+              // while the chip was opaque and shown through it once it was glass.
+              display: 'block', maxWidth: '100%', fontSize: TYPE.body, fontWeight: 600,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...ISOLATE,
+            }}>
+              {/* Printed AS THE BANK PRINTED IT, truncation included — that is what
+                  lets him match this list against the picture in his hand.
+                  UX pass 2026-08-30: `dir="auto"` REMOVED, same defect and same fix
+                  as the Book ledger row. The bank prints merchant names in Latin,
+                  so `dir="auto"` resolved this block LTR and drifted it to the row's
+                  LEFT while its own status/category meta stayed at the RIGHT — one
+                  batch row split across the card. ISOLATE still orders the glyphs;
+                  inheriting the paragraph direction puts the name at the start edge,
+                  above its meta, in both locales. */}
+              {row.merchant_display || row.description || '—'}
+            </span>
+          </TitleTag>
+          {/* The second line, as G06 draws it: state · category · [method]. Tapping
+              its words opens the row too (a pointer convenience — the name above
+              is the accessible control, so this is not a second button). */}
+          <div
+            onClick={canOpen ? onToggleOpen : undefined}
+            style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: TYPE.label, color: C.muted, marginTop: 2 }}
+          >
             {/**
               * FOUR ANSWERS, FOUR SENTENCES. `duplicate` means WE wrote this row
               * on an earlier attempt — it is in his book. `book_duplicate` means
@@ -532,33 +544,37 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               </span>
             )}
             {category && <span dir="auto">{categoryLabel(category)}</span>}
-          </span>
-        </TitleTag>
 
-        {/**
-          * U3 — THE METHOD CHIP, on the collapsed row (§3.10.2: the review
-          * screen SHOWS the chip; a tap still overrides). Pre-selected to
-          * Card through `effectiveMethod` — the same answer the wire sends —
-          * and one tap flips it, riding the SAME edits overlay the category
-          * picker uses, into the one wire builder. It exists exactly where
-          * the decision is live: a written row's method is a fact in his
-          * book, a non-writable row's is a method on money that will not
-          * move — neither gets a control.
-          */}
-        {!settled && writable && (
-          <button
-            className="catchip"
-            onClick={() => onMethod(otherMethod(method))}
-            style={{
-              // A3: 44 -> TAP, senior touch floor.
-              flex: '0 0 auto', minHeight: TAP, padding: '9px 12px',
-              ...glass('chip'), color: C.ink,
-              fontSize: TYPE.label, fontWeight: 700, whiteSpace: 'nowrap',
-            }}
-          >
-            {methodLabel(method)}
-          </button>
-        )}
+          {/**
+            * U3 — THE METHOD CHIP, on the collapsed row (§3.10.2: the review
+            * screen SHOWS the chip; a tap still overrides). Pre-selected to
+            * Card through `effectiveMethod` — the same answer the wire sends —
+            * and one tap flips it, riding the SAME edits overlay the category
+            * picker uses, into the one wire builder. It exists exactly where
+            * the decision is live: a written row's method is a fact in his
+            * book, a non-writable row's is a method on money that will not
+            * move — neither gets a control.
+            */}
+            {!settled && writable && (
+              <button
+                className="catchip"
+                onClick={(e) => { e.stopPropagation(); onMethod(otherMethod(method)); }}
+                aria-label={`${S.entryMethod}: ${methodLabel(method)}`}
+                style={{
+                  // R3: a 48pt target around a G06-sized pill — 6px of the
+                  // extra reach sits above, 18px below in the row's own padding.
+                  minHeight: TAP, margin: '-6px 0 -18px', padding: '6px 0 18px',
+                  background: 'transparent', display: 'inline-flex', alignItems: 'flex-start',
+                }}
+              >
+                <span style={{ padding: '2px 9px', borderRadius: RADIUS.capsule, background: C.mist,
+                  color: C.ink, fontSize: TYPE.label, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {methodLabel(method)}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* A null amount renders —, never 0. An aggregate has no single figure. */}
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16.5, fontWeight: 650, ...LATIN, ...NUMERALS }}>

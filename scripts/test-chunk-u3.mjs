@@ -127,12 +127,15 @@ try {
       return '';
     }
   };
-  /** The method chips on screen: buttons whose entire text is a method word. */
+  /** The method chips on screen: buttons whose entire TEXT is a method word.
+   *  Re-cut 2026-10-09 (G06): the word now sits in a pill span inside the
+   *  48pt button, so the button's text is read with its inner tags stripped. */
   const chips = (h) => {
     const out = [];
-    const re = /<button[^>]*>([^<]*)<\/button>/g;
+    const re = /<button[^>]*>([\s\S]*?)<\/button>/g;
     for (let m = re.exec(h); m; m = re.exec(h)) {
-      if (m[1] === str(AR, 'methodCard') || m[1] === str(AR, 'methodCash')) out.push(m[1]);
+      const t = m[1].replace(/<[^>]+>/g, '');
+      if (t === str(AR, 'methodCard') || t === str(AR, 'methodCash')) out.push(t);
     }
     return out;
   };
@@ -190,6 +193,12 @@ ok(/effectiveMethod\(row, edit\)/.test(src),
   'U3.17 the rendered chip and the flip read the one effectiveMethod — never a second computation of the default');
 ok(/methodLabel\(/.test(src) && !/'فيزا'|'كاش'/.test(src),
   'U3.18 the chip\'s word is a LOOKUP (methodCard/methodCash) — the label is never the value, the value never the label');
+// G06 (2026-10-09): the chip lives on the name's SECOND line, after the category —
+// not between the name and the amount — and keeps a 48pt target around its pill.
+ok(/\{category && <span dir="auto">\{categoryLabel\(category\)\}<\/span>\}[\s\S]{0,2500}onMethod\(otherMethod\(method\)\)[\s\S]{0,1500}<\/div>\s*<\/div>\s*\{\/\* A null amount/.test(src),
+  'U3.19 G06: the method chip sits after the category on the second line, inside the name column');
+ok(/minHeight: TAP, margin: '-6px 0 -18px', padding: '6px 0 18px'/.test(src),
+  'U3.20 …as a 48pt target around a G06-sized pill, the extra reach kept inside the row');
 {
   const mirror = /const effectiveMethod = \(row, edit\) =>[\s\S]{0,200}payment_hint === 'cash' \? 'Cash' : \(row\.defaultMethod \|\| 'Visa'\)/.test(src)
     || /function effectiveMethod\(row, edit\)[\s\S]{0,220}payment_hint === 'cash' \? 'Cash' : \(row\.defaultMethod \|\| 'Visa'\)/.test(src);
