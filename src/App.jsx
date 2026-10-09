@@ -888,6 +888,16 @@ export default function App() {
         position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none',
         background: GROUND[groundKey],
       }} />
+      {/* E-017 — WEBKIT BUG 301108, «REGRESSION (iOS 26)», open: a home-screen app is given
+          a view short by the top inset (his phone: 812 of 874pt), and iOS paints the rest
+          as a band in the page's BASE colour, ABOVE anything we draw (measured: a bar moved
+          into it was clipped). No app code removes it, so it must vanish: the screen's last
+          72px fade into exactly that base colour. OUTSIDE the .ground layer on purpose — the
+          Golden/Dusk atmosphere filter tints the ground but never the band. */}
+      <div aria-hidden className="ground-foot" style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, height: 72, zIndex: -1, pointerEvents: 'none',
+        background: `linear-gradient(to bottom, transparent, ${GROUND_EDGE[groundKey]})`,
+      }} />
       {/* E-017: the translucent status bar draws WHITE icons — this fade sits behind
           them, above everything (sheets too), exactly the status bar's height.
           0 tall wherever there is no status-bar inset, so browsers never see it. */}
