@@ -550,6 +550,14 @@ export const AR = {
 
   // ——— رابط الشيت في شاشة الإعداد (A7) — اختياري.
   setupSheet: 'رابط الشيت (اختياري)',
+  settingsLook: 'الشكل', // R10 display settings
+  frostLabel: 'الزجاج',
+  lookSheer: 'شفاف', lookDesigned: 'عادي', lookDeep: 'مثلّج',
+  atmosphereLabel: 'الجو',
+  lookMorning: 'الصبح', lookGolden: 'دهبي', lookDusk: 'المغربية',
+  zoomLabel: 'حجم الكلام',
+  zoomSmaller: 'أصغر',
+  zoomBigger: 'أكبر',
   coachTitle: 'حط مصاريف على الشاشة', // v4 P2 install coach
   coachBody: 'عشان تفتح زي أي أبلكيشن',
   coachStep1: 'دوس على زرار المشاركة تحت',

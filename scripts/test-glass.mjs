@@ -23,7 +23,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GLASS, glass, FROST, ATMOSPHERE, C } from '../src/theme.js';
+import { GLASS, glass, FROST, ATMOSPHERE, COMFORT_ZOOM, C } from '../src/theme.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = join(HERE, '..', 'src');
@@ -91,7 +91,7 @@ ok(threw, 'glass() refuses an unknown tier rather than returning a plausible not
 }
 
 // ——————————————————————————————————— 2. frost is a real factor, not a dead token (R10)
-const px = (s) => Number((s.backdropFilter.match(/blur\((\d+)px\)/) || [])[1]);
+const px = (s) => Number((s.backdropFilter.match(/\* (\d+)px\)/) || [])[1]);
 for (const name of ['card', 'chip', 'chrome', 'advisory']) {
   const sheer = px(glass(name, FROST.sheer));
   const designed = px(glass(name, FROST.designed));
@@ -100,6 +100,22 @@ for (const name of ['card', 'chip', 'chrome', 'advisory']) {
     `glass('${name}') must scale its blur with the frost factor (got ${sheer} / ${designed} / ${deep})`);
 }
 ok(FROST.designed === 1, 'FROST.designed must be the identity factor');
+// R10 live: the blur reads --frost at paint time, so the setting reaches every tier without a re-render.
+ok(/^blur\(calc\(var\(--frost, 1\) \* 26px\)\)/.test(glass('card').backdropFilter), 'R10: glass blurs scale with the live --frost variable');
+{
+  const { cleanDisplay, applyDisplay, DISPLAY_DEFAULT } = await import('../src/state/settings.js');
+  const props = {}; const root = { style: { setProperty: (k, v) => { props[k] = v; }, zoom: '' } };
+  applyDisplay({ frost: 'deep', atmosphere: 'dusk', zoom: 1.1 }, root);
+  ok(props['--frost'] === String(FROST.deep) && props['--atmosphere'] === ATMOSPHERE.dusk && root.style.zoom === '1.1',
+    'R10: applyDisplay sets --frost, --atmosphere and the comfort zoom');
+  const c = cleanDisplay({ frost: 'x', atmosphere: 'noon', zoom: 3 });
+  ok(c.frost === DISPLAY_DEFAULT.frost && c.atmosphere === DISPLAY_DEFAULT.atmosphere && c.zoom === DISPLAY_DEFAULT.zoom && cleanDisplay({ zoom: COMFORT_ZOOM.max }).zoom === COMFORT_ZOOM.max,
+    'R10: a stored value outside the menu (a zoom past 115% too) falls back to the default');
+  const app = readFileSync(join(HERE, '..', 'src', 'App.jsx'), 'utf8');
+  const css = readFileSync(join(HERE, '..', 'src', 'styles.css'), 'utf8');
+  ok(/className="ground"/.test(app) && /\.ground \{ filter: var\(--atmosphere, none\); \}/.test(css) && !/filter: var\(--atmosphere/.test(app),
+    'A22: the atmosphere filter sits on the ground layer ONLY — a filter on an ancestor would unpin the bar and sheets');
+}
 
 // ——————————————————————————————————— 3. the Well does not blur, by specification
 ok(glass('well').backdropFilter === undefined, 'the well must NOT blur — it is pressed, not frosted');

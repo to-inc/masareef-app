@@ -23,10 +23,14 @@ import { DEFAULT_METHOD, manualPayload } from './state/entryPayload.js';
 
 /** v4 P5 (R19): the undo window — the outbox holds a new entry this long before sending it. */
 const UNDO_MS = 6000;
+
+// R10: the display settings live on the page root; apply the saved ones before first paint.
+applyDisplay(getDisplay());
 import { entryReady } from './state/entryDock.js';
 import { openingTab, cairoHourOf } from './state/opening.js';
 import { remember } from './state/repeats.js';
 import { setBadge } from './state/badge.js';
+import { applyDisplay, getDisplay } from './state/settings.js';
 import {
   loadDraft, saveDraft, clearDraft, mergeJobs, unsettledCount, mergeOutcomes, outcomeMap,
 } from './state/batchDraft.js';
@@ -844,16 +848,24 @@ export default function App() {
          */
         // v4 R15: Dawn is the ground of the P-screens — Book AND the review
         // queue (P3, P6). The capture flow's own screens keep Tide (R9).
-        background: needsSetup ? GROUND.haze
-          : viewTab === 'book' || viewTab === 'inbox' ? GROUND.dawn
-          : viewTab === 'entry' ? GROUND.tide
-          : GROUND.haze,
+        // R10/A22: the ground is now its OWN layer (below) so the atmosphere can
+        // tint it without becoming an ancestor of the fixed bar and sheets.
+        // `isolation` makes a stacking context (not a containing block), so the
+        // layer's z-index -1 sits above the page but under every child.
+        position: 'relative', isolation: 'isolate',
         fontFamily: FONT_UI,
         color: C.ink,
         // The shell's base reading size IS the row size — one prose vocabulary.
         fontSize: TYPE.row,
       }}
     >
+      <div aria-hidden className="ground" style={{
+        position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none',
+        background: needsSetup ? GROUND.haze
+          : viewTab === 'book' || viewTab === 'inbox' ? GROUND.dawn
+          : viewTab === 'entry' ? GROUND.tide
+          : GROUND.haze,
+      }} />
       <header
         style={{
           /**

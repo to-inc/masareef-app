@@ -1,4 +1,5 @@
 import { METHODS } from './entryPayload.js';
+import { FROST, ATMOSPHERE, COMFORT_ZOOM } from '../theme.js';
 import { isTravelling } from './travel.js';
 
 /**
@@ -86,4 +87,46 @@ export function setDefaultMethod(m, storage) {
  */
 export function entryDefaultMethod(currency, storage) {
   return isTravelling(currency) ? FORCED_AWAY_METHOD : getDefaultMethod(storage);
+}
+
+/**
+ * R10 — THE DISPLAY SETTINGS: frost (how much the glass blurs), atmosphere (a
+ * tint on the GROUND only — never an ancestor of the fixed bar or sheets, A22)
+ * and comfort zoom (a multiplier ON TOP of compliant type; at 100% every floor
+ * holds as built). Applied as CSS on the page root, so one change restyles the
+ * whole app with no re-render and no view knowing.
+ */
+const KD = 'masareef.display.v1';
+export const DISPLAY_DEFAULT = { frost: 'designed', atmosphere: 'morning', zoom: 1 };
+export function cleanDisplay(v) {
+  const o = v && typeof v === 'object' ? v : {};
+  const z = Math.round(Number(o.zoom) * 100) / 100;
+  return {
+    frost: Object.prototype.hasOwnProperty.call(FROST, o.frost) ? o.frost : DISPLAY_DEFAULT.frost,
+    atmosphere: Object.prototype.hasOwnProperty.call(ATMOSPHERE, o.atmosphere) ? o.atmosphere : DISPLAY_DEFAULT.atmosphere,
+    zoom: isFinite(z) && z >= COMFORT_ZOOM.min && z <= COMFORT_ZOOM.max ? z : DISPLAY_DEFAULT.zoom,
+  };
+}
+export function getDisplay(storage) {
+  try {
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    return cleanDisplay(JSON.parse((store && store.getItem(KD)) || 'null'));
+  } catch { return { ...DISPLAY_DEFAULT }; }
+}
+export function setDisplay(next, storage) {
+  const v = cleanDisplay(next);
+  try {
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    if (store) store.setItem(KD, JSON.stringify(v));
+  } catch { /* will not persist; still applies now */ }
+  applyDisplay(v);
+  return v;
+}
+/** Writes the three settings onto the page root. `root` is injectable for tests. */
+export function applyDisplay(v, root = (typeof document !== 'undefined' ? document.documentElement : null)) {
+  if (!root) return;
+  const d = cleanDisplay(v);
+  root.style.setProperty('--frost', String(FROST[d.frost]));
+  root.style.setProperty('--atmosphere', ATMOSPHERE[d.atmosphere]);
+  root.style.zoom = d.zoom === 1 ? '' : String(d.zoom);
 }

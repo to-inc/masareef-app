@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM } from '../theme.js';
 import { S } from '../i18n/strings.js';
 import { Sheet, LangToggle, CurrencyToggle, SectionLabel } from '../components/Primitives.jsx';
 import { otherDisplayCurrency } from '../state/display.js';
 import { METHODS } from '../state/entryPayload.js';
-import { getDefaultMethod, setDefaultMethod } from '../state/settings.js';
+import { getDefaultMethod, setDefaultMethod, getDisplay, setDisplay } from '../state/settings.js';
 
 /**
  * S1 — THE SETTINGS SHEET BEHIND THE COG (Owner field ruling 2026-08-27).
@@ -76,6 +76,7 @@ export function SettingsCog({ onOpen }) {
 }
 
 export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose }) {
+  const [look, setLook] = useState(() => getDisplay());
   /**
    * S2 — the DEFAULT METHOD (06 §3.10.3). Owned HERE rather than threaded
    * from the shell: the language toggle already set the precedent (a control
@@ -190,6 +191,45 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
               }}
             >
               {S.settingsCurrencyNote}
+            </div>
+          </div>
+
+          {/* ═══ R10 — the look: frost, atmosphere, comfort zoom (state/settings.js) ═══ */}
+          <div style={{ marginTop: SPACE.gap }}>
+            <SectionLabel>{S.settingsLook}</SectionLabel>
+            {[['frost', S.frostLabel, Object.keys(FROST)], ['atmosphere', S.atmosphereLabel, Object.keys(ATMOSPHERE)]].map(([key, label, opts]) => (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, marginBottom: 6 }}>{label}</div>
+                <div role="group" aria-label={label} style={{ display: 'flex', gap: 4, ...glass('well'), borderRadius: RADIUS.capsule, padding: 4 }}>
+                  {opts.map((o) => (
+                    <button key={o} className="catchip" aria-pressed={look[key] === o}
+                      onClick={() => setLook(setDisplay({ ...look, [key]: o }))}
+                      style={{ flex: 1, minHeight: TAP, fontSize: TYPE.label,
+                        ...(look[key] === o ? glass('raised') : { background: 'transparent', borderRadius: RADIUS.capsule }),
+                        color: look[key] === o ? C.ink : C.muted, fontWeight: look[key] === o ? 700 : 600 }}>
+                      {S[`look${o[0].toUpperCase()}${o.slice(1)}`]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, marginBottom: 6 }}>{S.zoomLabel}</div>
+            <div role="group" aria-label={S.zoomLabel} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {[[-1, S.zoomSmaller, 'A−'], [1, S.zoomBigger, 'A+']].map(([dir, words, glyph], i) => {
+                const next = Math.round((look.zoom + dir * COMFORT_ZOOM.step) * 100) / 100;
+                const can = next >= COMFORT_ZOOM.min && next <= COMFORT_ZOOM.max;
+                const btn = (
+                  <button key={dir} className="catchip" disabled={!can} aria-label={words}
+                    onClick={() => setLook(setDisplay({ ...look, zoom: next }))}
+                    style={{ ...glass('chip'), minHeight: TAP, minWidth: TAP + 12, color: can ? C.ink : C.muted, fontSize: TYPE.row, fontWeight: 700 }}>
+                    <span aria-hidden>{glyph}</span>
+                  </button>
+                );
+                return i === 0 ? btn : [
+                  <span key="v" aria-live="polite" style={{ flex: 1, textAlign: 'center', fontSize: TYPE.row, fontWeight: 700, direction: 'ltr' }}>{Math.round(look.zoom * 100)}%</span>,
+                  btn,
+                ];
+              })}
             </div>
           </div>
 

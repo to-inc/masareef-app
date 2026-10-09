@@ -545,6 +545,14 @@ export const EN = {
 
   // ——— the sheet's address, on the setup screen (A7) — optional.
   setupSheet: 'Sheet link (optional)',
+  settingsLook: 'Look', // R10 display settings
+  frostLabel: 'Glass',
+  lookSheer: 'Sheer', lookDesigned: 'Standard', lookDeep: 'Frosted',
+  atmosphereLabel: 'Light',
+  lookMorning: 'Morning', lookGolden: 'Golden', lookDusk: 'Dusk',
+  zoomLabel: 'Text size',
+  zoomSmaller: 'Smaller',
+  zoomBigger: 'Bigger',
   coachTitle: 'Put Masareef on your home screen', // v4 P2 install coach
   coachBody: 'So it opens like any other app',
   coachStep1: 'Tap the Share button below',

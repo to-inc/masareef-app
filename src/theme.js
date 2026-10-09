@@ -514,8 +514,10 @@ export const GROUND_CROWN = {
  *
  * `f` is the frost factor (FROST — R10's setting): it scales every blur.
  */
+// R10: every blur rides `--frost` (the display setting, on the page root) — one
+// variable restyles every glass surface. `f` remains for tests and callers.
 const blur = (px, sat, f = 1) =>
-  `blur(${Math.round(px * f)}px)${sat ? ` saturate(${sat}%)` : ''}`;
+  `blur(calc(var(--frost, 1) * ${Math.round(px * f)}px))${sat ? ` saturate(${sat}%)` : ''}`;
 
 export const GLASS = {
   card:     { bg: `linear-gradient(155deg, ${W(0.72)}, ${W(0.40)})`, blur: 26, sat: 160,
