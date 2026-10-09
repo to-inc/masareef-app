@@ -820,10 +820,17 @@ export default function App() {
   return (
     <div
       style={{
-        // height, NOT min-height: with min-height the flex child below grows to
-        // fit its content instead of scrolling, which pushes the tab bar off the
+        // A FIXED HEIGHT, NOT min-height: with min-height the flex child below grows
+        // to fit its content instead of scrolling, which pushes the tab bar off the
         // bottom of the screen and strands Dad on whichever tab he opened.
-        height: '100dvh',
+        //
+        // Pinned to the screen's EDGES, not `height: 100dvh` (field report, Tarek
+        // 2026-10-10: «it's not full screen, there is a white thing at the bottom»).
+        // In an iOS home-screen app with viewport-fit=cover, WebKit sizes 100dvh as
+        // the screen MINUS the status bar while the page still starts under it, so
+        // the frame stopped ~60pt short and the bare body paper showed below the
+        // bar. `inset: 0` on a fixed box is the real screen, whatever dvh says.
+        position: 'fixed', inset: 0,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -856,7 +863,7 @@ export default function App() {
         // tint it without becoming an ancestor of the fixed bar and sheets.
         // `isolation` makes a stacking context (not a containing block), so the
         // layer's z-index -1 sits above the page but under every child.
-        position: 'relative', isolation: 'isolate',
+        isolation: 'isolate',   // the fixed frame above is already the ground's containing block
         fontFamily: FONT_UI,
         color: C.ink,
         // The shell's base reading size IS the row size — one prose vocabulary.

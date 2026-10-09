@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component {
     return (
       <div
         style={{
-          height: '100dvh', display: 'flex', flexDirection: 'column',
+          position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', gap: 14,
           background: C.shell, fontFamily: FONT_UI, color: C.ink, padding: 28, textAlign: 'center',
         }}

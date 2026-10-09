@@ -81,6 +81,29 @@ try {
     null, { timeout: 5000 },
   );
 
+  // ——— FULL SCREEN (field report, Tarek 2026-10-10: «it's not full screen, there
+  // is a white thing at the bottom»). The app frame must reach the screen's bottom
+  // edge, and the bottom pixel must be the app, never the bare body behind it.
+  // ⚠️ A SIZE CHECK ALONE IS BLIND HERE: desktop Chromium computes 100dvh correctly,
+  // only iOS home-screen mode comes up short — so the old frame PASSED a pure
+  // size check (measured). The guard therefore also pins the CAUSE: the frame is
+  // anchored to the screen's edges (fixed, top 0, bottom 0), never sized by dvh.
+  const fullscreen = () => page.evaluate(() => {
+    const o = document.querySelector('.ground').parentElement, c = getComputedStyle(o);
+    const frame = o.getBoundingClientRect();
+    const hit = document.elementFromPoint(5, innerHeight - 2);
+    return { top: frame.top, bottom: frame.bottom, vh: innerHeight, pos: c.position, insetTop: c.top, insetBottom: c.bottom,
+      dvh: /dvh|vh/.test(o.style.height || ''), app: !!hit && hit !== document.body && hit !== document.documentElement };
+  });
+  const pinned = (f) => f.pos === 'fixed' && f.insetTop === '0px' && f.insetBottom === '0px' && !f.dvh
+    && f.top === 0 && Math.abs(f.bottom - f.vh) <= 1 && f.app;
+  const fs = await fullscreen();
+  ok(pinned(fs), `FULLSCREEN the app frame is pinned to the screen edges and owns the bottom pixel — ${JSON.stringify(fs)}`);
+  // positive control: yesterday's shape (relative + height:100dvh) must be caught
+  await page.evaluate(() => { const o = document.querySelector('.ground').parentElement; o.dataset.css = o.style.cssText; o.style.position = 'relative'; o.style.inset = ''; o.style.height = '100dvh'; });
+  ok(!pinned(await fullscreen()), 'FULLSCREEN positive control FAILED — the 100dvh frame passed; the guard is blind');
+  await page.evaluate(() => { const o = document.querySelector('.ground').parentElement; o.style.cssText = o.dataset.css; });
+
   // A row's description and its OWN metadata are siblings in the inner block;
   // the split is precisely them resolving to opposite start edges.
   //
