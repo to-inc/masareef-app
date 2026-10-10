@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM } from '../theme.js';
-import { S } from '../i18n/strings.js';
-import { Sheet, LangToggle, CurrencyToggle, SectionLabel, LATIN } from '../components/Primitives.jsx';
+import { S, unitFor } from '../i18n/strings.js';
+import { Sheet, LangToggle, SectionLabel, LATIN } from '../components/Primitives.jsx';
 import { otherDisplayCurrency } from '../state/display.js';
 import { METHODS } from '../state/entryPayload.js';
 import { getDefaultMethod, setDefaultMethod, getDisplay, setDisplay, debugOn } from '../state/settings.js';
@@ -17,7 +17,7 @@ import { getDefaultMethod, setDefaultMethod, getDisplay, setDisplay, debugOn } f
  * sheet, one tap away, on every tab.
  *
  * ——— WHAT MOVED, AND WHAT DID NOT. The controls themselves are the
- * Primitives' own `LangToggle` and `CurrencyToggle`, imported — not copies.
+ * Primitives' own `LangToggle`, imported — not a copy; the currency is a € | E£ pair (2026-10-10).
  * Their contracts are untouched by the move:
  *   · the language switch still reloads, because `S` is resolved once at
  *     module load (state/lang.js says why that is the right trade);
@@ -182,12 +182,26 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
               }}
             >
               <span style={{ fontSize: TYPE.row, color: C.ink }}>{S.settingsCurrency}</span>
-              <CurrencyToggle
-                value={displayCurrency}
-                other={otherDisplayCurrency(displayCurrency)}
-                onFlip={onFlipCurrency}
-                subtle
-              />
+              {/* € | E£ — both units on show, the one he reads in raised, like the Look
+                  controls below (Tarek, 2026-10-10). A single chip naming the CURRENT
+                  unit never said that tapping it switched to the other. */}
+              <div role="group" aria-label={S.settingsCurrency}
+                style={{ display: 'flex', gap: 4, ...glass('well'), borderRadius: RADIUS.capsule, padding: 4, flex: '0 0 auto' }}>
+                {['EUR', 'EGP'].map((c) => {
+                  const on = displayCurrency === c;
+                  return (
+                    // The side he would tap names the ACTION («read in €») — the
+                    // 2026-08-25 currency-control ruling, kept on the pair.
+                    <button key={c} className="catchip" aria-pressed={on} aria-label={on ? S.currencyName(c) : S.readInUnit(unitFor(c))}
+                      onClick={on ? undefined : () => { if (otherDisplayCurrency(displayCurrency) === c) onFlipCurrency(); }}
+                      style={{ minWidth: 64, minHeight: TAP, fontSize: TYPE.label,
+                        ...(on ? glass('raised') : { background: 'transparent', borderRadius: RADIUS.capsule }),
+                        color: on ? C.ink : C.muted, fontWeight: on ? 700 : 600 }}>
+                      {unitFor(c)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/**

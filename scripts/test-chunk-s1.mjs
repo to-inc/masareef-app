@@ -142,9 +142,11 @@ ok(sheet !== null, 'S1.18 src/views/SettingsSheet.jsx exists');
 const sh = sheet || '';
 ok(/import \{[^}]*\bSheet\b[^}]*\} from '\.\.\/components\/Primitives\.jsx'/.test(sh),
   'S1.19 the view consumes B4\'s Sheet primitive — an adoption, never a hand-rolled twin');
-ok(/import \{[^}]*\bLangToggle\b[^}]*\}/.test(sh) && /\bCurrencyToggle\b/.test(sh)
-  && /<LangToggle/.test(sh) && /<CurrencyToggle/.test(sh),
-  'S1.20 BOTH controls are the Primitives\' own — they moved house; they were not re-implemented');
+// R0 re-cut 2026-10-10 (Tarek: «make the currency setting a € | E£ toggle»): the
+// language stays the Primitives' LangToggle; the currency is a two-sided pair.
+ok(/import \{[^}]*\bLangToggle\b[^}]*\}/.test(sh) && /<LangToggle/.test(sh)
+  && /\['EUR', 'EGP'\]\.map/.test(sh) && /aria-pressed=\{on\}/.test(sh),
+  'S1.20 language is the Primitives\' own toggle; currency is a € | E£ pair with the chosen side pressed');
 {
   // The backdrop: a full-screen button, honestly labelled, that closes.
   const backdrop = /aria-label=\{S\.settingsClose\}[\s\S]{0,220}position: 'fixed', inset: 0/.test(sh)
