@@ -255,6 +255,17 @@ export default function InboxView({
         </div>
       )}
 
+      {/**
+        * JUST FILED (Tarek's ruling, 2026-10-10 — amends R18's «a filed card
+        * leaves»): one card is still reviewed at a time, but a filed card stays
+        * UNDER the next one, correctable, until he swipes it away (or «Clear»).
+        * A mis-tap used to vanish with the card; the only way back was the Book.
+        */}
+      {fresh.filter((r) => r.outcome && (r.outcome.status === 'done' || r.outcome.status === 'already')).map((r) => (
+        <PendingCard key={r.key} item={r.item} outcome={r.outcome} onConfirm={onConfirm} onOpenEdit={openEdit}
+          onDismiss={() => setRemovedHere((s) => new Set(s).add(r.key))} />
+      ))}
+
       {stale.length > 0 && <StaleGroup rows={stale} onConfirm={onConfirm} onOpenEdit={openEdit} initialOpen={initialStaleOpen}
         onDismiss={(key) => setRemovedHere((s) => new Set(s).add(key))} />}
 

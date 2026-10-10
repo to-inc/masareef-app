@@ -309,7 +309,10 @@ try {
    */
   const done = withStatus({ status: 'done', category: 'Team' });
   // v4 P6 (R18) RE-CUT: one at a time — a confirmed card LEAVES the focus.
-  eq(buttons(done), 0, 'a confirmed card leaves the focus — no control for it remains to double-tap');
+  // R0 re-cut 2026-10-10 (Tarek: «keep it under the next one until I swipe it»): a
+  // filed card leaves the FOCUS but stays below, correctable and clearable.
+  ok(buttons(done) > 0 && text(done).includes(AR.recategorize) && text(done).includes(AR.reviewClear),
+    'a confirmed card stays under the queue — still correctable, and clearable');
   ok(text(done).includes(AR.reviewDone), 'and the screen says he is done');
 
   const saving = withStatus({ status: 'saving', category: 'Team' });
@@ -366,7 +369,8 @@ try {
   // v4 P6: the «1 من N» line is the one live region while he files; when the
   // queue empties, the finished line takes its place.
   eq(live(untouched), 1, 'an untouched queue has exactly one live region — the progress line');
-  eq(live(done), 1, 'and an emptied one has exactly one — the finished line');
+  // R0 re-cut 2026-10-10: the finished line, plus the filed card's own outcome strip.
+  eq(live(done), 2, 'and an emptied one has two — the finished line, and the one filed card\'s outcome strip');
   const confCard = withStatus({ status: 'conflict', category: 'Car', sheetCategory: 'Groceries' });
   ok(text(confCard).includes('النوع اتغير في الشيت'),
     'and the right outcome reaches it — a sentence that exists nowhere else on the screen');
@@ -405,8 +409,10 @@ try {
   // Read from the progress line down: the three rows share a day and an amount,
   // so the look-alike notice ABOVE the focus names all three by design.
   { const focusText = text(twoLeft).slice(text(twoLeft).indexOf(AR.reviewProgress(2, 3)));
-    ok(focusText.includes('ALI M**** S') && !focusText.includes('SARA T**** K') && !focusText.includes('MOHAMED G**** R'),
-      'and shows ONE card — the next one, not the filed one and not the one after'); }
+    // R0 re-cut 2026-10-10: the next card leads; the filed one sits BELOW it; the one after waits.
+    ok(focusText.includes('ALI M**** S') && !focusText.includes('SARA T**** K')
+      && focusText.indexOf('MOHAMED G**** R') > focusText.indexOf('ALI M**** S'),
+      'and shows ONE card to review — the next one — with the filed one under it, and not the one after'); }
   const mapOf = (over = {}) => Object.fromEntries(
     three.map((p, i) => [cardKey(p), over[i] || { status: 'done', category: 'Team' }]));
   const allDone = render(three, mapOf());
