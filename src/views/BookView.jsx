@@ -1978,6 +1978,9 @@ export function PeriodBlock({
  * component, `test-accountability.mjs` renders exactly what he sees.
  */
 export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens, displayCurrency, onPickMonth, birdsEye = null }) {
+  // The book's own unit — MonthScreen's own read (audit r2: it used the parent's
+  // variable and threw on every euro month, taking the whole app down).
+  const bookHome = (data && data.month && data.month.homeAgg && data.month.homeAgg.currency) || null;
   // Honest incompleteness (06 §2.2): a month we cannot fully account for must
   // never render as a confident number. `undated` rows are in the total but not
   // the chart; `unpriced` rows are in neither, so the total is knowably short.

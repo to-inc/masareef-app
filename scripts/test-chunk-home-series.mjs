@@ -100,7 +100,24 @@ ok(/period === 'week' && weekDay != null/.test(book) && /getDay\(\) === weekDay/
   // ——— a BROWSED month in his unit: euro rows at face, pound rows at their stamp, the rest named
   const v2 = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
   try {
-    const { browsedMonthData } = await v2.ssrLoadModule('/src/views/BookView.jsx');
+    const { browsedMonthData, MonthScreen } = await v2.ssrLoadModule('/src/views/BookView.jsx');
+    // Audit r2 2026-10-10: the euro Month screen threw (bookHome undefined) and took
+    // the whole app down. It must RENDER, with «Where it went» in euros.
+    {
+      const agg = (t) => ({ currency: 'EUR', total: t, unstamped: { count: 0, total: null, byCurrency: {} }, byMethod: { Visa: { total: t }, Cash: { total: 0 } } });
+      const n30 = Array.from({ length: 30 }, (_, i) => (i < 10 ? 10 : null));
+      const data = { today_cairo: { y: 2026, m: 9, d: 10 }, monthCats: [{ name: 'Groceries', now: 0, prev: 0, homeNow: 100, homePrev: 50 }],
+        month: { cur: { Visa: n30, Cash: n30.map((v) => (v == null ? null : 0)) }, prev: { Visa: Array(31).fill(5), Cash: Array(31).fill(0) },
+          names: { cur: 'Sep', prev: 'Aug' }, undated: { count: 0, Visa: 0, Cash: 0 }, unpriced: { count: 0 },
+          uncategorized: { count: 0, total: 0, homeTotal: 0 }, foreign: { count: 10, byCurrency: { EUR: 100 } }, prevForeign: { count: 0, byCurrency: {} },
+          homeAgg: agg(100), prevHomeAgg: agg(155),
+          homeSeries: { currency: 'EUR', cur: { Visa: n30, Cash: n30.map((v) => (v == null ? null : 0)) }, prev: { Visa: Array(31).fill(5), Cash: Array(31).fill(0) } } } };
+      let html = '', threw = null;
+      try {
+        html = renderToStaticMarkup(createElement(MonthScreen, { data, metric: 'all', setMetric() {}, onGoToInbox() {}, lensOpen: false, onToggleLens() {}, displayCurrency: 'EUR' }));
+      } catch (e) { threw = e; }
+      ok(!threw && html.length > 1000, `HS.ms1 the euro Month screen renders instead of throwing (${threw && threw.message})`);
+    }
     const rows = [
       { date: '3/9/2026', description: 'Prisma', method: 'Visa', category: 'Groceries', amount: 12.4, currency: 'EUR' },
       { date: '5/9/2026', description: 'Hyper1', method: 'Cash', category: 'Groceries', amount: 1000, currency: 'EGP', home: 19 },
