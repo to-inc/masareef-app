@@ -135,6 +135,8 @@ export const EN = {
   receiptIntro: 'Photograph the receipt and we read the amount. Nothing is logged until you agree.',
   receiptReading: 'Reading the receipt…',
   photosTitle: 'Photos',
+  photosEmpty: 'Nothing being processed',
+  photosEmptyHow: 'Photos and PDFs you add from New (camera or paperclip) wait here while they are read.',
   photosBusyTitle: (n) => `${n} ${n === 1 ? 'photo' : 'photos'} being processed`,
   photosSummary: (n, ready) => (ready ? `${ready} ready to check · ${n} in all` : `${n} in all`),
   attachFile: 'Attach a file',
@@ -323,6 +325,7 @@ export const EN = {
   dupPairTitle: 'Recorded twice?',
   dupPairBody: 'Two rows alike in the book. Choose which one to remove — the other stays as it is.',
   dupPairRemove: 'Remove this row',
+  dupKeep: 'Keep this', // a real second purchase — it leaves the look-alike card
   dupPairRemoved: "Removed — moved to the sheet's Removed tab",
   removeConfirm: "Remove this row? It moves to the sheet's Removed tab, so it can be brought back.",
   removeYes: 'Yes, remove it',

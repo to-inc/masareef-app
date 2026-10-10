@@ -636,24 +636,26 @@ export { cardKey };
 export function PhotosBar({ jobs = [], onOpen = null, initialOpen = false }) {
   const [open, setOpen] = useState(initialOpen);
   const list = jobs.filter((j) => j && j.stage !== 'dismissed');
-  if (!list.length) return null;
+  // ALWAYS THERE (Tarek, 2026-10-11: «I don't know where the button is»): it used to
+  // vanish whenever the queue emptied — exactly when he went looking for it.
   const stages = list.map((j) => effectiveStage(j));
   const busy = stages.filter((st) => st === 'queued' || st === 'reading').length;
   const ready = stages.filter((st) => st === 'ready').length;
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div data-photos-bar style={{ marginBottom: 14 }}>
       <button className="catchip" onClick={() => setOpen(!open)} aria-expanded={open}
         style={{ ...glass('card'), borderRadius: RADIUS.glassWell, width: '100%', minHeight: 56, padding: '8px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, color: C.ink, textAlign: 'start' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{ fontSize: TYPE.label, fontWeight: 700 }}>{busy ? S.photosBusyTitle(busy) : S.photosTitle}</span>
-          <span style={{ fontSize: TYPE.label, fontWeight: 500, color: C.muted }}>{S.photosSummary(list.length, ready)}</span>
+          <span style={{ fontSize: TYPE.label, fontWeight: 500, color: C.muted }}>{list.length ? S.photosSummary(list.length, ready) : S.photosEmpty}</span>
         </span>
         <span aria-hidden style={{ fontSize: TYPE.row, fontWeight: 700, color: C.muted }}>{open ? '⌄' : DIR === 'rtl' ? '‹' : '›'}</span>
       </button>
       {open && (
         <div style={{ ...glass('card'), marginTop: 8, padding: '4px 12px' }}>
-          {list.map((j, i) => <PhotoRow key={j.id} job={j} stage={stages[i]} onOpen={onOpen} />)}
+          {list.length ? list.map((j, i) => <PhotoRow key={j.id} job={j} stage={stages[i]} onOpen={onOpen} />)
+            : <div style={{ fontSize: TYPE.label, color: C.muted, padding: '12px 0', lineHeight: 1.5 }}>{S.photosEmptyHow}</div>}
         </div>
       )}
     </div>

@@ -245,8 +245,9 @@ try {
   // ═══ 2026-10-10 — «Photos being processed»: a bar that opens into the queue.
   { const { PhotosBar } = mod;
     const job = (id, stage, extra = {}) => ({ id, stage, queuedAt: 1791600000000, ...extra });
+    // R0 re-cut 2026-10-11 (Tarek: «I don't know where the button is»): the bar is always there.
     const none = renderToStaticMarkup(createElement(PhotosBar, { jobs: [job('d', 'dismissed')] }));
-    ok(none === '', 'PH.1 no photos (or only closed ones) — no bar at all');
+    ok(none.includes(AR.photosEmpty), 'PH.1 nothing waiting — the bar still shows, and says so');
     const closed = renderToStaticMarkup(createElement(PhotosBar, { jobs: [job('a', 'reading'), job('b', 'queued')] }));
     ok(closed.includes(AR.photosBusyTitle(2)) && closed.includes('aria-expanded="false"'),
       'PH.2 two photos waiting — the bar says so, closed');
@@ -299,7 +300,9 @@ try {
 
   const render = (pend, sett) =>
     renderToStaticMarkup(createElement(InboxView, { pending: pend, settled: sett, onConfirm: () => {} }));
-  const buttons = (html) => (html.match(/<button/g) || []).length;
+  // The «Photos» bar is always on To review now (2026-10-11); these counts are about the CARD.
+  const noBar = (html) => html.replace(/<div data-photos-bar[\s\S]*?<\/button>/, '');
+  const buttons = (html) => (noBar(html).match(/<button/g) || []).length;
   const disabled = (html) => (html.match(/disabled=""/g) || []).length;
   const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 

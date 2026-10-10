@@ -147,3 +147,4 @@ export function lookalikeCounts(report) {
   const extra = groups.reduce((n, g) => n + g.rows.length - 1, 0);
   return { groups: groups.length, rows, extra };
 }
+

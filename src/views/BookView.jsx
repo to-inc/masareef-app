@@ -12,6 +12,7 @@ import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CU
 import { fetchEntries, removeEntry } from '../api/index.js';
 import { outcomeForRemove } from '../state/removeOutcome.js';
 import { findLookalikes, lookalikeCounts, likeness } from '../state/duplicates.js';
+import { loadKept, keepRow, withoutKept } from '../state/keptLookalikes.js';
 import { canonCategory, sameCategory } from '../state/catOrder.js';
 import { TopCategories, PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
 import { Chip, LATIN, ISOLATE, SectionLabel, Rail, Sheet } from '../components/Primitives.jsx';
@@ -1269,7 +1270,8 @@ function Lookalikes({ rows, sheetUrl, onPick = null, onRemove = null }) {
   // Per-row remove state: undefined → «Remove this row», 'confirm' → asks once more,
   // then the server's outcome. Two taps, so a stray tap never costs a row.
   const [rm, setRm] = useState({});
-  const report = findLookalikes(rows);
+  const [kept, setKept] = useState(() => loadKept());
+  const report = withoutKept(findLookalikes(rows), kept);
   const counts = lookalikeCounts(report);
   if (!counts.groups) return null;              // the ordinary case is silence
 
@@ -1330,8 +1332,16 @@ function Lookalikes({ rows, sheetUrl, onPick = null, onRemove = null }) {
                   return <div style={{ fontSize: TYPE.label, color: st.status === 'done' ? C.settledInk : C.conflictInk, margin: '0 2px 6px' }}>{word}</div>;
                 }
                 return (
-                  <div style={{ margin: '0 2px 6px' }}>
-                    {st === 'confirm' && <div style={{ fontSize: TYPE.label, color: C.ink, marginBottom: 4 }}>{S.removeConfirm}</div>}
+                  <div style={{ margin: '0 2px 6px', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                    {st === 'confirm' && <div style={{ fontSize: TYPE.label, color: C.ink, flexBasis: '100%' }}>{S.removeConfirm}</div>}
+                    {/* «Keep this»: a real second purchase — it leaves this card (2026-10-11). */}
+                    {!st && (
+                      <button onClick={() => setKept(keepRow(r))}
+                        style={{ minHeight: TAP, padding: '0 14px', borderRadius: RADIUS.capsule, fontSize: TYPE.label, fontWeight: 700,
+                          color: C.harborInk, background: 'transparent', border: `1px solid ${C.line}` }}>
+                        {S.dupKeep}
+                      </button>
+                    )}
                     <button
                       disabled={!!st && typeof st === 'object'}
                       onClick={async () => {

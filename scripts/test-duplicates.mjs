@@ -22,6 +22,8 @@ import {
   bookKey, likeness, findLookalikes, lookalikeCounts,
 } from '../src/state/duplicates.js';
 import { twinKey } from '../src/state/batchDraft.js';
+import { findLookalikes as findLA } from '../src/state/duplicates.js';
+import { withoutKept, keepRow, loadKept } from '../src/state/keptLookalikes.js';
 
 let pass = 0;
 const failures = [];
@@ -165,6 +167,25 @@ const row = (date, description, amount, currency = 'EGP', method = 'Cash') =>
   eq(lookalikeCounts(clean).extra, 0, 'and nothing is offered for removal');
   eq(findLookalikes(null).groups.length, 0, 'a missing month is an empty report, never a throw');
   eq(findLookalikes([]).unpriced, 0, 'and an empty month examined nothing and says so');
+}
+
+/* ——— 2026-10-11 «Keep this»: a real double purchase leaves the card for good ——— */
+{
+  const store = new Map();
+  globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+  const rows = [
+    { date: '21/9/2026', description: 'HSL', amount: 4.5, currency: 'EUR' },
+    { date: '21/9/2026', description: 'HSL', amount: 4.5, currency: 'EUR' },
+    { date: '21/9/2026', description: 'Galleria', amount: 1.45, currency: 'EUR' },
+    { date: '21/9/2026', description: 'Galleria', amount: 1.45, currency: 'EUR' },
+  ];
+  const before = findLA(rows).groups.length;
+  keepRow(rows[0]);
+  const after = withoutKept(findLA(rows), loadKept()).groups;
+  ok(before === 2 && after.length === 1 && after[0].rows.every((r) => r.description === 'Galleria'),
+    'KEEP.1 «Keep this» on one HSL clears the HSL pair; the Galleria pair still asks');
+  ok(withoutKept(findLA(rows), loadKept()).groups.every((g) => g.rows.length >= 2), 'KEEP.2 a group left with one row is no group');
+  delete globalThis.localStorage;
 }
 
 const report = failures.length
