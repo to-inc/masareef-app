@@ -37,7 +37,7 @@ import {
 } from './state/batchDraft.js';
 import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY, hasCurrencyChoice } from './state/travel.js';
 import {
-  getDisplayCurrency, setDisplayCurrency, otherDisplayCurrency,
+  getDisplayCurrency, setDisplayCurrency, otherDisplayCurrency, hasDisplayChoice,
 } from './state/display.js';
 import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
@@ -191,6 +191,15 @@ export default function App() {
   useEffect(() => {
     if (bookCurrency !== 'EGP' && !hasCurrencyChoice()) setStoredCurrency(bookCurrency);
   }, [bookCurrency]);
+  /**
+   * THE READING UNIT FOLLOWS THE BOOK until one is chosen (audit r3). The euro
+   * default is his ruling for HIS book; on Dad's pound book it led the month with
+   * «13 €» and shrank 15,979 E£ to an aside. With no stored choice, a loaded book
+   * reads in its own unit — euros for his, pounds for Dad's.
+   */
+  useEffect(() => {
+    if (data && !hasDisplayChoice()) setDisplayCurrencyState(bookCurrency);
+  }, [!!data, bookCurrency]); // eslint-disable-line react-hooks/exhaustive-deps
   const [entryBusy, setEntryBusy] = useState(false);
 
   /**

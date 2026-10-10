@@ -94,6 +94,14 @@ export function getDisplayCurrency(storage) {
   }
 }
 
+/** Has a reading unit ever been chosen on this phone? (setDisplayCurrency always stores one.) */
+export function hasDisplayChoice(storage) {
+  try {
+    const store = storage || (typeof localStorage === 'undefined' ? null : localStorage);
+    return !!(store && DISPLAY_CURRENCIES.indexOf(store.getItem(KEY)) !== -1);
+  } catch { return false; }
+}
+
 export function setDisplayCurrency(c, storage) {
   const next = DISPLAY_CURRENCIES.indexOf(c) === -1 ? HOME_CURRENCY : c;
   try {

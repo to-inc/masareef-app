@@ -32,7 +32,7 @@ import {
 import { periodTotals, comparisonOf, hasShape } from '../src/lib/series.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../src/state/foreign.js';
 import {
-  DISPLAY_CURRENCIES, getDisplayCurrency, setDisplayCurrency, otherDisplayCurrency, leadAndAsides,
+  DISPLAY_CURRENCIES, getDisplayCurrency, setDisplayCurrency, otherDisplayCurrency, leadAndAsides, hasDisplayChoice,
 } from '../src/state/display.js';
 import { METRICS, UNKNOWN_CATEGORY } from '../src/lib/constants.js';
 import { batchable } from '../src/state/inboxOutcomes.js';
@@ -387,8 +387,10 @@ eq(unsizedForeign({ count: 1, byCurrency: { EUR: 200 } }), 0, 'and a fully-sized
    * separate constant, and it is EUR by the Owner's word.
    */
   eq(getDisplayCurrency(st), 'EUR', "the default is the READER's unit — the sheet's unit is a separate question");
+  eq(hasDisplayChoice(st), false, 'no choice made yet — the shell lets the book decide (audit r3: Dad\'s pound book must not open in euros)');
   setDisplayCurrency('EUR', st);
   eq(getDisplayCurrency(st), 'EUR', 'and the choice survives');
+  eq(hasDisplayChoice(st), true, 'and once chosen, the choice is his');
   eq(getDisplayCurrency(store('nonsense')), 'EUR', 'a corrupted value falls back rather than rendering itself');
 }
 
