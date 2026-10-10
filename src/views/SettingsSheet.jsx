@@ -262,14 +262,9 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
 
           {/* ═══ S2 — the default method (06 §3.10.3) ═══ */}
           <div style={{ marginTop: SPACE.gap }}>
-            {/**
-              * MEANWHILE-LABEL: `entryMethod` («الدفع كان إزاي») names the
-              * same concept the control defaults — a dedicated
-              * `settingsDefaultMethod` key is this chunk's reported residual
-              * (this leaf may not touch the locale files), and the swap is
-              * one line when it lands.
-              */}
-            <SectionLabel>{S.entryMethod}</SectionLabel>
+            {/* Its own words (Tarek, 2026-10-10): this sets how NEW entries start —
+                «How you paid» read like a fact about some past expense. */}
+            <SectionLabel>{S.settingsDefaultMethod}</SectionLabel>
             {/**
               * The EntryView chooser's own grammar, verbatim: options from
               * METHODS (the wire vocabulary — also the sheet's columns),
@@ -278,7 +273,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
               * the setter so state and storage cannot disagree, and the
               * setter's coercion means no label ever becomes the value.
               */}
-            <div style={{ display: 'flex', gap: SPACE.gap }} role="group" aria-label={S.entryMethod}>
+            <div style={{ display: 'flex', gap: SPACE.gap }} role="group" aria-label={S.settingsDefaultMethod}>
               {METHODS.map((m) => (
                 <button
                   key={m}

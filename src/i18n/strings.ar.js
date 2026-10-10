@@ -90,6 +90,7 @@ export const AR = {
   // اسم المجموعة لقارئ الشاشة. دول اللي بيقراهم؛ القيمة اللي بتتبعت
   // 'Cash' و 'Visa' ومفيش طريق تخلي الكلمة دي تبقى قيمة.
   entryMethod: 'الدفع كان إزاي',
+  settingsDefaultMethod: 'المصروف الجديد يبدأ',
   methodCash: 'كاش',
   methodCard: 'فيزا',
   currency: 'جنيه',

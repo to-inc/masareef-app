@@ -233,9 +233,10 @@ try {
       'S2.31 a corrupted store renders the shipped default rather than nothing — the fallback is visible, not silent');
 
     nodeStore.removeItem(KEY);
-    const label = str(AR, 'entryMethod');
-    ok(label !== null && fresh.includes(label),
-      'S2.32 the control is NAMED in his language via an existing i18n key (a dedicated settingsDefaultMethod key is a reported residual, both locales drafted)');
+    // R0 re-cut 2026-10-10: the residual landed — the control has its own key, «New entries start as».
+    const label = str(AR, 'settingsDefaultMethod');
+    ok(label !== null && fresh.includes(label) && str(EN, 'settingsDefaultMethod') === 'New entries start as',
+      'S2.32 the control is NAMED for what it does — how new entries start — in both locales');
   }
 
   if (typeof EntryView === 'function' && typeof entryDM === 'function') {

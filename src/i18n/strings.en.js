@@ -81,6 +81,7 @@ export const EN = {
   // The chooser's accessible name. The two labels below are what he READS; the
   // values behind them are 'Cash' and 'Visa' and never meet each other.
   entryMethod: 'How you paid',
+  settingsDefaultMethod: 'New entries start as',
   methodCash: 'Cash',
   methodCard: 'Card',
   currency: 'EGP',
