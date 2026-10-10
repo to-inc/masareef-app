@@ -27,8 +27,8 @@ const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 ok(startMethod({ method: 'Visa', defaultMethod: 'Cash' }) === 'Visa', 'PRED.1 a predicted Card beats D19\'s Cash default');
 ok(startMethod({ method: null, defaultMethod: 'Visa' }) === 'Visa', 'PRED.2 no prediction → the server\'s default stands');
 ok(startMethod({ method: 'card', defaultMethod: 'nonsense' }) === 'Cash', 'PRED.3 a value that is not a wire method never reaches the sheet — Cash');
-ok(predOf({ category: 'Groceries', categorySource: 'history', method: 'Visa', methodSource: 'receipt', extraction: { method_evidence: '**** 4821' } }).evidence === '**** 4821',
-  'PRED.4 the card evidence quote travels with the prediction');
+ok(predOf({ category: 'Groceries', categorySource: 'history', method: 'Visa', methodSource: 'receipt', extraction: { method_evidence: '**** 4821' } }).evidence === '•••• 4821',
+  'PRED.4 the card evidence travels with the prediction — a masked card said as its last four (R0 re-cut 2026-10-10)');
 
 // ——— one fix, many rows
 ok(confirmPayload({ tab: 'Oct', rowHint: 4, match: {} }, 'Groceries').applySimilar === true, 'PRED.5 a «To review» fix asks the server to file the same merchant\'s other ❓ rows');
@@ -41,6 +41,14 @@ ok(/if \(outcome\.status !== 'done' \|\| also > 0\) refresh\(\);/.test(app), 'PR
 const rv = read('src/views/ReceiptView.jsx');
 ok(/setMethod\(startMethod\(res\)\);\s*setPred\(predOf\(res\)\);/.test(rv) && !/setMethod\(isMethod\(res\.defaultMethod\)/.test(rv),
   'PRED.16 the LIVE path (applyExtraction) opens on the prediction too — not D19\'s default');
+
+// Tarek, 2026-10-10 («fix this»): the reader leaked its own JSON into the evidence.
+{
+  const { cleanEvidence } = await import('../src/state/predict.js');
+  ok(cleanEvidence("Visa DEBIT **** **** **** 0634 LP','category_guess':'Eating out'}") === '•••• 0634',
+    'PRED.e1 leaked answer text is cut, and a masked card is said as its last four');
+  ok(cleanEvidence('KÄTEINEN') === 'KÄTEINEN' && cleanEvidence(null) === null, 'PRED.e2 plain evidence passes untouched; none stays none');
+}
 
 // ——— the review card, rendered
 const store = new Map();
@@ -56,7 +64,7 @@ try {
 
   const card = render({ category: 'Groceries', categorySource: 'history', method: 'Visa', methodSource: 'receipt', defaultMethod: 'Cash' });
   ok(pressed(card).includes(AR.metricVisa), 'PRED.9 HIS CARD NUMBER ON THE RECEIPT → the card opens on Card');
-  ok(card.includes(AR.methodEvidence(true, '**** 4821')), 'PRED.10 …and says why, quoting the receipt («فيزا — الإيصال فيه «**** 4821»»)');
+  ok(card.includes(AR.methodEvidence(true, '•••• 4821')), 'PRED.10 …and says why, quoting the receipt («فيزا — الإيصال فيه «•••• 4821»», R0 re-cut 2026-10-10)');
   ok(card.includes(AR.predFromHistory), 'PRED.11 the category says it came from his book');
 
   const habit = render({ category: 'Groceries', categorySource: 'similar', method: 'Visa', methodSource: 'history', defaultMethod: 'Cash' });

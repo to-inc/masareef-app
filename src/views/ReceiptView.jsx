@@ -704,11 +704,9 @@ export default function ReceiptView({
           moves the selection, and tapping the selected one clears it. The list
           he can choose from does not change shape when he chooses.
         */}
-        {category && !showAllCats && (
-          <button className="bigbtn" onClick={() => setShowAllCats(true)} style={{ ...chipStyle, marginTop: 12, width: '100%', background: GRADIENT.harbor, color: C.onDark, fontSize: TYPE.action, fontWeight: 700, minHeight: 56 }}>
-            ✓ <span dir="auto">{categoryLabel(category)}</span>
-          </button>
-        )}
+        {/* The full-width «✓ Eating out» summary is gone (Tarek, 2026-10-10: «fix this»):
+            the Category line above and the ticked chip below already say it, and in
+            the save button's blue it read as the save. «More» opens the full list. */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
           <CategoryChips
             list={showAllCats ? allCategories() : shortCategories()}

@@ -17,5 +17,20 @@ export const startMethod = (res) => (isMethod(res && res.method) ? res.method
 export const predOf = (res) => (res ? {
   category: res.category || null, categorySource: res.categorySource || null,
   method: isMethod(res.method) ? res.method : null, methodSource: res.methodSource || null,
-  evidence: (res.extraction && res.extraction.method_evidence) || null,
+  evidence: cleanEvidence(res.extraction && res.extraction.method_evidence),
 } : null);
+
+/**
+ * What the receipt SHOWS, said briefly (Tarek, 2026-10-10: «Visa DEBIT **** ****
+ * **** 0634 LP','category_guess':'Eating out'}»). The reader sometimes leaks the
+ * tail of its own answer into this field. Cut at the first quote, brace or
+ * comma-quote; a masked card number is said as its last four («•••• 0634»).
+ */
+export function cleanEvidence(raw) {
+  if (raw == null) return null;
+  let t = String(raw).split(/['"{}]|,\s*'/)[0].trim();
+  const card = t.match(/(?:\*{2,}|x{2,}|•{2,})[\s*x•]*(\d{4})\b/i);
+  if (card) t = `•••• ${card[1]}`;
+  if (t.length > 40) t = `${t.slice(0, 39)}…`;
+  return t || null;
+}
