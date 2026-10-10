@@ -699,7 +699,7 @@ const setPrioritySelection = (key) => {
  * inside D5 rather than against it: he is shown a gap he can tap, not a category
  * he never chose.
  */
-export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized, group = null, unit = '' }) {
+export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized, group = null, unit = '', deltas = true }) {
   // Audit 2026-10-10: every amount carries its unit (v4) — these were bare under a € headline.
   /**
    * E4 — the scope a pressed lens tile put on this chart, or null for the
@@ -751,8 +751,10 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
             {/* Category name is frozen-schema Latin — isolated so RTL cannot reorder it */}
             <span style={{ fontWeight: 600 }} dir="auto">{categoryLabel(c.name)}</span>
             <span style={{ fontWeight: 700, fontFamily: FONT_DISPLAY }}>
-              <span style={LATIN}>{money(c.now)}</span><span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{unit ? ` ${unit}` : ''}</span>
-              <NeutralDelta now={c.now} prev={c.prev} />
+              <span style={LATIN}>{moneyRound(c.now)}</span><span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{unit ? ` ${unit}` : ''}</span>
+              {/* The live month's previous figure is the WHOLE previous month: a «▼ 54%»
+                  against it reads as a drop while he is on pace (audit r4). */}
+              {deltas && <NeutralDelta now={c.now} prev={c.prev} />}
             </span>
           </div>
           <div style={{ height: 9, background: C.shell, borderRadius: RADIUS.capsule, position: 'relative', overflow: 'hidden' }}>

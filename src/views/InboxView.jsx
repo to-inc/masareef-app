@@ -16,6 +16,7 @@ import { findLookalikes } from '../state/duplicates.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { removeEntry } from '../api/index.js';
 import EditSheet from './EditSheet.jsx';
+import { getDisplayCurrency } from '../state/display.js';
 import { outcomeForRemove } from '../state/removeOutcome.js';
 
 /**
@@ -567,13 +568,15 @@ function PendingCard({ item, outcome, onConfirm, onOpenEdit = null, onSkip = nul
         <Chip kind={p.method} small label={p.method === 'Visa' ? S.metricVisa : S.metricCash} />
         <span style={LATIN}>{p.date}</span>
         {/* Only a REAL foreign currency is travel; an unpriced row has currency null. */}
-        {p.currency && p.currency !== 'EGP' ? <span>{S.travel}</span> : null}
+        {/* …and never his own book's unit: on his euro book every euro row is home (audit r4). */}
+        {p.currency && p.currency !== 'EGP' && p.currency !== getDisplayCurrency() ? <span>{S.travel}</span> : null}
       </div>
-      <div style={{ fontSize: TYPE.section, fontWeight: 650, marginTop: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...ISOLATE }} dir="auto">
+      <div style={{ fontSize: TYPE.section, fontWeight: 650, marginTop: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...ISOLATE, display: 'block' }} dir="auto">
         {p.description}
       </div>
       {/* A row he never priced has NO amount: «—», never a «0» he never wrote. */}
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.amountReview, fontWeight: 650, lineHeight: 1.1, marginTop: 6, color: C.ink, ...NUMERALS, ...LATIN, textAlign: DIR === 'rtl' ? 'right' : 'left' }}>
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.amountReview, fontWeight: 650, lineHeight: 1.1, marginTop: 6, color: C.ink, ...NUMERALS, ...LATIN, display: 'block', textAlign: DIR === 'rtl' ? 'right' : 'left' }}>
+        {/* display:block — a short name and the amount shared one line («MobilePay20.00 €», audit r4) */}
         {p.amount == null ? '—' : money2(p.amount)}
         {p.amount != null && (
           <span style={{ fontFamily: FONT_UI, fontSize: unitSize(TYPE.hero), fontWeight: 600, color: C.muted }}> {unitFor(p.currency || 'EGP')}</span>

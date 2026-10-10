@@ -75,7 +75,8 @@ try {
   const h = head('EUR');
   ok(!h.includes(S.whyNoCompare), 'HS.11 the € headline no longer says «No comparison here — see why»');
   ok(h.includes(S.lessThan('Last week')) && /<b[^>]*>\d+%<\/b>/.test(h), 'HS.12 …it says «less than Last week» with a percentage, euro to euro');
-  ok(new RegExp(`${S.wasThen}[^<]*<span[^>]*>143</span>`).test(h) && !new RegExp(`${S.wasThen}[^<]*<span[^>]*>280</span>`).test(h),
+  // R0 re-cut 2026-10-10 (audit r4): the «was» figure now carries its unit («143 €»).
+  ok(new RegExp(`${S.wasThen}[^<]*<span[^>]*>143 €</span>`).test(h) && !new RegExp(`${S.wasThen}[^<]*<span[^>]*>280`).test(h),
     'HS.13 …measured at the SAME POINT of last week: through Wednesday 40+22+0+81.31 = 143, never the whole week\'s 280');
   // ——— «why are the colours different / why are the bars not clickable» (2026-10-10)
   ok(/data-bars-legend[\s\S]{0,600}This week[\s\S]{0,400}Last week/.test(html), 'HS.22 the bars carry a key — this week in the line colour, last week in sand');

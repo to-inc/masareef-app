@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, GLYPH, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
 import { S, categoryLabel, unitFor } from '../i18n/strings.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
-import { money, normalizeDigits } from '../lib/format.js';
+import { money, money2, normalizeDigits } from '../lib/format.js';
 import { newClientId, cairoClock, isoToDmy } from '../lib/dates.js';
 import { prepareReceipt, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
@@ -565,7 +565,7 @@ export default function ReceiptView({
               />
             ) : (
               <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.display, fontWeight: 650, ...LATIN, ...NUMERALS }}>
-                {money(amount)} <span style={{ fontSize: 16, color: C.muted }}>{unitFor(currencyOf())}</span>
+                {money2(amount)} <span style={{ fontSize: 16, color: C.muted }}>{unitFor(currencyOf())}</span>
               </div>
             )}
             {/* Nobody read the receipt's currency: say which unit it will be

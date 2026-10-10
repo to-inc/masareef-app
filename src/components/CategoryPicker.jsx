@@ -132,7 +132,9 @@ export function CategoryActions({ guess, outcome, onPick }) {
           {/* Arabic label, with the frozen value underneath (finding M2) — seeing
               the two together is what lets him check the app against his sheet. */}
           <span>✓ {categoryLabel(guess)}</span>
-          <span style={{ fontSize: TYPE.caption, fontWeight: 500, ...ISOLATE }} dir="auto">{guess}</span>
+          {/* Only where it ADDS something (the Arabic label over the sheet's value) — in
+              English it just said «Medical» twice (audit r4). */}
+          {categoryLabel(guess) !== guess && <span style={{ fontSize: TYPE.caption, fontWeight: 500, ...ISOLATE }} dir="auto">{guess}</span>}
         </button>
       )}
       {label(filed ? S.recategorize : guess ? S.reviewOrElse : S.entryNeedCategory)}

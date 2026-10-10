@@ -583,6 +583,7 @@ export default function BookView({
 
       {!browsing && period === 'month' && (
         <MonthScreen
+          live
           data={data} metric={metric} setMetric={setMetric} onGoToInbox={onGoToInbox}
           displayCurrency={displayCurrency}
           lensOpen={lensIsOpen}
@@ -2007,7 +2008,7 @@ export function PeriodBlock({
                     * the direction. Body ink, both directions, always.
                     */}
                   <b style={{ color: C.ink, ...LATIN }}>{cmpShown.pct}%</b>
-                  <span style={{ color: C.muted, fontSize: TYPE.label }}> ({S.wasThen} <span style={LATIN}>{moneyRound(cmpShown.prevAt)}</span>)</span>
+                  <span style={{ color: C.muted, fontSize: TYPE.label }}> ({S.wasThen} <span style={LATIN}>{moneyRound(cmpShown.prevAt)} {unitFor(lead.currency)}</span>)</span>
                 </>
               )}
             {/**
@@ -2066,7 +2067,7 @@ export function PeriodBlock({
  * mounted with the wrong props — the class a source regex cannot see. As a
  * component, `test-accountability.mjs` renders exactly what he sees.
  */
-export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens, displayCurrency, onPickMonth, birdsEye = null }) {
+export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens, displayCurrency, onPickMonth, birdsEye = null, live = false }) {
   // The book's own unit — MonthScreen's own read (audit r2: it used the parent's
   // variable and threw on every euro month, taking the whole app down).
   const bookHome = (data && data.month && data.month.homeAgg && data.month.homeAgg.currency) || null;
@@ -2218,6 +2219,7 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
         uncategorized={cv.uncategorized}
         total={listAccountsForTheMonth ? (cv.inHome ? (data.month.homeAgg ? data.month.homeAgg.total : null) : monthTrueTotal) : null}
         onUncategorized={onGoToInbox}
+        deltas={!live}
       />
     </>
   );

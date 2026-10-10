@@ -70,7 +70,7 @@ export const EN = {
   reviewLikely: 'Probably:', // v4 P6
   reviewOrElse: 'Or…',
   reviewSkip: 'Leave it for later',
-  reviewClear: 'Clear', // a logged card leaves the list; also a sideways swipe
+  reviewClear: 'Hide from this list', // a logged card leaves the list; also a sideways swipe
   reviewProgress: (i, n) => `${i} of ${n}`,
   reviewDone: 'All done ✓',
   likeYesterday: 'Like yesterday', // v4 P4 repeat chip (R17)
@@ -513,7 +513,7 @@ export const EN = {
   recentUndatedNote: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'} with no clear day — they show under Month only`,
 
   // ——— month accountability (D16d). Every gap on the screen has a name.
-  uncategorizedLine: 'Uncategorised ?',
+  uncategorizedLine: 'No category', // the rows' own word (audit r4)
   uncategorizedHint: 'tap to categorise',
   monthTotalLine: 'Month total',
 
@@ -530,7 +530,7 @@ export const EN = {
     joy: 'Joy',
     projects: 'Projects',
   }[key] || String(key)),
-  lensRemainder: 'Everything else',
+  lensRemainder: 'Not in a group', // «Everything else» also named Where-it-went's fold (audit r4)
 
   /**
    * ——— N7: the priority chips over the Book list — the count is a sentence,
@@ -601,7 +601,7 @@ export const EN = {
   settingsLangCurrency: 'Currency & language',
   settingsLanguage: 'Language',
   settingsCurrency: 'Currency',
-  settingsCurrencyNote: "Chooses which unit leads the Book's figures — nothing is converted; each currency keeps its own numbers.",
+  settingsCurrencyNote: 'Which unit the Book reads in. Nothing is converted here: pound rows count at the euro value stamped when they were logged, and rows without one are listed apart.',
 
   offline: 'No network — this is the last saved data',
   saving: 'Saving…',
