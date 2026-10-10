@@ -484,7 +484,8 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
           readable prose, outside the geometry. */}
       {counted.length > 0 && (
         <div data-avg-prose style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>
-          {S.avg} {avgWords ? `${avgWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
+          {/* Says WHAT it averages — a day on the week and month axes, a month on the year's (2026-10-11). */}
+          {avgWords ? `${S.avg} ${avgWords} ` : `${labels.length === 12 ? S.avgPerMonth : S.avgPerDay} `}<span style={LATIN}>{moneyRound(avg)}</span>
         </div>
       )}
       {/* THE KEY (Tarek, 2026-10-10: «why are the colours different?»): each slot holds

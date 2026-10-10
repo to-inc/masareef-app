@@ -154,6 +154,7 @@ export const EN = {
   jobQueued: 'In line',
   jobReading: 'Reading…',
   jobReady: 'Ready — check it',
+  jobCheck: 'Check and log', // the ready card's button — the status line already says «Ready»
   // A verdict, not a card to confirm. It used to say "Ready — check it" and
   // there was nothing to check (R-receipts 4).
   jobNotReceipt: 'Not a receipt',
@@ -280,7 +281,7 @@ export const EN = {
   tabBook: 'Book',
   todaySpent: 'Spent today', // v4 P3 hero caption
   uncatCount: (n) => `${n} with no category`,
-  uncatAction: 'File them →',
+  uncatAction: (n) => (n === 1 ? 'File it →' : 'File them →'),
   // Foreign money is counted on its own — never added into the EGP sum (D8).
   travelApart: 'on its own',
   /**
@@ -368,7 +369,7 @@ export const EN = {
   outboxDupNote: 'This receipt matches an expense already in your book, so it was held back. Send it anyway, or drop it.',
   batchDupBookIntro: 'Your book already has this:',
   batchDupBatch: 'Same as the one above, in this photo',
-  batchDupUnchecked: 'We could not check',
+  batchDupUnchecked: 'Could not check your book for a duplicate',
   batchSaveAnyway: 'Log it anyway',
   batchTruncated: (shown, total) => `Showing ${shown} of ${total} — the list is cut off. Photograph the rest.`,
   batchWritten: 'Logged',
@@ -493,6 +494,8 @@ export const EN = {
 
   vs: 'vs',
   avg: 'average',
+  avgPerDay: 'average per day',
+  avgPerMonth: 'average per month',
   // Keypad backspace — an aria-label, spoken not seen (A9 residual).
   keypadBackspace: 'Delete',
   // W1 — the chart never draws a zero it does not mean: the true sentence in its place (must contain chartUnit verbatim).

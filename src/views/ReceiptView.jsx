@@ -959,7 +959,7 @@ function JobRow({ job, onReview, onRetry, onCancel, onDebugLog }) {
    */
   const actions = [];
   if (stage === 'ready') {
-    actions.push({ key: 'review', primary: true, label: S.jobReady, onTap: () => onReview(job) });
+    actions.push({ key: 'review', primary: true, label: S.jobCheck, onTap: () => onReview(job) });
   }
   if (stage === 'notReceipt') {
     actions.push({ key: 'verdict', primary: false, label: S.jobWhy, onTap: () => onReview(job) });

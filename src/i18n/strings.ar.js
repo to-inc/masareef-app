@@ -163,6 +163,7 @@ export const AR = {
   // and a progress bar would be a number we invented (honest-render law).
   jobQueued: 'في الدور',
   jobReading: 'بيتقرا…',
+  jobCheck: 'راجعه وسجّله',
   jobReady: 'جاهز — راجعه',
   // حكم، مش كارت تأكيد. قبل كده كان بيقول «جاهز — راجعه» ومفيش حاجة تتراجع
   // (R-receipts 4).
@@ -297,7 +298,7 @@ export const AR = {
   tabBook: 'الدفتر',
   todaySpent: 'صرفت النهاردة', // v4 P3 hero caption
   uncatCount: (n) => `${n} من غير نوع`,
-  uncatAction: 'صنّفهم ←',
+  uncatAction: (n) => (n === 1 ? 'صنّفه ←' : 'صنّفهم ←'),
   // الفلوس بعملة تانية بتتعد لوحدها — مش بتتجمع مع الجنيه (D8).
   travelApart: 'لوحدها',
   /**
@@ -383,7 +384,7 @@ export const AR = {
   outboxDupNote: 'الإيصال ده شبه مصروف موجود في الدفتر، فاتشال. ابعته برضه، أو شيله.',
   batchDupBookIntro: 'الدفتر فيه دي خلاص:',
   batchDupBatch: 'زي اللي فوق في نفس الصورة',
-  batchDupUnchecked: 'ما قدرناش نتأكد',
+  batchDupUnchecked: 'ما قدرناش نتأكد إنها مش متسجلة قبل كده',
   batchSaveAnyway: 'سجّلها برضه',
   batchTruncated: (shown, total) => `ظاهر ${shown} من ${total} — الكشف مقصوص. صوّر الباقي وابعته.`,
   // نتيجة كل صف بعد التسجيل — مش حكم واحد على الدفعة
@@ -496,6 +497,8 @@ export const AR = {
 
   vs: 'مقابل',
   avg: 'متوسط',
+  avgPerDay: 'متوسط اليوم',
+  avgPerMonth: 'متوسط الشهر',
   // زرار المسح في اللوحة — بيتنطق مش بيتشاف (A9).
   keypadBackspace: 'مسح',
   // W1 — الرسمة مترسمش صفر مش صحيح: الجملة الصادقة مكان الخط (لازم تحتوي chartUnit حرفيًا).

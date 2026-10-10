@@ -93,8 +93,9 @@ try {
    */
   const idle = avgSpan(bars({}));
   ok(!!idle, 'E2.1 the average pill renders, right-pinned, with no selection');
-  ok(!!idle && text(idle.inner).includes(`${S.avg} ${moneyRound(65)}`),
-    `E2.2 no selection — the average is the whole period's (65), labelled with S.avg alone`);
+  // R0 re-cut 2026-10-11 (Tarek: «average 49» didn't say per what): the year axis says per month.
+  ok(!!idle && text(idle.inner).includes(`${S.avgPerMonth} ${moneyRound(65)}`),
+    `E2.2 no selection — the average is the whole period's (65), labelled «${S.avgPerMonth}»`);
   ok(!!idle && !idle.inner.includes(WORDS),
     'E2.3 …and carries no range words while no range is selected');
 
@@ -116,7 +117,7 @@ try {
   // One tapped slot (a week's Thursday) is not a scope — its average would be its own
   // bar, printed as «average Thu 23» (Tarek's screenshot, 2026-10-10).
   const one = avgSpan(bars({ range: { a: 4, b: 4 }, rangeWords: 'Thu' }));
-  ok(!!one && text(one.inner).includes(`${S.avg} ${moneyRound(65)}`) && !one.inner.includes('Thu'),
+  ok(!!one && text(one.inner).includes(`${S.avgPerMonth} ${moneyRound(65)}`) && !one.inner.includes('Thu'),
     'E2.6b a single tapped slot keeps the whole-period average and names no scope');
 
   /**

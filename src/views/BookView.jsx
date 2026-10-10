@@ -1579,7 +1579,7 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
           }}
         >
           <span style={{ fontSize: TYPE.body }}>{S.uncatCount(unknown)}</span>
-          <span style={{ fontSize: TYPE.label }}>{S.uncatAction}</span>
+          <span style={{ fontSize: TYPE.label }}>{S.uncatAction(unknown)}</span>
         </button>
       )}
     </div>
