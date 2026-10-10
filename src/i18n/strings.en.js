@@ -438,6 +438,9 @@ export const EN = {
    */
   sectionAgainst: (prev) => `Against ${prev}`,
   sectionByMethod: 'By method',
+  sectionWhereItWent: 'Where it went', // the euro book's bird's-eye view, in place of the method split
+  topOther: 'Everything else',
+  topEmpty: 'No spending in this period yet',
   // A row with no category is a door wherever it appears (M6).
   rowNeedsCategory: 'No category', // v4 P3
   // A2: filed from the merchant memory — he never chose it.

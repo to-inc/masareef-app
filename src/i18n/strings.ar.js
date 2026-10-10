@@ -444,6 +444,9 @@ export const AR = {
    */
   sectionAgainst: (prev) => `مقابل ${prev}`,
   sectionByMethod: 'حسب طريقة الدفع',
+  sectionWhereItWent: 'الفلوس راحت فين',
+  topOther: 'الباقي',
+  topEmpty: 'مفيش مصاريف في الفترة دي لسه',
   // السطر اللي من غير نوع بقى زرار في كل مكان بيظهر فيه (M6).
   rowNeedsCategory: 'من غير نوع', // v4 P3
   // A2: الصف ده اتصنّف لوحده من الذاكرة — مش إنت اللي اخترته.

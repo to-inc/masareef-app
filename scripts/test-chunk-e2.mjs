@@ -40,26 +40,25 @@ const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
  * ten assertions fail for a reason none of them was about. An extractor should
  * survive an attribute it does not care about.
  */
+// R0 re-cut 2026-10-10 (bar-chart audit): the right-pinned in-chart pill is gone —
+// it sat on today's column — and the average is read where it is now stated, the
+// prose line under the chart (`data-avg-prose`).
 const avgSpan = (html) => {
-  const re = /<span[^>]*?style="([^"]*)"[^>]*>([\s\S]*?)<\/span>/g;
-  let m;
-  while ((m = re.exec(html))) {
-    if (m[1].includes('position:absolute') && m[1].includes('right:0')) return { style: m[1], inner: m[2] };
-  }
-  return null;
+  const m = /<div data-avg-prose[^>]*?style="([^"]*)"[^>]*>([\s\S]*?)<\/div>/.exec(html);
+  return m ? { style: m[1], inner: m[2] } : null;
 };
 
 // ——— control: the extractor proves itself on seeded input first.
 {
-  const seeded = '<div><span style="position:absolute;right:0;bottom:10%">متوسط <span>45</span></span></div>';
+  const seeded = '<div><div data-avg-prose="true" style="font-size:15px">متوسط <span>45</span></div></div>';
   const got = avgSpan(seeded);
-  ok(!!got && got.inner.includes('45'), 'control — the avg-span extractor finds a seeded right-pinned label');
-  ok(avgSpan('<span style="left:0">x</span>') === null, 'control — and refuses a span that is not right-pinned');
+  ok(!!got && got.inner.includes('45'), 'control — the extractor finds a seeded average line');
+  ok(avgSpan('<div style="left:0">x</div>') === null, 'control — and refuses a div that is not the average line');
 }
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 try {
-  const { PairedBars, PeriodSummary } = await vite.ssrLoadModule('/src/components/Charts.jsx');
+  const { PairedBars, PeriodSummary, TopCategories } = await vite.ssrLoadModule('/src/components/Charts.jsx');
   const { S, MONTH_LABELS, monthByTab } = await vite.ssrLoadModule('/src/i18n/strings.js');
   const { moneyRound } = await vite.ssrLoadModule('/src/lib/format.js');
 
@@ -75,6 +74,16 @@ try {
       return '';
     }
   };
+  // «Where it went» (2026-10-10): top three, the rest folded, shares of the whole.
+  {
+    const html = renderToStaticMarkup(createElement(TopCategories, { unit: '€', items: [
+      { name: 'Eating out', amount: 142 }, { name: 'Groceries', amount: 61 }, { name: 'Transportation', amount: 44 },
+      { name: 'Gifts', amount: 30 }, { name: 'Medical', amount: 18 }, { name: 'Car', amount: 0 }] }));
+    const t = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    ok(/142\s*€\s*48%/.test(t) && t.includes(S.topOther) && /48\s*€\s*16%/.test(t),
+      `TC.1 the three biggest lead with their shares and the rest folds into one line (got: ${t.slice(0, 200)})`);
+    ok(!t.includes('Gifts') && !/\b0\s*€/.test(t), 'TC.2 a folded category is not listed, and a zero is not a line');
+  }
   const WORDS = `${monthByTab('Mar')}–${monthByTab('Jun')}`;
 
   /**
@@ -101,8 +110,8 @@ try {
     'E2.5 …and the whole-period figure is off the pill — one label, one scope');
   ok(!!sel && text(sel.inner).includes(`${S.avg} ${WORDS} ${moneyRound(45)}`),
     `E2.6 the label reads «${S.avg} ${WORDS} …» — the existing word plus the range's own month words, no new key`);
-  ok(!!sel && sel.style.includes('right:0'),
-    'E2.7 …and it stays at the right, where the average has always spoken');
+  ok(!/data-geometry="chart-average-label"/.test(bars({ range: { a: 2, b: 5 }, rangeWords: WORDS })),
+    'E2.7 …and no pill sits on the columns — the figure is said once, under the chart');
 
   // One tapped slot (a week's Thursday) is not a scope — its average would be its own
   // bar, printed as «average Thu 23» (Tarek's screenshot, 2026-10-10).

@@ -1,12 +1,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, SPACE, TAP, TYPE, unitSize, glass, GRADIENT } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, SPACE, TAP, TYPE, unitSize, glass, GRADIENT, SHEET } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape, inReadingUnit, homeOffPlot } from '../lib/series.js';
 import { rollup, groupOf } from '../lib/priorities.js';
 import { HOME_CURRENCY, homeMetricTotals } from '../state/display.js';
-import { LATIN, SectionLabel, NeutralDelta } from './Primitives.jsx';
+import { LATIN, ISOLATE, SectionLabel, NeutralDelta } from './Primitives.jsx';
 
 /**
  * Every chart here is ported verbatim from prototype/baba-expense-app.jsx.
@@ -391,21 +391,9 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
     <div style={{ position: 'relative', marginTop: 4 }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: labels.length > 8 ? 3 : 6, height: 110, position: 'relative' }}>
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: `${(avg / max) * 100}%`, borderTop: `1.5px solid ${color}`, opacity: 0.55, zIndex: 1 }} />
-        <span data-geometry="chart-average-label"
-          style={{
-            position: 'absolute', right: 0, bottom: `calc(${(avg / max) * 100}% + 2px)`,
-            fontSize: 10, fontWeight: 800, color, background: C.card, padding: '0 3px', zIndex: 2,
-          }}
-        >
-          {/**
-            * E2 — under a selection the label names its scope IN WORDS, from
-            * the range's own months («متوسط مارس–يونيو 45»). S.avg is the
-            * existing key; the months are vocabulary, not prose — no new key.
-            * With no selection the words would claim a scope that is not in
-            * force, so they render only when the range does.
-            */}
-          {S.avg} {avgWords ? `${avgWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
-        </span>
+        {/* The in-chart «average N» pill is gone (bar-chart audit 2026-10-10): pinned
+            right, it sat on the last columns — today's — and said what the line under
+            the chart says in readable type. The rule itself stays drawn. */}
         {labels.map((lb, i) => {
           const isLive = i === liveIndex;
           /**
@@ -436,7 +424,9 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
                   */}
                 <div style={{
                   width: '38%', height: `${((cur[i] || 0) / max) * 100}%`,
-                  background: range ? C.harbor : (isLive ? C.harbor : color),
+                  // One colour per series (audit 2026-10-10: the live bar's own blue read
+                  // as a third series the key never named); «today» is said by its label.
+                  background: range ? C.harbor : color,
                   ...(range && !within(i) ? { opacity: HARBOR_DIMMED } : null),
                   // GEOMETRY EXEMPTION (ruling 4): this bar's caps too — the
                   // paragraph on the grey twin above covers both, restated
@@ -458,8 +448,10 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
                 * to `caption` would make every tick wider than its column
                 * and hand back the collisions the thinning just removed.
                 */}
-              <div data-geometry="chart-axis-tick" style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: isLive || within(i) ? 800 : 500, color: isLive || within(i) ? C.harbor : C.muted }}>
-                {isLive ? '•' : speaks(i) ? lb : ''}
+              <div data-geometry="chart-axis-tick" style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: within(i) || (!range && isLive) ? 800 : 500, color: within(i) || (!range && isLive) ? C.harbor : C.muted }}>
+                {/* The WEEK names today (audit 2026-10-10: «•» hid which day it was); the
+                    year and month axes keep A12's live dot. */}
+                {isLive ? (labels.length === 7 ? lb : '•') : speaks(i) ? lb : ''}
               </div>
             </>
           );
@@ -497,7 +489,7 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
       {legend && (
         <div data-bars-legend style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
           {/* GEOMETRY EXEMPTION (ruling 4): two 10px swatches, the bars' caps in miniature. */}
-          <span><span aria-hidden style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: color, marginInlineEnd: 6 }} />{legend.cur}</span>
+          <span><span aria-hidden style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: range ? C.harbor : color, marginInlineEnd: 6 }} />{legend.cur}</span>
           <span><span aria-hidden style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: C.line, marginInlineEnd: 6 }} />{legend.prev}</span>
         </div>
       )}
@@ -620,7 +612,10 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: active ? C.onDark : m.color, marginInlineEnd: 5 }} />
               {S[m.labelKey]}
             </div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.action, fontWeight: 650, color: active ? C.onDark : C.ink, flexShrink: 0, ...LATIN, ...NUMERALS }}>
+            {/* Bar-chart audit 2026-10-10: the figure and its comparison STACK at the
+                end — on one line «was 0 € — Last week» pushed the figure out of the card. */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, padding: '6px 0' }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.action, fontWeight: 650, color: active ? C.onDark : C.ink, ...LATIN, ...NUMERALS }}>
               {moneyRound(now)}
               {/* A5 (HANDOFF:56): the figure carries its unit. The «in EGP»
                   caption above scopes the GROUP; it does not put a unit on any
@@ -629,7 +624,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
               <span style={{ fontSize: unitSize(TYPE.action), fontFamily: FONT_UI, fontWeight: 600,
                 color: active ? C.onDark : C.muted }}>{' '}{unit}</span>
             </div>
-            <div style={{ fontSize: TYPE.label, color: active ? C.onDark : C.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <div style={{ fontSize: TYPE.label, color: active ? C.onDark : C.muted, whiteSpace: 'nowrap' }}>
               {/* No comparison data ≠ a comparison of zero — and a TRUE zero
                   is worded (A4): «كان 0 — الأسبوع اللي فات», never a naked 0
                   the reader must diagnose. Prose, so no LATIN isolate. */}
@@ -639,6 +634,7 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
                   ? <span>{S.prevWorded(`${moneyRound(0)} ${unit}`, prevName)}</span>
                   : <span style={LATIN}>{moneyRound(prevAt)} {unit}</span>}
               {comparable && <NeutralDelta now={now} prev={prevAt} />}
+            </div>
             </div>
           </button>
         );
@@ -1012,7 +1008,9 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
 // doctrine lives where the inputs do, in views/BookView.jsx.
 export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot: rawOffPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads: rawZeroMisleads = false,
   /** D27 — the unit he is READING in; the cards follow it where the wire can. */
-  displayCurrency = HOME_CURRENCY, onRange = null }) {
+  displayCurrency = HOME_CURRENCY, onRange = null,
+  /** «Where it went» — replaces the method split on a book read in its own unit (2026-10-10). */
+  birdsEye = null }) {
   // The euro book's charts (2026-10-10): draw the series in his reading unit when
   // the server sends it. Off-plot money and the «zero misleads» verdict are EGP
   // facts, so in the home view there is neither — the money is ON the chart.
@@ -1286,6 +1284,7 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
       {/* A7: the method cards sit under their own NAME — a section, not an
           inference the reader draws from three buttons. */}
       {/* Spacing audit 2026-10-10: it sat 2px under the chart card (Week, Month, Year). */}
+      {birdsEye ? <div style={{ marginTop: SPACE.section }}>{birdsEye}</div> : (<>
       <div style={{ marginTop: SPACE.section }}><SectionLabel>{S.sectionByMethod}</SectionLabel></div>
       {/**
         * E1 — the cards' scope, said in words while a range is selected. The
@@ -1303,7 +1302,9 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
       <MetricCards metric={metric} setMetric={setMetric}
         computed={scoped || homeCards || computed}
         unit={scoped ? chartUnit : cardUnit}
-        comparable={comparable} prevName={periodNames.prev} />
+        // A tapped DAY compares with the same day last week — say so (bar-chart audit).
+        comparable={comparable} prevName={scoped && weekAxis ? `${rangeWords} · ${periodNames.prev}` : periodNames.prev} />
+      </>)}
       {footnote}
       {/**
         * THE THREE-LINE EXPLAINER IS GONE (finding S6).
@@ -1358,6 +1359,62 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
  * (`S.periodJustStarted`) say why; a stack that faked a dot over 31 grey
  * bars would read as broken and be believed.
  */
+/**
+ * «WHERE IT WENT» (Tarek, 2026-10-10: «what's the point of the split if 95% of
+ * my purchases are with card… something else should be in the bird's-eye
+ * view»). The period's three biggest categories in his unit, each with its
+ * share, and the rest folded into one line. Tapping one narrows the rows below
+ * (week and month); a second tap lets go. Dad's pound book keeps its split.
+ */
+export function TopCategories({ items, unit, onPick = null, picked = null }) {
+  const list = (items || []).filter((i) => i && i.amount > 0).sort((a, b) => b.amount - a.amount);
+  const total = list.reduce((t, i) => t + i.amount, 0);
+  const top = list.slice(0, 3);
+  const rest = list.slice(3).reduce((t, i) => t + i.amount, 0);
+  const lines = rest > 0 ? [...top, { name: null, amount: rest }] : top;
+  const nameOf = (n) => (n == null ? S.topOther : n === '❓' ? S.uncategorizedLine : categoryLabel(n));
+  return (
+    <div>
+      <SectionLabel>{S.sectionWhereItWent}</SectionLabel>
+      {!lines.length ? (
+        <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>{S.topEmpty}</div>
+      ) : (
+        <div style={{ ...glass('card'), padding: '6px 16px', marginTop: 8 }}>
+          {lines.map((l) => {
+            const share = total ? Math.round((l.amount / total) * 100) : 0;
+            const on = picked != null && picked === l.name;
+            const can = !!onPick && l.name != null;
+            const body = (
+              <>
+                <span style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
+                  <span style={{ fontSize: TYPE.row, fontWeight: on ? 800 : 650, color: on ? C.harborInk : C.ink, ...ISOLATE }} dir="auto">{nameOf(l.name)}</span>
+                  <span style={{ whiteSpace: 'nowrap' }}>
+                    <b style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, color: C.ink, ...LATIN, ...NUMERALS }}>{moneyRound(l.amount)}</b>
+                    <span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{` ${unit}`}</span>
+                    <span style={{ fontSize: TYPE.label, color: C.muted, marginInlineStart: 8, ...LATIN }}>{share}%</span>
+                  </span>
+                </span>
+                {/* GEOMETRY EXEMPTION (ruling 4): a 6px share bar, its 3px corner bounded by its height */}
+                <span aria-hidden style={{ display: 'block', height: 6, borderRadius: 3, marginTop: 6, background: SHEET.handle }}>
+                  <span style={{ display: 'block', height: 6, borderRadius: 3, width: `${Math.max(share, 2)}%`, background: l.name == null ? C.muted : C.harbor }} />
+                </span>
+              </>
+            );
+            return can ? (
+              <button key={l.name} className="catchip" aria-pressed={on} onClick={() => onPick(on ? null : l.name)}
+                style={{ display: 'block', width: '100%', textAlign: 'start', minHeight: TAP, padding: '10px 0', background: 'transparent' }}>
+                {body}
+              </button>
+            ) : (
+              <div key={l.name || 'other'} style={{ padding: '10px 0' }}>{body}</div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MonthStack({ cur, prev, labels, liveIndex, color, band = null, prevName = '', curName = '', labelled = true, peekOpen = false }) {
   if (!hasShape(cur)) return null;
   return (

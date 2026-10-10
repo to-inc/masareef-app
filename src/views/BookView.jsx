@@ -11,7 +11,7 @@ import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/f
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
 import { fetchEntries } from '../api/index.js';
 import { findLookalikes, lookalikeCounts, likeness } from '../state/duplicates.js';
-import { PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
+import { TopCategories, PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
 import { Chip, LATIN, ISOLATE, SectionLabel, Rail, Sheet } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, needsHim } from '../state/inboxOutcomes.js';
@@ -150,6 +150,7 @@ export default function BookView({
    * result in words, so a filtered list can never pass for a complete one.
    */
   const [priorityFilter, setPriorityFilter] = useState(initialPriorityFilter);
+  const [catPick, setCatPick] = useState(null);
   /** N6 — whether the month sheet is up. The heading is its only opener. */
   const [pickerOpen, setPickerOpen] = useState(false);
   /**
@@ -206,6 +207,7 @@ export default function BookView({
   const [open, setOpen] = useState(initialOpenKey);
   const [weekDay, setWeekDay] = useState(null);   // 0 = Sunday — the Week chart's tapped day
   useEffect(() => { setWeekDay(null); }, [period]);   // leaving Week forgets the day
+  useEffect(() => { setCatPick(null); }, [period, browsing]);   // «Where it went» picks are per screen
   /**
    * U1 — which row's edit sheet is up ({item, key}), and the rows the sheet
    * has ALREADY fixed this session, keyed by the row's settle key and holding
@@ -406,6 +408,31 @@ export default function BookView({
    * numbers — hiding it would be the quiet version of «This week 0»). Name:
    * locale compare, so Arabic descriptions sort as Arabic.
    */
+  /**
+   * «WHERE IT WENT» — the bird's-eye view on a book read in its own unit
+   * (Tarek, 2026-10-10). Week: from the week's own rows (a tapped day narrows
+   * it to that day). Month: the server's per-category home figures (MonthScreen
+   * hands them in). Year: the server's `year.homeCats`. Each row is valued as
+   * the server values it: native at face, stamped at its stamp, else not at all.
+   */
+  const bookHome = (data && data.month && data.month.homeAgg && data.month.homeAgg.currency) || null;
+  const birdsOn = !!bookHome && bookHome !== 'EGP' && displayCurrency === bookHome;
+  const rowHome = (r) => (r && r.currency === bookHome && typeof r.amount === 'number' ? r.amount
+    : r && typeof r.home === 'number' ? r.home : null);
+  const tally = (list) => {
+    const by = {};
+    for (const r of list) {
+      const x = rowHome(r);
+      if (x == null) continue;
+      const k = needsCategory(r) ? '❓' : String(r.category || '').trim();
+      by[k] = (by[k] || 0) + x;
+    }
+    return Object.entries(by).map(([name, amount]) => ({ name, amount }));
+  };
+  const topCats = (items, pickable) => (
+    <TopCategories items={items} unit={unitFor(bookHome)}
+      onPick={pickable ? setCatPick : null} picked={pickable ? catPick : null} />
+  );
   const sorted = sortBy === 'date' ? fetchedOrToday
     : [...fetchedOrToday].sort(sortBy === 'amount'
       ? (a, b) => {
@@ -425,9 +452,11 @@ export default function BookView({
    * a chip may not adopt money nobody has placed. Their door back is clearing
    * the filter, which is always one tap and always visible.
    */
-  const byPriority = priorityFilter
+  const byPriority = (priorityFilter
     ? sorted.filter((r) => groupOf(r && r.category) === priorityFilter)
-    : sorted;
+    : sorted)
+    // «Where it went»: a tapped category narrows the list too (2026-10-10).
+    .filter((r) => !catPick || (catPick === '❓' ? needsCategory(r) : String(r && r.category || '').trim() === catPick));
   // A tapped day on the Week chart narrows the list to that day (2026-10-10).
   const rows = period === 'week' && weekDay != null
     ? byPriority.filter((r) => { const d = parseSheetDate(r && r.date); return !!d && new Date(d.y, d.m - 1, d.d).getDay() === weekDay; })
@@ -535,6 +564,9 @@ export default function BookView({
           names={{ cur: S.thisWeek, prev: S.lastWeek }} showBars
           displayCurrency={displayCurrency}
           onRange={(r) => setWeekDay(r ? r.a : null)}
+          birdsEye={birdsOn && !loadingRows && !loadError
+            ? topCats(tally(weekDay == null ? sorted : sorted.filter((r) => { const d = parseSheetDate(r && r.date); return !!d && new Date(d.y, d.m - 1, d.d).getDay() === weekDay; })), true)
+            : null}
         />
       )}
 
@@ -545,6 +577,10 @@ export default function BookView({
           lensOpen={lensIsOpen}
           onToggleLens={() => setLensIsOpen((v) => setLensOpen(!v))}
           onPickMonth={() => setPickerOpen(true)}
+          birdsEye={birdsOn ? (cv) => (cv.inHome
+            ? topCats([...cv.cats.map((c) => ({ name: c.name, amount: c.now })),
+              { name: '❓', amount: (cv.uncategorized && cv.uncategorized.total) || 0 }], true)
+            : null) : null}
         />
       )}
 
@@ -572,6 +608,10 @@ export default function BookView({
           lensOpen={lensIsOpen}
           onToggleLens={() => setLensIsOpen((v) => setLensOpen(!v))}
           onPickMonth={() => setPickerOpen(true)}
+          birdsEye={birdsOn ? (cv) => (cv.inHome
+            ? topCats([...cv.cats.map((c) => ({ name: c.name, amount: c.now })),
+              { name: '❓', amount: (cv.uncategorized && cv.uncategorized.total) || 0 }], true)
+            : null) : null}
         />
       )}
 
@@ -590,6 +630,9 @@ export default function BookView({
            * its day names are furniture, not controls.
            */
           ariaLabels={MONTH_WORDS}
+          birdsEye={birdsOn && data.year.homeCats
+            ? topCats(Object.entries(data.year.homeCats).map(([name, amount]) => ({ name, amount })), false)
+            : null}
         />
       )}
       </div>
@@ -1499,7 +1542,7 @@ export function headlineWords(direction, prevName, basis) {
 export function PeriodBlock({
   data, labels = [], liveIndex = -1, metric = 'all', setMetric = () => {},
   names = { cur: '', prev: '' }, showBars = false, offPlot, footnote,
-  displayCurrency = HOME_CURRENCY,
+  displayCurrency = HOME_CURRENCY, birdsEye = null,
   /**
    * A7 — seeds the policy disclosure open so a static renderer can reach the
    * detail behind the one-line compression. SSR cannot tap; this is the same
@@ -1903,7 +1946,7 @@ export function PeriodBlock({
         metric={metric} setMetric={setMetric}
         periodNames={{ cur: names.cur, prev: names.prev }}
         showBars={showBars} footnote={footnote} offPlot={offPlot} stack={stack}
-        ariaLabels={ariaLabels} onRange={onRange}
+        ariaLabels={ariaLabels} onRange={onRange} birdsEye={birdsEye}
         // W1 — the card renders a verdict reached HERE, beside the head that
         // shares its inputs; it never re-decides from data it half-sees.
         homeZeroMisleads={homeZeroMisleads}
@@ -1934,7 +1977,7 @@ export function PeriodBlock({
  * mounted with the wrong props — the class a source regex cannot see. As a
  * component, `test-accountability.mjs` renders exactly what he sees.
  */
-export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens, displayCurrency, onPickMonth }) {
+export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, onToggleLens, displayCurrency, onPickMonth, birdsEye = null }) {
   // Honest incompleteness (06 §2.2): a month we cannot fully account for must
   // never render as a confident number. `undated` rows are in the total but not
   // the chart; `unpriced` rows are in neither, so the total is knowably short.
@@ -2026,7 +2069,7 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
     <>
       <PeriodBlock
         data={data.month} labels={[]} liveIndex={-1}
-        metric={metric} setMetric={setMetric}
+        metric={metric} setMetric={setMetric} birdsEye={birdsEye && birdsEye(cv)}
         stack={monthStack}
         displayCurrency={displayCurrency}
         names={{
