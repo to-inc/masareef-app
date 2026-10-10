@@ -45,3 +45,14 @@ let current = CATEGORIES;
 export function setCategoryUse(use) { current = orderCategories(use); }
 export const allCategories = () => current;
 export const shortCategories = () => current.slice(0, LEAD);
+
+/**
+ * A sheet label → the category it IS, the way the server reads it (its
+ * categoryKey_: case-insensitive, spaces collapsed). Null for ❓ and for a label
+ * that is no category. «Where it went» tallies and filters through this, so a
+ * row saved as «groceries» or «Elect.  Recharge» counts AND shows (audit r2).
+ */
+const keyOf = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+const BY_KEY = new Map(CATEGORIES.map((c) => [keyOf(c), c]));
+export const canonCategory = (label) => BY_KEY.get(keyOf(label)) || null;
+export const sameCategory = (label, cat) => canonCategory(label) === cat;

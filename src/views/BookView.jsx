@@ -11,6 +11,7 @@ import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/f
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
 import { fetchEntries } from '../api/index.js';
 import { findLookalikes, lookalikeCounts, likeness } from '../state/duplicates.js';
+import { canonCategory, sameCategory } from '../state/catOrder.js';
 import { TopCategories, PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
 import { Chip, LATIN, ISOLATE, SectionLabel, Rail, Sheet } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
@@ -352,7 +353,11 @@ export default function BookView({
         return true;
       }
       setBrowsed(null);
-      const all = answers.flatMap((a) => (a && Array.isArray(a.entries) ? a.entries : []));
+      // Each row remembers ITS month's tab (audit r2: a week spanning two months had
+      // no single tab, so every fix/edit was refused). Non-enumerable, so the row's
+      // fields — the server's match fingerprint — are untouched.
+      const all = answers.flatMap((a) => (a && Array.isArray(a.entries) ? a.entries : [])
+        .map((e) => (e && typeof e === 'object' && a.tab ? Object.defineProperty(e, '_tab', { value: a.tab, enumerable: false, configurable: true }) : e)));
       const shown = filterEntries(all, period, today);
       setFetched(sortForDisplay(shown));
       setFetchedTab(answers.length === 1 && answers[0] ? answers[0].tab || '' : '');
@@ -417,6 +422,11 @@ export default function BookView({
    */
   const bookHome = (data && data.month && data.month.homeAgg && data.month.homeAgg.currency) || null;
   const birdsOn = !!bookHome && bookHome !== 'EGP' && displayCurrency === bookHome;
+  // With «Where it went» on there are no method cards to pick «Card» again — so
+  // the chart reads All (audit r2: a tap during loading stranded it on Card).
+  useEffect(() => { if (birdsOn && metric !== 'all') setMetric('all'); }, [birdsOn, metric]);
+  // A category pick lives only as long as its control is on screen (audit r2).
+  useEffect(() => { setCatPick(null); }, [displayCurrency, weekDay, priorityFilter]);
   const rowHome = (r) => (r && r.currency === bookHome && typeof r.amount === 'number' ? r.amount
     : r && typeof r.home === 'number' ? r.home : null);
   const tally = (list) => {
@@ -424,7 +434,7 @@ export default function BookView({
     for (const r of list) {
       const x = rowHome(r);
       if (x == null) continue;
-      const k = needsCategory(r) ? '❓' : String(r.category || '').trim();
+      const k = canonCategory(r.category) || '❓';
       by[k] = (by[k] || 0) + x;
     }
     return Object.entries(by).map(([name, amount]) => ({ name, amount }));
@@ -456,7 +466,7 @@ export default function BookView({
     ? sorted.filter((r) => groupOf(r && r.category) === priorityFilter)
     : sorted)
     // «Where it went»: a tapped category narrows the list too (2026-10-10).
-    .filter((r) => !catPick || (catPick === '❓' ? needsCategory(r) : String(r && r.category || '').trim() === catPick));
+    .filter((r) => !catPick || !birdsOn || (catPick === '❓' ? !canonCategory(r && r.category) : sameCategory(r && r.category, catPick)));
   // A tapped day on the Week chart narrows the list to that day (2026-10-10).
   const rows = period === 'week' && weekDay != null
     ? byPriority.filter((r) => { const d = parseSheetDate(r && r.date); return !!d && new Date(d.y, d.m - 1, d.d).getDay() === weekDay; })
@@ -630,8 +640,12 @@ export default function BookView({
            * its day names are furniture, not controls.
            */
           ariaLabels={MONTH_WORDS}
-          birdsEye={birdsOn && data.year.homeCats
-            ? topCats(Object.entries(data.year.homeCats).map(([name, amount]) => ({ name, amount })), false)
+          // The year's ❓ money is the gap between its euro total and the named
+          // categories — listed, so the shares are of everything (audit r2).
+          birdsEye={birdsOn && data.year.homeCats && data.year.homeAgg
+            ? topCats([...Object.entries(data.year.homeCats).map(([name, amount]) => ({ name, amount })),
+              { name: '❓', amount: Math.round(((Number(data.year.homeAgg.total) || 0)
+                - Object.values(data.year.homeCats).reduce((t, v) => t + (Number(v) || 0), 0)) * 100) / 100 }], false)
             : null}
         />
       )}
@@ -1273,8 +1287,9 @@ function Lookalikes({ rows, sheetUrl, onPick = null }) {
                 </span>
                 <span style={{ color: C.ink, fontSize: TYPE.label, fontWeight: 700, whiteSpace: 'nowrap', ...NUMERALS, ...LATIN }}>
                   {r.amount == null ? '—' : `${money2(r.amount)} ${unitFor(r.currency || HOME_CURRENCY)}`}
-                  {onPick && <span aria-hidden style={{ color: C.muted, fontWeight: 400 }}> ›</span>}
                 </span>
+                {/* Outside the LTR figure, and pointing the reading way (audit r2). */}
+                {onPick && <span aria-hidden style={{ color: C.muted, fontWeight: 400 }}>{DIR === 'rtl' ? '‹' : '›'}</span>}
               </button>
             );
           })}
@@ -1360,10 +1375,15 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
   const allIn = allInLead(homeAgg, displayCurrency);
   const useAllIn = !!allIn && !!homeAgg.byMethod && (Number(allIn.amount) > 0 || !(Number(lead.amount) > 0));
   const remainder = useAllIn ? unconvertedLines(homeAgg) : [];
+  // Entries still on the phone in the reading unit join the figure, exactly as
+  // pound ones do on Dad's book — and the caption names them (audit r2).
+  const onPhoneHome = useAllIn ? phone.filter((r) => r.currency === displayCurrency && isFinite(r.amount)) : [];
+  const notYetHome = onPhoneHome.reduce((a, r) => a + r.amount, 0);
   if (useAllIn) {
-    lead = allIn;
-    totals.Visa = Number(homeAgg.byMethod.Visa && homeAgg.byMethod.Visa.total) || 0;
-    totals.Cash = Number(homeAgg.byMethod.Cash && homeAgg.byMethod.Cash.total) || 0;
+    const add = (m) => onPhoneHome.filter((r) => (m === 'Visa' ? r.method === 'Visa' : r.method !== 'Visa')).reduce((a, r) => a + r.amount, 0);
+    lead = { ...allIn, amount: (Number(allIn.amount) || 0) + notYetHome };
+    totals.Visa = (Number(homeAgg.byMethod.Visa && homeAgg.byMethod.Visa.total) || 0) + add('Visa');
+    totals.Cash = (Number(homeAgg.byMethod.Cash && homeAgg.byMethod.Cash.total) || 0) + add('Cash');
   }
   const pairUnit = useAllIn ? unitFor(displayCurrency) : S.currencyShort;
   const leadsHome = useAllIn || lead.currency === HOME_CURRENCY;
@@ -1403,6 +1423,11 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
       {notYet > 0 && (
         <div data-not-in-sheet style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>
           {S.notInSheetYet(`${money2(notYet)} ${unitFor('EGP')}`)}
+        </div>
+      )}
+      {notYetHome > 0 && (
+        <div data-not-in-sheet style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>
+          {S.notInSheetYet(`${money2(notYetHome)} ${unitFor(displayCurrency)}`)}
         </div>
       )}
       {/* Only when there IS one. A day with no foreign spending says nothing
@@ -1751,7 +1776,8 @@ export function PeriodBlock({
       const prevIdx = Math.min(li, prevAll.length - 1);
       const curWhole = li === curAll.length - 1;
       const prevWhole = prevIdx === prevAll.length - 1;
-      if (!prevWhole) windowLine = S.windowWords(li + 1, names.prev);
+      if (li === 0) windowLine = null;   // «days 1–1» on the 1st says nothing (audit r2)
+      else if (!prevWhole) windowLine = S.windowWords(li + 1, names.prev);
       else if (!curWhole) windowLine = S.windowWordsWholePrev(li + 1, names.prev);
     }
   }
@@ -1937,7 +1963,10 @@ export function PeriodBlock({
           </div>
           )
         ) : policySuppressed ? null : (
-          <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>{S.noComparison(names.prev)}</div>
+          <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
+            {/* A REAL zero last period is a fact, not «no data» (audit r2) — the cards' own wording. */}
+            {(compareInHome ? homeShown : shown) && (compareInHome ? homeShown : shown).prevAt === 0 ? S.prevWorded(`${moneyRound(0)} ${unitFor(lead.currency)}`, names.prev) : S.noComparison(names.prev)}
+          </div>
         )}
       </div>
 
@@ -2063,7 +2092,11 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
       color={(METRICS.find((x) => x.key === metric) || METRICS[0]).color}
       prevName={monthName(data.month.names.prev)}
       curName={monthName(data.month.names.cur)}
-      labelled={mv.inHome || !((undated?.Visa || 0) + (undated?.Cash || 0))}
+      // In euros the off-plot money is the euro gap (homeOffPlot) — the end label is
+      // withheld when the curve cannot reach the headline (audit r2).
+      labelled={mv.inHome
+        ? !((homeOffPlot(mv.period).Visa || 0) + (homeOffPlot(mv.period).Cash || 0))
+        : !((undated?.Visa || 0) + (undated?.Cash || 0))}
       band={yv ? typicalBand(comb(yv.cur.Visa, yv.cur.Cash), today ? today.m : 13) : null}
     />
   );
@@ -2187,7 +2220,7 @@ function RowList({
          * the same amount really are indistinguishable, here and in his book.
          * This value is a KEY only; the edit payload never carries a rowHint.
          */
-        const rawItem = { tab: tabName, rowHint: `${rawRow.date}|${rawRow.amount}`, match: rawRow };
+        const rawItem = { tab: rawRow._tab || tabName, rowHint: `${rawRow.date}|${rawRow.amount}`, match: rawRow };
         const key = `${cardKey(rawItem)}:${i}`;
         /**
          * U1 — a row the edit sheet already fixed renders the SERVER's re-read
@@ -2198,7 +2231,7 @@ function RowList({
          */
         const row = (edited && edited[key]) || rawRow;
         const item = row === rawRow ? rawItem
-          : { tab: tabName, rowHint: `${row.date}|${row.amount}`, match: row };
+          : { tab: rawRow._tab || tabName, rowHint: `${row.date}|${row.amount}`, match: row };
         const outcome = settled[cardKey(item)] || null;
         const isOpen = open === key;
         const inert = !needsHim(outcome);

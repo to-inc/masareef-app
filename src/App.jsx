@@ -33,6 +33,7 @@ import { setBadge } from './state/badge.js';
 import { applyDisplay, getDisplay } from './state/settings.js';
 import {
   loadDraft, saveDraft, clearDraft, mergeJobs, unsettledCount, mergeOutcomes, outcomeMap,
+  forgetBatchUi,
 } from './state/batchDraft.js';
 import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY, hasCurrencyChoice } from './state/travel.js';
 import {
@@ -244,6 +245,9 @@ export default function App() {
   const takeBatchJob = useCallback((job) => {
     if (!job || !job.sourceHash || !Array.isArray(job.entries)) return;
     setBatchExpired(false);
+    // A re-read of the SAME photo: his saved picks for it would land on whatever
+    // the new reading put at each index — drop them, as the outcomes are (audit r2).
+    forgetBatchUi(job.sourceHash);
     setBatch((prev) => {
       const jobs = (prev.jobs || []).filter((j) => j.sourceHash !== job.sourceHash).concat(job);
       /**

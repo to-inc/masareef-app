@@ -666,12 +666,20 @@ export function clearDraft() {
  * 2026-10-10). They lived only in the screen's memory: leaving with ← or coming
  * back the next day wiped fourteen classified rows. Kept beside the draft, keyed
  * by row; `restoreUi` keeps only keys that exist in the rows on screen.
- * (A re-read after expiry mints new row keys; carrying picks across that would
- * need the old rows too — `reattachEdits` — and is left for when it bites.)
+ * A re-read of the same photo keeps its row keys but not its rows, so App drops
+ * that photo's picks (`forgetBatchUi`) before the new reading lands.
  */
 const UI_KEY = 'masareef.batchUi';
 export function saveBatchUi(ui) {
   try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch { /* costs ticks, never an expense */ }
+}
+export function forgetBatchUi(sourceHash) {
+  try {
+    const ui = JSON.parse(localStorage.getItem(UI_KEY) || 'null');
+    if (!ui) return;
+    const keep = (o) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => !k.startsWith(`${sourceHash}#`)));
+    localStorage.setItem(UI_KEY, JSON.stringify({ ticks: keep(ui.ticks), edits: keep(ui.edits), overridden: keep(ui.overridden) }));
+  } catch { /* costs ticks, never an expense */ }
 }
 export function restoreUi(rows) {
   let ui = null;

@@ -53,7 +53,7 @@ const read = () => {
 
 const write = (list) => {
   try {
-    localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX_REPEATS)));
+    localStorage.setItem(KEY, JSON.stringify(capPerCurrency(list)));
   } catch {
     /* a full or disabled store costs him a shortcut, never an expense */
   }
@@ -99,7 +99,7 @@ export function remember(entry) {
   const key = repeatKey(fresh);
   const next = [fresh, ...read().filter((r) => repeatKey(r) !== key)];
   write(next);
-  return next.slice(0, MAX_REPEATS);
+  return capPerCurrency(next);
 }
 
 /**
@@ -118,13 +118,29 @@ export function remember(entry) {
  * before: fill the description, and the category where D5 allows one.
  */
 export function repeatChips({ presets: withPresets = true } = {}) {
-  const mine = read();
-  if (!withPresets) return mine.slice(0, MAX_REPEATS);   // a non-pound book: his own repeats only (2026-10-10)
+  const mine = capPerCurrency(read());
+  if (!withPresets) return mine;   // a non-pound book: his own repeats only (2026-10-10)
   const seen = new Set(mine.map(repeatKey));
+  const pounds = mine.filter((r) => (r.currency || 'EGP') === 'EGP');
   const presets = CASH_QUICK
     .map((q) => ({ description: q.label, category: q.category, method: 'Cash', amount: null }))
-    .filter((q) => !seen.has(repeatKey(q)));
-  return [...mine, ...presets].slice(0, MAX_REPEATS);
+    .filter((q) => !seen.has(repeatKey(q)))
+    .slice(0, Math.max(0, MAX_REPEATS - pounds.length));
+  return [...mine, ...presets];
+}
+
+/**
+ * At most MAX_REPEATS PER CURRENCY (audit r2): a shared cap let one trip's euro
+ * entries push every pound chip out for good. The sheet shows one currency's
+ * row at a time, so each keeps its own six.
+ */
+function capPerCurrency(list) {
+  const n = {};
+  return (Array.isArray(list) ? list : []).filter((r) => {
+    const c = (r && r.currency) || 'EGP';
+    n[c] = (n[c] || 0) + 1;
+    return n[c] <= MAX_REPEATS;
+  });
 }
 
 /** Test seam — a suite must be able to start from a known store. */

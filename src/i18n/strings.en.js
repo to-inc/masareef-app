@@ -210,7 +210,8 @@ export const EN = {
   methodEvidence: (card, q) => (card ? `Card — the receipt shows «${q}»` : `Cash — the receipt says «${q}»`),
   methodFromHistory: 'How you usually pay here',
   alsoFiled: (n) => `Filed — and ${n} more from the same place`,
-  appVersion: (v) => `Version ${v}`,
+  dateHint: 'd/M/yyyy', // EditSheet date placeholder (audit 2026-10-10)
+  appVersion: 'Version', // the commit renders beside it in LATIN (audit 2026-10-10)
   jobRetry: 'Try again',
   debugLogSend: '⚑ Send debug log',
   debugLogSent: '⚑ Log sent ✓',

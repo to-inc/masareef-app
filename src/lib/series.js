@@ -117,6 +117,8 @@ export function hasShape(series) {
 
 export function comparisonOf(now, prevAt) {
   if (prevAt == null || !isFinite(prevAt) || prevAt <= 0) return null;
+  // A refund can take a period below zero; «less by 130%» is not a sentence (audit r2).
+  if (!isFinite(now) || now < 0) return null;
   const pct = Math.round(((now - prevAt) / prevAt) * 100);
   if (!isFinite(pct)) return null;
   return { pct: Math.abs(pct), direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'same', prevAt };
@@ -227,7 +229,9 @@ export function inReadingUnit(period, displayCurrency, homeCurrency) {
 export function catsInReadingUnit(cats, uncategorized, displayCurrency, bookHome) {
   const list = Array.isArray(cats) ? cats : [];
   const inHome = !!bookHome && displayCurrency === bookHome && displayCurrency !== 'EGP'
-    && list.some((c) => c && c.homeNow != null);
+    && (list.some((c) => c && c.homeNow != null)
+      // A euro month whose money is ALL ❓ has no category rows, but is still euros (audit r2).
+      || (!!uncategorized && uncategorized.homeTotal != null));
   // Pound view: a category with euro money but no pounds arrives as now: 0 —
   // it is not a pound category this month, so it is not drawn as «0» (audit).
   if (!inHome) return { cats: list.filter((c) => c && (c.now || c.prev)), uncategorized, inHome: false };

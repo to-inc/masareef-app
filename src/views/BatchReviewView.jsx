@@ -66,7 +66,7 @@ export default function BatchReviewView({
        */
       ? retryRows(rows, results, overridden, edits, ticks)
       : toConfirmRows(rows, ticks, edits, { overridden, bookCurrency })),
-    [settled, results, rows, ticks, edits, overridden],
+    [settled, results, rows, ticks, edits, overridden, bookCurrency],
   );
 
   /**
@@ -619,13 +619,13 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                   stand on their own rather than framing an empty space. */}
               {matchRow && (
                 <>
-                  <div style={{ fontSize: TYPE.caption, fontWeight: 600, color: C.conflictInk }}>{S.batchDupBookIntro}</div>
+                  <div style={{ fontSize: TYPE.label, fontWeight: 600, color: C.conflictInk }}>{S.batchDupBookIntro}</div>
                   <div style={{
                     background: C.shell, border: `1px solid ${C.line}`, borderRadius: RADIUS.inset,
                     padding: '9px 11px', fontSize: TYPE.caption, marginTop: 6, lineHeight: 1.7, ...ISOLATE,
                   }} dir="auto">
                     <span style={LATIN}>{matchRow.date}</span> · {matchRow.description} ·{' '}
-                    <span style={LATIN}>{money(matchRow.amount)} {matchRow.currency}</span>
+                    <span style={LATIN}>{money(matchRow.amount)} {unitFor(matchRow.currency || 'EGP')}</span>
                   </div>
                 </>
               )}

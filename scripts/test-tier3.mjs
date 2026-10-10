@@ -142,6 +142,11 @@ const { CASH_QUICK } = await import('../src/lib/constants.js');
   ok(/allRepeats\.filter\(\(r\) => \(r\.currency \|\| 'EGP'\) === \(currency \|\| 'EGP'\)\)/.test(
     readFileSync(new URL('../src/views/EntryView.jsx', import.meta.url), 'utf8')),
     'and the entry sheet offers only chips in its own unit — that is a 12.5 EGP row never waiting to happen');
+  // Audit r2 2026-10-10: the cap is PER CURRENCY — a trip cannot evict the pound chips.
+  for (let i = 0; i < 7; i++) remember({ description: `Trip ${i}`, amount: 5 + i, currency: 'EUR' });
+  ok(repeatChips().some((c) => c.description === 'Coffee' && (c.currency || 'EGP') === 'EGP')
+    && repeatChips().filter((c) => c.currency === 'EUR').length === MAX_REPEATS,
+    'seven euro entries keep six euro chips and leave the pound chips where they were');
 
   // The cap holds, and his own entries push the presets off rather than the reverse.
   resetRepeats();

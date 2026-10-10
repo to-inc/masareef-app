@@ -149,7 +149,7 @@ export default function SetupView({ onDone }) {
       >
         {state === 'testing' ? S.setupTesting : S.setupTest}
       </button>
-      <div style={{ fontSize: TYPE.caption, color: C.muted, marginTop: 10, lineHeight: 1.6, textAlign: 'center' }}>
+      <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 10, lineHeight: 1.6, textAlign: 'center' }}>
         {S.setupBadgeNote}
       </div>
       </div>

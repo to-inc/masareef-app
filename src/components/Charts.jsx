@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, SPACE, TAP, TYPE, unitSize, glass, GRADIENT, SHEET } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
-import { S, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
+import { S, DIR, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
 import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape, inReadingUnit, homeOffPlot } from '../lib/series.js';
 import { rollup, groupOf } from '../lib/priorities.js';
@@ -238,7 +238,10 @@ export function CumulativeChart({ cur, prev, color, labelled = true, prevName = 
   const peekTop = Math.min(Math.max(curY, prevY) + 16, H - 20);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }} aria-hidden="true">
+    // direction="ltr": in Arabic the svg inherits rtl and every text-anchor flips,
+    // putting the marker figures across their markers (audit r2). GEOMETRY EXEMPTION
+    // (ruling 4): the marker figures are chart furniture, restated in the headline.
+    <svg viewBox={`0 0 ${W} ${H}`} direction="ltr" style={{ width: '100%', display: 'block' }} aria-hidden="true">
       <style>{DRAW_CSS}</style>
       {/**
         * E6 — the typical band: P25–P75 of his own closed months, in MIST,
@@ -893,7 +896,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
         }}
       >
         <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>{S.lensTitle}</span>
-        <span aria-hidden="true" style={{ fontSize: TYPE.caption, color: C.muted }}>{open ? '▾' : '▸'}</span>
+        <span aria-hidden="true" style={{ fontSize: TYPE.caption, color: C.muted }}>{open ? '▾' : DIR === 'rtl' ? '◂' : '▸'}</span>
       </button>
 
       {open && (
@@ -1089,8 +1092,10 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
    * itself is in the home unit, its series already carries the same-point
    * figure (null when there is none): the cards take their comparison from it.
    */
-  const homeCards = homeAll && inHome
-    ? Object.fromEntries(Object.keys(homeAll).map((k) => [k, { now: homeAll[k].now, prevAt: computed[k] ? computed[k].prevAt : null }]))
+  // Without the home series (an older server) there is no same-point figure at all:
+  // the comparison is withheld, as the headline withholds it (audit r2).
+  const homeCards = homeAll
+    ? Object.fromEntries(Object.keys(homeAll).map((k) => [k, { now: homeAll[k].now, prevAt: inHome && computed[k] ? computed[k].prevAt : null }]))
     : homeAll;
   const cardUnit = homeCards ? unitFor(displayCurrency) : unitFor(HOME_CURRENCY);
 

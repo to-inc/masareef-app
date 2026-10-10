@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, RADIUS, SPACE, TAP, TYPE } from '../theme.js';
-import { S, monthByTab } from '../i18n/strings.js';
-import { Sheet, Chip, LATIN } from '../components/Primitives.jsx';
+import { S, monthByTab, unitFor } from '../i18n/strings.js';
+import { Sheet, Chip, LATIN, ISOLATE } from '../components/Primitives.jsx';
 import { CURRENCIES } from '../state/travel.js';
 import { normalizeDigits, money } from '../lib/format.js';
 import { parseSheetDate } from '../state/recent.js';
@@ -164,7 +164,7 @@ function SnapshotRow({ row }) {
         <span style={{ fontSize: TYPE.caption, color: C.muted, ...LATIN }}>{row.date}</span>
         <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.label, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
           {row.amount == null ? '—' : money(row.amount)}
-          {row.amount != null && row.currency && row.currency !== 'EGP' ? ` ${row.currency}` : ''}
+          {row.amount != null ? ` ${unitFor(row.currency || 'EGP')}` : ''}
         </span>
       </span>
     </div>
@@ -350,15 +350,16 @@ export default function EditSheet({
                   key={c}
                   onClick={() => set('currency')(c)}
                   aria-pressed={active}
+                  aria-label={S.currencyName(c)}
                   style={{
                     minHeight: TAP, padding: '0 16px', borderRadius: RADIUS.capsule,
                     background: active ? C.harbor : C.card,
                     border: `1px solid ${active ? C.harbor : C.line}`,
                     color: active ? C.onDark : C.ink, fontSize: TYPE.label, fontWeight: active ? 700 : 600,
-                    ...LATIN,
+                    ...ISOLATE, // the unit, not a figure — «ج.م» is not Latin (audit 2026-10-10)
                   }}
                 >
-                  {c}
+                  {unitFor(c)}
                 </button>
               );
             })}
@@ -376,7 +377,7 @@ export default function EditSheet({
           <input
             value={draft.date}
             onChange={(e) => set('date')(e.target.value)}
-            placeholder="d/M/yyyy"
+            placeholder={S.dateHint}
             inputMode="numeric"
             style={{ ...INPUT, ...LATIN, ...NUMERALS }}
           />

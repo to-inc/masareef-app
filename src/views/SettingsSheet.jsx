@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM } from '../theme.js';
 import { S } from '../i18n/strings.js';
-import { Sheet, LangToggle, CurrencyToggle, SectionLabel } from '../components/Primitives.jsx';
+import { Sheet, LangToggle, CurrencyToggle, SectionLabel, LATIN } from '../components/Primitives.jsx';
 import { otherDisplayCurrency } from '../state/display.js';
 import { METHODS } from '../state/entryPayload.js';
-import { getDefaultMethod, setDefaultMethod, getDisplay, setDisplay } from '../state/settings.js';
+import { getDefaultMethod, setDefaultMethod, getDisplay, setDisplay, debugOn } from '../state/settings.js';
 
 /**
  * S1 — THE SETTINGS SHEET BEHIND THE COG (Owner field ruling 2026-08-27).
@@ -285,11 +285,12 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
             </div>
           </div>
           {/* Which build this phone runs — the commit it was built from (E-017). */}
-          <div style={{ marginTop: SPACE.gap, textAlign: 'center', fontSize: TYPE.label, color: C.muted }} dir="ltr">
-            {S.appVersion(typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev')}
+          {/* Only the commit is Latin; «النسخة» reads in its own direction (audit 2026-10-10). */}
+          <div style={{ marginTop: SPACE.gap, textAlign: 'center', fontSize: TYPE.label, color: C.muted }}>
+            {S.appVersion} <span style={LATIN}>{typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'}</span>
             {/* E-017 diagnostics: the screen against the space iOS actually gave the
-                app. A gap here IS the strip; one screenshot settles what to fix. */}
-            <div style={{ marginTop: 2 }}>{screenFit()}</div>
+                app. A gap here IS the strip. Debug-only — a readout for us, not him (audit 2026-10-10). */}
+            {debugOn() && <div style={{ marginTop: 2 }} dir="ltr">{screenFit()}</div>}
           </div>
         </Sheet>
       </div>

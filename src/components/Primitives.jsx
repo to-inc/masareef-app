@@ -402,9 +402,9 @@ export function Chip({ kind, small, label }) {
  * zero), and a previous of 0 admits no honest percentage at all.
  */
 export function NeutralDelta({ now, prev }) {
-  if (!prev) return null;
+  if (!prev || prev < 0 || now < 0) return null;   // a refund below zero admits no percentage (audit r2)
   const pct = Math.round(((now - prev) / prev) * 100);
-  if (!isFinite(pct)) return null;
+  if (!isFinite(pct) || pct === 0) return null;     // unchanged is not «▼ 0%» (audit r2)
   return (
     <span
       style={{

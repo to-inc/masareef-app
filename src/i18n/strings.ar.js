@@ -214,7 +214,8 @@ export const AR = {
   methodEvidence: (card, q) => (card ? `فيزا — الإيصال فيه «${q}»` : `كاش — الإيصال فيه «${q}»`),
   methodFromHistory: 'زي ما بتدفع هنا عادةً',
   alsoFiled: (n) => `اتسجّلت — و${n} كمان من نفس المكان`,
-  appVersion: (v) => `النسخة ${v}`,
+  dateHint: 'يوم/شهر/سنة', // EditSheet date placeholder (audit 2026-10-10)
+  appVersion: 'النسخة', // the commit renders beside it in LATIN (audit 2026-10-10)
   jobRetry: 'جرّب تاني',
   debugLogSend: '⚑ ابعت سجل القراية',
   debugLogSent: '⚑ السجل اتبعت ✓',

@@ -130,3 +130,9 @@ export function applyDisplay(v, root = (typeof document !== 'undefined' ? docume
   root.style.setProperty('--atmosphere', ATMOSPHERE[d.atmosphere]);
   root.style.zoom = d.zoom === 1 ? '' : String(d.zoom);
 }
+
+// Field-test diagnostics, off unless localStorage['masareef.debug']='1'.
+// Moved here from ReceiptView so Settings can gate its screen readout too (audit 2026-10-10).
+export const debugOn = () => {
+  try { return localStorage.getItem('masareef.debug') === '1'; } catch { return false; }
+};

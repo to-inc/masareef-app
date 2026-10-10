@@ -1,7 +1,14 @@
 import { useState, useRef } from 'react';
 import { C, FONT_DISPLAY, FONT_UI, NUMERALS, RADIUS, TAP, TYPE, glass, unitSize, SHEET } from '../theme.js';
 import { S, DIR, unitFor } from '../i18n/strings.js';
-import { money2, amountWithCurrency } from '../lib/format.js';
+import { money, money2, ABSENT } from '../lib/format.js';
+
+// Every amount carries its unit, EGP included (audit 2026-10-10: was amountWithCurrency's «12.5 EUR» / bare pounds).
+// An absent amount stays the glyph alone — no unit beside a figure that does not exist.
+const withUnit = (amount, currency) => {
+  const base = money(amount);
+  return base === ABSENT ? ABSENT : `${base} ${unitFor(currency || 'EGP')}`;
+};
 import { SectionLabel, Chip, LATIN, ISOLATE } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, reconcile, remaining, needsHim, headlineFor } from '../state/inboxOutcomes.js';
@@ -391,7 +398,7 @@ function PairCard({ pair, outcome, canRemove, onRemove }) {
             {m.description || S.dupNoDescription}
           </span>
           <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.label, fontWeight: 700, color: C.ink, flexShrink: 0, ...LATIN, ...NUMERALS }}>
-            {amountWithCurrency(m.amount, m.currency)}
+            {withUnit(m.amount, m.currency)}
           </span>
         </div>
         {/* Row meta — the method chip is the usual difference, and the two
@@ -461,7 +468,7 @@ function PairCard({ pair, outcome, canRemove, onRemove }) {
             {S.cardConflictIs}{' '}
             <span dir="auto" style={ISOLATE}>{outcome.current ? outcome.current.description : ''}</span>{' '}
             <span style={{ fontWeight: 700, ...LATIN, ...NUMERALS }}>
-              {outcome.current ? amountWithCurrency(outcome.current.amount, outcome.current.currency) : ''}
+              {outcome.current ? withUnit(outcome.current.amount, outcome.current.currency) : ''}
             </span>
           </div>
         </div>
@@ -489,7 +496,7 @@ function GroupCard({ group }) {
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 6 }}>
             <span dir="auto" style={{ fontSize: TYPE.label, color: C.ink, ...ISOLATE }}>{m.description || S.dupNoDescription}</span>
             <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink, ...LATIN, ...NUMERALS }}>
-              {amountWithCurrency(m.amount, m.currency)}
+              {withUnit(m.amount, m.currency)}
             </span>
           </div>
         );

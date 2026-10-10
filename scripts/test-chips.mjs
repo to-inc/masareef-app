@@ -155,7 +155,11 @@ try {
   const cardSrc = await readFile(new URL('../src/views/ReceiptView.jsx', import.meta.url), 'utf8');
   const catField = cardSrc.slice(cardSrc.indexOf('S.receiptCategory'));
   const catBlock = catField.slice(0, catField.indexOf('</Field>'));
-  ok(catBlock.includes("textAlign: 'right'"), 'the النوع value is explicitly right-aligned');
+  // R0 re-cut 2026-10-10: 'start', not 'right' — 'right' pinned the value wrong in English.
+  // The div itself inherits the card's direction (its dir="auto" is on the inner span), so
+  // start = right in Arabic, left in English; 'end' and 'right' are both still refused.
+  ok(catBlock.includes("textAlign: 'start'") && !catBlock.includes("textAlign: 'right'") && !catBlock.includes("textAlign: 'end'"),
+    'the النوع value is explicitly start-aligned (never right, never end)');
   ok(!catBlock.includes("textAlign: 'end'"), "and NOT 'end', which means left in an RTL card");
 
   /**

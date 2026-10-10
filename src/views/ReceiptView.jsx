@@ -11,6 +11,7 @@ import * as queue from '../state/receiptQueue.js';
 import { createWorker } from '../state/receiptWorker.js';
 import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
+import { debugOn } from '../state/settings.js';
 import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
 import { ISOLATE, SectionLabel, LATIN, Sheet } from '../components/Primitives.jsx';
@@ -36,10 +37,6 @@ const DMY_OK = (v) => {
 };
 const ISO_TO_DMY = isoToDmy; // shared with the batch review (lib/dates.js)
 
-// Field-test diagnostics, off unless explicitly switched on.
-const debugOn = () => {
-  try { return localStorage.getItem('masareef.debug') === '1'; } catch { return false; }
-};
 
 const ERROR_TEXT = {
   'image_too_large': S.receiptTooLarge,
@@ -533,16 +530,15 @@ export default function ReceiptView({
         {dup.book && (
           <Banner tone="warn">
             <div>{S.receiptDupBook}</div>
-            <div style={{ marginTop: 6, fontWeight: 700, direction: 'ltr', unicodeBidi: 'isolate', textAlign: 'start' }}>
+            {/* No forced ltr: the row reads in his language; ISOLATE + dir="auto" as BatchReviewView's evidence box (audit 2026-10-10). */}
+            <div style={{ marginTop: 6, fontWeight: 700, ...ISOLATE }} dir="auto">
               <span style={LATIN}>{dup.book.match.date}</span>
               {' · '}
               <span dir="auto">{dup.book.match.description || '—'}</span>
               {' · '}
-              <span style={{ ...LATIN, ...NUMERALS }}>{money(dup.book.match.amount)}</span>
-              {' '}
-              <span style={LATIN}>{dup.book.match.currency}</span>
+              <span style={{ ...LATIN, ...NUMERALS }}>{money(dup.book.match.amount)} {unitFor(dup.book.match.currency || 'EGP')}</span>
               {' · '}
-              <span style={LATIN}>{dup.book.match.method}</span>
+              {dup.book.match.method === 'Visa' ? S.metricVisa : S.metricCash}
             </div>
             {dup.book.count > 1 && (
               <div style={{ marginTop: 4, fontWeight: 500 }}>{S.receiptDupBookMore(dup.book.count)}</div>
@@ -554,7 +550,7 @@ export default function ReceiptView({
             date, so we cannot say whether it is this one. Saying nothing would
             be the tidier lie. */}
         {dupUndated && !dup.book && (
-          <div style={{ fontSize: TYPE.caption, color: C.muted, marginBottom: 10, lineHeight: 1.6 }}>
+          <div style={{ fontSize: TYPE.label, color: C.muted, marginBottom: 10, lineHeight: 1.6 }}>
             {S.receiptDupUndated}
           </div>
         )}
@@ -637,24 +633,24 @@ export default function ReceiptView({
           */}
           <Field label={S.receiptCategory}>
             {/*
-              EXPLICIT right alignment (P4b). The card is RTL, so its other
-              values sit right by inheritance — but a Latin category name with
+              EXPLICIT start alignment (P4b). The card's other values sit at
+              the leading edge by inheritance — but a Latin category name with
               `dir="auto"` is resolved LTR and drifts to the left, breaking the
-              column. `textAlign: 'right'` and not `'end'`: inside an RTL
-              container `end` means LEFT, which is the bug, spelled differently.
+              column. `start` pins it to the card's leading edge in either
+              language (audit 2026-10-10: was 'right', wrong in English).
             */}
             <div
               style={{
                 fontSize: TYPE.row, fontWeight: 600,
                 color: category ? C.ink : C.muted,
-                textAlign: 'right',
+                textAlign: 'start',
               }}
             >
               {category ? <span dir="auto">{categoryLabel(category)}</span> : '—'}
             </div>
             {/* E-015: where the guess came from — shown only while it is still the guess. */}
             {pred && pred.categorySource && category === pred.category && (
-              <div data-pred="category" style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'right', marginTop: 2 }}>
+              <div data-pred="category" style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'start', marginTop: 2 }}>
                 {PRED_FROM()[pred.categorySource] || ''}
               </div>
             )}

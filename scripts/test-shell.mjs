@@ -68,7 +68,8 @@ ok(/root\.style\.background = el\.style\.background;/.test(app) && /root\.style\
 ok(/className="ground-foot"/.test(app) && /linear-gradient\(to bottom, transparent, \$\{GROUND_EDGE\[groundKey\]\}\)/.test(app)
   && !/className="ground-foot"[^>]*className="ground"/.test(app),
   'S.28 WebKit 301108 (iOS 26): the band iOS paints below a home-screen app cannot be removed, so the screen fades into its exact colour — outside the atmosphere filter');
-ok(/define: \{ __APP_VERSION__: JSON\.stringify\(version\) \}/.test(read('vite.config.js')) && /S\.appVersion\(/.test(read('src/views/SettingsSheet.jsx')),
+// R0 re-cut 2026-10-10: S.appVersion is now a label with the commit beside it in LATIN (was S.appVersion(v) under dir="ltr", which flipped «النسخة»).
+ok(/define: \{ __APP_VERSION__: JSON\.stringify\(version\) \}/.test(read('vite.config.js')) && /S\.appVersion\} <span style=\{LATIN\}>\{typeof __APP_VERSION__/.test(read('src/views/SettingsSheet.jsx')),
   'S.26 Settings shows the commit the build came from — «is my phone on the new version?» is read, not guessed');
 ok(/onDebugLog=\{supportsAction\(build, 'debuglog'\) \?/.test(app), 'S.23 App hands the handler over only when the server advertises `debuglog`');
 const dbgPayload = (app.match(/kind: 'debuglog'[\s\S]{0,200}?\}\s*\}\);/) || [''])[0];
