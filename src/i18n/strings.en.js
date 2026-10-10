@@ -305,6 +305,7 @@ export const EN = {
   dupUnpriced: (n) => `${n} ${n === 1 ? 'row has' : 'rows have'} no amount, so ${n === 1 ? 'it was' : 'they were'} not compared.`,
   dupOdd: '(different description)',
   rangeShowAll: (w) => `${w} · Show the whole year ✕`,
+  rangeShowWeek: (d) => `${d} · Show the whole week ✕`,
   dupNoDescription: '(no description)',
   dupOpenSheet: 'Open the sheet to check them',
   // ═══ U4 — duplicate pairs in the Inbox (06 §3.9, Owner ruling 2026-08-27) ═══

@@ -76,6 +76,8 @@ export const PRIORITY_GROUPS = [
       'Elect. Recharge', 'Water. Recharge', 'Taxes and fines', 'Car',
       'Transportation', 'Villa', 'omara2 al behar',
       'InstaPay - Services', 'InstaPay - Purchases', 'Rent',
+      // Moved from Joy by the Owner, 2026-10-10: «I would change eating out to essentials».
+      'Eating out',
     ],
   },
   /**
@@ -86,7 +88,7 @@ export const PRIORITY_GROUPS = [
    * went.
    */
   { key: 'health', names: ['Medical', 'Sports', 'Madinety club', 'Shams club', 'Officers club'] },
-  { key: 'joy', names: ['Leisure', 'Hobbies', 'Eating out', 'Vacations', 'Gifts', 'fara7', 'Donations'] },
+  { key: 'joy', names: ['Leisure', 'Hobbies', 'Vacations', 'Gifts', 'fara7', 'Donations'] },
   { key: 'projects', names: ['Science Pitchers', 'HYS', 'Team'] },
 ];
 

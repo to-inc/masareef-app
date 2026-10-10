@@ -196,7 +196,7 @@ import { dirname, join } from 'node:path';
  * the arity check — the same arithmetic the 24 dead-key deletion established
  * in reverse.
  */
-const EXPECTED_ASSERTIONS = 6133;
+const EXPECTED_ASSERTIONS = 6145;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

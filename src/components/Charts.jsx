@@ -343,7 +343,7 @@ export function CumulativeChart({ cur, prev, color, labelled = true, prevName = 
  * labels are controls (E1). Optional, with the visible label as fallback:
  * an axis handed no vocabulary keeps exactly the pre-A13 contract.
  */
-export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, onRangeTap = null, rangeWords = null, ariaLabels = null }) {
+export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, onRangeTap = null, rangeWords = null, ariaLabels = null, legend = null }) {
   const vals = cur.map((v) => v || 0);
   const max = Math.max(...vals, ...prev.map((v) => v || 0), 1);
   /**
@@ -485,6 +485,15 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
       {counted.length > 0 && (
         <div data-avg-prose style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>
           {S.avg} {rangeWords ? `${rangeWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
+        </div>
+      )}
+      {/* THE KEY (Tarek, 2026-10-10: «why are the colours different?»): each slot holds
+          two bars — this period in the line's colour, the previous one in sand. */}
+      {legend && (
+        <div data-bars-legend style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
+          {/* GEOMETRY EXEMPTION (ruling 4): two 10px swatches, the bars' caps in miniature. */}
+          <span><span aria-hidden style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: color, marginInlineEnd: 6 }} />{legend.cur}</span>
+          <span><span aria-hidden style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: C.line, marginInlineEnd: 6 }} />{legend.prev}</span>
         </div>
       )}
     </div>
@@ -997,7 +1006,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
 // doctrine lives where the inputs do, in views/BookView.jsx.
 export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot: rawOffPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads: rawZeroMisleads = false,
   /** D27 — the unit he is READING in; the cards follow it where the wire can. */
-  displayCurrency = HOME_CURRENCY }) {
+  displayCurrency = HOME_CURRENCY, onRange = null }) {
   // The euro book's charts (2026-10-10): draw the series in his reading unit when
   // the server sends it. Off-plot money and the «zero misleads» verdict are EGP
   // facts, so in the home view there is neither — the money is ON the chart.
@@ -1024,11 +1033,18 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
    */
   const yearAxis = labels.length === 12;
   const [range, setRange] = useState(yearAxis ? rangeSeed : null);
+  // The WEEK's days are tappable too (Tarek, 2026-10-10: «why are the bars not clickable
+  // to show each day»): one day at a time — tap it again for the whole week.
+  const weekAxis = labels.length === 7;
   const onRangeTap = yearAxis
     ? (i) => { if (cur[i] == null) return; setRange((r) => nextRange(r, i)); }
-    : null;
+    : weekAxis
+      ? (i) => { if (cur[i] == null) return; setRange((r) => (r && r.a === i && r.b === i ? null : { a: i, b: i })); }
+      : null;
+  useEffect(() => { if (onRange) onRange(range); }, [range]);   // the screen narrows its list to the day
   const rangeWords = range
-    ? (range.a === range.b ? monthWord(range.a) : `${monthWord(range.a)}–${monthWord(range.b)}`)
+    ? (weekAxis ? labels[range.a]
+      : range.a === range.b ? monthWord(range.a) : `${monthWord(range.a)}–${monthWord(range.b)}`)
     : null;
 
   /**
@@ -1234,7 +1250,7 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
             <PairedBars
               cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color}
               range={range} onRangeTap={onRangeTap} rangeWords={rangeWords}
-              ariaLabels={ariaLabels}
+              ariaLabels={ariaLabels} legend={{ cur: periodNames.cur, prev: periodNames.prev }}
             />
           )}
         </div>
@@ -1257,7 +1273,7 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
         <div style={{ textAlign: 'center', margin: '6px 0 0' }}>
           <button onClick={() => setRange(null)} className="catchip" dir="auto"
             style={{ ...glass('chip'), minHeight: TAP, padding: '0 16px', fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>
-            {S.rangeShowAll(rangeWords)}
+            {weekAxis ? S.rangeShowWeek(rangeWords) : S.rangeShowAll(rangeWords)}
           </button>
         </div>
       )}
@@ -1325,7 +1341,7 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
  * (`S.periodJustStarted`) say why; a stack that faked a dot over 31 grey
  * bars would read as broken and be believed.
  */
-export function MonthStack({ cur, prev, labels, liveIndex, color, band = null, prevName = '', labelled = true, peekOpen = false }) {
+export function MonthStack({ cur, prev, labels, liveIndex, color, band = null, prevName = '', curName = '', labelled = true, peekOpen = false }) {
   if (!hasShape(cur)) return null;
   return (
     <div dir="ltr">
@@ -1334,7 +1350,8 @@ export function MonthStack({ cur, prev, labels, liveIndex, color, band = null, p
         labelled={labelled} peekOpen={peekOpen}
         columns={labels.length} band={band}
       />
-      <PairedBars cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color} />
+      <PairedBars cur={cur} prev={prev} labels={labels} liveIndex={liveIndex} color={color}
+        legend={curName ? { cur: curName, prev: prevName } : null} />
     </div>
   );
 }

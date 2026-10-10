@@ -155,8 +155,10 @@ try {
     labels: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'], liveIndex: 2, metric: 'all', setMetric: () => {},
     periodNames: { cur: 'w', prev: 'w-1' }, showBars: true,
   }));
-  ok(pressedIn(split(week).chart).length === 0,
-    'E1.i a week\'s day names stay furniture — range controls are the YEAR axis\'s grammar only');
+  // Re-cut 2026-10-10 (R0): Tarek asked for the week's days to be tappable («why are the bars not
+  // clickable to show each day»). They are buttons now — one day at a time — and none starts pressed.
+  ok(pressedIn(split(week).chart).length === 7 && !/aria-pressed="true"/.test(split(week).chart),
+    'E1.i a week\'s seven days are tappable — and nothing is selected until he taps one');
 
   /**
    * ——— (c) ONE HUE, TWO VALUES. Selected months harbor; unselected months

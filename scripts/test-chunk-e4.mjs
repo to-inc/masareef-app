@@ -60,7 +60,8 @@ try {
    */
   const CATS = [
     { name: 'Groceries', now: 5210, prev: 6480 },   // essentials
-    { name: 'Eating out', now: 6840, prev: 9120 },  // joy
+    // Re-cut 2026-10-10 (R0): Eating out moved Joy → Essentials on his word; Leisure stands in for Joy.
+    { name: 'Leisure', now: 6840, prev: 9120 },  // joy
     { name: 'Donations', now: 2100, prev: 4500 },   // joy (his amended ruling)
     { name: 'Medical', now: 1200, prev: 0 },        // health
     { name: 'Personal expenses', now: 900, prev: 900 }, // unplaced on purpose
@@ -135,7 +136,7 @@ try {
     'E4.11 control — unscoped, the month total and the ❓ money stand (D16d intact)');
 
   const joy = compare({ group: 'joy' });
-  ok(joy.includes(categoryLabel('Eating out')) && joy.includes(categoryLabel('Donations')),
+  ok(joy.includes(categoryLabel('Leisure')) && joy.includes(categoryLabel('Donations')),
     'E4.12 scoped to Joy — the group\'s own categories render');
   for (const name of ['Groceries', 'Medical', 'Personal expenses']) {
     ok(!joy.includes(categoryLabel(name)),

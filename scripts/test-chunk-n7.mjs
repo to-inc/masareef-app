@@ -107,7 +107,8 @@ try {
   const mixed = [
     day(),                                                                    // essentials
     day({ description: 'Pharmacy Dawa', category: 'Medical', amount: 50 }),   // health
-    day({ description: 'Harbour Cafe', category: 'Eating out', amount: 30 }), // joy
+    // Re-cut 2026-10-10 (R0): Eating out moved Joy → Essentials on his word; Leisure stands in for Joy.
+    day({ description: 'Harbour Cafe', category: 'Leisure', amount: 30 }), // joy
     day({ description: 'Mystery', category: '❓', amount: 20 }),              // no group yet
   ];
   const render = (entries, totals, filter) => renderToStaticMarkup(
@@ -174,8 +175,8 @@ try {
 
   // ——— the lookalike card describes the rows ON SCREEN, so a filter scopes it
   const dupes = [
-    day({ description: 'Harbour Cafe', category: 'Eating out', amount: 30 }),
-    day({ description: 'Harbour Cafe', category: 'Eating out', amount: 30 }),
+    day({ description: 'Harbour Cafe', category: 'Leisure', amount: 30 }),
+    day({ description: 'Harbour Cafe', category: 'Leisure', amount: 30 }),
     day(),
   ];
   const dupesVisible = render(dupes, { Visa: 160, Cash: 0 }, 'joy');

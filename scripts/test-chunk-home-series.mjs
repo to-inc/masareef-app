@@ -74,11 +74,16 @@ try {
   ok(h.includes(S.lessThan('Last week')) && /<b[^>]*>\d+%<\/b>/.test(h), 'HS.12 …it says «less than Last week» with a percentage, euro to euro');
   ok(new RegExp(`${S.wasThen}[^<]*<span[^>]*>143</span>`).test(h) && !new RegExp(`${S.wasThen}[^<]*<span[^>]*>280</span>`).test(h),
     'HS.13 …measured at the SAME POINT of last week: through Wednesday 40+22+0+81.31 = 143, never the whole week\'s 280');
+  // ——— «why are the colours different / why are the bars not clickable» (2026-10-10)
+  ok(/data-bars-legend[\s\S]{0,600}This week[\s\S]{0,400}Last week/.test(html), 'HS.22 the bars carry a key — this week in the line colour, last week in sand');
+  ok(/<button[^>]*aria-label="W"/.test(html) || /<button[^>]*aria-pressed="false"[^>]*aria-label="[^"]*"/.test(html), 'HS.23 the week\'s day bars are buttons');
   const old = render('EGP');
   ok(old.includes(S.chartHomeZero(S.currencyShort)), 'HS.9 control: read in E£ the same week still tells the truth about its empty pound chart');
 } finally { await vite.close(); }
 
 const book = readFileSync(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
+ok(/period === 'week' && weekDay != null/.test(book) && /getDay\(\) === weekDay/.test(book) && /useEffect\(\(\) => \{ setWeekDay\(null\); \}, \[period\]\)/.test(book),
+  'HS.24 a tapped day narrows the week\'s list to that day, and leaving Week forgets it');
 {
   // ——— a BROWSED month in his unit: euro rows at face, pound rows at their stamp, the rest named
   const v2 = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });

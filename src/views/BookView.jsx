@@ -204,6 +204,8 @@ export default function BookView({
   const monthCache = useRef(new Map());
   const [undated, setUndated] = useState(0);
   const [open, setOpen] = useState(initialOpenKey);
+  const [weekDay, setWeekDay] = useState(null);   // 0 = Sunday — the Week chart's tapped day
+  useEffect(() => { setWeekDay(null); }, [period]);   // leaving Week forgets the day
   /**
    * U1 — which row's edit sheet is up ({item, key}), and the rows the sheet
    * has ALREADY fixed this session, keyed by the row's settle key and holding
@@ -419,9 +421,13 @@ export default function BookView({
    * a chip may not adopt money nobody has placed. Their door back is clearing
    * the filter, which is always one tap and always visible.
    */
-  const rows = priorityFilter
+  const byPriority = priorityFilter
     ? sorted.filter((r) => groupOf(r && r.category) === priorityFilter)
     : sorted;
+  // A tapped day on the Week chart narrows the list to that day (2026-10-10).
+  const rows = period === 'week' && weekDay != null
+    ? byPriority.filter((r) => { const d = parseSheetDate(r && r.date); return !!d && new Date(d.y, d.m - 1, d.d).getDay() === weekDay; })
+    : byPriority;
 
   /**
    * v4 P5 — ROWS STILL ON THE PHONE (held for undo, or waiting for the network).
@@ -516,6 +522,7 @@ export default function BookView({
           metric={metric} setMetric={setMetric}
           names={{ cur: S.thisWeek, prev: S.lastWeek }} showBars
           displayCurrency={displayCurrency}
+          onRange={(r) => setWeekDay(r ? r.a : null)}
         />
       )}
 
@@ -701,7 +708,8 @@ export default function BookView({
         * two rows have an order already, whatever it is.
         */}
       {period !== 'year' && !loadingRows && !loadError && rows.length > 2 && (
-        <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 12 }}>
+        // Breath BELOW too (Tarek, 2026-10-10: «this needs space») — the list card sat flush against it.
+        <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 12, marginBottom: SPACE.gap }}>
           <span style={{ color: C.muted, fontSize: TYPE.label, fontWeight: 700 }}>{S.sortLabel}</span>
           {['date', 'amount', 'name'].map((k) => (
             <button
@@ -1482,6 +1490,7 @@ export function PeriodBlock({
   // A13 — the axis's spoken layer (full words, index-aligned with `labels`),
   // threaded untouched to PeriodSummary. Only the year call site passes it.
   ariaLabels = null,
+  onRange = null,
 }) {
   const totals = periodTotals(data, METRICS, offPlot || {});
   const shown = totals[metric] || totals.all;
@@ -1862,7 +1871,7 @@ export function PeriodBlock({
         metric={metric} setMetric={setMetric}
         periodNames={{ cur: names.cur, prev: names.prev }}
         showBars={showBars} footnote={footnote} offPlot={offPlot} stack={stack}
-        ariaLabels={ariaLabels}
+        ariaLabels={ariaLabels} onRange={onRange}
         // W1 — the card renders a verdict reached HERE, beside the head that
         // shares its inputs; it never re-decides from data it half-sees.
         homeZeroMisleads={homeZeroMisleads}
@@ -1975,6 +1984,7 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
       liveIndex={today ? today.d - 1 : -1}
       color={(METRICS.find((x) => x.key === metric) || METRICS[0]).color}
       prevName={monthName(data.month.names.prev)}
+      curName={monthName(data.month.names.cur)}
       labelled={mv.inHome || !((undated?.Visa || 0) + (undated?.Cash || 0))}
       band={yv ? typicalBand(comb(yv.cur.Visa, yv.cur.Cash), today ? today.m : 13) : null}
     />

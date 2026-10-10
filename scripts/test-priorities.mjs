@@ -149,9 +149,10 @@ const at = (fn, label) => {
   const folded = rollup(cats, { count: 2, total: 750 });
   const byKey = (k) => at(() => folded.groups.find((g) => g.key === k).total, `group ${k} exists`);
 
-  eq(byKey('essentials'), 5210, 'Essentials sums the categories his ruling put there');
+  // Re-cut 2026-10-10 (R0): Eating out moved Joy → Essentials on his word.
+  eq(byKey('essentials'), 5210 + 6840, 'Essentials sums the categories his ruling put there — Groceries AND Eating out (2026-10-10)');
   eq(byKey('health'), 1200, 'Health is Medical, Sports and the three clubs — and only Medical has rows here');
-  eq(byKey('joy'), 6840 + 2100, 'Joy sums his — Eating out AND Donations, per the amended ruling');
+  eq(byKey('joy'), 2100, 'Joy sums his — Donations; Eating out left it for Essentials (2026-10-10)');
   eq(byKey('projects'), 3000, 'and Projects sums the project labels');
   eq(at(() => folded.remainder.total, 'the remainder exists'), 900 + 750,
     'the remainder is every unmapped category PLUS the ❓ money — nothing may fall outside it');
