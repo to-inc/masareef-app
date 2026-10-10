@@ -134,6 +134,7 @@ export const EN = {
   receiptShort: '📷 Receipt',
   receiptIntro: 'Photograph the receipt and we read the amount. Nothing is logged until you agree.',
   receiptReading: 'Reading the receipt…',
+  attachFile: 'Attach a file',
   receiptSlow: 'The network is slow. You can wait, or enter it yourself.',
   receiptEnterManually: 'Enter it myself',
   receiptRetake: 'Photograph again',

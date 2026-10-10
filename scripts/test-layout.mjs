@@ -208,7 +208,15 @@ try {
     await pg.goto(url, { waitUntil: 'networkidle' });
     for (const [mode, name, title] of [['dictate', /Say it/, 'Say the expense'], ['receipt', /Receipt/, 'Receipt']]) {
       await pg.getByRole('button', { name: /^New$/ }).first().click(); await pg.waitForTimeout(500);
-      await pg.locator('[role=dialog]').getByRole('button', { name }).first().click(); await pg.waitForTimeout(600);
+      if (mode === 'receipt') {
+        // R0 re-cut 2026-10-10: the camera button now opens the iPhone camera itself; a
+        // picture handed to its input is what opens «← Receipt» (and starts the read).
+        const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+        await pg.locator('[role=dialog] input[type=file][capture]').setInputFiles({ name: 'r.png', mimeType: 'image/png', buffer: png });
+        await pg.waitForTimeout(800);
+      } else {
+        await pg.locator('[role=dialog]').getByRole('button', { name }).first().click(); await pg.waitForTimeout(600);
+      }
       if (errs.length) { ok(false, `R9 [${mode}] opening it threw: ${JSON.stringify(errs)}`); break; }
       const head = await pg.evaluate(() => document.querySelector('header')?.innerText || '');
       ok(head.includes(title) && /[←→]/.test(head), `R9 [${mode}] the screen opens under «← ${title}» (got ${JSON.stringify(head.slice(0, 40))})`);

@@ -142,6 +142,7 @@ export const AR = {
   receiptShort: '📷 فاتورة',
   receiptIntro: 'صوّر الفاتورة وهنقرا المبلغ لوحدنا. مش هيتسجل حاجة غير لما توافق.',
   receiptReading: 'بنقرا الفاتورة…',
+  attachFile: 'ارفق ملف',
   receiptSlow: 'الشبكة بطيئة شوية. تقدر تستنى أو تسجّلها بنفسك.',
   receiptEnterManually: 'أسجّلها بنفسي',
   receiptRetake: 'صوّر تاني',

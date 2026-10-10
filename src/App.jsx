@@ -200,6 +200,9 @@ export default function App() {
   useEffect(() => {
     if (data && !hasDisplayChoice()) setDisplayCurrencyState(bookCurrency);
   }, [!!data, bookCurrency]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The photo/file picked on the New sheet, handed to the receipt screen (2026-10-10).
+  const [receiptFile, setReceiptFile] = useState(null);
+  useEffect(() => { if (tab !== 'entry' || entryMode !== 'receipt') setReceiptFile(null); }, [tab, entryMode]);
   const [entryBusy, setEntryBusy] = useState(false);
 
   /**
@@ -1053,6 +1056,9 @@ export default function App() {
                 {tab === 'entry' && entryMode === 'receipt' && (
                   <ReceiptView
                     bookCurrency={bookCurrency}
+                    // Handed over once: the next visit to the screen starts empty.
+                    initialFile={receiptFile}
+                    key={receiptFile ? `f-${receiptFile.name}-${receiptFile.size}-${receiptFile.lastModified}` : 'receipt'}
                     onSaved={(msg, queuedPayload) => {
                       // A confirm that could not reach the server still has to
                       // append a row, so it goes through the normal outbox —
@@ -1233,6 +1239,8 @@ export default function App() {
                       ? (c) => setStoredCurrency(persistCurrency(c))
                       : undefined}
                     onCamera={() => pushDetail(() => setEntryMode('receipt'))}
+                    // A photo or file chosen ON the sheet: the receipt screen reads it at once.
+                    onReceiptFile={(f) => pushDetail(() => { setReceiptFile(f); setEntryMode('receipt'); })}
                     /**
                       * SHOWN ONLY IF THE SERVER KNOWS THE VERB. Absent
                       * capability list ⇒ no button, which is the state of the

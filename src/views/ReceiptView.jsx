@@ -50,6 +50,14 @@ export default function ReceiptView({
   /** SSR seam (house pattern): open straight onto a review card — no camera under SSR. */
   initialReview = null,
   bookCurrency = 'EGP',   // an unread currency is the BOOK's unit, and he can flip it (audit 2026-10-10)
+  /**
+   * ONE TAP FROM THE ENTRY SHEET (Tarek, 2026-10-10: «as soon as I send the photo
+   * of the receipt, it starts reading it right away»). A photo or file chosen on
+   * the New sheet arrives here: it is read at once, and the check card opens by
+   * itself when the read is done — no «take photo» screen, no «Ready — check it»
+   * tap. Photos taken from THIS screen keep the queue-and-shoot-the-next flow.
+   */
+  initialFile = null,
 }) {
   const [stage, setStage] = useState(initialReview ? 'review' : 'idle');
   const [slow, setSlow] = useState(false);
@@ -99,7 +107,7 @@ export default function ReceiptView({
   useEffect(() => () => clearTimeout(slowTimer.current), []);
 
   const reset = () => {
-    setStage('idle'); setSlow(false); setErrorMsg('');
+    setStage('idle'); setSlow(false); setErrorMsg(''); setAutoOpenId(null);
     setShot(null); setExtraction(null); setDup({ sms: false, photo: false, book: null });
     setDupUndated(false);
     setOverrideDup(false); setAmount(''); setMerchant(''); setDateStr('');
@@ -185,8 +193,9 @@ export default function ReceiptView({
     setStage(e.is_receipt ? 'review' : 'notReceipt');
   };
 
-  const onFile = async (ev) => {
-    const file = ev.target.files?.[0];
+  const [autoOpenId, setAutoOpenId] = useState(null);
+  const onFile = (ev) => takeFile(ev.target.files?.[0], false);
+  const takeFile = async (file, autoOpen) => {
     if (!file) return;
 
     setStage('working');
@@ -232,10 +241,27 @@ export default function ReceiptView({
       setStage('error');
       return;
     }
+    if (autoOpen) {
+      // Stay on «Reading the receipt…» (with its 20 s way out) until this job is read.
+      setAutoOpenId(prepared.clientHash);
+      slowTimer.current = setTimeout(() => setSlow(true), 20000);
+    }
     await refreshJobs();
-    setStage('idle');
+    if (!autoOpen) setStage('idle');
     workerRef.current.pump();
   };
+
+  useEffect(() => { if (initialFile) takeFile(initialFile, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!autoOpenId) return;
+    const job = jobs.find((j) => j.id === autoOpenId);
+    const st = job ? effectiveStage(job) : null;
+    if (!job || st === 'queued' || st === 'reading') return;
+    clearTimeout(slowTimer.current); setSlow(false);
+    setAutoOpenId(null);
+    if (st === 'ready') review(job);
+    else setStage('idle');   // not a receipt / failed: the job card below says so
+  }, [jobs, autoOpenId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Open a finished job's confirm card. Nothing is written until he taps أكّد. */
   const review = (job) => {

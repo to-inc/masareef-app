@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, SPACE, unitSize, glass, GRADIENT, SELECTED_TINT, SHEET,
 } from '../theme.js';
@@ -72,7 +72,7 @@ import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx
  */
 
 export default function EntryView({
-  amount, setAmount, desc, setDesc, cat, setCat, method, setMethod, onCamera,
+  amount, setAmount, desc, setDesc, cat, setCat, method, setMethod, onCamera, onReceiptFile = null,
   currency = HOME_CURRENCY, setCurrency, onDictate, onClose = null,
   /**
    * The cash presets («Coffee · Car wash · Taqa · Talabat») are DAD'S Cairo habits
@@ -90,6 +90,8 @@ export default function EntryView({
    * reshuffle under his thumb the moment he logs something — the same
    * shape-changing-while-you-reach rule the Inbox and the category grid follow.
    */
+  const shotRef = useRef(null);   // the camera, opened from here
+  const pickRef = useRef(null);   // Photos / Files
   const [allRepeats] = useState(() => repeatChips({ presets }));
   /**
    * REPEATS ARE HIDDEN WHILE HE IS TRAVELLING — card and rail both. Every
@@ -247,7 +249,29 @@ export default function EntryView({
               <MicIcon />
             </button>
           )}
-          {onCamera && (
+          {/**
+            * PHOTO and FILE, straight from here (Tarek, 2026-10-10: «much faster»).
+            * The camera button opens the iPhone camera itself (`capture`); the file
+            * button opens Photos/Files. Either hands the picture to the receipt
+            * screen, which reads it at once. Without `onReceiptFile` (an older
+            * shell) the camera button keeps opening the receipt screen.
+            */}
+          {onReceiptFile ? (
+            <>
+              <button className="catchip" onClick={() => shotRef.current && shotRef.current.click()} aria-label={S.receiptShort}
+                style={{ ...glass('chip'), minHeight: TAP, minWidth: TAP, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink }}>
+                <CameraIcon />
+              </button>
+              <button className="catchip" onClick={() => pickRef.current && pickRef.current.click()} aria-label={S.attachFile}
+                style={{ ...glass('chip'), minHeight: TAP, minWidth: TAP, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink }}>
+                <ClipIcon />
+              </button>
+              <input ref={shotRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) onReceiptFile(f); }} />
+              <input ref={pickRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) onReceiptFile(f); }} />
+            </>
+          ) : onCamera && (
             <button className="catchip" onClick={onCamera} aria-label={S.receiptShort}
               style={{ ...glass('chip'), minHeight: TAP, minWidth: TAP, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink }}>
               <CameraIcon />
@@ -340,6 +364,14 @@ function MicIcon() {
     </svg>
   );
 }
+function ClipIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M20 11.5l-7.6 7.6a5 5 0 01-7.1-7.1l8.1-8.1a3.3 3.3 0 014.7 4.7l-8 8a1.7 1.7 0 01-2.4-2.4l7.3-7.3" />
+    </svg>
+  );
+}
+
 function CameraIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true" focusable="false">
