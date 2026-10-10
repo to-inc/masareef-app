@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
 import {
   C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG,
 } from '../theme.js';
@@ -9,7 +9,8 @@ import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, in
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
-import { fetchEntries } from '../api/index.js';
+import { fetchEntries, removeEntry } from '../api/index.js';
+import { outcomeForRemove } from '../state/removeOutcome.js';
 import { findLookalikes, lookalikeCounts, likeness } from '../state/duplicates.js';
 import { canonCategory, sameCategory } from '../state/catOrder.js';
 import { TopCategories, PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
@@ -763,7 +764,28 @@ export default function BookView({
         * tap away under «الشهر».
         */}
       {period !== 'year' && !loadingRows && !loadError && (
-        <Lookalikes rows={rows} sheetUrl={sheetUrl} onPick={(at) => {
+        <Lookalikes rows={rows} sheetUrl={sheetUrl}
+          /**
+           * «Remove this row» on each look-alike (Tarek, 2026-10-10: «you need to give
+           * me some sort of a button to delete the duplicates»). The same server verb
+           * as the edit sheet's remove: the row MOVES to the sheet's Removed tab.
+           */
+          onRemove={supportsAction(build, 'remove_entry') ? async (at) => {
+            const row = rows[at];
+            if (!row) return { status: 'gone' };
+            let res = null; let threw = false;
+            try {
+              res = await removeEntry({ tab: row._tab || (needsFetch ? fetchedTab : liveTab), rowHint: `${row.date}|${row.amount}`, match: row });
+            } catch { threw = true; }
+            const out = outcomeForRemove(res, threw);
+            if (out.status === 'done') {
+              if (browsing) monthCache.current.delete(`${browsing.y}_${browsing.m}`);
+              if (onRowRemoved) onRowRemoved();
+              load(true);
+            }
+            return out;
+          } : null}
+          onPick={(at) => {
           // The panel and the list below are built from the SAME `rows`, so `at` names the
           // list row; it opens there, scrolled into view, with its Edit and Delete.
           const el = document.querySelector(`[data-at="${at}"]`);
@@ -1239,7 +1261,10 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
  * examined is the one he is looking at, so the card can never describe a month
  * he is not on.
  */
-function Lookalikes({ rows, sheetUrl, onPick = null }) {
+function Lookalikes({ rows, sheetUrl, onPick = null, onRemove = null }) {
+  // Per-row remove state: undefined → «Remove this row», 'confirm' → asks once more,
+  // then the server's outcome. Two taps, so a stray tap never costs a row.
+  const [rm, setRm] = useState({});
   const report = findLookalikes(rows);
   const counts = lookalikeCounts(report);
   if (!counts.groups) return null;              // the ordinary case is silence
@@ -1273,7 +1298,8 @@ function Lookalikes({ rows, sheetUrl, onPick = null }) {
             // report 2026-10-10: «Lilla Floranna Stockmann» listed under two «HSL»).
             const odd = g.rows.length > 2 && g.rows.every((o, j) => j === i || likeness(r, o) === 'different');
             return (
-              <button key={`${g.key}#${i}`}
+              <Fragment key={`${g.key}#${i}`}>
+              <button
                 onClick={onPick ? () => onPick(r.at) : undefined} disabled={!onPick}
                 style={{
                   // Tappable (Tarek, 2026-10-10: «why are these unclickable»): opens THIS row in
@@ -1291,6 +1317,37 @@ function Lookalikes({ rows, sheetUrl, onPick = null }) {
                 {/* Outside the LTR figure, and pointing the reading way (audit r2). */}
                 {onPick && <span aria-hidden style={{ color: C.muted, fontWeight: 400 }}>{DIR === 'rtl' ? '‹' : '›'}</span>}
               </button>
+              {onRemove && (() => {
+                const k = `${g.key}#${r.at}`;
+                const st = rm[k];
+                if (st && typeof st === 'object' && st.status !== 'saving') {
+                  const word = st.status === 'done' ? S.dupPairRemoved : st.status === 'gone' ? S.dupPairGone
+                    : st.status === 'engine' ? S.dupNeedsEngine : S.dupPairFailed;
+                  return <div style={{ fontSize: TYPE.label, color: st.status === 'done' ? C.settledInk : C.conflictInk, margin: '0 2px 6px' }}>{word}</div>;
+                }
+                return (
+                  <div style={{ margin: '0 2px 6px' }}>
+                    {st === 'confirm' && <div style={{ fontSize: TYPE.label, color: C.ink, marginBottom: 4 }}>{S.removeConfirm}</div>}
+                    <button
+                      disabled={!!st && typeof st === 'object'}
+                      onClick={async () => {
+                        if (st !== 'confirm') { setRm((m) => ({ ...m, [k]: 'confirm' })); return; }
+                        setRm((m) => ({ ...m, [k]: { status: 'saving' } }));
+                        const out = await onRemove(r.at);
+                        setRm((m) => ({ ...m, [k]: out }));
+                      }}
+                      style={{
+                        minHeight: TAP, padding: '0 14px', borderRadius: RADIUS.capsule, fontSize: TYPE.label, fontWeight: 700,
+                        color: C.conflictInk, background: st === 'confirm' ? C.conflictBg : 'transparent',
+                        border: `1px solid ${C.conflictLine}`,
+                      }}
+                    >
+                      {st && typeof st === 'object' ? S.cardSaving : S.dupPairRemove}
+                    </button>
+                  </div>
+                );
+              })()}
+              </Fragment>
             );
           })}
         </div>
@@ -1307,8 +1364,8 @@ function Lookalikes({ rows, sheetUrl, onPick = null }) {
         </div>
       )}
 
-      {/* The only exit: his sheet. Deliberately not a button that does it for
-          him — see the header of this component. */}
+      {/* His sheet, for a closer look. (Each row above can also be removed, on his
+          two taps — Owner ruling 2026-10-10.) */}
       {sheetUrl && (
         <a
           href={sheetUrl} target="_blank" rel="noreferrer"

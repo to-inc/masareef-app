@@ -444,8 +444,16 @@ try {
     'two rows with the same day, amount and currency raise the lookalike card ON THE SCREEN');
   ok(dupes.includes(AR.dupTier('same')),
     'and it says HOW alike in words — a percentage would invite trust it has no basis for');
-  ok(!/(?:remove|delete|احذف|امسح)/i.test(dupes),
-    'the card offers NO delete control of any kind, in either locale');
+  // R0 re-cut 2026-10-10: with no remove verb advertised, still no delete control…
+  ok(!dupes.includes(AR.dupPairRemove),
+    'without the server\'s remove verb the card offers no delete control');
+  // …and with it, every look-alike row carries «Remove this row» (Owner ruling).
+  {
+    const withRm = text(renderToStaticMarkup(createElement(BookView, { build: { actions: ['remove_entry'] }, data: payload([
+      day({ description: 'HSL', amount: 56.1 }), day({ description: 'HSL', amount: 56.1 }),
+    ], { Visa: 112.2, Cash: 0 }) })));
+    ok((withRm.split(AR.dupPairRemove).length - 1) === 2, 'with remove_entry advertised, each of the two look-alikes offers «Remove this row»');
+  }
   /**
    * ⚠️ THE SHEET LINK IS ASSERTED FROM SOURCE, NOT FROM THIS RENDER, and the
    * reason is worth recording rather than working around silently: the link is
@@ -464,10 +472,15 @@ try {
     'the card\'s one exit is an anchor into his own sheet…');
   // Re-cut 2026-10-10 (R0): «why are these unclickable» — the rows now OPEN their list row (navigation only).
   // The law the two pins guarded stands: nothing in this card acts on his book.
-  ok(!/removeEntry|fixCategory|editEntry|onEdit|onRemove|onConfirm|onOpenEdit/.test(lookalikes),
-    '…and nothing in it acts on his book — no edit, remove or file call anywhere in the card');
-  ok((lookalikes.match(/onClick=/g) || []).length === 1 && /onClick=\{onPick \? \(\) => onPick\(r\.at\) : undefined\}/.test(lookalikes),
-    'its one tap only OPENS the row in the list below (onPick) — a detector that points, never one that acts');
+  // R0 re-cut 2026-10-10 (Owner ruling: «you need to give me some sort of a button to
+  // delete the duplicates»): each look-alike row may now REMOVE itself — but only HIS
+  // decision, after two taps, through the one remove verb (the row moves to Removed).
+  // The card still never edits or files, and never removes on one tap.
+  ok(!/fixCategory|editEntry|onEdit|onConfirm|onOpenEdit/.test(lookalikes),
+    '…and nothing in it edits or files — its one act is the remove HE asks for');
+  ok(/onClick=\{onPick \? \(\) => onPick\(r\.at\) : undefined\}/.test(lookalikes)
+    && /if \(st !== 'confirm'\) \{ setRm\(\(m\) => \(\{ \.\.\.m, \[k\]: 'confirm' \}\)\); return; \}/.test(lookalikes),
+    'a row tap still only OPENS it below; the remove asks first (two taps) — a stray tap never costs a row');
 
   // AND THE ORDINARY CASE IS SILENCE — the other direction, which is the one a
   // card that always rendered would pass.
