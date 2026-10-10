@@ -242,6 +242,19 @@ const vite = await createServer({ server: { middlewareMode: true }, appType: 'cu
 
 try {
   const mod = await vite.ssrLoadModule('/src/views/InboxView.jsx');
+  // ═══ 2026-10-10 — «Photos being processed»: a bar that opens into the queue.
+  { const { PhotosBar } = mod;
+    const job = (id, stage, extra = {}) => ({ id, stage, queuedAt: 1791600000000, ...extra });
+    const none = renderToStaticMarkup(createElement(PhotosBar, { jobs: [job('d', 'dismissed')] }));
+    ok(none === '', 'PH.1 no photos (or only closed ones) — no bar at all');
+    const closed = renderToStaticMarkup(createElement(PhotosBar, { jobs: [job('a', 'reading'), job('b', 'queued')] }));
+    ok(closed.includes(AR.photosBusyTitle(2)) && closed.includes('aria-expanded="false"'),
+      'PH.2 two photos waiting — the bar says so, closed');
+    const opened = renderToStaticMarkup(createElement(PhotosBar, { initialOpen: true, onOpen: () => {},
+      jobs: [job('a', 'reading'), job('c', 'ready', { extraction: { extraction: { merchant_display: 'Fazer Café', is_receipt: true, amount: 4.4, amount_confidence: 'high' } } })] }));
+    ok(opened.includes('Fazer Café') && (opened.match(/<button/g) || []).length === 3,
+      'PH.3 opened, each photo is a row he can tap — named by its shop once read');
+  }
   const InboxView = mod.default;
   const { isSwipe } = mod;
   // ═══ FIELD REPORT 2026-10-09 — a card fee filed as «Elect. Recharge» could not

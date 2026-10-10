@@ -52,6 +52,8 @@ import ReceiptView from './views/ReceiptView.jsx';
 import DictateView from './views/DictateView.jsx';
 import BookView from './views/BookView.jsx';
 import BatchReviewView from './views/BatchReviewView.jsx';
+import * as receiptQueue from './state/receiptQueue.js';
+import { runner, onJobsChange } from './state/receiptRunner.js';
 import { setCategoryUse } from './state/catOrder.js';
 import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
 
@@ -202,7 +204,25 @@ export default function App() {
   }, [!!data, bookCurrency]); // eslint-disable-line react-hooks/exhaustive-deps
   // The photo/file picked on the New sheet, handed to the receipt screen (2026-10-10).
   const [receiptFile, setReceiptFile] = useState(null);
-  useEffect(() => { if (tab !== 'entry' || entryMode !== 'receipt') setReceiptFile(null); }, [tab, entryMode]);
+  // A finished photo opened from To review's «Photos being processed» bar.
+  const [openJobId, setOpenJobId] = useState(null);
+  useEffect(() => { if (tab !== 'entry' || entryMode !== 'receipt') { setReceiptFile(null); setOpenJobId(null); } }, [tab, entryMode]);
+  /**
+   * THE PHOTO QUEUE, watched from anywhere (2026-10-10). The one shared reader
+   * keeps going wherever he is — kicked on launch, on reconnect and on return
+   * to the app — and To review lists what it is doing.
+   */
+  const [photoJobs, setPhotoJobs] = useState([]);
+  useEffect(() => {
+    const load = () => receiptQueue.all().then(setPhotoJobs).catch(() => {});
+    const kick = () => { load(); runner().pump(); };
+    const off = onJobsChange(load);
+    kick();
+    window.addEventListener('online', kick);
+    const vis = () => { if (document.visibilityState === 'visible') kick(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { off(); window.removeEventListener('online', kick); document.removeEventListener('visibilitychange', vis); };
+  }, []);
   const [entryBusy, setEntryBusy] = useState(false);
 
   /**
@@ -1042,6 +1062,8 @@ export default function App() {
                 {viewTab === 'inbox' && (
                   <InboxView
                     pending={data.pending} settled={settled}
+                    photos={photoJobs}
+                    onOpenPhoto={(job) => pushDetail(() => { setOpenJobId(job.id); setTab('entry'); setEntryMode('receipt'); })}
                     onConfirm={confirmPending} onConfirmMany={confirmMany}
                     onEdited={refresh}
                   />
@@ -1058,7 +1080,8 @@ export default function App() {
                     bookCurrency={bookCurrency}
                     // Handed over once: the next visit to the screen starts empty.
                     initialFile={receiptFile}
-                    key={receiptFile ? `f-${receiptFile.name}-${receiptFile.size}-${receiptFile.lastModified}` : 'receipt'}
+                    openJobId={openJobId}
+                    key={receiptFile ? `f-${[].concat(receiptFile).map((f) => `${f.name}${f.size}${f.lastModified}`).join('|')}` : openJobId ? `j-${openJobId}` : 'receipt'}
                     onSaved={(msg, queuedPayload) => {
                       // A confirm that could not reach the server still has to
                       // append a row, so it goes through the normal outbox —

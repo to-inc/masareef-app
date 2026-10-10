@@ -8,7 +8,7 @@ import { prepareReceipt, snapDateISO, ReceiptImageError } from '../lib/receipt-i
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
 import * as queue from '../state/receiptQueue.js';
-import { createWorker } from '../state/receiptWorker.js';
+import { runner, onJobsChange, jobsChanged } from '../state/receiptRunner.js';
 import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
 import { debugOn } from '../state/settings.js';
@@ -58,6 +58,8 @@ export default function ReceiptView({
    * tap. Photos taken from THIS screen keep the queue-and-shoot-the-next flow.
    */
   initialFile = null,
+  /** A finished job opened from To review's photos bar: its card opens by itself. */
+  openJobId = null,
 }) {
   const [stage, setStage] = useState(initialReview ? 'review' : 'idle');
   const [slow, setSlow] = useState(false);
@@ -91,17 +93,13 @@ export default function ReceiptView({
   const refreshJobs = () => queue.all().then((list) => { setJobs(list); setPendingCount(list.length); });
 
   /**
-   * ONE worker for the life of the view (WS4-Q). Created in a ref rather than
-   * on every render, because a second worker would be a second thing in flight —
-   * and "one extraction at a time" is a promise about the vision budget and
-   * about a list that stays truthful, not an implementation detail.
+   * ONE worker for the whole APP now (state/receiptRunner.js, 2026-10-10): a
+   * second worker would be a second thing in flight, and «one extraction at a
+   * time» is a promise about the vision budget and a truthful list. It used to
+   * be this view's own, so leaving the screen stopped the reading.
    */
-  const workerRef = useRef(null);
-  if (!workerRef.current) {
-    workerRef.current = createWorker({
-      queue, extract: receiptExtract, onChange: () => { refreshJobs(); },
-    });
-  }
+  const workerRef = useRef(runner());
+  useEffect(() => onJobsChange(() => { refreshJobs(); }), []);
 
   useEffect(() => { refreshJobs().then(() => workerRef.current.pump()); }, []);
   useEffect(() => () => clearTimeout(slowTimer.current), []);
@@ -193,7 +191,7 @@ export default function ReceiptView({
     setStage(e.is_receipt ? 'review' : 'notReceipt');
   };
 
-  const [autoOpenId, setAutoOpenId] = useState(null);
+  const [autoOpenId, setAutoOpenId] = useState(openJobId);
   const onFile = (ev) => takeFile(ev.target.files?.[0], false);
   const takeFile = async (file, autoOpen) => {
     if (!file) return;
@@ -246,12 +244,17 @@ export default function ReceiptView({
       setAutoOpenId(prepared.clientHash);
       slowTimer.current = setTimeout(() => setSlow(true), 20000);
     }
-    await refreshJobs();
+    await refreshJobs(); jobsChanged();
     if (!autoOpen) setStage('idle');
     workerRef.current.pump();
   };
 
-  useEffect(() => { if (initialFile) takeFile(initialFile, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!initialFile) return;
+    if (!Array.isArray(initialFile)) { takeFile(initialFile, true); return; }
+    // Several photos: each joins the queue; the list (and To review's bar) shows them.
+    (async () => { for (const f of initialFile) await takeFile(f, false); })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!autoOpenId) return;
     const job = jobs.find((j) => j.id === autoOpenId);
@@ -273,7 +276,7 @@ export default function ReceiptView({
 
   const retry = async (job) => {
     await queue.update(job.id, { stage: 'queued', error: null, retryable: false });
-    await refreshJobs();
+    await refreshJobs(); jobsChanged();
     workerRef.current.pump();
   };
 
@@ -302,7 +305,7 @@ export default function ReceiptView({
     // confirm card on screen for a job that no longer exists is the same class
     // of lie as the zombie it replaces.
     if (reviewingId === job.id) { setReviewingId(null); reset(); }
-    await refreshJobs();
+    await refreshJobs(); jobsChanged();
     workerRef.current.pump();
   };
 
@@ -324,7 +327,7 @@ export default function ReceiptView({
     if (id) {
       await queue.update(id, { stage: 'dismissed', error: null, retryable: false });
       setReviewingId(null);
-      await refreshJobs();
+      await refreshJobs(); jobsChanged();
     }
   };
 
@@ -375,7 +378,7 @@ export default function ReceiptView({
       }
       if (outcome === 'written') {
         const doneId = reviewingId || shot?.clientHash;
-        if (doneId) queue.remove(doneId).then(refreshJobs);
+        if (doneId) queue.remove(doneId).then(jobsChanged);
         setReviewingId(null);
         onSaved?.(S.saved);
         reset();
@@ -395,7 +398,7 @@ export default function ReceiptView({
       // Audit 2026-10-10: the job leaves the list exactly as on success — left
       // as «Ready — review» it invited a second confirm, a double write.
       const doneId = reviewingId || shot?.clientHash;
-      if (doneId) queue.remove(doneId).then(refreshJobs);
+      if (doneId) queue.remove(doneId).then(jobsChanged);
       setReviewingId(null);
       reset();
     } finally {
@@ -878,7 +881,7 @@ const JOB_LABEL = () => ({
  * explanation would be the app inventing a diagnosis, which is the same defect
  * as «we could not check» rendering as «we checked and it is clean».
  */
-function jobLabel(job, stage) {
+export function jobLabel(job, stage) {
   if (stage === 'notReceipt') {
     const why = S.jobNotExpense(job && job.notExpenseReason);
     if (why) return why;

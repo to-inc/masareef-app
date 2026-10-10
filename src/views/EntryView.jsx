@@ -268,8 +268,9 @@ export default function EntryView({
               </button>
               <input ref={shotRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
                 onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) onReceiptFile(f); }} />
-              <input ref={pickRef} type="file" accept="image/*" style={{ display: 'none' }}
-                onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) onReceiptFile(f); }} />
+              {/* Several at once: they queue and read one after another (the To review photos bar). */}
+              <input ref={pickRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+                onChange={(e) => { const fs = Array.from(e.target.files || []); e.target.value = ''; if (fs.length) onReceiptFile(fs.length === 1 ? fs[0] : fs); }} />
             </>
           ) : onCamera && (
             <button className="catchip" onClick={onCamera} aria-label={S.receiptShort}

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { C, FONT_DISPLAY, FONT_UI, NUMERALS, RADIUS, TAP, TYPE, glass, unitSize, SHEET } from '../theme.js';
 import { S, DIR, unitFor } from '../i18n/strings.js';
 import { money, money2, ABSENT } from '../lib/format.js';
@@ -16,6 +16,10 @@ import { findLookalikes } from '../state/duplicates.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { removeEntry } from '../api/index.js';
 import EditSheet from './EditSheet.jsx';
+import { jobLabel } from './ReceiptView.jsx';
+import { effectiveStage, jobMerchant } from '../state/receiptStages.js';
+import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
+import { cairoClock } from '../lib/dates.js';
 import { getDisplayCurrency } from '../state/display.js';
 import { outcomeForRemove } from '../state/removeOutcome.js';
 
@@ -109,6 +113,8 @@ export default function InboxView({
   onEdited = null,
   initialEditing = null,
   initialStaleOpen = false, // SSR seam: render the older group unfolded
+  photos = [],               // the receipt queue — «Photos being processed» (2026-10-10)
+  onOpenPhoto = null,
 }) {
   const [editing, setEditing] = useState(initialEditing);
   // v4 P6: «سيبها لبعدين» moves a card to the END of the queue; it writes nothing.
@@ -208,6 +214,7 @@ export default function InboxView({
 
   return (
     <div>
+      <PhotosBar jobs={photos} onOpen={onOpenPhoto} />
       {(dup.pairs.length > 0 || dup.bigGroups.length > 0) && (
         <div style={{ marginBottom: 6 }}>
           <SectionLabel>{S.dupPairTitle}</SectionLabel>
@@ -618,3 +625,65 @@ function PendingCard({ item, outcome, onConfirm, onOpenEdit = null, onSkip = nul
 }
 
 export { cardKey };
+
+/**
+ * «PHOTOS BEING PROCESSED» (Tarek, 2026-10-10: «all the photos that are being
+ * processed should go somewhere… a little bar… a toggle dropdown list»). One
+ * glass row on To review: how many photos are being read and how many are ready;
+ * it opens into the list. A row opens that photo on the receipt screen — a ready
+ * one straight onto its check card. Closed photos are not listed.
+ */
+export function PhotosBar({ jobs = [], onOpen = null, initialOpen = false }) {
+  const [open, setOpen] = useState(initialOpen);
+  const list = jobs.filter((j) => j && j.stage !== 'dismissed');
+  if (!list.length) return null;
+  const stages = list.map((j) => effectiveStage(j));
+  const busy = stages.filter((st) => st === 'queued' || st === 'reading').length;
+  const ready = stages.filter((st) => st === 'ready').length;
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <button className="catchip" onClick={() => setOpen(!open)} aria-expanded={open}
+        style={{ ...glass('card'), borderRadius: RADIUS.glassWell, width: '100%', minHeight: 56, padding: '8px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, color: C.ink, textAlign: 'start' }}>
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: TYPE.label, fontWeight: 700 }}>{busy ? S.photosBusyTitle(busy) : S.photosTitle}</span>
+          <span style={{ fontSize: TYPE.label, fontWeight: 500, color: C.muted }}>{S.photosSummary(list.length, ready)}</span>
+        </span>
+        <span aria-hidden style={{ fontSize: TYPE.row, fontWeight: 700, color: C.muted }}>{open ? '⌄' : DIR === 'rtl' ? '‹' : '›'}</span>
+      </button>
+      {open && (
+        <div style={{ ...glass('card'), marginTop: 8, padding: '4px 12px' }}>
+          {list.map((j, i) => <PhotoRow key={j.id} job={j} stage={stages[i]} onOpen={onOpen} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PhotoRow({ job, stage, onOpen }) {
+  const [thumb, setThumb] = useState(null);
+  // Created in an effect and revoked on unmount — an unrevoked URL pins its Blob.
+  useEffect(() => {
+    if (!job.base64) return undefined;
+    const url = thumbUrl(job.base64);
+    setThumb(url);
+    return () => revokeThumb(url);
+  }, [job.base64]);
+  const at = Number.isFinite(job.queuedAt) ? cairoClock(job.queuedAt) : null;
+  const name = jobMerchant(job) || (at ? S.jobPhotoAt(at) : S.jobPhoto);
+  return (
+    <button className="catchip" onClick={onOpen ? () => onOpen(job) : undefined} disabled={!onOpen}
+      style={{ width: '100%', minHeight: TAP, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0',
+        background: 'transparent', textAlign: 'start', color: C.ink }}>
+      {/* GEOMETRY EXEMPTION (ruling 4): a 40px photo thumbnail, its corner bounded by its size */}
+      <span style={{ width: 40, height: 40, borderRadius: 8, flex: '0 0 auto', background: C.shell, overflow: 'hidden' }}>
+        {thumb && <img src={thumb} alt={S.jobThumbAlt} style={{ width: 40, height: 40, objectFit: 'cover', display: 'block' }} />}
+      </span>
+      <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: TYPE.label, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...ISOLATE }} dir="auto">{name}</span>
+        <span style={{ fontSize: TYPE.label, color: stage === 'ready' ? C.harborInk : C.muted, fontWeight: stage === 'ready' ? 700 : 500 }}>{jobLabel(job, stage)}</span>
+      </span>
+      {onOpen && <span aria-hidden style={{ color: C.muted }}>{DIR === 'rtl' ? '‹' : '›'}</span>}
+    </button>
+  );
+}
