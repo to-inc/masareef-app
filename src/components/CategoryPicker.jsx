@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { C, TAP, RADIUS, TYPE, GRADIENT, alpha, glass } from '../theme.js';
-import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
+import { allCategories, shortCategories } from '../state/catOrder.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { ISOLATE, LATIN } from './Primitives.jsx';
 
@@ -111,7 +111,7 @@ export function CategoryActions({ guess, outcome, onPick }) {
   // v4 P6: «غالبًا:» + ONE 64px guess, then «ولا…» + a 2×2 grid of 52px
   // alternatives — three categories and «more». Without a guess, the grid
   // simply leads. «more» unfolds the whole list in the same two columns.
-  const rest = (showAll ? CATEGORIES : SHORT_LIST).filter((c) => c !== guess);
+  const rest = (showAll ? allCategories() : shortCategories()).filter((c) => c !== guess);
   const shown = showAll ? rest : rest.slice(0, guess ? 3 : 5);
   const label = (t) => <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, margin: '18px 0 8px' }}>{t}</div>;
   return (

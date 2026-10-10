@@ -255,7 +255,8 @@ export default function InboxView({
         </div>
       )}
 
-      {stale.length > 0 && <StaleGroup rows={stale} onConfirm={onConfirm} onOpenEdit={openEdit} initialOpen={initialStaleOpen} />}
+      {stale.length > 0 && <StaleGroup rows={stale} onConfirm={onConfirm} onOpenEdit={openEdit} initialOpen={initialStaleOpen}
+        onDismiss={(key) => setRemovedHere((s) => new Set(s).add(key))} />}
 
       {editing && (
         <EditSheet
@@ -274,7 +275,7 @@ export default function InboxView({
   );
 }
 
-function StaleGroup({ rows, onConfirm, onOpenEdit, initialOpen = false }) {
+function StaleGroup({ rows, onConfirm, onOpenEdit, initialOpen = false, onDismiss = null }) {
   const [open, setOpen] = useState(initialOpen);
   return (
     <div style={{ marginTop: 14 }}>
@@ -298,7 +299,8 @@ function StaleGroup({ rows, onConfirm, onOpenEdit, initialOpen = false }) {
       {open && (
         <div style={{ marginTop: 12 }}>
           {rows.map((row) => (
-            <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} onOpenEdit={onOpenEdit} />
+            <PendingCard key={row.key} item={row.item} outcome={row.outcome} onConfirm={onConfirm} onOpenEdit={onOpenEdit}
+              onDismiss={onDismiss ? () => onDismiss(row.key) : null} />
           ))}
         </div>
       )}
@@ -502,17 +504,44 @@ export function focusQueue(needing, skipped) {
  * its unit, then the picker (the guess, then «ولا…» and the 2×2 grid). In focus
  * mode the card closes on «سيبها لبعدين» (skip — writes nothing) beside «عدّل».
  */
-function PendingCard({ item, outcome, onConfirm, onOpenEdit = null, onSkip = null, focus = false }) {
+function PendingCard({ item, outcome, onConfirm, onOpenEdit = null, onSkip = null, focus = false, onDismiss = null }) {
   const p = item.match;
   // Dimmed only while a write is in flight or queued — a LOGGED card stays at
   // full strength, because it can still be changed (CategoryActions).
   const inert = !!outcome && (outcome.status === 'saving' || outcome.status === 'queued');
+  /**
+   * A LOGGED card can be swiped away (Tarek, 2026-10-10: «allow me to swipe it
+   * away after it has been logged»). It writes nothing: the row is already in
+   * his sheet, and the next refetch drops it from the list on the server's word.
+   * The card follows the finger; past isSwipe it slides off. «Clear» is the
+   * button floor for the same act. A card still needing him never swipes.
+   */
+  const clearable = !!onDismiss && !!outcome && (outcome.status === 'done' || outcome.status === 'already');
+  const touch = useRef(null);
+  const [dx, setDx] = useState(0);
+  const [gone, setGone] = useState(false);
+  const clear = () => { setGone(true); setTimeout(onDismiss, 220); };
+  const swipe = clearable ? {
+    onTouchStart: (e) => { const t = e.touches[0]; touch.current = { x: t.clientX, y: t.clientY }; },
+    onTouchMove: (e) => {
+      const t = touch.current, c = e.touches[0];
+      if (t && Math.abs(c.clientX - t.x) > Math.abs(c.clientY - t.y)) setDx(c.clientX - t.x);
+    },
+    onTouchEnd: (e) => {
+      const t = touch.current, c = e.changedTouches[0];
+      touch.current = null;
+      if (t && isSwipe(Math.abs(c.clientX - t.x), Math.abs(c.clientY - t.y))) clear(); else setDx(0);
+    },
+  } : {};
   return (
     <div
       className="card-in"
+      {...swipe}
       style={{
         ...glass('card'), position: 'relative', padding: focus ? '26px 22px 18px' : 18, marginBottom: 14,
-        opacity: inert ? 0.62 : 1, transition: 'opacity .2s ease',
+        opacity: gone ? 0 : inert ? 0.62 : 1,
+        transform: gone ? `translateX(${dx < 0 ? '-' : ''}110%)` : dx ? `translateX(${dx}px)` : undefined,
+        transition: touch.current ? 'none' : 'opacity .2s ease, transform .2s ease',
       }}
     >
       {/* caption (ruling 2): row meta — method chip, date, travel flag — restates the row */}
@@ -537,8 +566,14 @@ function PendingCard({ item, outcome, onConfirm, onOpenEdit = null, onSkip = nul
 
       <CategoryActions guess={item.guess} outcome={outcome} onPick={(c) => onConfirm(item, c)} />
 
-      {(onSkip || onOpenEdit) && (
+      {(onSkip || onOpenEdit || clearable) && (
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          {clearable && (
+            <button onClick={clear}
+              style={{ flex: 1, minHeight: TAP, background: 'transparent', color: C.muted, fontSize: TYPE.label, fontWeight: 600, borderRadius: RADIUS.capsule }}>
+              {S.reviewClear}
+            </button>
+          )}
           {onSkip && (
             <button onClick={onSkip}
               style={{ flex: 1, minHeight: TAP, background: 'transparent', color: C.muted, fontSize: TYPE.label, fontWeight: 600, borderRadius: RADIUS.capsule }}>

@@ -70,6 +70,7 @@ export const EN = {
   reviewLikely: 'Probably:', // v4 P6
   reviewOrElse: 'Or…',
   reviewSkip: 'Leave it for later',
+  reviewClear: 'Clear', // a logged card leaves the list; also a sideways swipe
   reviewProgress: (i, n) => `${i} of ${n}`,
   reviewDone: 'All done ✓',
   likeYesterday: 'Like yesterday', // v4 P4 repeat chip (R17)

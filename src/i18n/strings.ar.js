@@ -79,6 +79,7 @@ export const AR = {
   reviewLikely: 'غالبًا:', // v4 P6
   reviewOrElse: 'ولا…',
   reviewSkip: 'سيبها لبعدين',
+  reviewClear: 'شيلها من هنا',
   reviewProgress: (i, n) => `${i} من ${n}`,
   reviewDone: 'خلصت ✓',
   likeYesterday: 'زي امبارح', // v4 P4 repeat chip (R17)

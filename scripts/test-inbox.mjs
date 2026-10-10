@@ -267,6 +267,14 @@ try {
       onConfirm: () => {}, initialStaleOpen: true }));
     ok(filedHtml.includes(AR.recategorize) && !/class="catchip"[^>]*disabled/.test(filedHtml),
       'RF.5 a logged card stays correctable — its buttons are live under «غيّر النوع لو غلط»');
+    // 2026-10-10 — «allow me to swipe it away after it has been logged»
+    ok(filedHtml.includes(AR.reviewClear),
+      'RF.6 a logged card offers «Clear» (the button floor of its sideways swipe)');
+    const openHtml = renderToStaticMarkup(createElement(InboxView, {
+      pending: [{ ...row('Jun', 3, { description: 'OLD FEE' }), stale: true }], settled: {},
+      onConfirm: () => {}, initialStaleOpen: true }));
+    ok(openHtml.includes('OLD FEE') && !openHtml.includes(AR.reviewClear),
+      'RF.7 a card still needing him cannot be cleared away — only a logged one');
   }
   // ═══ v4 P6 — «سيبها لبعدين»: the skipped card goes to the END, nothing is written.
   { const { focusQueue } = mod; const k = (x) => ({ key: x });

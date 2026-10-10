@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
 import { S, categoryLabel, unitFor, headlineUnitFor } from '../i18n/strings.js';
-import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
+import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, money2 } from '../lib/format.js';
 import { isoToDmy } from '../lib/dates.js';
 import { LATIN, ISOLATE } from '../components/Primitives.jsx';
@@ -649,7 +649,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                 * chip grid shipped; the pattern just never crossed files. Same
                 * expansion here, per row.
                 */}
-              {(catsOpen ? CATEGORIES : SHORT_LIST).map((c) => (
+              {(catsOpen ? allCategories() : shortCategories()).map((c) => (
                 <button
                   key={c} className="catchip" onClick={() => onPick(c)}
                   style={{

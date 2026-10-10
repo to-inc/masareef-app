@@ -51,6 +51,7 @@ import ReceiptView from './views/ReceiptView.jsx';
 import DictateView from './views/DictateView.jsx';
 import BookView from './views/BookView.jsx';
 import BatchReviewView from './views/BatchReviewView.jsx';
+import { setCategoryUse } from './state/catOrder.js';
 import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
 
 /**
@@ -821,6 +822,13 @@ export default function App() {
     : viewTab === 'book' || viewTab === 'inbox' ? 'dawn'
     : viewTab === 'entry' ? 'tide' : 'haze';
 
+  // A book kept in another unit (his) — Dad's pound book keeps its learned grids.
+  const foreignBook = !!(data && data.month && data.month.homeAgg && data.month.homeAgg.currency
+    && data.month.homeAgg.currency !== 'EGP');
+  // Category grids: most-used six first, then by kin (catOrder.js). Set before
+  // the children render so all four grids read one order.
+  setCategoryUse(foreignBook && data.year ? data.year.catUse || null : null);
+
   return (
     <div
       style={{
@@ -1153,7 +1161,7 @@ export default function App() {
                     cat={entryCat} setCat={setEntryCat}
                     method={entryMethod} setMethod={setEntryMethod}
                     currency={entryCurrency}
-                    presets={!(data && data.month && data.month.homeAgg && data.month.homeAgg.currency && data.month.homeAgg.currency !== 'EGP')}
+                    presets={!foreignBook}
                     /**
                       * The toggle is offered only where the write can honour it
                       * — same rule as the dictation button, and for a worse

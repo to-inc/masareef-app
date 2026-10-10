@@ -21,6 +21,7 @@
 import { CATEGORIES, SHORT_LIST, CASH_QUICK, UNKNOWN_CATEGORY } from '../src/lib/constants.js';
 import { AR_LOCALE } from '../src/i18n/strings.ar.js';
 import { EN_LOCALE } from '../src/i18n/strings.en.js';
+import { orderCategories } from '../src/state/catOrder.js';
 
 let pass = 0;
 const failures = [];
@@ -192,6 +193,19 @@ for (const q of CASH_QUICK) {
   eq(AR_L(null), '', 'a missing value is an empty label rather than a crash');
   eq(AR_L(undefined), '', 'and so is an absent one');
   eq(EN_L(null), '', 'both locales agree about nothing');
+}
+
+/* ——— 2026-10-10: most-used six first, then by kin (src/state/catOrder.js) ——— */
+{
+  eq(orderCategories(null), CATEGORIES, 'no use counts (Dad\'s book, an old server): the grid is CATEGORIES, unchanged');
+  const o = orderCategories({ Groceries: 40, Leisure: 9, Transportation: 22, Rent: 1, 'Eating out': 22 });
+  eq(o.slice(0, 5).join('|'), 'Groceries|Eating out|Transportation|Leisure|Rent',
+    'the most-used lead, by count; a tie keeps kin order (Eating out before Transportation)');
+  eq(o.length, CATEGORIES.length, 'every category is still offered — none dropped, none doubled');
+  eq(new Set(o).size, CATEGORIES.length, '…and each exactly once');
+  const rest = o.slice(6);
+  eq(rest.indexOf('Shams club') - rest.indexOf('Madinety club'), 1, 'after the lead, kin sit side by side (the clubs)');
+  eq(rest.indexOf('Water. Recharge') - rest.indexOf('Elect. Recharge'), 1, '…and the recharges');
 }
 
 const report = failures.length

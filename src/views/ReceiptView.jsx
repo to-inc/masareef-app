@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, GLYPH, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
 import { S, categoryLabel } from '../i18n/strings.js';
-import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
+import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, normalizeDigits } from '../lib/format.js';
 import { newClientId, cairoClock, isoToDmy } from '../lib/dates.js';
 import { prepareReceipt, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
@@ -692,7 +692,7 @@ export default function ReceiptView({
         )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
           <CategoryChips
-            list={showAllCats ? CATEGORIES : SHORT_LIST}
+            list={showAllCats ? allCategories() : shortCategories()}
             selected={category}
             onPick={(c) => { setCategory(c); setShowAllCats(true); }}
           />

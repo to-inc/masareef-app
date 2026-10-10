@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, SPACE, unitSize, glass, GRADIENT, SELECTED_TINT, SHEET,
 } from '../theme.js';
-import { CATEGORIES, SHORT_LIST } from '../lib/constants.js';
+import { allCategories, shortCategories } from '../state/catOrder.js';
 import { repeatChips } from '../state/repeats.js';
 import { isTravelling, toggleCurrency, HOME_CURRENCY } from '../state/travel.js';
 import { METHODS } from '../state/entryPayload.js';
@@ -272,7 +272,7 @@ export default function EntryView({
           chips made the sheet too tall for «0» to clear «سجّل» (the E-003 law).
           «كل الأنواع» unfolds the full list below as a wrapped grid. */}
       <Rail role="group" aria-label={cat ? categoryLabel(cat) : S.entryNeedCategory} style={{ gap: 8, paddingBottom: 2, flexWrap: showAll ? 'wrap' : 'nowrap' }}>
-        {(showAll ? CATEGORIES : SHORT_LIST).concat(!showAll && cat && SHORT_LIST.indexOf(cat) === -1 ? [cat] : []).map((c) => (
+        {(showAll ? allCategories() : shortCategories()).concat(!showAll && cat && shortCategories().indexOf(cat) === -1 ? [cat] : []).map((c) => (
           <button
             key={c}
             className="catchip"

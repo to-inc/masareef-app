@@ -194,7 +194,7 @@ try {
   // → keypad. The categories moved ABOVE the keypad so the thumb picks one before
   // typing; the keypad stays last, right above «سجّل».
   const iQuick = view.indexOf('repeats.map');
-  const iCats = view.indexOf('SHORT_LIST).concat');
+  const iCats = view.indexOf('shortCategories()).concat');
   const iKeys = view.indexOf("'1', '2', '3'");
   ok(iQuick > -1 && iKeys > -1 && iCats > -1, 'the three blocks are all still there');
   ok(iQuick < iKeys, 'the one-tap chips are ABOVE the keypad — they set description AND category');
