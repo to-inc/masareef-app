@@ -765,6 +765,9 @@ export default function BookView({
         */}
       {period !== 'year' && !loadingRows && !loadError && (
         <Lookalikes rows={rows} sheetUrl={sheetUrl}
+          // Keyed by the rows' content: when the list changes (a removal, a refresh)
+          // the card starts fresh — per-row remove state is by position (audit r4).
+          key={rows.map((r) => `${r && r.date}|${r && r.amount}|${r && r.description}`).join('¦')}
           /**
            * «Remove this row» on each look-alike (Tarek, 2026-10-10: «you need to give
            * me some sort of a button to delete the duplicates»). The same server verb

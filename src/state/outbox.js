@@ -47,7 +47,7 @@ export function all() { return readAll(); }
 export const FINAL_ERRORS = ['bad_category', 'bad_amount', 'row_not_found', 'row_changed'];
 
 /** Marks one item, in place (audit r3: a receipt the server held as a book duplicate). */
-function mark(id, patch) {
+export function mark(id, patch) {
   writeAll(readAll().map((i) => (i.id === id ? { ...i, ...patch } : i)));
 }
 
@@ -127,6 +127,8 @@ export async function flush(send, now = Date.now()) {
  */
 export function onPhone(now = Date.now()) {
   return readAll()
-    .filter((i) => i.kind === 'manual' || i.kind === 'receipt_confirm')
+    // A receipt HELD as a book duplicate is not «waiting to be logged» — it waits
+    // for his decision on its card, and its money is already in the book (audit r4).
+    .filter((i) => !i.blocked && (i.kind === 'manual' || i.kind === 'receipt_confirm'))
     .map((i) => ({ ...i, held: i.holdUntil > now }));
 }

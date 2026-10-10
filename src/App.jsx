@@ -14,7 +14,7 @@ import { createRefresher, resultState } from './state/refresh.js';
 import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, sendDebugLog, ping, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
-import { enqueue, flush, partition, remove as dropQueued, onPhone, FINAL_ERRORS, all as allQueued } from './state/outbox.js';
+import { enqueue, flush, partition, remove as dropQueued, onPhone, FINAL_ERRORS, all as allQueued, mark as markQueued } from './state/outbox.js';
 import {
   cardKey, outcomeFor, reconcile, remaining, pruneSettled, applyCategoryToToday,
 } from './state/inboxOutcomes.js';
@@ -781,11 +781,12 @@ export default function App() {
     setEntryAmount(''); setEntryDesc(''); setEntryCat(null); setEntryMethod(DEFAULT_METHOD);
     setTab('book');
     clearTimeout(undoTimer.current);
-    setUndo({ id: clientId, amount, currency: entryCurrency, restore, holdUntil });
+    const learn = { description: payload.description, category: payload.category, method: payload.method, amount, currency: restore.currency };
+    setUndo({ id: clientId, amount, currency: entryCurrency, restore, holdUntil, learn });
     undoTimer.current = setTimeout(async () => {
       setUndo(null);
       // «زي امبارح» learns the entry only once it is really kept.
-      remember({ description: payload.description, category: payload.category, method: payload.method, amount, currency: restore.currency });
+      remember(learn);
       const r = await runOutbox();
       if (r && r.dropped) showToast(S.genericError);
     }, UNDO_MS);
@@ -801,7 +802,11 @@ export default function App() {
      * then put the amount back in the keypad over a row his sheet kept — and a
      * re-entry counted it twice.
      */
-    if (Date.now() >= undo.holdUntil || !allQueued().some((i) => i.id === undo.id)) {
+    // Still on the phone and offline: nothing has left, so undo still works (audit r4).
+    const queued = allQueued().some((i) => i.id === undo.id);
+    if (!queued || (Date.now() >= undo.holdUntil && navigator.onLine)) {
+      // It reached the book: it is a real entry, so «زي امبارح» learns it after all.
+      remember(undo.learn);
       setUndo(null);
       showToast(S.undoTooLate);
       return;
@@ -826,6 +831,9 @@ export default function App() {
        */
       const written = res?.ok && res.skipped !== 'book_duplicate';
       if (written || FINAL_ERRORS.includes(res?.error)) dropQueued(item.id);
+      // A stale receipt the server meets for the first time HERE as a book duplicate
+      // becomes the «save anyway» card — else every tap resent it without dupAck (audit r4).
+      if (res?.skipped === 'book_duplicate' && !item.blocked) markQueued(item.id, { blocked: true });
       setStaleQueue(partition().stale); setPhoneRows(onPhone());
       refresh();
       showToast(written ? S.saved : S.genericError);

@@ -196,10 +196,11 @@ import { dirname, join } from 'node:path';
  * the arity check — the same arithmetic the 24 dead-key deletion established
  * in reverse.
  */
-const EXPECTED_ASSERTIONS = 6229;
+const EXPECTED_ASSERTIONS = 6296;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
+  'test-names.mjs',   // 2026-10-10: two crashes in one day from undefined names
   'test-format.mjs',
   'test-i18n.mjs',
   'test-refresh.mjs',

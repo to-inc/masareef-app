@@ -144,6 +144,8 @@ eq(AR.methodCash === 'Cash', false, '…in either direction');
   eq(r1.sent, 0, 'P5.6 a book_duplicate answer is not a send');
   ok(ob.partition(now + 8000).stale.some((i) => i.id === 'dupe' && i.blocked),
     'P5.7 …the receipt stays, blocked, shown at once as a card he decides on');
+  ok(!ob.onPhone(now + 8000).some((i) => i.id === 'dupe'),
+    'P5.8 …and it is NOT counted as «waiting to be logged» — its money is already in the book (audit r4)');
   delete globalThis.localStorage;
 }
 
