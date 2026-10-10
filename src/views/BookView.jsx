@@ -9,7 +9,7 @@ import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, in
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
-import { fetchEntries, removeEntry } from '../api/index.js';
+import { fetchEntries, removeEntry, keepLookalike } from '../api/index.js';
 import { outcomeForRemove } from '../state/removeOutcome.js';
 import { findLookalikes, lookalikeCounts, likeness } from '../state/duplicates.js';
 import { loadKept, keepRow, withoutKept } from '../state/keptLookalikes.js';
@@ -767,6 +767,7 @@ export default function BookView({
         */}
       {period !== 'year' && !loadingRows && !loadError && (
         <Lookalikes rows={rows} sheetUrl={sheetUrl}
+          canKeepOnSheet={supportsAction(build, 'keep_lookalike')}
           // Keyed by the rows' content: when the list changes (a removal, a refresh)
           // the card starts fresh — per-row remove state is by position (audit r4).
           key={rows.map((r) => `${r && r.date}|${r && r.amount}|${r && r.description}`).join('¦')}
@@ -1266,7 +1267,7 @@ export function MonthSheet({ today, browsing, onChoose, onClose }) {
  * examined is the one he is looking at, so the card can never describe a month
  * he is not on.
  */
-function Lookalikes({ rows, sheetUrl, onPick = null, onRemove = null }) {
+function Lookalikes({ rows, sheetUrl, onPick = null, onRemove = null, canKeepOnSheet = false }) {
   // Per-row remove state: undefined → «Remove this row», 'confirm' → asks once more,
   // then the server's outcome. Two taps, so a stray tap never costs a row.
   const [rm, setRm] = useState({});
@@ -1336,7 +1337,7 @@ function Lookalikes({ rows, sheetUrl, onPick = null, onRemove = null }) {
                     {st === 'confirm' && <div style={{ fontSize: TYPE.label, color: C.ink, flexBasis: '100%' }}>{S.removeConfirm}</div>}
                     {/* «Keep this»: a real second purchase — it leaves this card (2026-10-11). */}
                     {!st && (
-                      <button onClick={() => setKept(keepRow(r))}
+                      <button onClick={() => setKept(keepRow(r, canKeepOnSheet ? keepLookalike : null))}
                         style={{ minHeight: TAP, padding: '0 14px', borderRadius: RADIUS.capsule, fontSize: TYPE.label, fontWeight: 700,
                           color: C.harborInk, background: 'transparent', border: `1px solid ${C.line}` }}>
                         {S.dupKeep}

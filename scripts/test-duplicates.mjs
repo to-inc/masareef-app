@@ -23,7 +23,7 @@ import {
 } from '../src/state/duplicates.js';
 import { twinKey } from '../src/state/batchDraft.js';
 import { findLookalikes as findLA } from '../src/state/duplicates.js';
-import { withoutKept, keepRow, loadKept } from '../src/state/keptLookalikes.js';
+import { withoutKept, keepRow, loadKept, syncKept } from '../src/state/keptLookalikes.js';
 
 let pass = 0;
 const failures = [];
@@ -185,6 +185,15 @@ const row = (date, description, amount, currency = 'EGP', method = 'Cash') =>
   ok(before === 2 && after.length === 1 && after[0].rows.every((r) => r.description === 'Galleria'),
     'KEEP.1 «Keep this» on one HSL clears the HSL pair; the Galleria pair still asks');
   ok(withoutKept(findLA(rows), loadKept()).groups.every((g) => g.rows.length >= 2), 'KEEP.2 a group left with one row is no group');
+  // The sheet is the memory (2026-10-11): launch merges the Kept tab in, and sends what only this phone has.
+  const sent = [];
+  const merged = await syncKept(async () => ({ ok: true, signatures: ['1/9/2026|9|EUR|kiosk'] }), async (b) => { sent.push(b.signature); return { ok: true }; });
+  ok(merged.includes('1/9/2026|9|EUR|kiosk') && merged.includes('21/9/2026|4.5|EUR|hsl'),
+    'KEEP.3 another phone\'s kept row arrives here, and this phone\'s stays');
+  ok(sent.join() === '21/9/2026|4.5|EUR|hsl', 'KEEP.4 the one the sheet did not have is sent to it — nothing else');
+  const offline = await syncKept(async () => { throw new Error('offline'); }, async () => ({ ok: true })).catch(() => 'threw');
+  ok(offline === 'threw' || Array.isArray(offline), 'KEEP.5 offline, the sync gives up quietly — the phone\'s list is untouched');
+  ok(loadKept().includes('21/9/2026|4.5|EUR|hsl'), 'KEEP.6 …and still holds what he kept');
   delete globalThis.localStorage;
 }
 

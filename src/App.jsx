@@ -11,7 +11,7 @@ import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_EDGE, STATUS_SHADE, RADIUS, SP
 import { S, LOCALE, DIR, unitFor } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
-import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, sendDebugLog, ping, USING_MOCK } from './api/index.js';
+import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, sendDebugLog, ping, keepLookalike, keptList, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
 import { enqueue, flush, partition, remove as dropQueued, onPhone, FINAL_ERRORS, all as allQueued, mark as markQueued } from './state/outbox.js';
@@ -54,6 +54,7 @@ import BookView from './views/BookView.jsx';
 import BatchReviewView from './views/BatchReviewView.jsx';
 import * as receiptQueue from './state/receiptQueue.js';
 import { runner, onJobsChange } from './state/receiptRunner.js';
+import { syncKept } from './state/keptLookalikes.js';
 import { setCategoryUse } from './state/catOrder.js';
 import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
 
@@ -212,6 +213,14 @@ export default function App() {
    * keeps going wherever he is — kicked on launch, on reconnect and on return
    * to the app — and To review lists what it is doing.
    */
+  // The Kept tab is the look-alike memory across phones: merged once the server
+  // says it has it (2026-10-11).
+  const keptSynced = useRef(false);
+  useEffect(() => {
+    if (keptSynced.current || !supportsAction(build, 'kept_list')) return;
+    keptSynced.current = true;
+    syncKept(keptList, keepLookalike).catch(() => { keptSynced.current = false; });
+  }, [build]);
   const [photoJobs, setPhotoJobs] = useState([]);
   useEffect(() => {
     const load = () => receiptQueue.all().then(setPhotoJobs).catch(() => {});

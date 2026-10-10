@@ -160,6 +160,18 @@ export const sendDebugLog = ({ jobId, clientHash, reason, clientId }) =>
   (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
     : call({ action: 'debuglog', jobId, clientHash, reason, clientId }, 'write'));
 
+/**
+ * «Keep this» saved to the sheet's Kept tab, and read back (2026-10-11). Not in
+ * the mock's verb list — under the mock both answer the deployed doPost's
+ * `unknown_action`, so the kept list stays on the phone there.
+ */
+export const keepLookalike = ({ signature }) =>
+  (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
+    : call({ action: 'keep_lookalike', signature }, 'write'));
+export const keptList = () =>
+  (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
+    : call({ action: 'kept_list' }, 'read'));
+
 export const removeEntry = ({ tab, rowHint, match }) =>
   (USING_MOCK ? mockRemoveEntry({ tab, rowHint, match })
     : call({ action: 'remove_entry', tab, rowHint, match }, 'write'));
