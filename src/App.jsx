@@ -845,7 +845,7 @@ export default function App() {
   const sendStale = async (item) => {
     try {
       // A card he sends after the server held it as a book duplicate IS his «save anyway».
-      const res = await sendQueued(item.blocked ? { ...item, payload: { ...item.payload, dupAck: true } } : item);
+      const res = await sendQueued(item.blocked === true ? { ...item, payload: { ...item.payload, dupAck: true } } : item);
       /**
        * Only a WRITTEN row leaves the phone (audit r3). It used to drop on ANY
        * answer and toast «saved» — a lock timeout (`internal`) or a refused date
@@ -857,6 +857,7 @@ export default function App() {
       // A stale receipt the server meets for the first time HERE as a book duplicate
       // becomes the «save anyway» card — else every tap resent it without dupAck (audit r4).
       if (res?.skipped === 'book_duplicate' && !item.blocked) markQueued(item.id, { blocked: true });
+      if (res?.error === 'bad_date') markQueued(item.id, { blocked: 'bad_date' });
       setStaleQueue(partition().stale); setPhoneRows(onPhone());
       refresh();
       showToast(written ? S.saved : S.genericError);
@@ -1351,23 +1352,29 @@ export function StaleQueueCard({ item, onSend, onDrop }) {
         padding: 14, marginBottom: 12,
       }}
     >
-      <div style={{ fontWeight: 700, color: C.ink, fontSize: TYPE.body }}>{item.blocked ? S.batchDupBook : S.outboxStaleTitle}</div>
+      <div style={{ fontWeight: 700, color: C.ink, fontSize: TYPE.body }}>
+        {item.blocked === 'bad_date' ? S.outboxLateTitle : item.blocked ? S.batchDupBook : S.outboxStaleTitle}
+      </div>
       {/* A8: `opacity: 0.85` deleted — this is the sentence explaining that
           entries are stuck in the outbox, which is the whole point of the card. */}
       <div style={{ fontSize: TYPE.label, color: C.ink, marginTop: 4, lineHeight: 1.6 }}>
         {/* Held as a book duplicate (audit r3): «send» saves it anyway, «drop» keeps the book as it is. */}
-        {item.blocked ? S.outboxDupNote : S.outboxStaleNote}
+        {item.blocked === 'bad_date' ? S.outboxLateNote(item.payload?.entryDate || item.payload?.dateStr || '')
+          : item.blocked ? S.outboxDupNote : S.outboxStaleNote}
       </div>
       <div style={{ fontSize: TYPE.label, marginTop: 8, unicodeBidi: 'isolate', textAlign: 'start' }} dir="auto">
         {item.payload?.description} · {item.payload?.amount}{item.payload?.amount != null ? ` ${unitFor(item.payload?.currency || 'EGP')}` : ''} · {item.payload?.entryDate || item.payload?.dateStr}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        {/* A date the book refused would only be refused again — no «send» (2026-10-11). */}
+        {item.blocked !== 'bad_date' && (
         <button
           className="bigbtn" onClick={onSend}
           style={{ flex: 1, minHeight: 48, borderRadius: RADIUS.row, background: C.harbor, color: C.onDark, fontSize: 16, fontWeight: 700 }}
         >
           {S.outboxSend}
         </button>
+        )}
         <button
           className="catchip" onClick={onDrop}
           style={{ minHeight: 48, padding: '0 16px', borderRadius: RADIUS.row, background: 'transparent', border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 600 }}

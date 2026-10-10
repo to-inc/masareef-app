@@ -366,6 +366,8 @@ export const EN = {
   batchNeedCategory: '? category',
   batchDupBook: 'Already in your book',
   undoTooLate: 'Already sent to your book — fix it there if needed',
+  outboxLateTitle: 'Too old to log by itself',
+  outboxLateNote: (d) => `From ${d} — more than a week ago, so the book will not file it on its own. Add it in the sheet with its date, or drop it.`,
   outboxDupNote: 'This receipt matches an expense already in your book, so it was held back. Send it anyway, or drop it.',
   batchDupBookIntro: 'Your book already has this:',
   batchDupBatch: 'Same as the one above, in this photo',

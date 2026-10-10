@@ -100,6 +100,11 @@ export async function flush(send, now = Date.now()) {
         // decides on; sending from the card carries dupAck.
         mark(item.id, { blocked: true });
         retrying++;
+      } else if (res?.error === 'bad_date') {
+        // REFUSED FOR ITS DATE (Owner ruling 2026-10-11): more than a week old, the
+        // book will not file it by itself. Never dropped — a card names its date.
+        mark(item.id, { blocked: 'bad_date' });
+        retrying++;
       } else if (res?.ok) {
         remove(item.id);
         sent++;

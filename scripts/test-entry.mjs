@@ -146,6 +146,12 @@ eq(AR.methodCash === 'Cash', false, '…in either direction');
     'P5.7 …the receipt stays, blocked, shown at once as a card he decides on');
   ok(!ob.onPhone(now + 8000).some((i) => i.id === 'dupe'),
     'P5.8 …and it is NOT counted as «waiting to be logged» — its money is already in the book (audit r4)');
+  // Owner ruling 2026-10-11: an entry more than a week old is REFUSED by the server —
+  // it stays on the phone, at once, as a card naming its date. Never dropped.
+  ob.enqueue({ id: 'late', kind: 'manual', ageGated: true, payload: { amount: 9, entryDate: '1/7/2026' }, queuedAt: now + 9000 });
+  const r2 = await ob.flush(async (i) => (i.id === 'late' ? { ok: false, error: 'bad_date' } : { ok: true }), now + 10000);
+  ok(r2.sent === 0 && ob.partition(now + 10000).stale.some((i) => i.id === 'late' && i.blocked === 'bad_date'),
+    'P5.9 a late entry the server refuses is kept, shown at once as its own card — never lost, never moved to today');
   delete globalThis.localStorage;
 }
 
