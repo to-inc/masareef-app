@@ -133,7 +133,7 @@ ok(/useEffect\(/.test(view) && /setMethod\(entryDefaultMethod\(currency\)\)/.tes
   'S2.16 the chooser INITIALIZES through setMethod(entryDefaultMethod(currency)) — the pre-choice is the setting\'s, stated once');
 ok(/!amount && !desc && !cat/.test(view),
   'S2.17 the mount init takes the default only on a PRISTINE composition — returning mid-entry never stomps a chosen method');
-ok(/\[travelling\]\)/.test(view) && /if \(travelling\) setMethod\(entryDefaultMethod\(currency\)\)/.test(view),
+ok(/\[travelling\]\)/.test(view) && /if \(travelling && !amount && !desc\) setMethod\(entryDefaultMethod\(currency\)\)/.test(view),
   'S2.18 entering a non-EGP mode FORCES the pre-choice (the effect keys on travelling and re-applies the one rule, which answers Card away)');
 ok(!/\[method\]\)/.test(view),
   'S2.19 NO effect re-fires on method — after the force, his tap within the entry being composed stands');

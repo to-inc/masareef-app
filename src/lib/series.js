@@ -52,6 +52,22 @@ export const lastIdxOf = (arr) => arr.reduce((a, v, i) => (v != null ? i : a), 0
  * would tell him he spent nothing last year when the truth is that the 2025 file
  * is not connected.
  */
+/**
+ * The home unit's OFF-PLOT money (audit 2026-10-10): `homeAgg` counts a row
+ * whose day can't be read, the home series can't place it. The difference per
+ * method IS that money — so in euros the chart is marked and the headline's
+ * percentage uses the whole month, as the pound view always did.
+ */
+export function homeOffPlot(period) {
+  const by = period && period.homeAgg && period.homeAgg.byMethod;
+  if (!by) return {};
+  const gap = (k) => {
+    const d = Math.round(((Number(by[k] && by[k].total) || 0) - sumTo(seriesFor(period.cur, k))) * 100) / 100;
+    return d > 0.009 ? d : 0;
+  };
+  return { Visa: gap('Visa'), Cash: gap('Cash') };
+}
+
 export function periodTotals(data, metrics, offPlot = {}) {
   const out = {};
   for (const m of metrics) {
@@ -212,7 +228,9 @@ export function catsInReadingUnit(cats, uncategorized, displayCurrency, bookHome
   const list = Array.isArray(cats) ? cats : [];
   const inHome = !!bookHome && displayCurrency === bookHome && displayCurrency !== 'EGP'
     && list.some((c) => c && c.homeNow != null);
-  if (!inHome) return { cats: list, uncategorized, inHome: false };
+  // Pound view: a category with euro money but no pounds arrives as now: 0 —
+  // it is not a pound category this month, so it is not drawn as «0» (audit).
+  if (!inHome) return { cats: list.filter((c) => c && (c.now || c.prev)), uncategorized, inHome: false };
   return {
     cats: list.map((c) => ({ name: c.name, now: c.homeNow || 0, prev: c.homePrev == null ? 0 : c.homePrev }))
       .filter((c) => c.now || c.prev)

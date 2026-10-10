@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
 import { S, categoryLabel, unitFor, headlineUnitFor } from '../i18n/strings.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
@@ -7,7 +7,7 @@ import { isoToDmy } from '../lib/dates.js';
 import { LATIN, ISOLATE } from '../components/Primitives.jsx';
 import {
   rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows, BATCH_MAX_ROWS,
-  outcomeFor, isRetryable, retryRows, unsettledCount,
+  outcomeFor, isRetryable, retryRows, unsettledCount, saveBatchUi, restoreUi,
 } from '../state/batchDraft.js';
 
 /**
@@ -36,12 +36,15 @@ import {
  */
 export default function BatchReviewView({
   jobs, expired, busy, results, onConfirm, onResnap, onDiscard, onLeave,
+  bookCurrency = 'EGP',   // an unread currency falls back to the BOOK's unit (audit 2026-10-10)
 }) {
   const rows = useMemo(() => mergeJobs(jobs), [jobs]);
-  const [ticks, setTicks] = useState(() => initialTicks(rows));
-  const [edits, setEdits] = useState({});
+  const [saved] = useState(() => restoreUi(rows));
+  const [ticks, setTicks] = useState(() => ({ ...initialTicks(rows), ...saved.ticks }));
+  const [edits, setEdits] = useState(saved.edits);
   const [open, setOpen] = useState(null);
-  const [overridden, setOverridden] = useState({});
+  const [overridden, setOverridden] = useState(saved.overridden);
+  useEffect(() => { saveBatchUi({ ticks, edits, overridden }); }, [ticks, edits, overridden]);
 
   const settled = !!results;
   // `overridden` rides into the wire as `dupAck` — without it the override
@@ -62,7 +65,7 @@ export default function BatchReviewView({
        * written row cannot be re-sent from here at all.
        */
       ? retryRows(rows, results, overridden, edits, ticks)
-      : toConfirmRows(rows, ticks, edits, { overridden })),
+      : toConfirmRows(rows, ticks, edits, { overridden, bookCurrency })),
     [settled, results, rows, ticks, edits, overridden],
   );
 
@@ -638,7 +641,8 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               </button>
             </>
           )}
-          {!settled && writable && !bookDup && (
+          {/* «save anyway» on a duplicate brings the picker back — it used to land as ❓ (audit 2026-10-10) */}
+          {!settled && writable && (!bookDup || overrode) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {/**
                 * FIELD-FOUND (Tarek, 2026-08-24, first real batch): the picker

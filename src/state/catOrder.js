@@ -27,6 +27,11 @@ const LEAD = 6;
 
 export function orderCategories(use) {
   if (!use) return CATEGORIES;
+  // The sheet stores some labels with a stray space ('Elect. Recharge '); the
+  // grids use trimmed forms, so the counts are keyed the same way (audit).
+  const raw = use;
+  use = {};
+  for (const [k, v] of Object.entries(raw)) use[k.trim()] = (use[k.trim()] || 0) + v;
   const kin = KIN.filter((c) => CATEGORIES.includes(c))
     .concat(CATEGORIES.filter((c) => !KIN.includes(c)));            // a label added later still shows
   const lead = kin.filter((c) => use[c] > 0)

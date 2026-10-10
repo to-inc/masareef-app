@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 /**
  * The five behaviours added by the design read's Tier 3.  `npm run check:tier3`
  *
@@ -134,8 +135,13 @@ const { CASH_QUICK } = await import('../src/lib/constants.js');
    * path.
    */
   remember({ description: 'Café de Flore', amount: 12.5, currency: 'EUR' });
-  ok(!repeatChips().some((c) => c.description === 'Café de Flore'),
-    'a EUR entry is never offered to a pound keypad — that is a 12.5 EGP row waiting to happen');
+  // R0 re-cut 2026-10-10: a EUR entry is remembered WITH its currency (his book
+  // is in euros), and EntryView offers only chips in the unit on screen.
+  ok(repeatChips().some((c) => c.description === 'Café de Flore' && c.currency === 'EUR'),
+    'a EUR entry is remembered as EUR — never as a bare 12.5 a pound keypad could take');
+  ok(/allRepeats\.filter\(\(r\) => \(r\.currency \|\| 'EGP'\) === \(currency \|\| 'EGP'\)\)/.test(
+    readFileSync(new URL('../src/views/EntryView.jsx', import.meta.url), 'utf8')),
+    'and the entry sheet offers only chips in its own unit — that is a 12.5 EGP row never waiting to happen');
 
   // The cap holds, and his own entries push the presets off rather than the reverse.
   resetRepeats();

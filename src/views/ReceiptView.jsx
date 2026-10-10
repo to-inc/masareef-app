@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, GLYPH, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
-import { S, categoryLabel } from '../i18n/strings.js';
+import { S, categoryLabel, unitFor } from '../i18n/strings.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, normalizeDigits } from '../lib/format.js';
 import { newClientId, cairoClock, isoToDmy } from '../lib/dates.js';
@@ -52,6 +52,7 @@ export default function ReceiptView({
   onSaved, onManual, onBatch, onDebugLog,
   /** SSR seam (house pattern): open straight onto a review card — no camera under SSR. */
   initialReview = null,
+  bookCurrency = 'EGP',   // an unread currency is the BOOK's unit, and he can flip it (audit 2026-10-10)
 }) {
   const [stage, setStage] = useState(initialReview ? 'review' : 'idle');
   const [slow, setSlow] = useState(false);
@@ -71,6 +72,7 @@ export default function ReceiptView({
   const [dateStr, setDateStr] = useState(initialReview ? (initialReview.dateStr || '') : '');
   // E-015: the SSR seam may carry the server's answer (`initialReview.res`).
   const [pred, setPred] = useState(initialReview ? predOf(initialReview.res) : null);
+  const [curPick, setCurPick] = useState(null);
   const [method, setMethod] = useState(initialReview && initialReview.res ? startMethod(initialReview.res) : 'Cash');
   const [category, setCategory] = useState(initialReview ? (initialReview.category || null) : null);
   const [showAllCats, setShowAllCats] = useState(false);
@@ -303,6 +305,9 @@ export default function ReceiptView({
     }
   };
 
+  const unread = !extraction?.currency || extraction.currency === 'UNKNOWN';
+  const currencyOf = () => (unread ? (curPick || bookCurrency) : extraction.currency);
+
   const save = async () => {
     const amt = Number(normalizeDigits(amount));
     if (!isFinite(amt) || amt <= 0 || !category || saving) return;
@@ -312,7 +317,7 @@ export default function ReceiptView({
       clientHash: shot?.clientHash,
       clientId: newClientId(),
       amount: amt,
-      currency: extraction?.currency && extraction.currency !== 'UNKNOWN' ? extraction.currency : 'EGP',
+      currency: currencyOf(),
       method,
       category,
       description: merchant || category,
@@ -364,6 +369,11 @@ export default function ReceiptView({
       // The row still needs writing — hand it to the outbox, which is age-gated
       // and clientId-idempotent exactly like a cash entry.
       onSaved?.(S.queued, payload);
+      // Audit 2026-10-10: the job leaves the list exactly as on success — left
+      // as «Ready — review» it invited a second confirm, a double write.
+      const doneId = reviewingId || shot?.clientHash;
+      if (doneId) queue.remove(doneId).then(refreshJobs);
+      setReviewingId(null);
       reset();
     } finally {
       setSaving(false);
@@ -559,7 +569,20 @@ export default function ReceiptView({
               />
             ) : (
               <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.display, fontWeight: 650, ...LATIN, ...NUMERALS }}>
-                {money(amount)} <span style={{ fontSize: 16, color: C.muted }}>{extraction.currency}</span>
+                {money(amount)} <span style={{ fontSize: 16, color: C.muted }}>{unitFor(currencyOf())}</span>
+              </div>
+            )}
+            {/* Nobody read the receipt's currency: say which unit it will be
+                written in, and let him flip it (his book's unit by default). */}
+            {unread && bookCurrency !== 'EGP' && (
+              <div role="group" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                {[bookCurrency, 'EGP'].map((c) => (
+                  <button key={c} onClick={() => setCurPick(c)} aria-pressed={currencyOf() === c}
+                    style={{ minHeight: TAP, minWidth: TAP, padding: '0 14px', borderRadius: RADIUS.capsule,
+                      ...(currencyOf() === c ? SELECTED_TINT : glass('chip')), fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>
+                    {unitFor(c)}
+                  </button>
+                ))}
               </div>
             )}
           </Field>

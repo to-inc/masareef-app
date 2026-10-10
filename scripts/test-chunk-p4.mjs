@@ -43,7 +43,8 @@ const view = await readFile(new URL('../src/views/EntryView.jsx', import.meta.ur
 const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
 
 // ——— source: one fill rule, both callers
-ok((view.match(/onClick=\{\(\) => fill\(/g) || []).length === 2,
+// R0 re-cut 2026-10-10: the quick chip's second tap lets go, so its call is in a ternary.
+ok((view.match(/onClick=\{\(\) => (?:\(desc === q\.description \? setDesc\(''\) : )?fill\(/g) || []).length === 2,
   'P4.1 the repeat chip and the quick chips call the SAME fill — one rule, two callers (N3\'s law)');
 ok(!/function LikeBeforeCard/.test(view), 'P4.2 the old two-line «like before» card is gone — v4 draws a chip');
 
@@ -52,7 +53,7 @@ ok(/role="dialog" aria-modal="true" aria-label=\{S\.tabEntry\}/.test(app), 'P4.3
 ok(/\{!needsSetup && !sheetOpen && \(\s*<nav/.test(app), 'P4.4 the bar hides while the sheet is open (R17)');
 ok(/const viewTab = sheetOpen \? underTab\.current : tab;/.test(app), 'P4.5 the screen he came from stays drawn underneath');
 ok(/aria-label=\{S\.settingsClose\} onClick=\{closeEntry\}/.test(app), 'P4.6 the dimmed backdrop is a labelled button that closes the sheet');
-ok(/dy >= 80 && dy >= 2 \* dx\) closeEntry\(\)/.test(app) && /body\.scrollTop > 0\)\) return/.test(app),
+ok(/dy >= 80 && dy >= 2 \* dx\) closeEntry\(\)/.test(app) && /!\(b && b\.scrollTop > 0\)/.test(app),
   'P4.7 swipe down closes — mostly vertical, 80px+, and never while the sheet body is scrolled');
 ok(/onClose=\{closeEntry\}/.test(app), 'P4.8 the ✕ is wired to the same close');
 

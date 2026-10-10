@@ -98,7 +98,7 @@ try {
   );
   eq(heroOf(ordinary), '100',
     'A10.5 a day with real EGP money leads EGP exactly as before — the rule fires on misleading, not on foreignness');
-  ok(text(ordinary).includes(AR.travelApart) && /12\.5\s*EUR/.test(text(ordinary)),
+  ok(text(ordinary).includes(AR.travelApart) && /12\.5\s*(EUR|€)/.test(text(ordinary)),
     'A10.6 …with the foreign money still named apart from the figure (S4), untouched by this chunk');
 
   // ——— the genuinely empty day: a TRUE zero is a true sentence

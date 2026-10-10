@@ -263,6 +263,7 @@ export function wireDateStr(iso) {
  */
 export function toConfirmRows(rows, ticks, edits = {}, opts = {}) {
   const overridden = opts.overridden || {};
+  const bookCurrency = opts.bookCurrency || 'EGP';
   const out = [];
   for (const row of Array.isArray(rows) ? rows : []) {
     const key = rowKey(row);
@@ -275,7 +276,9 @@ export function toConfirmRows(rows, ticks, edits = {}, opts = {}) {
       amount: edited.amount,
       // The row's own currency, always — absent means EGP to the server, and
       // these rows are exactly the ones that are usually NOT in EGP.
-      currency: edited.currency || row.currency || 'EGP',
+      // An UNREAD currency is the book's own unit, never pounds by accident
+      // (audit 2026-10-10: on his euro book, «UNKNOWN» became EGP server-side).
+      currency: edited.currency || (row.currency && row.currency !== 'UNKNOWN' ? row.currency : bookCurrency),
       /**
        * An explicit cash hint on the row wins; otherwise the server's own
        * per-list ruling (defaultMethod, D19). The client composes from what the
@@ -655,5 +658,25 @@ export function saveDraft(draft) {
 }
 
 export function clearDraft() {
-  try { localStorage.removeItem(KEY); } catch { /* nothing to do */ }
+  try { localStorage.removeItem(KEY); localStorage.removeItem(UI_KEY); } catch { /* nothing to do */ }
+}
+
+/**
+ * HIS PICKS ON THE BATCH SCREEN — ticks, edits, «save anyway» (audit
+ * 2026-10-10). They lived only in the screen's memory: leaving with ← or coming
+ * back the next day wiped fourteen classified rows. Kept beside the draft, keyed
+ * by row; `restoreUi` keeps only keys that exist in the rows on screen.
+ * (A re-read after expiry mints new row keys; carrying picks across that would
+ * need the old rows too — `reattachEdits` — and is left for when it bites.)
+ */
+const UI_KEY = 'masareef.batchUi';
+export function saveBatchUi(ui) {
+  try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch { /* costs ticks, never an expense */ }
+}
+export function restoreUi(rows) {
+  let ui = null;
+  try { ui = JSON.parse(localStorage.getItem(UI_KEY) || 'null'); } catch { ui = null; }
+  const keys = new Set((Array.isArray(rows) ? rows : []).map(rowKey));
+  const pick = (o) => Object.fromEntries(Object.entries((ui && o) || {}).filter(([k]) => keys.has(k)));
+  return { ticks: pick(ui && ui.ticks), edits: pick(ui && ui.edits), overridden: pick(ui && ui.overridden) };
 }

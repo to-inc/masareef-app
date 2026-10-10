@@ -74,6 +74,11 @@ export function getCurrency() {
   }
 }
 
+/** Has he ever chosen a unit on this phone? (EUR is stored; EGP clears the key.) */
+export function hasCurrencyChoice() {
+  try { return localStorage.getItem(KEY) != null; } catch { return false; }
+}
+
 export function setCurrency(c) {
   const next = isCurrency(c) ? c : HOME_CURRENCY;
   try {

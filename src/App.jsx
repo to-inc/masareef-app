@@ -34,7 +34,7 @@ import { applyDisplay, getDisplay } from './state/settings.js';
 import {
   loadDraft, saveDraft, clearDraft, mergeJobs, unsettledCount, mergeOutcomes, outcomeMap,
 } from './state/batchDraft.js';
-import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY } from './state/travel.js';
+import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY, hasCurrencyChoice } from './state/travel.js';
 import {
   getDisplayCurrency, setDisplayCurrency, otherDisplayCurrency,
 } from './state/display.js';
@@ -179,6 +179,17 @@ export default function App() {
    * preference would keep writing euros as pounds with no control left to see.
    */
   const entryCurrency = effectiveCurrency(storedCurrency, build);
+  /**
+   * THE BOOK'S OWN UNIT (audit 2026-10-10). His book is kept in euros: a fresh
+   * phone (or cleared storage) used to open the keypad in pounds, and a euro
+   * coffee landed as E£. With no stored choice, the keypad starts in the book's
+   * unit. Receipts and statement rows whose currency nobody read fall back to
+   * it too, instead of to pounds.
+   */
+  const bookCurrency = (data && data.month && data.month.homeAgg && data.month.homeAgg.currency) || 'EGP';
+  useEffect(() => {
+    if (bookCurrency !== 'EGP' && !hasCurrencyChoice()) setStoredCurrency(bookCurrency);
+  }, [bookCurrency]);
   const [entryBusy, setEntryBusy] = useState(false);
 
   /**
@@ -823,8 +834,7 @@ export default function App() {
     : viewTab === 'entry' ? 'tide' : 'haze';
 
   // A book kept in another unit (his) — Dad's pound book keeps its learned grids.
-  const foreignBook = !!(data && data.month && data.month.homeAgg && data.month.homeAgg.currency
-    && data.month.homeAgg.currency !== 'EGP');
+  const foreignBook = bookCurrency !== 'EGP';
   // Category grids: most-used six first, then by kin (catOrder.js). Set before
   // the children render so all four grids read one order.
   setCategoryUse(foreignBook && data.year ? data.year.catUse || null : null);
@@ -1000,6 +1010,7 @@ export default function App() {
                 )}
                 {tab === 'entry' && entryMode === 'receipt' && (
                   <ReceiptView
+                    bookCurrency={bookCurrency}
                     onSaved={(msg, queuedPayload) => {
                       // A confirm that could not reach the server still has to
                       // append a row, so it goes through the normal outbox —
@@ -1028,6 +1039,7 @@ export default function App() {
                 )}
                 {tab === 'entry' && entryMode === 'batch' && (
                   <BatchReviewView
+                    bookCurrency={bookCurrency}
                     jobs={batch.jobs}
                     expired={batchExpired}
                     busy={batchBusy}
@@ -1130,13 +1142,18 @@ export default function App() {
             style={{ position: 'fixed', inset: 0, zIndex: 40, background: SHEET.dim, cursor: 'default' }} />
           <div
             role="dialog" aria-modal="true" aria-label={S.tabEntry} className="view-in"
-            onTouchStart={(e) => { const t = e.touches[0]; swipeY.current = t ? { x: t.clientX, y: t.clientY } : null; }}
+            onTouchStart={(e) => {
+              // The scroll position is read at the START: a drag that scrolls the
+              // body back to the top in the same gesture must not close it (audit).
+              const t = e.touches[0]; const b = e.currentTarget.querySelector('[data-sheet-body]');
+              swipeY.current = t && !(b && b.scrollTop > 0) ? { x: t.clientX, y: t.clientY } : null;
+            }}
             onTouchEnd={(e) => {
               // Swipe down to close (v4 P4) — mostly vertical, 80px+, and only
               // from the top of the sheet's scroll so a scroll back up never closes it.
               const st = swipeY.current; swipeY.current = null;
-              const c = e.changedTouches[0]; const body = e.currentTarget.querySelector('[data-sheet-body]');
-              if (!st || !c || (body && body.scrollTop > 0)) return;
+              const c = e.changedTouches[0];
+              if (!st || !c) return;
               const dy = c.clientY - st.y; const dx = Math.abs(c.clientX - st.x);
               if (dy >= 80 && dy >= 2 * dx) closeEntry();
             }}

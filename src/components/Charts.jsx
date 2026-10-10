@@ -3,7 +3,7 @@ import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
-import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape, inReadingUnit } from '../lib/series.js';
+import { seriesFor, sumTo, cumsum, lastIdxOf, periodTotals, hasShape, inReadingUnit, homeOffPlot } from '../lib/series.js';
 import { rollup, groupOf } from '../lib/priorities.js';
 import { HOME_CURRENCY, homeMetricTotals } from '../state/display.js';
 import { LATIN, SectionLabel, NeutralDelta } from './Primitives.jsx';
@@ -700,7 +700,8 @@ const setPrioritySelection = (key) => {
  * inside D5 rather than against it: he is shown a gap he can tap, not a category
  * he never chose.
  */
-export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized, group = null }) {
+export function CategoryCompare({ cats, curName, prevName, uncategorized, total, onUncategorized, group = null, unit = '' }) {
+  // Audit 2026-10-10: every amount carries its unit (v4) — these were bare under a € headline.
   /**
    * E4 — the scope a pressed lens tile put on this chart, or null for the
    * whole month. `group` is the SSR seed (suites; a static render cannot
@@ -751,7 +752,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
             {/* Category name is frozen-schema Latin — isolated so RTL cannot reorder it */}
             <span style={{ fontWeight: 600 }} dir="auto">{categoryLabel(c.name)}</span>
             <span style={{ fontWeight: 700, fontFamily: FONT_DISPLAY }}>
-              <span style={LATIN}>{money(c.now)}</span>
+              <span style={LATIN}>{money(c.now)}</span><span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{unit ? ` ${unit}` : ''}</span>
               <NeutralDelta now={c.now} prev={c.prev} />
             </span>
           </div>
@@ -788,7 +789,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: TYPE.label, gap: 8 }}>
             <span style={{ fontWeight: 700, color: C.conflictInk }}>{S.uncategorizedLine}</span>
             <span style={{ fontWeight: 700, color: C.conflictInk, ...LATIN, ...NUMERALS }}>
-              {moneyRound(uncategorized.total)}
+              {moneyRound(uncategorized.total)}<span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{unit ? ` ${unit}` : ''}</span>
             </span>
           </div>
           <div style={{ fontSize: TYPE.label, color: C.ink, marginTop: 2 }}>{S.uncategorizedHint}</div>
@@ -819,7 +820,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
         }}>
           <span style={{ fontWeight: 700, color: C.ink }}>{S.monthTotalLine}</span>
           <span style={{ fontWeight: 700, color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN, ...NUMERALS }}>
-            {moneyRound(total)}
+            {moneyRound(total)}<span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{unit ? ` ${unit}` : ''}</span>
           </span>
         </div>
       )}
@@ -846,7 +847,7 @@ export function CategoryCompare({ cats, curName, prevName, uncategorized, total,
  * one quiet line and no numbers he did not ask for. The header is the toggle;
  * the state persists, so he opens it once.
  */
-export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGroup = null }) {
+export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGroup = null, unit = '' }) {
   /**
    * E4 — which tile is pressed. The store above is the live truth (the chart
    * below reads the same one); `selectedGroup` is the SSR seed. Hooks stand
@@ -880,7 +881,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
       <span style={{ fontWeight: strong ? 700 : 600, color: C.ink }}>{label}</span>
       <span style={{
         fontWeight: 700, color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN, ...NUMERALS,
-      }}>{moneyRound(amount)}</span>
+      }}>{moneyRound(amount)}<span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{unit ? ` ${unit}` : ''}</span></span>
     </div>
   );
 
@@ -937,7 +938,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
                     {S.lensGroup(g.key)}
                   </span>
                   <span style={{ fontWeight: 700, color: active ? C.onDark : C.ink, fontFamily: FONT_DISPLAY, ...LATIN, ...NUMERALS }}>
-                    {moneyRound(g.total)}
+                    {moneyRound(g.total)}<span style={{ fontFamily: FONT_UI, fontWeight: 600, color: active ? C.onDark : C.muted, fontSize: unitSize(TYPE.label) }}>{unit ? ` ${unit}` : ''}</span>
                   </span>
                 </button>
               );
@@ -1016,7 +1017,7 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
   // the server sends it. Off-plot money and the «zero misleads» verdict are EGP
   // facts, so in the home view there is neither — the money is ON the chart.
   const { period: data, unit: chartCur, inHome } = inReadingUnit(raw, displayCurrency, HOME_CURRENCY);
-  const offPlot = inHome ? {} : rawOffPlot;
+  const offPlot = inHome ? homeOffPlot(data) : rawOffPlot;
   const homeZeroMisleads = inHome ? false : rawZeroMisleads;
   const chartUnit = unitFor(chartCur);
   const color = METRICS.find((m) => m.key === metric).color;
@@ -1082,7 +1083,17 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
    * render under an EGP label, which is what a book without the stamps can
    * honestly say.
    */
-  const homeCards = homeMetricTotals(data && data.homeAgg, data && data.prevHomeAgg, displayCurrency);
+  const homeAll = homeMetricTotals(data && data.homeAgg, data && data.prevHomeAgg, displayCurrency);
+  /**
+   * Audit 2026-10-10: `prevHomeAgg` is the WHOLE previous period, while the
+   * headline compares at the same point — so mid-month the cards always read a
+   * big drop, and a missing previous year arrived as «was 0 €». When the chart
+   * itself is in the home unit, its series already carries the same-point
+   * figure (null when there is none): the cards take their comparison from it.
+   */
+  const homeCards = homeAll && inHome
+    ? Object.fromEntries(Object.keys(homeAll).map((k) => [k, { now: homeAll[k].now, prevAt: computed[k] ? computed[k].prevAt : null }]))
+    : homeAll;
   const cardUnit = homeCards ? unitFor(displayCurrency) : unitFor(HOME_CURRENCY);
 
   /**

@@ -201,6 +201,8 @@ for (const q of CASH_QUICK) {
   const o = orderCategories({ Groceries: 40, Leisure: 9, Transportation: 22, Rent: 1, 'Eating out': 22 });
   eq(o.slice(0, 5).join('|'), 'Groceries|Eating out|Transportation|Leisure|Rent',
     'the most-used lead, by count; a tie keeps kin order (Eating out before Transportation)');
+  eq(orderCategories({ 'Elect. Recharge ': 50, Groceries: 3 })[0], 'Elect. Recharge',
+    'a label the sheet stores with a stray space still counts (audit 2026-10-10)');
   eq(o.length, CATEGORIES.length, 'every category is still offered — none dropped, none doubled');
   eq(new Set(o).size, CATEGORIES.length, '…and each exactly once');
   const rest = o.slice(6);

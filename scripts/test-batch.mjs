@@ -26,6 +26,7 @@ import {
   rowKey, twinKey, mergeJobs, initialTicks, toConfirmRows, reattachEdits, unsettledCount,
   RETRYABLE_OUTCOMES, isRetryable, outcomeMap, outcomeFor, mergeOutcomes, retryRows, pairAnswers,
 } from '../src/state/batchDraft.js';
+import { saveBatchUi, restoreUi, rowKey as rk } from '../src/state/batchDraft.js';
 
 let pass = 0;
 const failures = [];
@@ -828,6 +829,19 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
     'while rows are outstanding the exit CALLS onLeave — the label and the act are the same promise');
   ok(/S\.batchDiscardWaiting\(outstanding\)/.test(src),
     'and the only control that destroys the draft states the count it destroys');
+}
+
+/* ——— audit 2026-10-10: his batch picks survive leaving the screen ——— */
+{
+  const store = {};
+  globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
+  const rowsA = [{ sourceHash: 'h', index: 0 }, { sourceHash: 'h', index: 1 }];
+  saveBatchUi({ ticks: { [rk(rowsA[0])]: false, gone: true }, edits: { [rk(rowsA[1])]: { category: 'Car' } }, overridden: {} });
+  const back = restoreUi(rowsA);
+  eq(back.ticks[rk(rowsA[0])], false, 'an untick survives leaving the batch screen');
+  eq(back.edits[rk(rowsA[1])].category, 'Car', '…and so does a category pick');
+  ok(!('gone' in back.ticks), '…and a key for a row no longer on screen is dropped');
+  delete globalThis.localStorage;
 }
 
 const report = failures.length

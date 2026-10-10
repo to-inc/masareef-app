@@ -98,7 +98,10 @@ export default function EntryView({
    * would prefill 60 into a field whose unit now reads «يورو» — writing a
    * sixty-EURO coffee into his book, with a ✓ over it.
    */
-  const offered = isTravelling(currency) ? [] : allRepeats;
+  // Audit 2026-10-10: entries are remembered with their currency, so the row
+  // offers exactly those in the unit on screen — a pound coffee never prefills
+  // a euro field, and his euro entries repeat in euros.
+  const offered = allRepeats.filter((r) => (r.currency || 'EGP') === (currency || 'EGP'));
   /**
    * N3 — the card is his most recent COMPLETE entry: his own, amount included.
    * Presets (`repeatChips`'s fresh-install padding) carry `amount: null` by
@@ -153,7 +156,9 @@ export default function EntryView({
    */
   const travelling = isTravelling(currency);
   useEffect(() => {
-    if (travelling) setMethod(entryDefaultMethod(currency));
+    // Only a PRISTINE entry is forced: an undo restoring euro cash must not be
+    // flipped back to Card behind his back (audit 2026-10-10).
+    if (travelling && !amount && !desc) setMethod(entryDefaultMethod(currency));
     // The way HOME restores nothing: his EGP pre-choice is whatever stood
     // before the trip forced Card, and only his own tap moves it again.
   }, [travelling]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -193,7 +198,8 @@ export default function EntryView({
             <button
               key={`${q.description}|${q.method}`}
               className="quickchip"
-              onClick={() => fill(q)}
+              // A second tap on the chosen chip lets it go (audit 2026-10-10).
+              onClick={() => (desc === q.description ? setDesc('') : fill(q))}
               aria-pressed={desc === q.description}
               style={{
                 ...glass('chip'), ...(desc === q.description ? { background: SELECTED_TINT } : null),

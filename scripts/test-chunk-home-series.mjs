@@ -10,7 +10,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { readFileSync } from 'node:fs';
-import { inReadingUnit, catsInReadingUnit } from '../src/lib/series.js';
+import { inReadingUnit, catsInReadingUnit, homeOffPlot } from '../src/lib/series.js';
 
 const MARKER = 'CHUNK-HOMESERIES-GREEN';
 let pass = 0;
@@ -42,8 +42,11 @@ const cv = catsInReadingUnit(srvCats, { count: 1, total: 0, homeTotal: 9 }, 'EUR
 ok(cv.inHome && cv.cats.map((c) => `${c.name}:${c.now}/${c.prev}`).join(',') === 'Groceries:39/20,Eating out:25/0',
   'HS.14 read in €, By priority and the category list get the euro figures — a euro-only category included');
 ok(cv.uncategorized.total === 9, 'HS.15 …and the ❓ total in euros');
-ok(!catsInReadingUnit(srvCats, null, 'EGP', 'EUR').inHome && catsInReadingUnit(srvCats, null, 'EGP', 'EUR').cats === srvCats,
-  'HS.16 read in E£, the pound figures stand untouched');
+// R0 re-cut (audit 2026-10-10): the pound figures stand untouched, and a euro-only
+// category (now 0, prev 0 in pounds) is left out rather than drawn as «0».
+ok(!catsInReadingUnit(srvCats, null, 'EGP', 'EUR').inHome
+  && JSON.stringify(catsInReadingUnit(srvCats, null, 'EGP', 'EUR').cats) === JSON.stringify([srvCats[0]]),
+  'HS.16 read in E£, the pound figures stand untouched — the euro-only row is not a pound «0»');
 ok(!catsInReadingUnit([{ name: 'X', now: 5, prev: 1 }], null, 'EUR', 'EUR').inHome, 'HS.17 a server without home figures keeps the old lists');
 
 // ——— rendered
@@ -82,6 +85,15 @@ try {
 } finally { await vite.close(); }
 
 const book = readFileSync(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
+// Audit 2026-10-10: a euro row with no readable day is in homeAgg but on no slot.
+{
+  const p = { cur: { Visa: [10, 20], Cash: [5, null] }, homeAgg: { byMethod: { Visa: { total: 80 }, Cash: { total: 5 } } } };
+  const o = homeOffPlot(p);
+  ok(o.Visa === 50 && o.Cash === 0, `HS.off1 the undated euro money is the gap between homeAgg and the series — got ${JSON.stringify(o)}`);
+  ok(JSON.stringify(homeOffPlot({ cur: {} })) === '{}', 'HS.off2 no byMethod, no claim');
+  const pc = catsInReadingUnit([{ name: 'Eating out', now: 0, prev: 0, homeNow: 25 }, { name: 'Car', now: 10, prev: 0 }], null, 'EGP', 'EUR');
+  ok(pc.cats.map((c) => c.name).join() === 'Car', 'HS.off3 in pounds, a euro-only category is not drawn as «0»');
+}
 ok(/period === 'week' && weekDay != null/.test(book) && /getDay\(\) === weekDay/.test(book) && /useEffect\(\(\) => \{ setWeekDay\(null\); \}, \[period\]\)/.test(book),
   'HS.24 a tapped day narrows the week\'s list to that day, and leaving Week forgets it');
 {

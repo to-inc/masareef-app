@@ -5,7 +5,7 @@ import {
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, money2, moneyRound } from '../lib/format.js';
-import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit, catsInReadingUnit } from '../lib/series.js';
+import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit, catsInReadingUnit, homeOffPlot } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
@@ -258,6 +258,10 @@ export default function BookView({
       // displays — and its undated note would be scoped to one month, a wrong
       // number on a screen about twelve.
       setLoadingRows(false);
+      // Audit 2026-10-10: a failed Week load or a Month's undated note must not
+      // follow him to Today, whose rows are already in hand.
+      setLoadError(false);
+      setUndated(0);
       return true;
     }
     if (force) {
@@ -434,7 +438,14 @@ export default function BookView({
    * Today only, and only on the live day — never under a browsed month. They are
    * drawn marked and their sum is NAMED in the hero, not folded in silently.
    */
-  const phone = period === 'today' && !browsing ? phoneRows.map((i) => {
+  // Audit 2026-10-10: only rows DATED today — a cash entry queued offline last
+  // night, or an older receipt, is not today's spending. (Undated = today.)
+  const isToday = (i) => {
+    const p = i.payload || {};
+    const d = parseSheetDate(p.entryDate || p.dateStr);
+    return !d || !today || (d.y === today.y && d.m === today.m && d.d === today.d);
+  };
+  const phone = period === 'today' && !browsing ? phoneRows.filter(isToday).map((i) => {
     const p = i.payload || {};
     return {
       id: i.id, held: !!i.held, description: p.description || categoryLabel(p.category), category: p.category,
@@ -512,6 +523,7 @@ export default function BookView({
       {period === 'today' && (
         <TodayHead
           totals={data.today.totals} entries={data.today.entries} onGoToInbox={onGoToInbox} phone={phone}
+          homeAgg={data.today.homeAgg} displayCurrency={displayCurrency}
           unsettledBatch={unsettledBatch} onOpenBatch={onOpenBatch}
         />
       )}
@@ -1254,7 +1266,7 @@ function Lookalikes({ rows, sheetUrl, onPick = null }) {
   );
 }
 
-function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch = 0, onOpenBatch, phone = [] }) {
+function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch = 0, onOpenBatch, phone = [], homeAgg = null, displayCurrency = HOME_CURRENCY }) {
   // v4 P5: EGP money still on the phone joins the day's figure — and the caption
   // under the hero says exactly how much of it has not reached the sheet.
   const onPhoneEgp = phone.filter((r) => r.currency === 'EGP' && isFinite(r.amount));
@@ -1291,12 +1303,27 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
    * stands beside whatever the day carried.)
    */
   const misleads = egp === 0 && travel.length > 0;
-  const { lead, asides } = leadAndAsides(
+  let { lead, asides } = leadAndAsides(
     egp,
     { count: travel.length, byCurrency: Object.fromEntries(travel.map((t) => [t.currency, t.amount])) },
     misleads ? travel[0].currency : HOME_CURRENCY,
   );
-  const leadsHome = lead.currency === HOME_CURRENCY;
+  /**
+   * Audit 2026-10-10: on a book read in another unit (his euros) Today leads
+   * all-in, exactly as Week/Month/Year do (PeriodBlock) — it used to lead in
+   * pounds and list his euros as «travel, kept apart». Same zero rule: the
+   * all-in figure leads only when it has money or nothing else does.
+   */
+  const allIn = allInLead(homeAgg, displayCurrency);
+  const useAllIn = !!allIn && !!homeAgg.byMethod && (Number(allIn.amount) > 0 || !(Number(lead.amount) > 0));
+  const remainder = useAllIn ? unconvertedLines(homeAgg) : [];
+  if (useAllIn) {
+    lead = allIn;
+    totals.Visa = Number(homeAgg.byMethod.Visa && homeAgg.byMethod.Visa.total) || 0;
+    totals.Cash = Number(homeAgg.byMethod.Cash && homeAgg.byMethod.Cash.total) || 0;
+  }
+  const pairUnit = useAllIn ? unitFor(displayCurrency) : S.currencyShort;
+  const leadsHome = useAllIn || lead.currency === HOME_CURRENCY;
 
   return (
     <div style={{ textAlign: 'center', padding: '14px 0 16px' }}>
@@ -1326,9 +1353,9 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
           * exception clause, and this is the site that proves why.
           */}
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{/* geometry exemption (ruling 4): an 8px legend square, its 2px corner bounded by its size */}<span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: C.harbor }} />{S.metricVisa} <b style={{ color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN }}>{money2(totals.Visa)}</b>
-          <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{S.currencyShort}</span></span>
+          <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{pairUnit}</span></span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{/* geometry exemption (ruling 4): an 8px legend square, its 2px corner bounded by its size */}<span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: C.muted }} />{S.metricCash} <b style={{ color: C.ink, fontFamily: FONT_DISPLAY, ...LATIN }}>{money2(totals.Cash)}</b>
-          <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{S.currencyShort}</span></span>
+          <span style={{ fontSize: unitSize(TYPE.label), color: C.muted }}>{' '}{pairUnit}</span></span>
       </div>
       {notYet > 0 && (
         <div data-not-in-sheet style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>
@@ -1337,10 +1364,15 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
       )}
       {/* Only when there IS one. A day with no foreign spending says nothing
           about foreign spending — the silence is the ordinary case. */}
-      {leadsHome && travel.length > 0 && (
+      {remainder.map((l) => (
+        <div key={`nc-${l.currency}`} style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
+          <b style={{ color: C.ink, ...LATIN }}>{moneyRound(l.amount)} {unitFor(l.currency)}</b>{' '}{S.notConverted}
+        </div>
+      ))}
+      {!useAllIn && leadsHome && travel.length > 0 && (
         <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
           {S.travel} {travel.map((t) => (
-            <span key={t.currency} style={{ ...LATIN, marginInlineStart: 4 }}>{money(t.amount)} {t.currency}</span>
+            <span key={t.currency} style={{ ...LATIN, marginInlineStart: 4 }}>{money(t.amount)} {unitFor(t.currency)}</span>
           ))} — {S.travelApart}
         </div>
       )}
@@ -1633,7 +1665,7 @@ export function PeriodBlock({
    */
   const hv = inReadingUnit(data, displayCurrency, HOME_CURRENCY);
   const compareInHome = hv.inHome && useAllIn && lead.currency === displayCurrency;
-  const homeTotals = compareInHome ? periodTotals(hv.period, METRICS, {}) : null;
+  const homeTotals = compareInHome ? periodTotals(hv.period, METRICS, homeOffPlot(hv.period)) : null;
   const homeShown = homeTotals ? (homeTotals[metric] || homeTotals.all) : null;
   const cmpShown = compareInHome ? comparisonOf(homeShown.now, homeShown.prevAt) : (cmp && leadsHome ? cmp : null);
   const policySuppressed = !compareInHome && (hasForeign(foreign) || hasForeign(prevForeign) || !leadsHome);
@@ -2023,6 +2055,7 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
         */}
       <PriorityLens
         cats={cv.cats}
+        unit={unitFor(cv.inHome ? bookHome : 'EGP')}
         uncategorized={cv.uncategorized}
         open={lensOpen}
         onToggle={onToggleLens}
@@ -2040,6 +2073,7 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
       </div>
       <CategoryCompare
         cats={cv.cats}
+        unit={unitFor(cv.inHome ? bookHome : 'EGP')}
         curName={monthName(data.month.names.cur)}
         prevName={monthName(data.month.names.prev)}
         uncategorized={cv.uncategorized}

@@ -68,7 +68,7 @@ const write = (list) => {
  * Case- and space-insensitive, matching how the backend's merchant memory keys.
  */
 export const repeatKey = (e) => (
-  `${String((e && e.description) || '').trim().toLowerCase()}|${(e && e.method) || ''}`
+  `${String((e && e.description) || '').trim().toLowerCase()}|${(e && e.method) || ''}|${(e && e.currency) || 'EGP'}`
 );
 
 /**
@@ -87,13 +87,14 @@ export function remember(entry) {
   const amount = Number(entry.amount);
   if (!desc) return read();
   if (!isFinite(amount) || amount <= 0) return read();
-  if (entry.currency && entry.currency !== 'EGP') return read();
-
+  // Every currency is remembered WITH its currency (audit 2026-10-10: his euro
+  // book got no repeats at all); the sheet offers only the ones in its unit.
   const fresh = {
     description: desc,
     category: entry.category || null,
     method: entry.method || 'Cash',
     amount,
+    currency: entry.currency || 'EGP',
   };
   const key = repeatKey(fresh);
   const next = [fresh, ...read().filter((r) => repeatKey(r) !== key)];
