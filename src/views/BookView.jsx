@@ -5,7 +5,7 @@ import {
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, money2, moneyRound } from '../lib/format.js';
-import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit } from '../lib/series.js';
+import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit, catsInReadingUnit } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
@@ -546,7 +546,8 @@ export default function BookView({
       {period === 'month' && browsing && !loadingRows && !loadError
         && browsed && browsed.ref.y === browsing.y && browsed.ref.m === browsing.m && (
         <MonthScreen
-          data={browsedMonthData(browsing, browsed.entries, browsed.prevEntries, today)}
+          data={browsedMonthData(browsing, browsed.entries, browsed.prevEntries, today, displayCurrency,
+            (data && data.month && data.month.homeAgg && data.month.homeAgg.currency) || null)}
           metric={metric} setMetric={setMetric} onGoToInbox={onGoToInbox}
           displayCurrency={displayCurrency}
           lensOpen={lensIsOpen}
@@ -939,7 +940,46 @@ function monthSums(rows, ref, todayCairo) {
  * null foreign shape — so the screen says «no comparison» in words rather
  * than comparing against a confident month of zeros nobody fetched.
  */
-export function browsedMonthData(ref, entries, prevEntries, todayCairo) {
+/**
+ * A browsed month IN HIS UNIT (2026-10-10). The same population as monthSums,
+ * valued as the server's homeAgg values a row: money already in `unit` at face,
+ * other money at its STAMPED home value (`row.home`, sent by the server), and
+ * unstamped money left out and named per currency — never converted here.
+ */
+function homeMonthSums(rows, ref, todayCairo, unit) {
+  const n = daysInMonth(ref.y, ref.m);
+  const isCurrent = !!todayCairo && ref.y === todayCairo.y && ref.m === todayCairo.m;
+  const live = isCurrent ? Math.min(todayCairo.d, n) : n;
+  const perDay = () => Array.from({ length: n }, (_, i) => (i < live ? 0 : null));
+  const cur = { Visa: perDay(), Cash: perDay() };
+  const byMethod = { Visa: 0, Cash: 0 };
+  const cats = new Map();
+  const unvalued = {};
+  let total = 0, uncatTotal = 0;
+  for (const e of Array.isArray(rows) ? rows : []) {
+    if (!e) continue;
+    const amt = Number(e.amount);
+    const val = (e.currency === unit && e.amount != null && isFinite(amt)) ? amt
+      : (e.home != null && isFinite(Number(e.home)) ? Number(e.home) : null);
+    if (val == null) {
+      if (e.amount != null && isFinite(amt) && e.currency) unvalued[e.currency] = (unvalued[e.currency] || 0) + amt;
+      continue;
+    }
+    const method = e.method === 'Visa' ? 'Visa' : 'Cash';
+    total += val; byMethod[method] += val;
+    const d = parseSheetDate(e.date);
+    if (d && d.y === ref.y && d.m === ref.m && d.d <= n && cur[method][d.d - 1] != null) cur[method][d.d - 1] += val;
+    if (needsCategory(e)) uncatTotal += val;
+    else { const k = String(e.category).trim(); cats.set(k, (cats.get(k) || 0) + val); }
+  }
+  const r2 = (x) => Math.round(x * 100) / 100;
+  for (const m of ['Visa', 'Cash']) cur[m] = cur[m].map((v) => (v == null ? null : r2(v)));
+  const agg = { currency: unit, total: r2(total), unstamped: { count: 0, total: null, byCurrency: unvalued },
+    byMethod: { Visa: { total: r2(byMethod.Visa) }, Cash: { total: r2(byMethod.Cash) } } };
+  return { cur, cats, agg, uncatTotal: r2(uncatTotal) };
+}
+
+export function browsedMonthData(ref, entries, prevEntries, todayCairo, unit = null, bookHome = null) {
   const before = monthBefore(ref);
   const c = monthSums(entries, ref, todayCairo);
   const p = prevEntries ? monthSums(prevEntries, before, todayCairo) : null;
@@ -949,7 +989,7 @@ export function browsedMonthData(ref, entries, prevEntries, todayCairo) {
     return { Visa: mk(), Cash: mk() };
   };
   const names = new Set([...c.cats.keys(), ...(p ? p.cats.keys() : [])]);
-  return {
+  const out = {
     month: {
       cur: c.cur,
       prev: p ? p.cur : nullMonth(),
@@ -981,6 +1021,23 @@ export function browsedMonthData(ref, entries, prevEntries, todayCairo) {
       prev: p ? (p.cats.get(name) || 0) : null,
     })),
   };
+  // In his unit (the book's home unit, not pounds): the same month, valued as the
+  // server values the current one — homeSeries/homeAgg/home category figures, so
+  // the charts, the headline and the category lists all read in euros.
+  if (unit && bookHome && unit === bookHome && unit !== 'EGP') {
+    const hc = homeMonthSums(entries, ref, todayCairo, unit);
+    const hp = prevEntries ? homeMonthSums(prevEntries, before, todayCairo, unit) : null;
+    out.month.homeAgg = hc.agg;
+    out.month.prevHomeAgg = hp ? hp.agg : null;
+    out.month.homeSeries = { currency: unit, cur: hc.cur, prev: hp ? hp.cur : nullMonth() };
+    out.month.uncategorized = { ...out.month.uncategorized, homeTotal: hc.uncatTotal };
+    const hn = new Set([...names, ...hc.cats.keys(), ...(hp ? hp.cats.keys() : [])]);
+    out.monthCats = [...hn].sort().map((name) => {
+      const row = out.monthCats.find((x) => x.name === name) || { name, now: 0, prev: p ? 0 : null };
+      return { ...row, homeNow: hc.cats.get(name) || 0, homePrev: hp ? (hp.cats.get(name) || 0) : 0 };
+    });
+  }
+  return out;
 }
 
 /**
@@ -1904,6 +1961,9 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
   const dayLabels = Array.from(
     { length: (data.month.cur.Visa || []).length }, (_, i) => String(i + 1),
   );
+  // Categories and priorities in his reading unit too (see catsInReadingUnit).
+  const cv = catsInReadingUnit(data.monthCats, data.month?.uncategorized, displayCurrency,
+    (data.month && data.month.homeAgg && data.month.homeAgg.currency) || null);
   // The month's own stack draws in his reading unit too (see inReadingUnit).
   const mv = inReadingUnit(data.month, displayCurrency, HOME_CURRENCY);
   const yv = data.year ? inReadingUnit(data.year, displayCurrency, HOME_CURRENCY).period : null;
@@ -1952,8 +2012,8 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
         * this is one quiet line and nothing more.
         */}
       <PriorityLens
-        cats={data.monthCats}
-        uncategorized={data.month?.uncategorized}
+        cats={cv.cats}
+        uncategorized={cv.uncategorized}
         open={lensOpen}
         onToggle={onToggleLens}
       />
@@ -1969,11 +2029,11 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
         <SectionLabel>{S.sectionAgainst(monthName(data.month.names.prev))}</SectionLabel>
       </div>
       <CategoryCompare
-        cats={data.monthCats}
+        cats={cv.cats}
         curName={monthName(data.month.names.cur)}
         prevName={monthName(data.month.names.prev)}
-        uncategorized={data.month?.uncategorized}
-        total={listAccountsForTheMonth ? monthTrueTotal : null}
+        uncategorized={cv.uncategorized}
+        total={listAccountsForTheMonth ? (cv.inHome ? (data.month.homeAgg ? data.month.homeAgg.total : null) : monthTrueTotal) : null}
         onUncategorized={onGoToInbox}
       />
     </>

@@ -10,7 +10,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { readFileSync } from 'node:fs';
-import { inReadingUnit } from '../src/lib/series.js';
+import { inReadingUnit, catsInReadingUnit } from '../src/lib/series.js';
 
 const MARKER = 'CHUNK-HOMESERIES-GREEN';
 let pass = 0;
@@ -35,6 +35,16 @@ const egp = inReadingUnit(week, 'EGP', 'EGP');
 ok(!egp.inHome && egp.period === week, 'HS.3 reading in E£, nothing changes — the pound series as before');
 ok(!inReadingUnit({ ...week, homeSeries: null }, 'EUR', 'EGP').inHome, 'HS.4 a server without the series (Dad\'s book, an old build) keeps the pound charts');
 ok(!inReadingUnit({ ...week, homeSeries: { ...week.homeSeries, currency: 'SEK' } }, 'EUR', 'EGP').inHome, 'HS.5 a series in another unit is never drawn under a € label');
+
+// ——— categories in his unit («why is this 0?»)
+const srvCats = [{ name: 'Groceries', now: 1000, prev: 0, homeNow: 39, homePrev: 20 }, { name: 'Eating out', now: 0, prev: 0, homeNow: 25, homePrev: 0 }];
+const cv = catsInReadingUnit(srvCats, { count: 1, total: 0, homeTotal: 9 }, 'EUR', 'EUR');
+ok(cv.inHome && cv.cats.map((c) => `${c.name}:${c.now}/${c.prev}`).join(',') === 'Groceries:39/20,Eating out:25/0',
+  'HS.14 read in €, By priority and the category list get the euro figures — a euro-only category included');
+ok(cv.uncategorized.total === 9, 'HS.15 …and the ❓ total in euros');
+ok(!catsInReadingUnit(srvCats, null, 'EGP', 'EUR').inHome && catsInReadingUnit(srvCats, null, 'EGP', 'EUR').cats === srvCats,
+  'HS.16 read in E£, the pound figures stand untouched');
+ok(!catsInReadingUnit([{ name: 'X', now: 5, prev: 1 }], null, 'EUR', 'EUR').inHome, 'HS.17 a server without home figures keeps the old lists');
 
 // ——— rendered
 const store = new Map([['masareef.lang', 'en']]);
@@ -69,6 +79,26 @@ try {
 } finally { await vite.close(); }
 
 const book = readFileSync(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
+{
+  // ——— a BROWSED month in his unit: euro rows at face, pound rows at their stamp, the rest named
+  const v2 = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
+  try {
+    const { browsedMonthData } = await v2.ssrLoadModule('/src/views/BookView.jsx');
+    const rows = [
+      { date: '3/9/2026', description: 'Prisma', method: 'Visa', category: 'Groceries', amount: 12.4, currency: 'EUR' },
+      { date: '5/9/2026', description: 'Hyper1', method: 'Cash', category: 'Groceries', amount: 1000, currency: 'EGP', home: 19 },
+      { date: '6/9/2026', description: 'Carrefour', method: 'Cash', category: 'Groceries', amount: 500, currency: 'EGP' },
+      { date: '9/9/2026', description: 'Cafe', method: 'Visa', category: 'Eating out', amount: 25, currency: 'EUR' },
+    ];
+    const d = browsedMonthData({ y: 2026, m: 9 }, rows, [], { y: 2026, m: 10, d: 10 }, 'EUR', 'EUR');
+    ok(d.month.homeAgg.total === 56.4, `HS.18 a browsed September in € totals 12.4 + 19 (stamped) + 25 = 56.4 (got ${d.month.homeAgg.total})`);
+    ok(d.month.homeAgg.unstamped.byCurrency.EGP === 500, 'HS.19 …the unstamped 500 E£ is named, never converted on the phone');
+    const g = d.monthCats.find((c) => c.name === 'Groceries');
+    ok(g && g.homeNow === 31.4 && d.month.homeSeries.cur.Cash[4] === 19, 'HS.20 …its categories and its daily chart read in euros');
+    const egp = browsedMonthData({ y: 2026, m: 9 }, rows, [], { y: 2026, m: 10, d: 10 }, 'EGP', 'EUR');
+    ok(!egp.month.homeSeries && !('homeNow' in (egp.monthCats[0] || {})), 'HS.21 read in E£, the browsed month is exactly as before');
+  } finally { await v2.close(); }
+}
 ok(/const mv = inReadingUnit\(data\.month, displayCurrency, HOME_CURRENCY\);/.test(book) && /cur=\{seriesFor\(mv\.period\.cur, metric\)\}/.test(book),
   'HS.10 the Month screen\'s own stack (line + daily bars) draws in the reading unit too');
 

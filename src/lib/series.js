@@ -200,3 +200,24 @@ export function inReadingUnit(period, displayCurrency, homeCurrency) {
   }
   return { period: { ...period, cur: hs.cur, prev: hs.prev }, unit: displayCurrency, inHome: true };
 }
+
+/**
+ * CATEGORIES IN HIS READING UNIT (Tarek, 2026-10-10: «why is this 0?» — By
+ * priority and the category list read 0 on his euro months). When he reads in
+ * the book's HOME unit and the server sent home figures (homeNow/homePrev,
+ * uncategorized.homeTotal), the lists use those; otherwise nothing changes.
+ * Returns { cats, uncategorized, inHome }.
+ */
+export function catsInReadingUnit(cats, uncategorized, displayCurrency, bookHome) {
+  const list = Array.isArray(cats) ? cats : [];
+  const inHome = !!bookHome && displayCurrency === bookHome && displayCurrency !== 'EGP'
+    && list.some((c) => c && c.homeNow != null);
+  if (!inHome) return { cats: list, uncategorized, inHome: false };
+  return {
+    cats: list.map((c) => ({ name: c.name, now: c.homeNow || 0, prev: c.homePrev == null ? 0 : c.homePrev }))
+      .filter((c) => c.now || c.prev)
+      .sort((a, b) => b.now - a.now),
+    uncategorized: uncategorized ? { ...uncategorized, total: uncategorized.homeTotal == null ? uncategorized.total : uncategorized.homeTotal } : uncategorized,
+    inHome: true,
+  };
+}
