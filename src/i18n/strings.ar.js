@@ -374,6 +374,8 @@ export const AR = {
   batchNeedCategory: '؟ النوع',
   // التكرار: تلات جمل مختلفة، وده مقصود
   batchDupBook: 'زيها في الدفتر',
+  undoTooLate: 'اتبعت للدفتر خلاص — صلّحه من هناك لو محتاج',
+  outboxDupNote: 'الإيصال ده شبه مصروف موجود في الدفتر، فاتشال. ابعته برضه، أو شيله.',
   batchDupBookIntro: 'الدفتر فيه دي خلاص:',
   batchDupBatch: 'زي اللي فوق في نفس الصورة',
   batchDupUnchecked: 'ما قدرناش نتأكد',

@@ -43,6 +43,14 @@ export function remove(id) {
 
 export function all() { return readAll(); }
 
+/** Retrying cannot fix these: the row is already sorted, or can never be written. */
+export const FINAL_ERRORS = ['bad_category', 'bad_amount', 'row_not_found', 'row_changed'];
+
+/** Marks one item, in place (audit r3: a receipt the server held as a book duplicate). */
+function mark(id, patch) {
+  writeAll(readAll().map((i) => (i.id === id ? { ...i, ...patch } : i)));
+}
+
 export function clear() { writeAll([]); }
 
 /**
@@ -58,7 +66,8 @@ export function clear() { writeAll([]); }
  */
 export function partition(now = Date.now()) {
   const items = readAll();
-  const isStale = (i) => i.ageGated !== false && now - i.queuedAt >= SIX_HOURS_MS;
+  // A `blocked` item waits for HIS decision, so it is shown as a card at once (audit r3).
+  const isStale = (i) => !!i.blocked || (i.ageGated !== false && now - i.queuedAt >= SIX_HOURS_MS);
   return { fresh: items.filter((i) => !isStale(i)), stale: items.filter(isStale) };
 }
 
@@ -84,10 +93,17 @@ export async function flush(send, now = Date.now()) {
   for (const item of fresh) {
     try {
       const res = await send(item);
-      if (res?.ok) {
+      if (res?.ok && res.skipped === 'book_duplicate') {
+        // NOTHING WAS WRITTEN (audit r3): the server found the same expense in his
+        // book and held this one back. Dropping it «as sent» lost the receipt in
+        // silence — the receipt screen refuses exactly that. It becomes a card he
+        // decides on; sending from the card carries dupAck.
+        mark(item.id, { blocked: true });
+        retrying++;
+      } else if (res?.ok) {
         remove(item.id);
         sent++;
-      } else if (['bad_category', 'bad_amount', 'row_not_found', 'row_changed'].includes(res?.error)) {
+      } else if (FINAL_ERRORS.includes(res?.error)) {
         // Retrying cannot help. `row_not_found`/`row_changed` specifically mean
         // the row is already sorted — dropping is the correct outcome, not a loss.
         remove(item.id);

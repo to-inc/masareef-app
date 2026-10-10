@@ -8,13 +8,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  */
 import { flushSync } from 'react-dom';
 import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_EDGE, STATUS_SHADE, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
-import { S, LOCALE, DIR } from './i18n/strings.js';
+import { S, LOCALE, DIR, unitFor } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
 import { createRefresher, resultState } from './state/refresh.js';
 import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, sendDebugLog, ping, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
-import { enqueue, flush, partition, remove as dropQueued, onPhone } from './state/outbox.js';
+import { enqueue, flush, partition, remove as dropQueued, onPhone, FINAL_ERRORS, all as allQueued } from './state/outbox.js';
 import {
   cardKey, outcomeFor, reconcile, remaining, pruneSettled, applyCategoryToToday,
 } from './state/inboxOutcomes.js';
@@ -775,12 +775,13 @@ export default function App() {
       clientId, entryDate: cairoDateStr(), currency: entryCurrency,
     });
     const restore = { amount: entryAmount, desc: entryDesc, cat: entryCat, method: entryMethod, currency: entryCurrency };
-    enqueue({ id: clientId, kind: 'manual', ageGated: true, payload, holdUntil: Date.now() + UNDO_MS });
+    const holdUntil = Date.now() + UNDO_MS;
+    enqueue({ id: clientId, kind: 'manual', ageGated: true, payload, holdUntil });
     setPhoneRows(onPhone());
     setEntryAmount(''); setEntryDesc(''); setEntryCat(null); setEntryMethod(DEFAULT_METHOD);
     setTab('book');
     clearTimeout(undoTimer.current);
-    setUndo({ id: clientId, amount, currency: entryCurrency, restore });
+    setUndo({ id: clientId, amount, currency: entryCurrency, restore, holdUntil });
     undoTimer.current = setTimeout(async () => {
       setUndo(null);
       // «زي امبارح» learns the entry only once it is really kept.
@@ -793,6 +794,18 @@ export default function App() {
   const undoEntry = () => {
     clearTimeout(undoTimer.current);
     if (!undo) return;
+    /**
+     * TOO LATE IS SAID, NOT FAKED (audit r3). iOS pauses the page's timers when he
+     * switches away, but the hold runs on the wall clock: coming back, the outbox
+     * may already have sent the entry while the toast still offers «undo». Undoing
+     * then put the amount back in the keypad over a row his sheet kept — and a
+     * re-entry counted it twice.
+     */
+    if (Date.now() >= undo.holdUntil || !allQueued().some((i) => i.id === undo.id)) {
+      setUndo(null);
+      showToast(S.undoTooLate);
+      return;
+    }
     dropQueued(undo.id);
     setPhoneRows(onPhone());
     const r = undo.restore;
@@ -803,11 +816,19 @@ export default function App() {
 
   const sendStale = async (item) => {
     try {
-      const res = await sendQueued(item);
-      if (res?.ok || res?.error) dropQueued(item.id);
+      // A card he sends after the server held it as a book duplicate IS his «save anyway».
+      const res = await sendQueued(item.blocked ? { ...item, payload: { ...item.payload, dupAck: true } } : item);
+      /**
+       * Only a WRITTEN row leaves the phone (audit r3). It used to drop on ANY
+       * answer and toast «saved» — a lock timeout (`internal`) or a refused date
+       * deleted the expense and said it was in the book. A final refusal leaves
+       * too (retrying cannot help), but is never called saved.
+       */
+      const written = res?.ok && res.skipped !== 'book_duplicate';
+      if (written || FINAL_ERRORS.includes(res?.error)) dropQueued(item.id);
       setStaleQueue(partition().stale); setPhoneRows(onPhone());
       refresh();
-      showToast(S.saved);
+      showToast(written ? S.saved : S.genericError);
     } catch {
       showToast(S.genericError);
     }
@@ -1033,6 +1054,8 @@ export default function App() {
                           id: queuedPayload.clientId, kind: 'receipt_confirm',
                           ageGated: true, payload: queuedPayload,
                         });
+                        // Shown among «still on the phone» at once (audit r3).
+                        setPhoneRows(onPhone());
                       } else {
                         refresh();
                       }
@@ -1288,14 +1311,15 @@ export function StaleQueueCard({ item, onSend, onDrop }) {
         padding: 14, marginBottom: 12,
       }}
     >
-      <div style={{ fontWeight: 700, color: C.ink, fontSize: TYPE.body }}>{S.outboxStaleTitle}</div>
+      <div style={{ fontWeight: 700, color: C.ink, fontSize: TYPE.body }}>{item.blocked ? S.batchDupBook : S.outboxStaleTitle}</div>
       {/* A8: `opacity: 0.85` deleted — this is the sentence explaining that
           entries are stuck in the outbox, which is the whole point of the card. */}
       <div style={{ fontSize: TYPE.label, color: C.ink, marginTop: 4, lineHeight: 1.6 }}>
-        {S.outboxStaleNote}
+        {/* Held as a book duplicate (audit r3): «send» saves it anyway, «drop» keeps the book as it is. */}
+        {item.blocked ? S.outboxDupNote : S.outboxStaleNote}
       </div>
-      <div style={{ fontSize: TYPE.label, marginTop: 8, direction: 'ltr', unicodeBidi: 'isolate', textAlign: 'end' }}>
-        {item.payload?.description} · {item.payload?.amount} · {item.payload?.entryDate}
+      <div style={{ fontSize: TYPE.label, marginTop: 8, unicodeBidi: 'isolate', textAlign: 'start' }} dir="auto">
+        {item.payload?.description} · {item.payload?.amount}{item.payload?.amount != null ? ` ${unitFor(item.payload?.currency || 'EGP')}` : ''} · {item.payload?.entryDate || item.payload?.dateStr}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <button

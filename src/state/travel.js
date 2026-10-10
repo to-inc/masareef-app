@@ -81,10 +81,9 @@ export function hasCurrencyChoice() {
 
 export function setCurrency(c) {
   const next = isCurrency(c) ? c : HOME_CURRENCY;
-  try {
-    if (next === HOME_CURRENCY) localStorage.removeItem(KEY);
-    else localStorage.setItem(KEY, next);
-  } catch { /* a lost preference costs him a mode, never an entry */ }
+  // EGP is STORED too (audit r3): clearing the key made a chosen E£ read as «no
+  // choice», and on his euro book the next launch put the keypad back in euros.
+  try { localStorage.setItem(KEY, next); } catch { /* a lost preference costs him a mode, never an entry */ }
   return next;
 }
 

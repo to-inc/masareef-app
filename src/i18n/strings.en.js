@@ -359,6 +359,8 @@ export const EN = {
   batchUnclear: 'Could not read it',
   batchNeedCategory: '? category',
   batchDupBook: 'Already in your book',
+  undoTooLate: 'Already sent to your book — fix it there if needed',
+  outboxDupNote: 'This receipt matches an expense already in your book, so it was held back. Send it anyway, or drop it.',
   batchDupBookIntro: 'Your book already has this:',
   batchDupBatch: 'Same as the one above, in this photo',
   batchDupUnchecked: 'We could not check',

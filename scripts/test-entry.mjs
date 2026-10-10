@@ -137,6 +137,13 @@ eq(AR.methodCash === 'Cash', false, '…in either direction');
   ob.remove('undone');
   await ob.flush(send, now + 7000);
   ok(!sentIds.includes('undone'), 'P5.5 an entry taken back with «رجوع» is never sent');
+  // Audit r3 2026-10-10: a receipt the server HELD as a book duplicate wrote nothing —
+  // it must stay on the phone as a card he decides on, never be counted as sent.
+  ob.enqueue({ id: 'dupe', kind: 'receipt_confirm', ageGated: true, payload: { amount: 56.1 }, queuedAt: now + 7000 });
+  const r1 = await ob.flush(async () => ({ ok: true, skipped: 'book_duplicate' }), now + 8000);
+  eq(r1.sent, 0, 'P5.6 a book_duplicate answer is not a send');
+  ok(ob.partition(now + 8000).stale.some((i) => i.id === 'dupe' && i.blocked),
+    'P5.7 …the receipt stays, blocked, shown at once as a card he decides on');
   delete globalThis.localStorage;
 }
 
@@ -240,7 +247,8 @@ try {
   const appSrc = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
   ok(/manualPayload\(\{/.test(appSrc), 'the entry builds its payload in the named place…');
   // v4 P5 RE-CUT: no optimistic line — the entry is enqueued with an undo hold.
-  ok(/enqueue\(\{ id: clientId, kind: 'manual', ageGated: true, payload, holdUntil: Date\.now\(\) \+ UNDO_MS \}\)/.test(appSrc),
+  // R0 re-cut 2026-10-10 (audit r3): the hold is named once so «undo» can check it.
+  ok(/const holdUntil = Date\.now\(\) \+ UNDO_MS;\s*enqueue\(\{ id: clientId, kind: 'manual', ageGated: true, payload, holdUntil \}\)/.test(appSrc),
     '…and goes straight into the outbox, held for the undo window (R19)');
   ok(!/applyEntryToToday/.test(appSrc), 'the silent optimistic insert is gone from the shell');
   ok(/dropQueued\(undo\.id\)/.test(appSrc), '«رجوع» removes the held entry from the outbox');
