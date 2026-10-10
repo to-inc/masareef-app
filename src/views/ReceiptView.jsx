@@ -106,13 +106,13 @@ export default function ReceiptView({
     setShot(null); setExtraction(null); setDup({ sms: false, photo: false, book: null });
     setDupUndated(false);
     setOverrideDup(false); setAmount(''); setMerchant(''); setDateStr('');
-    setMethod(DEFAULT_METHOD); setPred(null); setCategory(null); setShowAllCats(false);
+    setMethod(DEFAULT_METHOD); setPred(null); setCategory(null); setShowAllCats(false); setCurPick(null);
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const applyExtraction = (res, snapDate, clientHash) => {
     const e = res.extraction;
-    setExtraction(e);
+    setExtraction(e); setCurPick(null);   // each receipt starts at the book's unit
     setDup(dupState(res));
     setDupUndated(undatedHint(res));
     setAmount(e.amount == null ? '' : String(e.amount));
@@ -579,7 +579,7 @@ export default function ReceiptView({
                 {[bookCurrency, 'EGP'].map((c) => (
                   <button key={c} onClick={() => setCurPick(c)} aria-pressed={currencyOf() === c}
                     style={{ minHeight: TAP, minWidth: TAP, padding: '0 14px', borderRadius: RADIUS.capsule,
-                      ...(currencyOf() === c ? SELECTED_TINT : glass('chip')), fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>
+                      ...(currencyOf() === c ? { background: SELECTED_TINT } : glass('chip')), fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>
                     {unitFor(c)}
                   </button>
                 ))}

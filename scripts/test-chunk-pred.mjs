@@ -67,6 +67,16 @@ try {
   ok(pressed(none).includes(AR.metricCash) && none.includes(AR.receiptCashSteer) && !/data-pred=/.test(none),
     'PRED.14 nothing predicted → Cash with the D19 steer, and no invented reason');
 
+  // Audit r2 2026-10-10: an UNREAD currency on a euro book offers € / E£ chips —
+  // and their style is an object (a spread rgba string crashed the screen).
+  {
+    const exU = { ...ex, currency: 'UNKNOWN' };
+    const u = renderToStaticMarkup(createElement(RV, { onSaved() {}, onManual() {}, onBatch() {}, bookCurrency: 'EUR',
+      initialReview: { extraction: exU, dateStr: '9/10/2026', category: 'Groceries', res: { category: 'Groceries', extraction: exU } } }));
+    ok(!/style="0:/.test(u) && /aria-pressed="true"[^>]*>€</.test(u) && u.includes('ج.م'),
+      'PRED.u1 an unread currency on a euro book: € is chosen, E£ is offered, and the chips render');
+  }
+
   const r = await fixCategory({ tab: 'Aug', rowHint: 2, match: { category: '❓' }, newCategory: 'Groceries', applySimilar: true });
   ok(r && r.ok === true && typeof r.alsoFixed === 'number', 'PRED.15 mock parity: the mock answers applySimilar with a count, as the server does');
 } finally { await vite.close(); }
