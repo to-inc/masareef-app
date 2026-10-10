@@ -104,6 +104,12 @@ try {
   ok(!!sel && sel.style.includes('right:0'),
     'E2.7 …and it stays at the right, where the average has always spoken');
 
+  // One tapped slot (a week's Thursday) is not a scope — its average would be its own
+  // bar, printed as «average Thu 23» (Tarek's screenshot, 2026-10-10).
+  const one = avgSpan(bars({ range: { a: 4, b: 4 }, rangeWords: 'Thu' }));
+  ok(!!one && text(one.inner).includes(`${S.avg} ${moneyRound(65)}`) && !one.inner.includes('Thu'),
+    'E2.6b a single tapped slot keeps the whole-period average and names no scope');
+
   /**
    * ——— (c) ABSENT MONTHS NEVER DRAG THE AVERAGE. A null inside the selection
    * is a month with no tab: [30, null, 50, 60] averages over THREE months

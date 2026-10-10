@@ -1153,6 +1153,7 @@ export default function App() {
                     cat={entryCat} setCat={setEntryCat}
                     method={entryMethod} setMethod={setEntryMethod}
                     currency={entryCurrency}
+                    presets={!(data && data.month && data.month.homeAgg && data.month.homeAgg.currency && data.month.homeAgg.currency !== 'EGP')}
                     /**
                       * The toggle is offered only where the write can honour it
                       * — same rule as the dictation button, and for a worse

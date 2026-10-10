@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, TAP, TYPE, unitSize, glass, GRADIENT } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, MOTION, NUMERALS, PREV_SERIES_OPACITY, RADIUS, SPACE, TAP, TYPE, unitSize, glass, GRADIENT } from '../theme.js';
 import { METRICS } from '../lib/constants.js';
 import { S, categoryLabel, monthByTab, unitFor } from '../i18n/strings.js';
 import { moneyRound, money } from '../lib/format.js';
@@ -363,7 +363,12 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
    * it as zero would quietly flatter exactly the ranges that are hardest to
    * read. No selection keeps the whole-period average, unchanged.
    */
-  const counted = cur.filter((v, i) => v != null && (!range || within(i)));
+  // ONE tapped slot is not a scope worth averaging — its average IS its bar (Tarek,
+  // 2026-10-10: a tapped Thursday printed «average Thu 23» over Friday). Only a
+  // span of two or more slots re-scopes the line and its words.
+  const spans = !!range && range.b > range.a;
+  const avgWords = spans ? rangeWords : null;
+  const counted = cur.filter((v, i) => v != null && (!spans || within(i)));
   const avg = counted.length ? sumTo(counted) / counted.length : 0;
   /**
    * ═══ A12 — MONTH-AXIS FURNITURE: the axis speaks every 5th day ═══
@@ -399,7 +404,7 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
             * With no selection the words would claim a scope that is not in
             * force, so they render only when the range does.
             */}
-          {S.avg} {rangeWords ? `${rangeWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
+          {S.avg} {avgWords ? `${avgWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
         </span>
         {labels.map((lb, i) => {
           const isLive = i === liveIndex;
@@ -484,7 +489,7 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
           readable prose, outside the geometry. */}
       {counted.length > 0 && (
         <div data-avg-prose style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>
-          {S.avg} {rangeWords ? `${rangeWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
+          {S.avg} {avgWords ? `${avgWords} ` : ''}<span style={LATIN}>{moneyRound(avg)}</span>
         </div>
       )}
       {/* THE KEY (Tarek, 2026-10-10: «why are the colours different?»): each slot holds
@@ -1256,17 +1261,7 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
         </div>
         )}
       </div>
-      {/* A7: the method cards sit under their own NAME — a section, not an
-          inference the reader draws from three buttons. */}
-      <SectionLabel>{S.sectionByMethod}</SectionLabel>
-      {/**
-        * E1 — the cards' scope, said in words while a range is selected. The
-        * line above them keeps telling the whole year's story (its marker
-        * figures stay year-scoped, deliberately — see the leaf report), so
-        * the one place two scopes share a screen, each is named: the chart
-        * card's header names the year, this line names the selection.
-        */}
-      {/* A tapped bar narrows the year — said as a BUTTON that widens it again (Tarek,
+      {/* Under the CHART it narrowed, never inside By method (2026-10-10). A tapped bar narrows the year — said as a BUTTON that widens it again (Tarek,
           2026-10-10: «where is the yearly data?» — a stray tap had scoped it to October,
           and a grey caption was the only clue). */}
       {range && (
@@ -1277,6 +1272,17 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
           </button>
         </div>
       )}
+      {/* A7: the method cards sit under their own NAME — a section, not an
+          inference the reader draws from three buttons. */}
+      {/* Spacing audit 2026-10-10: it sat 2px under the chart card (Week, Month, Year). */}
+      <div style={{ marginTop: SPACE.section }}><SectionLabel>{S.sectionByMethod}</SectionLabel></div>
+      {/**
+        * E1 — the cards' scope, said in words while a range is selected. The
+        * line above them keeps telling the whole year's story (its marker
+        * figures stay year-scoped, deliberately — see the leaf report), so
+        * the one place two scopes share a screen, each is named: the chart
+        * card's header names the year, this line names the selection.
+        */}
       {/**
         * ⚠️ A SCOPED SELECTION STILL WINS. `scoped` is a range the reader has
         * dragged out of the chart, and the chart is the EGP series — so its

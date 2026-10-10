@@ -74,6 +74,13 @@ import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx
 export default function EntryView({
   amount, setAmount, desc, setDesc, cat, setCat, method, setMethod, onCamera,
   currency = HOME_CURRENCY, setCurrency, onDictate, onClose = null,
+  /**
+   * The cash presets («Coffee · Car wash · Taqa · Talabat») are DAD'S Cairo habits
+   * (CASH_QUICK). On a book kept in another unit they are a second, foreign row of
+   * chips over the categories (Tarek, 2026-10-10: «one should only show»), so the
+   * shell turns them off there; his own remembered entries still show.
+   */
+  presets = true,
 }) {
   // Opened once, stays open for the visit. Collapsing it back under him between
   // entries is the shape-changing-while-you-reach problem the Inbox avoids too.
@@ -83,7 +90,7 @@ export default function EntryView({
    * reshuffle under his thumb the moment he logs something — the same
    * shape-changing-while-you-reach rule the Inbox and the category grid follow.
    */
-  const [allRepeats] = useState(() => repeatChips());
+  const [allRepeats] = useState(() => repeatChips({ presets }));
   /**
    * REPEATS ARE HIDDEN WHILE HE IS TRAVELLING — card and rail both. Every
    * remembered entry is EGP by construction (`remember` refuses anything else,

@@ -116,8 +116,9 @@ export function remember(entry) {
  * Presets carry NO amount (they never had one), so they behave exactly as
  * before: fill the description, and the category where D5 allows one.
  */
-export function repeatChips() {
+export function repeatChips({ presets: withPresets = true } = {}) {
   const mine = read();
+  if (!withPresets) return mine.slice(0, MAX_REPEATS);   // a non-pound book: his own repeats only (2026-10-10)
   const seen = new Set(mine.map(repeatKey));
   const presets = CASH_QUICK
     .map((q) => ({ description: q.label, category: q.category, method: 'Cash', amount: null }))

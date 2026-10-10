@@ -127,7 +127,7 @@ export default function SetupView({ onDone }) {
           onChange={(e) => setSheet(e.target.value)}
           style={field}
         />
-        <span style={{ display: 'block', fontSize: TYPE.label, fontWeight: 500, color: C.muted, marginTop: 4, lineHeight: 1.6 }}>
+        <span style={{ display: 'block', fontSize: TYPE.label, fontWeight: 500, color: C.muted, marginTop: 8, lineHeight: 1.6 }}>
           {S.setupSheetHint}
         </span>
       </label>

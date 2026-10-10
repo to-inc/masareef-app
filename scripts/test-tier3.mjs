@@ -90,11 +90,15 @@ const { CASH_QUICK } = await import('../src/lib/constants.js');
     'a FRESH install is never bare — the hand-written presets fill the row');
   ok(repeatChips().every((c) => c.amount === null),
     'and a preset carries no amount, exactly as it never did');
+  eq(repeatChips({ presets: false }).length, 0,
+    'a book kept in another unit shows no Cairo presets — the categories are the only row (2026-10-10)');
 
   remember({ description: 'Coffee', category: 'Eating out', method: 'Cash', amount: 60, currency: 'EGP' });
   const after = repeatChips();
   eq(after[0].description, 'Coffee', 'what he logged comes first');
   eq(after[0].amount, 60, 'carrying the amount he actually paid');
+  eq(repeatChips({ presets: false }).map((c) => c.description).join(), 'Coffee',
+    'and with presets off, his own entry still shows — alone');
   eq(after[0].category, 'Eating out', 'and the category he actually chose');
 
   /**

@@ -204,8 +204,11 @@ try {
     'E1.r the full-year figure is OFF the cards while a range is selected — one screen, one scope for these totals');
   ok(sCards.includes(moneyRound(600)),
     'E1.s a fully-closed selection keeps its year-ago figure — same months, last year');
-  ok(sCards.includes(words),
-    `E1.t the selection is named IN WORDS beside the totals it scopes — expected «${words}»`);
+  // R0 re-cut 2026-10-10: the scope chip moved from under «By method» to the foot of
+  // the chart it narrows — still the last thing before the totals it scopes.
+  const chipAt = sChart.lastIndexOf('<button');
+  ok(chipAt !== -1 && sChart.slice(chipAt).includes(words),
+    `E1.t the selection is named IN WORDS on the button right before the totals it scopes — expected «${words}»`);
   ok(split(idle).cards.includes(`>${moneyRound(1520)}<`) && !split(idle).cards.includes(words),
     'E1.u …and with no selection the cards say the whole year and no range words (control)');
 

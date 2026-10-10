@@ -178,7 +178,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
             <div
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: SPACE.gap, minHeight: TAP, marginTop: 2,
+                gap: SPACE.gap, minHeight: TAP, marginTop: SPACE.gap,   // spacing audit 2026-10-10: was 2px under Language
               }}
             >
               <span style={{ fontSize: TYPE.row, color: C.ink }}>{S.settingsCurrency}</span>
@@ -200,7 +200,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
             <div
               style={{
                 fontSize: TYPE.label, color: C.muted, lineHeight: 1.45,
-                margin: '4px 0 2px',
+                margin: '10px 0 2px',
               }}
             >
               {S.settingsCurrencyNote}
