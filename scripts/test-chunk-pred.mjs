@@ -50,6 +50,24 @@ ok(/setMethod\(startMethod\(res\)\);\s*setPred\(predOf\(res\)\);/.test(rv) && !/
   ok(cleanEvidence('KÄTEINEN') === 'KÄTEINEN' && cleanEvidence(null) === null, 'PRED.e2 plain evidence passes untouched; none stays none');
 }
 
+// 2026-10-10 — PDF receipts: offered only to a server that reads them, sent whole.
+{
+  const { supportsDocument } = await import('../src/state/capabilities.js');
+  ok(!supportsDocument({ actions: [] }, 'application/pdf') && !supportsDocument(null, 'application/pdf')
+    && supportsDocument({ documents: ['image/jpeg', 'application/pdf'] }, 'application/pdf'),
+    'PDF.1 the paperclip offers PDFs only when the server advertises them — fails closed');
+  const { prepareDocument, PDF_LIMIT } = await import('../src/lib/receipt-image.js');
+  const pdf = new Blob([new Uint8Array([37, 80, 68, 70, 45])], { type: 'application/pdf' });
+  const prepared = await prepareDocument(pdf);
+  ok(prepared.base64 === 'JVBERi0=' && prepared.mediaType === 'application/pdf' && /^[0-9a-f]{64}$/.test(prepared.clientHash),
+    'PDF.2 a PDF travels as its own bytes, marked as a PDF, hashed for de-duplication');
+  let refused = false;
+  try { await prepareDocument({ size: PDF_LIMIT + 1, arrayBuffer: async () => new ArrayBuffer(0) }); } catch (e) { refused = e.code === 'too-large'; }
+  ok(refused, 'PDF.3 a PDF over the server\'s ceiling is refused on the phone, with the too-large message');
+  const w = readFileSync(new URL('../src/state/receiptWorker.js', import.meta.url), 'utf8');
+  ok(/mediaType: job\.mediaType/.test(w), 'PDF.4 the worker hands the reader the job\'s own media type');
+}
+
 // ——— the review card, rendered
 const store = new Map();
 globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };

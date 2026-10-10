@@ -50,8 +50,8 @@ export const voice = ({ text, clientId }) =>
  * AbortSignal cannot ride onto the wire as `"signal":{}` no matter how the
  * caller passes it.
  */
-export const receiptExtract = ({ image, clientHash, snapDate, signal }) =>
-  call({ action: 'receipt_extract', image, clientHash, snapDate }, 'vision', signal);
+export const receiptExtract = ({ image, clientHash, snapDate, mediaType, signal }) =>
+  call({ action: 'receipt_extract', image, clientHash, snapDate, ...(mediaType ? { mediaType } : {}) }, 'vision', signal);
 
 export const receiptConfirm = (fields) =>
   call({ action: 'receipt_confirm', ...fields }, 'write');

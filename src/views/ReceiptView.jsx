@@ -4,7 +4,7 @@ import { S, categoryLabel, unitFor } from '../i18n/strings.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, money2, normalizeDigits } from '../lib/format.js';
 import { newClientId, cairoClock, isoToDmy } from '../lib/dates.js';
-import { prepareReceipt, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
+import { prepareReceipt, prepareDocument, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
 import * as queue from '../state/receiptQueue.js';
@@ -205,7 +205,7 @@ export default function ReceiptView({
 
     let prepared;
     try {
-      prepared = await prepareReceipt(file);
+      prepared = file.type === 'application/pdf' ? await prepareDocument(file) : await prepareReceipt(file);
     } catch (err) {
       clearTimeout(slowTimer.current);
       setErrorMsg(err instanceof ReceiptImageError && err.code === 'too-large'
@@ -230,7 +230,7 @@ export default function ReceiptView({
      */
     const ok = await queue.enqueue({
       id: prepared.clientHash, base64: prepared.base64,
-      clientHash: prepared.clientHash, snapDate,
+      clientHash: prepared.clientHash, snapDate, ...(prepared.mediaType ? { mediaType: prepared.mediaType } : {}),
     });
     if (!ok) {
       // Storage refused it. Say so — a photo he believes is saved and is not is
@@ -916,6 +916,7 @@ function JobRow({ job, onReview, onRetry, onCancel, onDebugLog }) {
    * would leak a Blob nobody has a handle to.
    */
   useEffect(() => {
+    if (job.mediaType === 'application/pdf') return undefined;   // a PDF has no picture to show
     const url = thumbUrl(job.base64);
     setThumb(url);
     return () => revokeThumb(url);

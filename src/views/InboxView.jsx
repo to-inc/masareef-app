@@ -664,7 +664,7 @@ function PhotoRow({ job, stage, onOpen }) {
   const [thumb, setThumb] = useState(null);
   // Created in an effect and revoked on unmount — an unrevoked URL pins its Blob.
   useEffect(() => {
-    if (!job.base64) return undefined;
+    if (!job.base64 || job.mediaType === 'application/pdf') return undefined;
     const url = thumbUrl(job.base64);
     setThumb(url);
     return () => revokeThumb(url);
@@ -678,6 +678,7 @@ function PhotoRow({ job, stage, onOpen }) {
       {/* GEOMETRY EXEMPTION (ruling 4): a 40px photo thumbnail, its corner bounded by its size */}
       <span style={{ width: 40, height: 40, borderRadius: 8, flex: '0 0 auto', background: C.shell, overflow: 'hidden' }}>
         {thumb && <img src={thumb} alt={S.jobThumbAlt} style={{ width: 40, height: 40, objectFit: 'cover', display: 'block' }} />}
+        {job.mediaType === 'application/pdf' && <span aria-hidden style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 40, fontSize: TYPE.row }}>📄</span>}
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
         <span style={{ fontSize: TYPE.label, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...ISOLATE }} dir="auto">{name}</span>

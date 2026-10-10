@@ -39,7 +39,7 @@ import { getCurrency, setCurrency as persistCurrency, AWAY_CURRENCY, hasCurrency
 import {
   getDisplayCurrency, setDisplayCurrency, otherDisplayCurrency, hasDisplayChoice,
 } from './state/display.js';
-import { supportsAction, supportsCurrency, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
+import { supportsAction, supportsCurrency, supportsDocument, effectiveCurrency, loadBuild, saveBuild } from './state/capabilities.js';
 import { cairoDateStr, cairoClock, newClientId } from './lib/dates.js';
 import { isSummaryShape, withDefaults } from './lib/summaryShape.js';
 import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon, TrayIcon, PlusIcon, UndoToast, UpdatePrompt } from './components/Primitives.jsx';
@@ -1264,6 +1264,7 @@ export default function App() {
                     onCamera={() => pushDetail(() => setEntryMode('receipt'))}
                     // A photo or file chosen ON the sheet: the receipt screen reads it at once.
                     onReceiptFile={(f) => pushDetail(() => { setReceiptFile(f); setEntryMode('receipt'); })}
+                    acceptPdf={supportsDocument(build, 'application/pdf')}
                     /**
                       * SHOWN ONLY IF THE SERVER KNOWS THE VERB. Absent
                       * capability list ⇒ no button, which is the state of the

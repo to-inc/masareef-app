@@ -47,7 +47,7 @@ export function createWorker({ queue, extract, onChange }) {
         inFlight.set(job.id, ctrl);
         try {
           res = await extract({
-            image: job.base64, clientHash: job.clientHash, snapDate: job.snapDate,
+            image: job.base64, clientHash: job.clientHash, snapDate: job.snapDate, mediaType: job.mediaType,
             signal: ctrl.signal,
           });
         } catch {

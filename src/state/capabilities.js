@@ -117,6 +117,12 @@ export function supportsAction(build, action) {
  * deploy gate makes.
  * ═══════════════════════════════════════════════════════════════════════════
  */
+/** Can the serving backend read this kind of receipt file (`build.documents`)? Fails closed. */
+export function supportsDocument(build, mediaType) {
+  const list = build && build.documents;
+  return Array.isArray(list) && list.indexOf(mediaType) !== -1;
+}
+
 export function supportsCurrency(build, code) {
   if (!build || !code) return false;
   const list = build.currencies;

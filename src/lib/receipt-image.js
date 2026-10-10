@@ -157,6 +157,18 @@ export async function prepareReceipt(file) {
 }
 
 /** `snapDate` for the extract call — the day the photo was taken, Cairo. */
+/**
+ * A PDF RECEIPT travels as it is (2026-10-10) — there is nothing to resize — and
+ * is read on the server as a document. Same size ceiling the server applies to
+ * its base64 (6 MB ≈ 4.4 MB of file); the hash is of the file's own bytes.
+ */
+export const PDF_LIMIT = 4.4 * 1024 * 1024;
+export async function prepareDocument(file) {
+  if (!file || file.size > PDF_LIMIT) throw new ReceiptImageError('too-large');
+  const buf = await file.arrayBuffer();
+  return { base64: bytesToBase64(new Uint8Array(buf)), clientHash: await sha256Hex(buf), mediaType: 'application/pdf' };
+}
+
 export function snapDateISO(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit',
