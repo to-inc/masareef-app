@@ -146,8 +146,9 @@ export default function App() {
    * become a second owner of either.
    */
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // The header's photos shortcut: >0 opens To review with the «Photos» list unfolded.
-  const [photosNonce, setPhotosNonce] = useState(0);
+  // The header's photos switch (Tarek, 2026-10-13: «when I tap it again, it switches off»):
+  // on = To review with the «Photos» list unfolded on top; the list's own header flips it too.
+  const [photosOpen, setPhotosOpen] = useState(false);
   const [staleQueue, setStaleQueue] = useState([]);
   // v4 P5: rows still on the phone (held for undo, or waiting for the network),
   // and the 6-second «اتحفظ ✓ — رجوع» toast that can still take one back.
@@ -883,7 +884,7 @@ export default function App() {
   };
 
   // Going to the Book folds the shortcut's list again (a receipt opened from it comes back to it open).
-  useEffect(() => { if (tab === 'book') setPhotosNonce(0); }, [tab]);
+  useEffect(() => { if (tab === 'book') setPhotosOpen(false); }, [tab]);
   if (!booted) return null;
 
   // One name for «the dock is on screen» — the scroll box's clearance, the
@@ -1013,6 +1014,8 @@ export default function App() {
           padding: `calc(4px + env(safe-area-inset-top)) 20px 0`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
           color: C.ink,
+          // Above the Settings backdrop while it is open: the lit cog is how it switches off.
+          ...(settingsOpen ? { position: 'relative', zIndex: 46 } : null),
         }}
       >
         {/* R9: the capture flow's own screens (receipt, statement, dictation) get a
@@ -1034,8 +1037,9 @@ export default function App() {
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* R9: a capture screen's header is ← + its name only (G05–G07) — the title needs the room. */}
-          {!needsSetup && !captureMode && <PhotosShortcut jobs={photoJobs} onOpen={() => { setPhotosNonce((n) => n + 1); setTab('inbox'); }} />}
-          {!needsSetup && !captureMode && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
+          {!needsSetup && !captureMode && <PhotosShortcut jobs={photoJobs} active={photosOpen && viewTab === 'inbox'}
+            onOpen={() => { setSettingsOpen(false); if (photosOpen && viewTab === 'inbox') setPhotosOpen(false); else { setPhotosOpen(true); setTab('inbox'); } }} />}
+          {!needsSetup && !captureMode && <SettingsCog active={settingsOpen} onOpen={() => setSettingsOpen((o) => !o)} />}
           {!needsSetup && !captureMode && <RefreshButton state={reading > 0 ? 'busy' : refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
         </span>
       </header>
@@ -1077,7 +1081,7 @@ export default function App() {
                 {viewTab === 'inbox' && (
                   <InboxView
                     pending={data.pending} settled={settled}
-                    photos={photoJobs} photosNonce={photosNonce}
+                    photos={photoJobs} photosOpen={photosOpen} onPhotosToggle={() => setPhotosOpen((o) => !o)}
                     onOpenPhoto={(job) => pushDetail(() => { setOpenJobId(job.id); setTab('entry'); setEntryMode('receipt'); })}
                     onConfirm={confirmPending} onConfirmMany={confirmMany}
                     onEdited={refresh}

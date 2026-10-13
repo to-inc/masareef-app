@@ -53,18 +53,21 @@ import { newClientId } from '../lib/dates.js';
  * different kind of thing, and it is not — both are chrome, neither is amber.
  * The one warm action stays the keypad's (theme.js's one-amber law).
  */
-export function SettingsCog({ onOpen }) {
+export function SettingsCog({ onOpen, active = false }) {
   return (
     <button
       onClick={onOpen}
       aria-label={S.settingsTitle}
       aria-haspopup="dialog"
+      aria-expanded={active}
       style={{
         minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         // v4: header controls are ink on glass (R0 retired the harbor header).
         ...glass('chip'),
         color: C.ink, fontSize: ICON.control, fontWeight: 700,
+        // Lit while Settings is open; tapping it again closes it (Tarek, 2026-10-13).
+        ...(active ? { background: C.harbor, color: C.onDark, borderColor: C.harbor } : null),
       }}
     >
       {/**

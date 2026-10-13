@@ -95,8 +95,9 @@ export { outcomeForRemove } from '../state/removeOutcome.js';
 
 export default function InboxView({
   pending, settled = {}, onConfirm, onConfirmMany,
-  // The header's photos shortcut bumps this: the «Photos» list opens already unfolded.
-  photosNonce = 0,
+  // The header's photos switch: the «Photos» list's open state lives in the shell, so
+  // the button and the list's own header always agree. Absent (suites), the list keeps its own.
+  photosOpen, onPhotosToggle,
   /**
    * U4 — the serving backend's advertisement (fail closed) and the pairs'
    * outcome seed, both in the house SSR pattern: props defaulting to the live
@@ -170,7 +171,7 @@ export default function InboxView({
     // button lands here, and it landed on nothing (Tarek's debug send, 2026-10-13).
     return (
       <div>
-      <PhotosBar key={photosNonce} jobs={photos} onOpen={onOpenPhoto} initialOpen={photosNonce > 0} />
+      <PhotosBar jobs={photos} onOpen={onOpenPhoto} open={photosOpen} onToggle={onPhotosToggle} />
       <div style={{ textAlign: 'center', paddingTop: 72 }}>
         <div data-geometry="empty-state-illustration" style={{ fontSize: 52 }}>🍵</div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
@@ -221,7 +222,7 @@ export default function InboxView({
 
   return (
     <div>
-      <PhotosBar key={photosNonce} jobs={photos} onOpen={onOpenPhoto} initialOpen={photosNonce > 0} />
+      <PhotosBar jobs={photos} onOpen={onOpenPhoto} open={photosOpen} onToggle={onPhotosToggle} />
       {(dup.pairs.length > 0 || dup.bigGroups.length > 0) && (
         <div style={{ marginBottom: 6 }}>
           <SectionLabel>{S.dupPairTitle}</SectionLabel>
@@ -645,13 +646,15 @@ export { cardKey };
  * button … that takes us directly to the queue»). Same glass circle as the cog;
  * a small count while photos are being read or waiting for him.
  */
-export function PhotosShortcut({ jobs = [], onOpen }) {
+export function PhotosShortcut({ jobs = [], onOpen, active = false }) {
   const n = jobs.filter((j) => j && j.stage !== 'dismissed')
     .map((j) => effectiveStage(j)).filter((st) => st === 'queued' || st === 'reading' || st === 'ready').length;
   return (
-    <button data-photos-shortcut onClick={onOpen} aria-label={n ? `${S.photosTitle} · ${n}` : S.photosTitle}
+    <button data-photos-shortcut onClick={onOpen} aria-pressed={active} aria-label={n ? `${S.photosTitle} · ${n}` : S.photosTitle}
       style={{ ...glass('chip'), position: 'relative', minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: C.ink }}>
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: C.ink,
+        // ON reads as a switch that is on: harbor fill, white mark (the Cash/Card chooser's grammar).
+        ...(active ? { background: C.harbor, color: C.onDark, borderColor: C.harbor } : null) }}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
         <path d="M7 3.5h11.5A2.5 2.5 0 0 1 21 6v10" />
         <rect x="3" y="7" width="14" height="13.5" rx="2.5" />
@@ -660,14 +663,16 @@ export function PhotosShortcut({ jobs = [], onOpen }) {
       </svg>
       {n > 0 && (
         <span aria-hidden style={{ position: 'absolute', top: 0, insetInlineEnd: 0, minWidth: 20, height: 20, padding: '0 5px',
-          borderRadius: RADIUS.capsule, background: C.harbor, color: C.onDark, fontSize: TYPE.caption, fontWeight: 800, lineHeight: '20px', textAlign: 'center', ...LATIN }}>{n}</span>
+          borderRadius: RADIUS.capsule, background: active ? C.onDark : C.harbor, color: active ? C.harbor : C.onDark, fontSize: TYPE.caption, fontWeight: 800, lineHeight: '20px', textAlign: 'center', ...LATIN }}>{n}</span>
       )}
     </button>
   );
 }
 
-export function PhotosBar({ jobs = [], onOpen = null, initialOpen = false }) {
-  const [open, setOpen] = useState(initialOpen);
+export function PhotosBar({ jobs = [], onOpen = null, initialOpen = false, open: shellOpen, onToggle }) {
+  const [ownOpen, setOwnOpen] = useState(initialOpen);
+  const open = shellOpen === undefined ? ownOpen : shellOpen;
+  const setOpen = (v) => (onToggle && shellOpen !== undefined ? onToggle() : setOwnOpen(v));
   const list = jobs.filter((j) => j && j.stage !== 'dismissed');
   // ALWAYS THERE (Tarek, 2026-10-11: «I don't know where the button is»): it used to
   // vanish whenever the queue emptied — exactly when he went looking for it.

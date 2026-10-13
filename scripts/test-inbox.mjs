@@ -308,9 +308,18 @@ try {
 
   // Tarek's first debug send (2026-10-13): «the photo archive button is not going to any
   // other page» — an EMPTY To review returned before the «Photos» list was drawn.
-  { const empty = renderToStaticMarkup(createElement(InboxView, { pending: [], settled: {}, onConfirm: () => {}, photosNonce: 1 }));
+  { const empty = renderToStaticMarkup(createElement(InboxView, { pending: [], settled: {}, onConfirm: () => {}, photosOpen: true, onPhotosToggle: () => {} }));
     ok(/data-photos-bar/.test(empty) && /aria-expanded="true"/.test(empty) && empty.includes("empty-state-illustration"),
-      'PB.empty with nothing to review, the photos button still lands on the «Photos» list, unfolded, above «All logged»'); }
+      'PB.empty with nothing to review, the photos button still lands on the «Photos» list, unfolded, above «All logged»');
+    // A SWITCH (2026-10-13: «when I tap it again, it switches off»): the shell owns the state.
+    const closed = renderToStaticMarkup(createElement(InboxView, { pending: [], settled: {}, onConfirm: () => {}, photosOpen: false, onPhotosToggle: () => {} }));
+    ok(/aria-expanded="false"/.test(closed), 'PB.switch switched off, the same list is folded');
+    const { PhotosShortcut } = mod;
+    {
+      const on = renderToStaticMarkup(createElement(PhotosShortcut, { jobs: [], onOpen() {}, active: true }));
+      const off = renderToStaticMarkup(createElement(PhotosShortcut, { jobs: [], onOpen() {}, active: false }));
+      ok(/aria-pressed="true"/.test(on) && /aria-pressed="false"/.test(off) && /background:#/.test(on) && on !== off, 'PB.lit the header button shows it is on (pressed, filled) and off again');
+    } }
 
   const one = [row('Aug', 14)];
   const keyOne = cardKey(one[0]);
