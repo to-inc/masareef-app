@@ -253,6 +253,9 @@ try {
     const off = html('SettingsSheet', SettingsSheet, { displayCurrency: 'EGP', onFlipCurrency: noop, onClose: noop, build: { actions: [] } });
     ok(/data-debug-shots/.test(on) && /type="file"[^>]*accept="image\/\*"[^>]*multiple/.test(on) && !/data-debug-shots/.test(off),
       'S1.dbg the «Send screenshots for debugging» picker shows (several at once) only on a server that advertises debug_shot');
+    const form = html('SettingsSheet', SettingsSheet, { displayCurrency: 'EGP', onFlipCurrency: noop, onClose: noop, build: { actions: ['debug_shot', 'debug_note'] } });
+    ok(/data-debug-note/.test(form) && !/data-debug-note/.test(on) && /data-debug-send[^>]*disabled/.test(form),
+      'S1.dbg2 the form has a box for his words when the server saves notes (not before), and Send waits for a photo or words');
     ok(h.includes('class="sheet-in"'),
       'S1.36 the surface arrives as B4\'s one sheet (class="sheet-in")');
     ok(h.includes(`border-radius:${RADIUS.sheet}px`),

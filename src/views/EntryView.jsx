@@ -175,8 +175,16 @@ export default function EntryView({
    * and it carries the amount and category, so no summary line is drawn.
    */
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', height: '100%' }}>
+      {/**
+        * THE KEYPAD FITS WITHOUT SCROLLING (Tarek, 2026-10-13: «make the keyboard
+        * always sticky, I don't want to scroll to the bottom of it»). The ✕ used
+        * to own a whole 60pt row whenever there was no «like yesterday» chip;
+        * now it floats in the corner and the row exists only for a chip or the
+        * quick descriptions beside it.
+        */}
+      {(last || repeats.length > 0) ? (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         {onClose ? (
           <button onClick={onClose} aria-label={S.settingsClose}
             style={{ minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule, background: 'transparent', color: C.muted, fontSize: TYPE.section }}>
@@ -191,12 +199,9 @@ export default function EntryView({
             <span style={{ ...ISOLATE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dir="auto">{last.description}</span>
             <b style={{ ...LATIN, ...NUMERALS }}>{last.amount}</b>
           </button>
-        ) : null}
-      </div>
-
-      {/* First visits have no «yesterday» — the quick descriptions stand in for it. */}
-      {!last && repeats.length > 0 && (
-        <Rail style={{ gap: 7, paddingBottom: 2 }}>
+        ) : (
+        /* First visits have no «yesterday» — the quick descriptions stand in for it, beside the ✕. */
+        <Rail style={{ gap: 7, paddingBottom: 2, flex: 1, minWidth: 0 }}>
           {repeats.map((q) => (
             <button
               key={`${q.description}|${q.method}`}
@@ -216,21 +221,28 @@ export default function EntryView({
             </button>
           ))}
         </Rail>
-      )}
+        )}
+      </div>
+      ) : onClose ? (
+        <button data-entry-close onClick={onClose} aria-label={S.settingsClose}
+          style={{ position: 'absolute', top: 0, insetInlineStart: -8, zIndex: 1, minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule, background: 'transparent', color: C.muted, fontSize: TYPE.section }}>
+          ✕
+        </button>
+      ) : null}
 
-      <div style={{ textAlign: 'center', padding: '2px 0' }}>
+      <div style={{ textAlign: 'center', padding: '2px 0', flexShrink: 0 }}>
         <div
           data-amount
           // What the muted «0» SHOWS, said to VoiceOver in words.
           aria-label={amount ? undefined : S.entryNeedAmount}
-          style={{ fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: TYPE.amountEntry, fontWeight: 650, lineHeight: 1, color: amount ? C.ink : C.muted }}
+          style={{ fontFamily: FONT_DISPLAY, ...NUMERALS, fontSize: `clamp(48px, 8svh, ${TYPE.amountEntry}px)`, fontWeight: 650, lineHeight: 1, color: amount ? C.ink : C.muted }}
           dir="ltr"
         >
           {amount || '0'}
           {/* the harbor caret (v4 P4) — a 3px capsule */}
           <span aria-hidden style={{ display: 'inline-block', width: 3, height: '0.8em', background: C.harbor, marginLeft: 4, verticalAlign: '-0.05em', borderRadius: RADIUS.capsule }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 10 }}>
           {/* The unit IS this chip — every amount names its unit (v4); tapping it switches currency. */}
           <button
             className="catchip"
@@ -282,7 +294,7 @@ export default function EntryView({
         </div>
       </div>
 
-      <div style={{ display: 'flex', ...glass('well'), borderRadius: RADIUS.capsule, padding: 4, gap: 4 }} role="group" aria-label={S.entryMethod}>
+      <div style={{ display: 'flex', ...glass('well'), borderRadius: RADIUS.capsule, padding: 4, gap: 4, flexShrink: 0 }} role="group" aria-label={S.entryMethod}>
         {METHODS.map((m) => (
           <button
             key={m}
@@ -303,7 +315,7 @@ export default function EntryView({
       {/* One swipeable row (the Rail's edge fade says it continues) — six wrapped
           chips made the sheet too tall for «0» to clear «سجّل» (the E-003 law).
           «كل الأنواع» unfolds the full list below as a wrapped grid. */}
-      <Rail role="group" aria-label={cat ? categoryLabel(cat) : S.entryNeedCategory} style={{ gap: 8, paddingBottom: 2, flexWrap: showAll ? 'wrap' : 'nowrap' }}>
+      <Rail role="group" aria-label={cat ? categoryLabel(cat) : S.entryNeedCategory} style={{ gap: 8, paddingBottom: 2, flexWrap: showAll ? 'wrap' : 'nowrap', flexShrink: 0 }}>
         {(showAll ? allCategories() : shortCategories()).concat(!showAll && cat && shortCategories().indexOf(cat) === -1 ? [cat] : []).map((c) => (
           <button
             key={c}
@@ -337,7 +349,10 @@ export default function EntryView({
       </Rail>
 
       {/* R7: the keypad is a digit grid, so it is deliberately dir="ltr"; ⌫ sits bottom-right beside the digit it deletes. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }} dir="ltr">
+      {/* The keypad takes the room that is left: keys from 56 down to the 44pt tap floor,
+          so on a short screen it shrinks instead of sliding under «Log it». */}
+      <div data-keypad style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(4, 1fr)', gap: 6,
+        flex: '1 1 auto', minHeight: 4 * TAP + 18, maxHeight: 4 * 56 + 18, marginTop: 'auto' }} dir="ltr">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((k) => (
           <button
             key={k}
@@ -346,7 +361,7 @@ export default function EntryView({
             aria-label={k === '⌫' ? S.keypadBackspace : k}
             style={{
               ...glass('chip'), borderRadius: RADIUS.glassWell,
-              minHeight: 56, fontSize: k === '⌫' ? TYPE.title : TYPE.key, fontWeight: 500,
+              minHeight: TAP, fontSize: k === '⌫' ? TYPE.title : TYPE.key, fontWeight: 500,
               color: k === '⌫' ? C.muted : C.ink,
             }}
           >

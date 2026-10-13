@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM } from '../theme.js';
 import { S, unitFor } from '../i18n/strings.js';
 import { Sheet, LangToggle, SectionLabel, LATIN } from '../components/Primitives.jsx';
@@ -6,7 +6,7 @@ import { otherDisplayCurrency } from '../state/display.js';
 import { METHODS } from '../state/entryPayload.js';
 import { getDefaultMethod, setDefaultMethod, getDisplay, setDisplay, debugOn } from '../state/settings.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
-import { debugShot } from '../api/index.js';
+import { debugShot, debugNote } from '../api/index.js';
 import { prepareScreenshot } from '../lib/receipt-image.js';
 import { newClientId } from '../lib/dates.js';
 
@@ -93,40 +93,72 @@ function screenFit() {
 }
 
 /**
- * SCREENSHOTS FOR DEBUGGING (Tarek, 2026-10-13: «I can upload screenshots for
- * debugging right away … to a Google Drive folder»). Picks one or several from
- * Photos and sends them one by one to «Debug screenshots» beside his receipt
- * archive; a watcher on that folder picks them up. Shown only when the server
- * advertises `debug_shot`.
+ * SCREENSHOTS FOR DEBUGGING — A SMALL FORM (Tarek, 2026-10-13: «upload
+ * screenshots for debugging … to a Google Drive folder», then «make it like a
+ * form, with an area for submitting context»). Choose one or several, say what
+ * is wrong, Send. One send shares a batch name on the Drive, so the photos and
+ * the note sit together in «Debug screenshots». The note box shows when the
+ * server can save notes (`debug_note`); the form when it can save photos.
  */
-export function DebugShots({ send = debugShot, prepare = prepareScreenshot }) {
+export function DebugShots({ send = debugShot, sendNote = debugNote, prepare = prepareScreenshot, withNote = true }) {
+  const [files, setFiles] = useState([]);
+  const [note, setNote] = useState('');
   const [state, setState] = useState(null);   // null | {i,n} | {sent,failed}
-  const pick = async (e) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = '';
-    let sent = 0, failed = 0;
-    for (let i = 0; i < files.length; i++) {
-      setState({ i: i + 1, n: files.length });
-      try {
-        const shot = await prepare(files[i]);
-        const r = await send({ image: shot.base64, mediaType: shot.mediaType, clientId: newClientId() });
-        if (r && r.ok) sent++; else failed++;
-      } catch (err) { failed++; }
+  const [thumbs, setThumbs] = useState([]);
+  // Object URLs for the chosen photos, revoked when the choice changes or the sheet closes.
+  useEffect(() => {
+    if (typeof URL === 'undefined' || !URL.createObjectURL) return undefined;
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setThumbs(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [files]);
+  const busy = !!state && state.n != null;
+  const words = withNote ? note.trim() : '';
+  const canSend = !busy && (files.length > 0 || !!words);
+  const submit = async () => {
+    const batch = newClientId().replace(/[^A-Za-z0-9]/g, '').slice(0, 8);
+    const n = files.length + (words ? 1 : 0);
+    let sent = 0, failed = 0, i = 0;
+    const one = async (fn) => {
+      setState({ i: ++i, n });
+      try { const r = await fn(); if (r && r.ok) sent++; else failed++; } catch (err) { failed++; }
+    };
+    if (words) await one(() => sendNote({ note: words, batch }));
+    for (let k = 0; k < files.length; k++) {
+      await one(async () => {
+        const shot = await prepare(files[k]);
+        return send({ image: shot.base64, mediaType: shot.mediaType, clientId: newClientId(), batch, index: k + 1 });
+      });
     }
     setState({ sent, failed });
+    if (!failed) { setFiles([]); setNote(''); }
   };
-  const busy = !!state && state.n != null;
+  const box = { width: '100%', boxSizing: 'border-box', borderRadius: RADIUS.row, border: `1px solid ${C.line}`, background: C.card, color: C.ink };
   return (
     <div data-debug-shots style={{ marginTop: SPACE.gap }}>
       <SectionLabel>{S.debugShotsTitle}</SectionLabel>
-      <label className="catchip" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: TAP, borderRadius: RADIUS.row,
-        border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: TYPE.row, fontWeight: 700,
-        opacity: busy ? 0.6 : 1, pointerEvents: busy ? 'none' : undefined,
-      }}>
-        {busy ? S.debugShotsSending(state.i, state.n) : S.debugShotsButton}
-        <input type="file" accept="image/*" multiple onChange={pick} disabled={busy} style={{ display: 'none' }} />
+      <label className="catchip" style={{ ...box, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: TAP,
+        fontSize: TYPE.row, fontWeight: 650, opacity: busy ? 0.6 : 1, pointerEvents: busy ? 'none' : undefined }}>
+        {files.length ? S.debugShotsChosen(files.length) : S.debugShotsChoose}
+        <input type="file" accept="image/*" multiple disabled={busy} style={{ display: 'none' }}
+          onChange={(e) => { const f = Array.from(e.target.files || []); e.target.value = ''; if (f.length) { setFiles(f); setState(null); } }} />
       </label>
+      {thumbs.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, overflowX: 'auto' }}>
+          {/* GEOMETRY EXEMPTION (ruling 4): 44px thumbnails, their corner bounded by their size */}
+          {thumbs.map((u, k) => <img key={u} src={u} alt={S.debugShotsThumb(k + 1)} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, flex: '0 0 auto' }} />)}
+        </div>
+      )}
+      {withNote && (
+        <textarea data-debug-note value={note} onChange={(e) => setNote(e.target.value)} disabled={busy} rows={3} maxLength={4000}
+          placeholder={S.debugShotsNote} aria-label={S.debugShotsNote} dir="auto"
+          style={{ ...box, marginTop: 8, padding: '10px 12px', fontSize: 16, fontFamily: 'inherit', lineHeight: 1.45, resize: 'vertical' }} />
+      )}
+      <button data-debug-send onClick={submit} disabled={!canSend}
+        style={{ width: '100%', minHeight: TAP, marginTop: 8, borderRadius: RADIUS.row, fontSize: TYPE.row, fontWeight: 700,
+          background: canSend ? C.harbor : C.line, color: canSend ? C.onDark : C.muted, border: 'none' }}>
+        {busy ? S.debugShotsSending(state.i, state.n) : S.debugShotsSend}
+      </button>
       <div role="status" aria-live="polite" style={{ fontSize: TYPE.label, color: state && state.failed ? C.conflictInk : C.muted, marginTop: 6, lineHeight: 1.5 }}>
         {state && state.n == null
           ? (state.failed ? S.debugShotsFailed(state.failed) : S.debugShotsSent(state.sent))
@@ -341,7 +373,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
               ))}
             </div>
           </div>
-          {supportsAction(build, 'debug_shot') && <DebugShots />}
+          {supportsAction(build, 'debug_shot') && <DebugShots withNote={supportsAction(build, 'debug_note')} />}
           {/* Which build this phone runs — the commit it was built from (E-017). */}
           {/* Only the commit is Latin; «النسخة» reads in its own direction (audit 2026-10-10). */}
           <div style={{ marginTop: SPACE.gap, textAlign: 'center', fontSize: TYPE.label, color: C.muted }}>

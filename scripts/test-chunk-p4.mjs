@@ -88,7 +88,8 @@ try {
   ok(html.includes(`${AR.likeYesterday}:`) && /قهوة[\s\S]{0,200}>60</.test(html), 'P4.12 «زي امبارح: قهوة 60» — description and amount, legible before the tap');
 
   // ——— amount
-  ok(new RegExp(`data-amount="true"[^>]*font-size:${TYPE.amountEntry}px`).test(html), 'P4.13 the amount reads at TYPE.amountEntry (68)');
+  // R0 re-cut (2026-10-13, «make the keyboard always sticky»): 68 at most, less only on a short screen.
+  ok(new RegExp(`data-amount="true"[^>]*font-size:clamp\\(48px, 8svh, ${TYPE.amountEntry}px\\)`).test(html), 'P4.13 the amount reads at TYPE.amountEntry (68) — at most');
   ok(html.includes(`background:${C.harbor}`), 'P4.14 with its harbor caret');
 
   // ——— modes: icon buttons at the floor, dead-control law, abroad pressed
@@ -123,7 +124,10 @@ try {
   ok(/dir="ltr"/.test(grid.slice(0, 200)), 'P4.21 the keypad grid is deliberately dir="ltr" (R7)');
   const keys = [...grid.matchAll(/aria-label="([^"]+)"/g)].map((m) => m[1]).slice(0, 12);
   ok(keys.join(',') === `1,2,3,4,5,6,7,8,9,.,0,${AR.keypadBackspace}`, `P4.22 ⌫ is last — bottom-right, beside the digit it deletes (got ${keys.join(',')})`);
-  ok((grid.match(/min-height:56px/g) || []).length >= 12, 'P4.23 every key is 56 tall — above the 48pt floor');
+  // R0 re-cut (2026-10-13): keys are 56 tall where there is room and shrink to the 48pt
+  // floor on a short screen (the grid's rows share its height, capped at 4×56 + gaps).
+  ok((grid.match(/min-height:48px/g) || []).length >= 12 && /max-height:242px/.test(grid.slice(0, 400)),
+    'P4.23 every key is up to 56 tall — never below the 48pt floor');
 
   // ——— one warm action: none in the body
   ok(!html.includes(C.amber) && !html.includes('#CF9A34'), 'P4.24 the sheet body paints no amber — «سجّل» is the one warm action');

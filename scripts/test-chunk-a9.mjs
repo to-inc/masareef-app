@@ -149,8 +149,10 @@ try {
   const at = body.indexOf('Baskerville');
   ok(at !== -1, 'A9.10a the display-face amount is still there');
   const hero = at === -1 ? '' : body.slice(at);
-  ok(hero.slice(0, Math.max(0, hero.indexOf('>'))).includes(`font-size:${TYPE.amountEntry}px`),
-    'A9.10b the amount renders at TYPE.amountEntry (68, v4 P4)');
+  // R0 re-cut (2026-10-13, «make the keyboard always sticky»): the amount is TYPE.amountEntry
+  // at most, shrinking on a short screen so the keypad fits — clamp(48px, 8svh, 68px).
+  ok(hero.slice(0, Math.max(0, hero.indexOf('>'))).includes(`font-size:clamp(48px, 8svh, ${TYPE.amountEntry}px)`),
+    'A9.10b the amount renders at TYPE.amountEntry (68, v4 P4) — at most; less only on a short screen');
   ok(/aria-pressed="false"[^>]*>ج\.م/.test(body) || body.includes('>ج.م<'),
     'A9.10c and its unit is named right under it — the currency chip IS the unit (v4: every amount with its unit)');
 } finally {

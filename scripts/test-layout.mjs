@@ -279,6 +279,32 @@ try {
     }
     await ctx.close();
   }
+  // ═══ «MAKE THE KEYBOARD ALWAYS STICKY» (Tarek, 2026-10-13) ═══
+  // His iPhone shows ~730pt to the app (status bar inset + iOS 26's band). There
+  // the whole keypad must sit above «Log it» at scroll 0, with no scrolling, even
+  // with the quick-descriptions row on the sheet.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 722 } });
+    await ctx.addInitScript(() => {
+      localStorage.setItem('masareef.lang', 'en');
+      localStorage.setItem('masareef.repeats.v1', JSON.stringify([{ description: 'Coffee', category: 'Eating out', method: 'Cash', amount: 60, currency: 'EGP' }]));
+    });
+    const pg = await ctx.newPage();
+    await pg.goto(url, { waitUntil: 'networkidle' });
+    await pg.getByRole('button', { name: /^New$/ }).first().click();
+    await pg.waitForSelector('[aria-label="0"]');
+    await pg.waitForTimeout(500);
+    const g = await pg.evaluate(() => {
+      const sheet = document.querySelector('[role=dialog]');
+      const save = sheet.querySelector('button.bigbtn').getBoundingClientRect();
+      const keys = [...sheet.querySelectorAll('button.key')].map((k) => k.getBoundingClientRect());
+      return { dock: Math.round(save.top), low: Math.round(Math.max(...keys.map((r) => r.bottom))), minKey: Math.round(Math.min(...keys.map((r) => r.height))),
+        scroll: sheet.querySelector('[data-sheet-body]').scrollTop };
+    });
+    ok(g.scroll === 0 && g.low <= g.dock - 6 && g.minKey >= 48,
+      `KEYPAD-FITS on a 722pt screen the whole keypad clears «Log it» with no scrolling, keys ≥ 48pt — lowest key@${g.low} vs Log it@${g.dock}, smallest key ${g.minKey}`);
+    await ctx.close();
+  }
 } finally {
   if (browser) await browser.close();
   await server.close();

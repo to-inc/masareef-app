@@ -1256,8 +1256,12 @@ export default function App() {
               {/* geometry exemption (ruling 4): the 40×5 grab bar, its corner bounded by its height */}
               <span aria-hidden style={{ width: 40, height: 5, borderRadius: 3, background: SHEET.handle }} />
             </div>
+            {/* The body leaves room for «Log it» exactly where it sits: its height + a gap + the
+                SAME max(saveBottom, home bar) its wrapper uses. Adding both (the old sum) reserved
+                ~30pt of nothing on an iPhone and pushed the keypad's last row under the button
+                (Tarek, 2026-10-13: «I don't want to scroll»). */}
             <div data-sheet-body style={{
-              flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: `6px 20px calc(${SHEET.saveHeight + SHEET.saveBottom + SPACE.gap}px + env(safe-area-inset-bottom))`,
+              flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: `6px 20px calc(${SHEET.saveHeight + SPACE.gap}px + max(${SHEET.saveBottom}px, env(safe-area-inset-bottom)))`,
             }}>
               <EntryView
                     onClose={closeEntry}
