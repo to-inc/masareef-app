@@ -166,8 +166,12 @@ export default function InboxView({
   };
 
   if (rows.length === 0) {
+    // The «Photos» list stays on an empty To review too — the header's photos
+    // button lands here, and it landed on nothing (Tarek's debug send, 2026-10-13).
     return (
-      <div style={{ textAlign: 'center', paddingTop: 110 }}>
+      <div>
+      <PhotosBar key={photosNonce} jobs={photos} onOpen={onOpenPhoto} initialOpen={photosNonce > 0} />
+      <div style={{ textAlign: 'center', paddingTop: 72 }}>
         <div data-geometry="empty-state-illustration" style={{ fontSize: 52 }}>🍵</div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.inboxEmptyTitle}
@@ -175,6 +179,7 @@ export default function InboxView({
         <div style={{ color: C.muted, fontSize: TYPE.body, marginTop: 8, lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
           {S.inboxEmptyBody}
         </div>
+      </div>
       </div>
     );
   }

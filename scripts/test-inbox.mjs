@@ -306,6 +306,12 @@ try {
   const disabled = (html) => (html.match(/disabled=""/g) || []).length;
   const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
+  // Tarek's first debug send (2026-10-13): «the photo archive button is not going to any
+  // other page» — an EMPTY To review returned before the «Photos» list was drawn.
+  { const empty = renderToStaticMarkup(createElement(InboxView, { pending: [], settled: {}, onConfirm: () => {}, photosNonce: 1 }));
+    ok(/data-photos-bar/.test(empty) && /aria-expanded="true"/.test(empty) && empty.includes("empty-state-illustration"),
+      'PB.empty with nothing to review, the photos button still lands on the «Photos» list, unfolded, above «All logged»'); }
+
   const one = [row('Aug', 14)];
   const keyOne = cardKey(one[0]);
   const withStatus = (o) => render(one, { [keyOne]: o });
