@@ -172,6 +172,11 @@ export const keptList = () =>
   (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
     : call({ action: 'kept_list' }, 'read'));
 
+/** A screenshot from Settings → «<archive>/Debug screenshots» on his Drive (2026-10-13). */
+export const debugShot = ({ image, mediaType, clientId }) =>
+  (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
+    : call({ action: 'debug_shot', image, mediaType, clientId }, 'write'));
+
 export const removeEntry = ({ tab, rowHint, match }) =>
   (USING_MOCK ? mockRemoveEntry({ tab, rowHint, match })
     : call({ action: 'remove_entry', tab, rowHint, match }, 'write'));

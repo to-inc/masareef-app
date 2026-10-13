@@ -5,6 +5,10 @@ import { Sheet, LangToggle, SectionLabel, LATIN } from '../components/Primitives
 import { otherDisplayCurrency } from '../state/display.js';
 import { METHODS } from '../state/entryPayload.js';
 import { getDefaultMethod, setDefaultMethod, getDisplay, setDisplay, debugOn } from '../state/settings.js';
+import { supportsAction, loadBuild } from '../state/capabilities.js';
+import { debugShot } from '../api/index.js';
+import { prepareScreenshot } from '../lib/receipt-image.js';
+import { newClientId } from '../lib/dates.js';
 
 /**
  * S1 — THE SETTINGS SHEET BEHIND THE COG (Owner field ruling 2026-08-27).
@@ -88,7 +92,51 @@ function screenFit() {
   return `screen ${screen.width}×${screen.height} · app ${Math.round(window.innerHeight)} · safe ${Math.round(top)}/${Math.round(bottom)} · gap ${parseInt(gap, 10) || 0}`;
 }
 
-export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose }) {
+/**
+ * SCREENSHOTS FOR DEBUGGING (Tarek, 2026-10-13: «I can upload screenshots for
+ * debugging right away … to a Google Drive folder»). Picks one or several from
+ * Photos and sends them one by one to «Debug screenshots» beside his receipt
+ * archive; a watcher on that folder picks them up. Shown only when the server
+ * advertises `debug_shot`.
+ */
+export function DebugShots({ send = debugShot, prepare = prepareScreenshot }) {
+  const [state, setState] = useState(null);   // null | {i,n} | {sent,failed}
+  const pick = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    let sent = 0, failed = 0;
+    for (let i = 0; i < files.length; i++) {
+      setState({ i: i + 1, n: files.length });
+      try {
+        const shot = await prepare(files[i]);
+        const r = await send({ image: shot.base64, mediaType: shot.mediaType, clientId: newClientId() });
+        if (r && r.ok) sent++; else failed++;
+      } catch (err) { failed++; }
+    }
+    setState({ sent, failed });
+  };
+  const busy = !!state && state.n != null;
+  return (
+    <div data-debug-shots style={{ marginTop: SPACE.gap }}>
+      <SectionLabel>{S.debugShotsTitle}</SectionLabel>
+      <label className="catchip" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: TAP, borderRadius: RADIUS.row,
+        border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: TYPE.row, fontWeight: 700,
+        opacity: busy ? 0.6 : 1, pointerEvents: busy ? 'none' : undefined,
+      }}>
+        {busy ? S.debugShotsSending(state.i, state.n) : S.debugShotsButton}
+        <input type="file" accept="image/*" multiple onChange={pick} disabled={busy} style={{ display: 'none' }} />
+      </label>
+      <div role="status" aria-live="polite" style={{ fontSize: TYPE.label, color: state && state.failed ? C.conflictInk : C.muted, marginTop: 6, lineHeight: 1.5 }}>
+        {state && state.n == null
+          ? (state.failed ? S.debugShotsFailed(state.failed) : S.debugShotsSent(state.sent))
+          : S.debugShotsHelp}
+      </div>
+    </div>
+  );
+}
+
+export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose, build = loadBuild() }) {
   const [look, setLook] = useState(() => getDisplay());
   /**
    * S2 — the DEFAULT METHOD (06 §3.10.3). Owned HERE rather than threaded
@@ -293,6 +341,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
               ))}
             </div>
           </div>
+          {supportsAction(build, 'debug_shot') && <DebugShots />}
           {/* Which build this phone runs — the commit it was built from (E-017). */}
           {/* Only the commit is Latin; «النسخة» reads in its own direction (audit 2026-10-10). */}
           <div style={{ marginTop: SPACE.gap, textAlign: 'center', fontSize: TYPE.label, color: C.muted }}>

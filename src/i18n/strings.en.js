@@ -451,6 +451,12 @@ export const EN = {
    */
   sectionAgainst: (prev) => `Against ${prev}`,
   sectionByMethod: 'By method',
+  debugShotsTitle: 'Something looks wrong?',
+  debugShotsButton: 'Send screenshots for debugging',
+  debugShotsHelp: 'They go to the «Debug screenshots» folder on your Drive, and get looked at from there.',
+  debugShotsSending: (i, n) => `Sending ${i} of ${n}…`,
+  debugShotsSent: (n) => (n === 1 ? 'Sent ✓' : `${n} sent ✓`),
+  debugShotsFailed: (n) => `${n} didn't send — check the connection and try again`,
   rollingTitle: 'Weekly average',
   rollingSpan: (days) => `over the last ${days} days`,
   rollingSoon: 'Your weekly average appears after your first full week.',

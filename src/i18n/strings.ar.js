@@ -457,6 +457,12 @@ export const AR = {
    */
   sectionAgainst: (prev) => `مقابل ${prev}`,
   sectionByMethod: 'حسب طريقة الدفع',
+  debugShotsTitle: 'في حاجة غلط؟',
+  debugShotsButton: 'ابعت سكرين شوت للتصليح',
+  debugShotsHelp: 'بتروح على فولدر «Debug screenshots» في الدرايف، وبتتشاف من هناك.',
+  debugShotsSending: (i, n) => `بنبعت ${i} من ${n}…`,
+  debugShotsSent: (n) => (n === 1 ? 'اتبعتت ✓' : `${n} اتبعتوا ✓`),
+  debugShotsFailed: (n) => `${n} متبعتش — اتأكد من النت وجرب تاني`,
   rollingTitle: 'متوسط الأسبوع',
   rollingSpan: (days) => `آخر ${days} يوم`,
   rollingSoon: 'متوسط الأسبوع يظهر بعد أول أسبوع كامل.',

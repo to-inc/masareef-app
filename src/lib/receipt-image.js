@@ -169,6 +169,19 @@ export async function prepareDocument(file) {
   return { base64: bytesToBase64(new Uint8Array(buf)), clientHash: await sha256Hex(buf), mediaType: 'application/pdf' };
 }
 
+/**
+ * A DEBUG SCREENSHOT (2026-10-13) goes as it is when it fits the server's
+ * ceiling — every pixel of the UI kept — and is shrunk the receipt way only
+ * when it does not.
+ */
+export async function prepareScreenshot(file) {
+  if (file && file.size <= PDF_LIMIT && /^image\/(png|jpeg)$/.test(file.type)) {
+    return { base64: bytesToBase64(new Uint8Array(await file.arrayBuffer())), mediaType: file.type };
+  }
+  const r = await prepareReceipt(file);
+  return { base64: r.base64, mediaType: 'image/jpeg' };
+}
+
 export function snapDateISO(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit',

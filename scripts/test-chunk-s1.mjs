@@ -234,6 +234,11 @@ try {
     const h = html('SettingsSheet', SettingsSheet, {
       displayCurrency: 'EGP', onFlipCurrency: noop, onClose: noop,
     });
+    // Debug screenshots (2026-10-13): offered only when the server can save them.
+    const on = html('SettingsSheet', SettingsSheet, { displayCurrency: 'EGP', onFlipCurrency: noop, onClose: noop, build: { actions: ['debug_shot'] } });
+    const off = html('SettingsSheet', SettingsSheet, { displayCurrency: 'EGP', onFlipCurrency: noop, onClose: noop, build: { actions: [] } });
+    ok(/data-debug-shots/.test(on) && /type="file"[^>]*accept="image\/\*"[^>]*multiple/.test(on) && !/data-debug-shots/.test(off),
+      'S1.dbg the «Send screenshots for debugging» picker shows (several at once) only on a server that advertises debug_shot');
     ok(h.includes('class="sheet-in"'),
       'S1.36 the surface arrives as B4\'s one sheet (class="sheet-in")');
     ok(h.includes(`border-radius:${RADIUS.sheet}px`),
