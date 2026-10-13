@@ -252,52 +252,43 @@ export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t
   const busy = state === 'busy';
   const failed = state === 'failed';
   /**
-   * v4 P5 (R19): with entries still on the phone the pill turns SAND and says
-   * how many wait for the network («1 مستني النت») — the same control, a third
-   * state. It still refreshes (and so retries the queue) when tapped.
+   * ALWAYS SMALL (Tarek, 2026-10-13: «keep this block always small because it
+   * blocks off the text on the top left»). Every state is a mark plus at most
+   * the time or a count — never words. The words live in the spoken name:
+   *   read          → green dot · 11:53
+   *   reading       → pulsing dot · 11:53 (the saved copy's age), or ↻ before any copy
+   *   failed        → red dot · 11:53, or ↻
+   *   phone entries → (sand) no-signal mark · 1
+   * It still refreshes (and so retries the queue) when tapped, in every state.
    */
-  if (waiting > 0 && !busy) {
-    return (
-      <button onClick={onPress} aria-label={`${S.waitingNet(waiting)} — ${S.refresh}`}
-        style={{ ...glass('advisory'), borderRadius: RADIUS.capsule, minHeight: TAP, minWidth: TAP, padding: '0 16px',
-          display: 'inline-flex', alignItems: 'center', gap: 8, color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
-          <path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0" /><path d="M3 3l18 18" />
-        </svg>
-        <span style={LATIN}>{S.waitingNet(waiting)}</span>
-      </button>
-    );
-  }
-  /**
-   * v4 P8: while reading, the pill says what is ON the screen — over a saved
-   * copy «آخر تحديث 8:12» (the copy's age), with nothing yet «بنجيب من الشيت…».
-   * The dot is muted while reading: amber is the one save action (ONE-AMBER).
-   */
-  /**
-   * SMALLER (Tarek, 2026-10-13: «the status box could be smaller»): once read,
-   * the pill is the green dot and the time alone — «Updated» moves into its
-   * spoken name, where it still says what the time is.
-   */
-  const fresh = !busy && savedAt && !failed;
-  const words = busy ? (savedAt ? S.lastUpdated : S.fetchingSheet) : (fresh ? null : S.refresh);
+  const offline = waiting > 0 && !busy;
+  const name = offline ? `${S.waitingNet(waiting)} — ${S.refresh}`
+    : busy ? `${savedAt ? `${S.lastUpdated} ${clock(savedAt)}` : S.fetchingSheet} — ${S.refreshing}`
+      : failed ? S.refreshFailed
+        : savedAt ? `${S.synced} ${clock(savedAt)} — ${S.refresh}` : S.refresh;
   return (
     <button
       onClick={onPress}
       disabled={busy}
-      aria-label={busy ? S.refreshing : failed ? S.refreshFailed : fresh ? `${S.synced} ${clock(savedAt)} — ${S.refresh}` : S.refresh}
+      aria-label={name}
       aria-busy={busy ? 'true' : undefined}
       style={{
-        ...glass('chip'), minHeight: TAP, minWidth: TAP, padding: fresh ? '0 14px' : '0 16px',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-        color: C.ink, fontSize: TYPE.label, fontWeight: 600,
+        ...glass(offline ? 'advisory' : 'chip'), borderRadius: RADIUS.capsule, minHeight: TAP, minWidth: TAP, padding: '0 14px',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, whiteSpace: 'nowrap',
+        color: C.ink, fontSize: TYPE.label, fontWeight: offline ? 700 : 600,
       }}
     >
-      <span aria-hidden className={busy ? 'pulse' : undefined}
-        style={{ width: 8, height: 8, borderRadius: RADIUS.capsule, background: busy ? C.muted : failed ? C.conflictInk : C.settledInk }} />
-      {words}
-      {savedAt && !failed && (
-        <span style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>{clock(savedAt)}</span>
+      {offline ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+          <path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0" /><path d="M3 3l18 18" />
+        </svg>
+      ) : (
+        <span aria-hidden className={busy ? 'pulse' : undefined}
+          style={{ width: 8, height: 8, borderRadius: RADIUS.capsule, background: busy ? C.muted : failed ? C.conflictInk : C.settledInk }} />
       )}
+      <span aria-hidden style={{ direction: 'ltr', unicodeBidi: 'isolate', ...LATIN }}>
+        {offline ? waiting : savedAt ? clock(savedAt) : '↻'}
+      </span>
     </button>
   );
 }

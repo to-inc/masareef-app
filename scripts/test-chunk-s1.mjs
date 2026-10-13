@@ -218,6 +218,20 @@ try {
   } catch (err) {
     failures.push(`SettingsSheet THREW while loading — ${err && err.message}`);
   }
+  {
+    // ALWAYS SMALL (Tarek, 2026-10-13): in every state the pill SHOWS a mark and
+    // at most the time or a count — no words to push the screen's title aside.
+    const { RefreshButton } = await vite.ssrLoadModule('/src/components/Primitives.jsx');
+    const shown = (h) => h.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const t = Date.UTC(2026, 9, 13, 9, 53);
+    const states = [
+      { state: 'idle', savedAt: t }, { state: 'busy', savedAt: t }, { state: 'busy', savedAt: null },
+      { state: 'failed', savedAt: t }, { state: 'idle', savedAt: null }, { state: 'idle', savedAt: t, waiting: 2 },
+    ];
+    const texts = states.map((p) => shown(html('RefreshButton', RefreshButton, { onPress() {}, clock: () => '11:53', ...p })));
+    ok(texts.every((x) => /^(11:53|↻|2)$/.test(x)),
+      `S1.pill every state shows only the time, ↻ or a count (got ${JSON.stringify(texts)})`);
+  }
   ok(typeof SettingsSheet === 'function' && typeof SettingsCog === 'function',
     'S1.33 the sheet and its cog are exported for standalone render — a surface a suite cannot render alone is a surface nobody re-verifies');
 
