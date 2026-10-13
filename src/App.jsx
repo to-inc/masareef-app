@@ -46,7 +46,7 @@ import { TabButton, Toast, OfflineBanner, RefreshButton, Sheet, LedgerIcon, Tray
 import { useUpdatePrompt } from './state/update.js';
 import InstallCoach from './components/InstallCoach.jsx';
 import SetupView from './views/SetupView.jsx';
-import InboxView from './views/InboxView.jsx';
+import InboxView, { PhotosShortcut } from './views/InboxView.jsx';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
 import ReceiptView from './views/ReceiptView.jsx';
 import DictateView from './views/DictateView.jsx';
@@ -146,6 +146,8 @@ export default function App() {
    * become a second owner of either.
    */
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // The header's photos shortcut: >0 opens To review with the «Photos» list unfolded.
+  const [photosNonce, setPhotosNonce] = useState(0);
   const [staleQueue, setStaleQueue] = useState([]);
   // v4 P5: rows still on the phone (held for undo, or waiting for the network),
   // and the 6-second «اتحفظ ✓ — رجوع» toast that can still take one back.
@@ -880,6 +882,8 @@ export default function App() {
     setStaleQueue(partition().stale); setPhoneRows(onPhone());
   };
 
+  // Going to the Book folds the shortcut's list again (a receipt opened from it comes back to it open).
+  useEffect(() => { if (tab === 'book') setPhotosNonce(0); }, [tab]);
   if (!booted) return null;
 
   // One name for «the dock is on screen» — the scroll box's clearance, the
@@ -1030,6 +1034,7 @@ export default function App() {
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* R9: a capture screen's header is ← + its name only (G05–G07) — the title needs the room. */}
+          {!needsSetup && !captureMode && <PhotosShortcut jobs={photoJobs} onOpen={() => { setPhotosNonce((n) => n + 1); setTab('inbox'); }} />}
           {!needsSetup && !captureMode && <SettingsCog onOpen={() => setSettingsOpen(true)} />}
           {!needsSetup && !captureMode && <RefreshButton state={reading > 0 ? 'busy' : refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
         </span>
@@ -1072,7 +1077,7 @@ export default function App() {
                 {viewTab === 'inbox' && (
                   <InboxView
                     pending={data.pending} settled={settled}
-                    photos={photoJobs}
+                    photos={photoJobs} photosNonce={photosNonce}
                     onOpenPhoto={(job) => pushDetail(() => { setOpenJobId(job.id); setTab('entry'); setEntryMode('receipt'); })}
                     onConfirm={confirmPending} onConfirmMany={confirmMany}
                     onEdited={refresh}

@@ -10,7 +10,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { readFileSync } from 'node:fs';
-import { inReadingUnit, catsInReadingUnit, homeOffPlot } from '../src/lib/series.js';
+import { inReadingUnit, catsInReadingUnit, homeOffPlot, rollingWeek } from '../src/lib/series.js';
 
 const MARKER = 'CHUNK-HOMESERIES-GREEN';
 let pass = 0;
@@ -101,7 +101,15 @@ ok(/period === 'week' && weekDay != null/.test(book) && /getDay\(\) === weekDay/
   // ——— a BROWSED month in his unit: euro rows at face, pound rows at their stamp, the rest named
   const v2 = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
   try {
-    const { browsedMonthData, MonthScreen } = await v2.ssrLoadModule('/src/views/BookView.jsx');
+    const { browsedMonthData, MonthScreen, RollingWeek } = await v2.ssrLoadModule('/src/views/BookView.jsx');
+    {
+      const f = (len, v, upTo = len) => Array.from({ length: len }, (_, i) => (i < upTo ? v : null));
+      const month = { cur: { Visa: f(31, 0), Cash: f(31, 0) }, prev: { Visa: f(30, 0), Cash: f(30, 0) },
+        homeSeries: { currency: 'EUR', cur: { Visa: f(31, 10, 13), Cash: f(31, 0, 13) }, prev: { Visa: f(30, 10), Cash: f(30, 0) } } };
+      const html = renderToStaticMarkup(createElement(RollingWeek, { month, todayD: 13, displayCurrency: 'EUR' }));
+      ok(/data-rolling-week/.test(html) && />70</.test(html) && /€/.test(html) && /28/.test(html),
+        `HS.rw5 the card reads «Weekly average 70 € · over the last 28 days» from the euro series (got ${html.slice(0, 160)})`);
+    }
     // Audit r2 2026-10-10: the euro Month screen threw (bookHome undefined) and took
     // the whole app down. It must RENDER, with «Where it went» in euros.
     {
@@ -136,6 +144,20 @@ ok(/period === 'week' && weekDay != null/.test(book) && /getDay\(\) === weekDay/
 }
 ok(/const mv = inReadingUnit\(data\.month, displayCurrency, HOME_CURRENCY\);/.test(book) && /cur=\{seriesFor\(mv\.period\.cur, metric\)\}/.test(book),
   'HS.10 the Month screen\'s own stack (line + daily bars) draws in the reading unit too');
+
+// ——— the rolling weekly average («make me a rolling average», 2026-10-13)
+{
+  const n = (len, f) => Array.from({ length: len }, (_, i) => f(i));
+  const m = { cur: { Visa: n(31, (i) => (i < 13 ? 10 : null)), Cash: n(31, (i) => (i < 13 ? 0 : null)) },
+    prev: { Visa: n(30, () => 10), Cash: n(30, () => 0) } };
+  const r = rollingWeek(m, 13);
+  ok(r && r.days === 28 && r.avg === 70, `HS.rw1 10 a day for 28 days (13 this month + 15 of last) averages 70 a week (got ${JSON.stringify(r)})`);
+  const young = { cur: m.cur, prev: { Visa: n(30, () => 0), Cash: n(30, () => 0) } };
+  const y = rollingWeek(young, 13);
+  ok(y && y.days === 13 && y.avg === Math.round((130 / (13 / 7)) * 100) / 100, `HS.rw2 a book that began on the 1st is averaged over its 13 days, not 28 (got ${JSON.stringify(y)})`);
+  ok(/<RollingWeek month=\{data\.month\} todayD=\{today\.d\}/.test(book), 'HS.rw4 the Week screen shows it above «Where it went»');
+  ok(rollingWeek({ cur: { Visa: n(31, () => 0), Cash: n(31, () => 0) }, prev: young.prev }, 13) === null, 'HS.rw3 no money → no average, never «0 a week»');
+}
 
 if (failures.length) {
   console.log(`❌ CHUNK HOMESERIES — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`);

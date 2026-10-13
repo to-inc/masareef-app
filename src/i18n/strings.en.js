@@ -150,7 +150,7 @@ export const EN = {
   receiptAmount: 'Amount',
   receiptMerchant: 'Shop',
   receiptDate: 'Date',
-  receiptDateNeeded: "We couldn't read the date — type the day on the receipt (e.g. 14/9/2026)",
+  receiptDateNeeded: "We couldn't read the date — tap to pick the day on the receipt",
   receiptCategory: 'Category',
   receiptFromLibrary: 'From photos',
   jobQueued: 'In line',
@@ -218,7 +218,6 @@ export const EN = {
   methodEvidence: (card, q) => (card ? `Card — the receipt shows «${q}»` : `Cash — the receipt says «${q}»`),
   methodFromHistory: 'How you usually pay here',
   alsoFiled: (n) => `Filed — and ${n} more from the same place`,
-  dateHint: 'd/M/yyyy', // EditSheet date placeholder (audit 2026-10-10)
   appVersion: 'Version', // the commit renders beside it in LATIN (audit 2026-10-10)
   jobRetry: 'Try again',
   debugLogSend: '⚑ Send debug log',
@@ -452,6 +451,9 @@ export const EN = {
    */
   sectionAgainst: (prev) => `Against ${prev}`,
   sectionByMethod: 'By method',
+  rollingTitle: 'Weekly average',
+  rollingSpan: (days) => `over the last ${days} days`,
+  rollingSoon: 'Your weekly average appears after your first full week.',
   sectionWhereItWent: 'Where it went', // the euro book's bird's-eye view, in place of the method split
   topOther: 'Everything else',
   topEmpty: 'No spending in this period yet',

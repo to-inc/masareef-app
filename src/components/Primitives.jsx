@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { money2 } from '../lib/format.js';
+import { money2, normalizeDigits } from '../lib/format.js';
+import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
 import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG } from '../theme.js';
 import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
@@ -272,16 +273,22 @@ export function RefreshButton({ state, onPress, savedAt = null, clock = (t) => t
    * copy «آخر تحديث 8:12» (the copy's age), with nothing yet «بنجيب من الشيت…».
    * The dot is muted while reading: amber is the one save action (ONE-AMBER).
    */
-  const words = busy ? (savedAt ? S.lastUpdated : S.fetchingSheet) : (savedAt && !failed ? S.synced : S.refresh);
+  /**
+   * SMALLER (Tarek, 2026-10-13: «the status box could be smaller»): once read,
+   * the pill is the green dot and the time alone — «Updated» moves into its
+   * spoken name, where it still says what the time is.
+   */
+  const fresh = !busy && savedAt && !failed;
+  const words = busy ? (savedAt ? S.lastUpdated : S.fetchingSheet) : (fresh ? null : S.refresh);
   return (
     <button
       onClick={onPress}
       disabled={busy}
-      aria-label={busy ? S.refreshing : (failed ? S.refreshFailed : S.refresh)}
+      aria-label={busy ? S.refreshing : failed ? S.refreshFailed : fresh ? `${S.synced} ${clock(savedAt)} — ${S.refresh}` : S.refresh}
       aria-busy={busy ? 'true' : undefined}
       style={{
-        ...glass('chip'), minHeight: TAP, minWidth: TAP, padding: '0 16px',
-        display: 'inline-flex', alignItems: 'center', gap: 8,
+        ...glass('chip'), minHeight: TAP, minWidth: TAP, padding: fresh ? '0 14px' : '0 16px',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         color: C.ink, fontSize: TYPE.label, fontWeight: 600,
       }}
     >
@@ -682,5 +689,25 @@ export function BigAmount({ amount, currency, size = 30 }) {
       {amount}
       {currency ? <span style={{ fontSize: unitSize(size), fontFamily: FONT_UI, color: C.muted, fontWeight: 500 }}> {currency}</span> : null}
     </div>
+  );
+}
+
+/**
+ * THE DATE FIELD IS THE PHONE'S OWN DATE PICKER (Tarek, 2026-10-13: the number
+ * pad has no «/», so «12/10/2026» could not be typed). `<input type="date">`
+ * opens the iOS calendar: nothing to type, no separator, and no day/month
+ * mix-up. The value stays his sheet's d/m/yyyy text on both sides, so nothing
+ * downstream changes. The future is greyed out (`max` = today in Cairo).
+ */
+export function DateField({ value, onChange, style, invalid = false }) {
+  const t = cairoParts();
+  const max = `${t.y}-${String(t.m).padStart(2, '0')}-${String(t.d).padStart(2, '0')}`;
+  return (
+    <input
+      type="date" data-date-field dir="ltr" max={max}
+      value={dmyToIso(normalizeDigits(String(value == null ? '' : value)))}
+      onChange={(e) => onChange(isoToDmy(e.target.value))}
+      style={{ ...style, ...(invalid ? { borderColor: C.conflictInk } : null), minHeight: 52, WebkitAppearance: 'none', appearance: 'none', textAlign: 'start' }}
+    />
   );
 }

@@ -243,3 +243,24 @@ export function catsInReadingUnit(cats, uncategorized, displayCurrency, bookHome
     inHome: true,
   };
 }
+
+/**
+ * THE ROLLING WEEKLY AVERAGE (Tarek, 2026-10-13: «make me a rolling average»).
+ * The last 28 days up to today, from the month's daily series (this month +
+ * last), divided into weeks. The window starts at the first day with money if
+ * that is later, so a book that only began this month is not averaged over
+ * weeks it never had. `period` is a month already through inReadingUnit.
+ * Returns { avg, days } — null with no money; `days < 7` means not a full week yet.
+ * (A longer window would need more than two months of days from the server.)
+ */
+export function rollingWeek(period, todayD) {
+  if (!period || !period.cur || !period.prev || !(todayD > 0)) return null;
+  const cur = comb(period.cur.Visa, period.cur.Cash).slice(0, todayD);
+  const prev = comb(period.prev.Visa, period.prev.Cash);
+  const days = prev.slice(Math.max(0, prev.length - Math.max(0, 28 - cur.length))).concat(cur).slice(-28);
+  const first = days.findIndex((v) => v > 0);
+  if (first < 0) return null;
+  const span = days.length - first;
+  const total = sumTo(days.slice(first));
+  return { avg: Math.round((total / Math.max(1, span / 7)) * 100) / 100, days: span };
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, RADIUS, SPACE, TAP, TYPE } from '../theme.js';
 import { S, monthByTab, unitFor } from '../i18n/strings.js';
-import { Sheet, Chip, LATIN, ISOLATE } from '../components/Primitives.jsx';
+import { Sheet, Chip, LATIN, ISOLATE, DateField } from '../components/Primitives.jsx';
 import { CURRENCIES } from '../state/travel.js';
 import { normalizeDigits, money } from '../lib/format.js';
 import { parseSheetDate } from '../state/recent.js';
@@ -374,13 +374,7 @@ export default function EditSheet({
           />
 
           <div style={FIELD_LABEL}>{S.receiptDate}</div>
-          <input
-            value={draft.date}
-            onChange={(e) => set('date')(e.target.value)}
-            placeholder={S.dateHint}
-            inputMode="numeric"
-            style={{ ...INPUT, ...LATIN, ...NUMERALS }}
-          />
+          <DateField value={draft.date} onChange={set('date')} style={{ ...INPUT, ...LATIN, ...NUMERALS }} />
           {invalid.indexOf('date') !== -1 && refusalLine(S.editBadDate)}
           {/* The one refusal the client can NAME before the wire — the server's
               answer would be a bare bad_edit for a rule he cannot guess. */}

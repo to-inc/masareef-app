@@ -5,7 +5,7 @@ import {
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, money2, moneyRound } from '../lib/format.js';
-import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit, catsInReadingUnit, homeOffPlot } from '../lib/series.js';
+import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit, catsInReadingUnit, homeOffPlot, rollingWeek } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
@@ -577,7 +577,7 @@ export default function BookView({
           displayCurrency={displayCurrency}
           onRange={(r) => setWeekDay(r ? r.a : null)}
           birdsEye={birdsOn && !loadingRows && !loadError
-            ? topCats(tally(weekDay == null ? sorted : sorted.filter((r) => { const d = parseSheetDate(r && r.date); return !!d && new Date(d.y, d.m - 1, d.d).getDay() === weekDay; })), true)
+            ? <><RollingWeek month={data.month} todayD={today.d} displayCurrency={displayCurrency} />{topCats(tally(weekDay == null ? sorted : sorted.filter((r) => { const d = parseSheetDate(r && r.date); return !!d && new Date(d.y, d.m - 1, d.d).getDay() === weekDay; })), true)}</>
             : null}
         />
       )}
@@ -1391,6 +1391,35 @@ function Lookalikes({ rows, sheetUrl, onPick = null, onRemove = null, canKeepOnS
         >
           {S.dupOpenSheet}
         </a>
+      )}
+    </div>
+  );
+}
+
+/**
+ * THE ROLLING WEEKLY AVERAGE, above «Where it went» on the Week screen (Tarek,
+ * 2026-10-13). Read in the same unit as the rest of the screen; says so plainly
+ * until there is a full week to average.
+ */
+export function RollingWeek({ month, todayD, displayCurrency }) {
+  const mv = inReadingUnit(month, displayCurrency, HOME_CURRENCY);
+  const r = rollingWeek(mv.period, todayD);
+  if (!r) return null;
+  return (
+    <div data-rolling-week style={{ ...glass('card'), padding: '12px 16px', marginBottom: SPACE.section }}>
+      {r.days < 7 ? (
+        <div style={{ fontSize: TYPE.label, color: C.muted, lineHeight: 1.5 }}>{S.rollingSoon}</div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+          <span>
+            <span style={{ fontSize: TYPE.row, fontWeight: 650, color: C.ink }}>{S.rollingTitle}</span>
+            <span style={{ display: 'block', fontSize: TYPE.label, color: C.muted }}>{S.rollingSpan(r.days)}</span>
+          </span>
+          <span style={{ whiteSpace: 'nowrap' }}>
+            <b style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, color: C.ink, ...LATIN, ...NUMERALS }}>{moneyRound(r.avg)}</b>
+            <span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{` ${unitFor(mv.unit)}`}</span>
+          </span>
+        </div>
       )}
     </div>
   );

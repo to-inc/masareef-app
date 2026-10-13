@@ -158,7 +158,7 @@ export const AR = {
   receiptAmount: 'المبلغ',
   receiptMerchant: 'المحل',
   receiptDate: 'التاريخ',
-  receiptDateNeeded: 'مقدرناش نقرا التاريخ — اكتب يوم الفاتورة (مثلاً 14/9/2026)',
+  receiptDateNeeded: 'مقدرناش نقرا التاريخ — دوس واختار يوم الفاتورة',
   receiptCategory: 'النوع',
   receiptFromLibrary: 'من الصور',
   // WS4-Q — job stages. Words, never percentages: extraction is one opaque call
@@ -222,7 +222,6 @@ export const AR = {
   methodEvidence: (card, q) => (card ? `فيزا — الإيصال فيه «${q}»` : `كاش — الإيصال فيه «${q}»`),
   methodFromHistory: 'زي ما بتدفع هنا عادةً',
   alsoFiled: (n) => `اتسجّلت — و${n} كمان من نفس المكان`,
-  dateHint: 'يوم/شهر/سنة', // EditSheet date placeholder (audit 2026-10-10)
   appVersion: 'النسخة', // the commit renders beside it in LATIN (audit 2026-10-10)
   jobRetry: 'جرّب تاني',
   debugLogSend: '⚑ ابعت سجل القراية',
@@ -458,6 +457,9 @@ export const AR = {
    */
   sectionAgainst: (prev) => `مقابل ${prev}`,
   sectionByMethod: 'حسب طريقة الدفع',
+  rollingTitle: 'متوسط الأسبوع',
+  rollingSpan: (days) => `آخر ${days} يوم`,
+  rollingSoon: 'متوسط الأسبوع يظهر بعد أول أسبوع كامل.',
   sectionWhereItWent: 'الفلوس راحت فين',
   topOther: 'الباقي',
   topEmpty: 'مفيش مصاريف في الفترة دي لسه',

@@ -14,7 +14,7 @@ import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
 import { debugOn } from '../state/settings.js';
 import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
-import { ISOLATE, SectionLabel, LATIN, Sheet } from '../components/Primitives.jsx';
+import { ISOLATE, SectionLabel, LATIN, Sheet, DateField } from '../components/Primitives.jsx';
 
 /**
  * Two-phase receipt capture (contract §3.3–§3.4).
@@ -636,11 +636,7 @@ export default function ReceiptView({
           <Field label={S.receiptDate} editable={lowDate}>
             {lowDate ? (
               <>
-                <input
-                  value={dateStr} onChange={(e) => setDateStr(e.target.value)} dir="ltr"
-                  placeholder="d/m/2026" inputMode="numeric"
-                  style={noDate ? { ...inputStyle, borderColor: C.conflictInk } : inputStyle}
-                />
+                <DateField value={dateStr} onChange={setDateStr} style={inputStyle} invalid={noDate} />
                 {noDate && (
                   <div style={{ fontSize: TYPE.label, color: C.conflictInk, marginTop: 6 }}>{S.receiptDateNeeded}</div>
                 )}

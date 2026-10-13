@@ -274,7 +274,9 @@ async function sweep(lang, L) {
       }
       ok(base.includes('value="22.9"'), `U1.r6 [${lang}] the amount field holds the row's own figure`);
       ok(base.includes('Allas Sea Pool'), `U1.r7 [${lang}] and the description its words`);
-      ok(base.includes('value="11/8/2026"'), `U1.r8 [${lang}] and the date its day`);
+      // R0 re-cut (2026-10-13): the date is the phone's own picker now, which holds
+      // the day in its ISO form — 11/8/2026 is value="2026-08-11".
+      ok(base.includes('value="2026-08-11"'), `U1.r8 [${lang}] and the date its day`);
       {
         const attrs = buttonAttrs(base, kw(L, 'editSave') || '∅');
         ok(attrs !== null && /disabled/.test(attrs || ''),

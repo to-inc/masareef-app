@@ -38,3 +38,9 @@ export function isoToDmy(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
   return m ? `${Number(m[3])}/${Number(m[2])}/${m[1]}` : '';
 }
+
+/** «26/8/2026» → «2026-08-26», the native date picker's form. Anything else → ''. */
+export function dmyToIso(dmy) {
+  const m = /^\s*(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})\s*$/.exec(String(dmy == null ? '' : dmy));
+  return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
+}

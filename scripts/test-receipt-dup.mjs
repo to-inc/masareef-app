@@ -184,6 +184,11 @@ try {
       'E012.2 once he types the receipt\'s day, the warning goes and Save opens');
     const bogus = card(null, '31/2/2026');
     ok(bogus.includes(S.receiptDateNeeded) && saveOff(bogus), 'E012.3 an impossible date (31/2) is not a date');
+    ok(/type="date"/.test(typed) && /value="2026-09-14"/.test(typed) && !/inputmode="numeric"/i.test(typed),
+      'E012.5 the date is the phone\'s own date picker (no number pad without «/»), showing 14/9/2026 as 2026-09-14');
+    const { dmyToIso, isoToDmy } = await import('../src/lib/dates.js');
+    ok(dmyToIso('4/9/2026') === '2026-09-04' && isoToDmy(dmyToIso('4/9/2026')) === '4/9/2026' && dmyToIso('') === '',
+      'E012.6 the picker round-trips his d/m/yyyy exactly');
     const src = readFileSync(new URL('../src/views/ReceiptView.jsx', import.meta.url), 'utf8');
     ok(!src.split('\n').some((l) => /setDateStr\(/.test(l) && /snapDate/.test(l)),
       'E012.4 the card never pre-fills the camera moment (snapDate) as the purchase date');
