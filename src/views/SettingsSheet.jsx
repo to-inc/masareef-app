@@ -218,11 +218,18 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
             boxShadow: '0 -12px 32px rgba(44, 67, 86, 0.18)',
           }}
         >
-          {/* The title row: what this surface is, and the readable way out. */}
+          {/* The title row: what this surface is, and the readable way out. PINNED
+              (Tarek's debug send 2026-10-13, «Make it sticky»): it stays at the top
+              while the sheet scrolls, so «Close» is always one tap away. It spans the
+              sheet's padding so the rows scroll under a solid band, not around it. */}
           <div
+            data-settings-head
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              gap: SPACE.gap, padding: '10px 0 2px',
+              gap: SPACE.gap, padding: `10px ${SPACE.gutter}px 8px`,
+              position: 'sticky', top: -6, zIndex: 2, background: C.card,
+              marginInline: -SPACE.gutter, marginTop: -6, paddingTop: 16,
+              borderBottom: `1px solid ${C.line}`,
             }}
           >
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.ink }}>

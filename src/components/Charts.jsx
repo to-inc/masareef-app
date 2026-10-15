@@ -632,10 +632,13 @@ export function MetricCards({ metric, setMetric, computed, comparable = true, pr
               {/* No comparison data ≠ a comparison of zero — and a TRUE zero
                   is worded (A4): «كان 0 — الأسبوع اللي فات», never a naked 0
                   the reader must diagnose. Prose, so no LATIN isolate. */}
+              {/* A real zero last period prints nothing (Refactoring UI pass, 2026-10-16 —
+                  the head's rule, here too): «was 0 — Last week» three times over said
+                  nothing three times. No data is still «—». */}
               {prevAt == null
                 ? <span style={LATIN}>—</span>
-                : prevAt === 0 && prevName
-                  ? <span>{S.prevWorded(`${moneyRound(0)} ${unit}`, prevName)}</span>
+                : prevAt === 0
+                  ? null
                   : <span style={LATIN}>{moneyRound(prevAt)} {unit}</span>}
               {comparable && <NeutralDelta now={now} prev={prevAt} />}
             </div>
@@ -1142,8 +1145,18 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
    */
   const plottable = hasShape(cur);
 
+  /**
+   * NOTHING TO DRAW, NO CARD (Refactoring UI pass, Tarek 2026-10-16). A whole
+   * card for «the chart appears after another day» spent a screen's worth of
+   * glass on an absence. Until there is a shape the card is not drawn; the
+   * figures above it still say everything there is to say. (W1's foreign-zero
+   * sentence keeps its card — it states a fact about the money, not a wait.)
+   */
+  const showCard = plottable || homeZeroMisleads;
+
   return (
     <div>
+      {showCard && (
       <div style={{ ...glass('card'), padding: '14px 12px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px 8px', gap: 8 }}>
           <span style={{ fontSize: TYPE.label, fontWeight: 700, color }}>
@@ -1278,6 +1291,7 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
         </div>
         )}
       </div>
+      )}
       {/* Under the CHART it narrowed, never inside By method (2026-10-10). A tapped bar narrows the year — said as a BUTTON that widens it again (Tarek,
           2026-10-10: «where is the yearly data?» — a stray tap had scoped it to October,
           and a grey caption was the only clue). */}
@@ -1399,7 +1413,8 @@ export function TopCategories({ items, unit, onPick = null, picked = null }) {
                   <span style={{ whiteSpace: 'nowrap' }}>
                     <b style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, color: C.ink, ...LATIN, ...NUMERALS }}>{moneyRound(l.amount)}</b>
                     <span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.label) }}>{` ${unit}`}</span>
-                    <span style={{ fontSize: TYPE.label, color: C.muted, marginInlineStart: 8, ...LATIN }}>{share}%</span>
+                    {/* One category is all of it — «100%» says nothing (Refactoring UI pass, 2026-10-16). */}
+                    {lines.length > 1 && <span style={{ fontSize: TYPE.label, color: C.muted, marginInlineStart: 8, ...LATIN }}>{share}%</span>}
                   </span>
                 </span>
                 {/* GEOMETRY EXEMPTION (ruling 4): a 6px share bar, its 3px corner bounded by its height */}

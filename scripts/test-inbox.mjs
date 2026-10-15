@@ -483,9 +483,12 @@ try {
   // SectionLabel, which the duplicate pairs and the Book still use — test it there.
   { const { SectionLabel } = await vite.ssrLoadModule('/src/components/Primitives.jsx');
     const lab = renderToStaticMarkup(createElement(SectionLabel, null, 'x'));
-    ok(lab.includes('background-image:url(&quot;data:image/svg+xml,'), 'the divider is painted as a background image');
+    // R0 re-cut (2026-10-16, Refactoring UI pass, Tarek: «build them all»): headings lead by
+    // weight and ink; the beads left SectionLabel (they stay on the month's log card). The
+    // D15 half survives: nothing decorative is ever TEXT a screen reader would read out.
+    ok(!/background-image/.test(lab), 'the heading carries no painted rule any more');
     ok(!/[·—]{1}\s*—/.test(text(lab)), 'and never as text a screen reader would read out');
-    ok(lab.includes('%233E7CA6'), 'its beads are drawn in harbor, from the palette rather than a literal'); }
+    ok(/font-weight:700/.test(lab), 'it leads by weight (700) instead'); }
 
   // ——— both doors, one handler: the green button and every chip confirm the
   // same way. A second path here is a second place for this bug to come back.

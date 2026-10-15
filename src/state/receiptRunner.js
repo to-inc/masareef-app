@@ -1,6 +1,7 @@
 import * as queue from './receiptQueue.js';
 import { createWorker } from './receiptWorker.js';
 import { receiptExtract } from '../api/index.js';
+import { recordReadTime } from './readTimes.js';
 
 /**
  * THE ONE RECEIPT READER, for the whole app (2026-10-10, Tarek: «we can take
@@ -13,7 +14,7 @@ let worker = null;
 const listeners = new Set();
 
 export function runner() {
-  if (!worker) worker = createWorker({ queue, extract: receiptExtract, onChange: () => listeners.forEach((fn) => fn()) });
+  if (!worker) worker = createWorker({ queue, extract: receiptExtract, onRead: (ms) => recordReadTime(ms), onChange: () => listeners.forEach((fn) => fn()) });
   return worker;
 }
 

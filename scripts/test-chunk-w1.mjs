@@ -184,8 +184,12 @@ async function sweep(lang, L) {
     ok(!!words && text(daySlot).includes(words)
       && !text(daySlot).includes(L.periodJustStarted(L.thisWeek)),
       `W1.13b [${lang}] on a one-slot foreign-led zero week the TRUE sentence outranks the just-started promise`);
-    ok(text(pb(dadWeek(oneSlot))).includes(L.periodJustStarted(L.thisWeek)),
-      `W1.13c [${lang}] while under an EGP lead the one-slot week keeps M7's own sentence — the just-started case is untouched where the rule does not fire`);
+    // R0 re-cut (2026-10-16, Refactoring UI pass): a one-slot week under an EGP lead
+    // draws NO chart card at all — the «appears after another day» card was glass spent on
+    // an absence. W1's foreign-zero sentence (above) still keeps its card.
+    { const dad = pb(dadWeek(oneSlot));
+      ok(!text(dad).includes(L.periodJustStarted(L.thisWeek)) && !/<svg/.test(dad),
+        `W1.13c [${lang}] while under an EGP lead the one-slot week draws no chart card — no promise, no empty frame`); }
 
     /**
      * ——— ANY EGP money returns the chart EXACTLY as it is today (both

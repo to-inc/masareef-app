@@ -17,7 +17,7 @@
  */
 import { nextJob, resultStage } from './receiptStages.js';
 
-export function createWorker({ queue, extract, onChange }) {
+export function createWorker({ queue, extract, onChange, onRead }) {
   let running = false;
   let processed = 0;
   /** id → the controller aborting THAT job's extraction, while it is in flight. */
@@ -38,7 +38,9 @@ export function createWorker({ queue, extract, onChange }) {
         const job = nextJob(jobs);
         if (!job) break;
 
-        await queue.update(job.id, { stage: 'reading', error: null });
+        // `readingAt` lets the progress bar start where the read did, on any screen.
+        const readingAt = Date.now();
+        await queue.update(job.id, { stage: 'reading', error: null, readingAt });
         onChange?.();
 
         let res = null;
@@ -77,6 +79,8 @@ export function createWorker({ queue, extract, onChange }) {
         }
 
         const outcome = resultStage(res, threw);
+        // A finished read (any answer, not a failure to reach the server) teaches the estimate.
+        if (!threw) onRead?.(Date.now() - readingAt);
         await queue.update(job.id, {
           stage: outcome.stage,
           error: outcome.error,

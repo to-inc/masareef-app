@@ -27,6 +27,14 @@ import LogCard from '../components/LogCard.jsx';
 import EditSheet from './EditSheet.jsx';
 
 /**
+ * THE UNIT HOLDS A FIXED SLOT in a list row (Refactoring UI pass, 2026-10-16):
+ * the digits are already equal-width, but «€» and «E£» are not, so a column of
+ * amounts ended at different places. A slot as wide as the widest mark (ج.م)
+ * lines every figure's last digit up, row under row.
+ */
+const ROW_UNIT = { display: 'inline-block', minWidth: '2.2em', paddingInlineStart: 4, textAlign: 'start' };
+
+/**
  * «الدفتر» — THE BOOK. One list at four zooms (finding M1).
  *
  * ——— WHAT THIS REPLACED, and why it was two screens.
@@ -2063,10 +2071,13 @@ export function PeriodBlock({
             )}
           </div>
           )
-        ) : policySuppressed ? null : (
+        ) : policySuppressed ? null : (compareInHome ? homeShown : shown) && (compareInHome ? homeShown : shown).prevAt === 0 ? null : (
+          /* A REAL zero last period says nothing worth a line under the figure
+             («was 0 € — Last week»), so it is not printed (Refactoring UI pass,
+             Tarek 2026-10-16; this replaces audit r2's worded zero). «No data»
+             still says so — that one is a fact about the book. */
           <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
-            {/* A REAL zero last period is a fact, not «no data» (audit r2) — the cards' own wording. */}
-            {(compareInHome ? homeShown : shown) && (compareInHome ? homeShown : shown).prevAt === 0 ? S.prevWorded(`${moneyRound(0)} ${unitFor(lead.currency)}`, names.prev) : S.noComparison(names.prev)}
+            {S.noComparison(names.prev)}
           </div>
         )}
       </div>
@@ -2311,7 +2322,7 @@ function RowList({
           </span>
           <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.row, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
             {money2(r.amount)}
-            <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {unitFor(r.currency)}</span>
+            <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted, ...ROW_UNIT }}>{unitFor(r.currency)}</span>
           </span>
         </div>
       ))}
@@ -2421,7 +2432,7 @@ function RowList({
                     (unitSize) governs it, and it is non-serif (A4). */}
                 {/* EVERY amount with its unit (v4 hard requirement) — «ج.م» too, not only foreign. */}
                 {row.amount != null
-                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted }}> {unitFor(row.currency || HOME_CURRENCY)}</span> : null}
+                  ? <span style={{ fontSize: unitSize(TYPE.row), fontFamily: FONT_UI, fontWeight: 500, color: C.muted, ...ROW_UNIT }}>{unitFor(row.currency || HOME_CURRENCY)}</span> : null}
               </span>
             </button>
 

@@ -133,6 +133,7 @@ export const EN = {
   // vertical space (M1).
   receiptShort: '📷 Receipt',
   receiptIntro: 'Photograph the receipt and we read the amount. Nothing is logged until you agree.',
+  readUsually: (s) => `Usually about ${s} seconds`,
   receiptReading: 'Reading the receipt…',
   photosTitle: 'Photos',
   photosEmpty: 'Nothing being processed',
@@ -496,7 +497,6 @@ export const EN = {
    * is. Takes the amount ALREADY FORMATTED (money/moneyRound — this template
    * never invents digits) and the localized period name the header names.
    */
-  prevWorded: (amount, prevName) => `was ${amount} — ${prevName}`,
   todayEmptyTitle: 'Nothing logged today yet',
   todayEmptyBody: 'Confirm from the Inbox, or add a new expense.',
 

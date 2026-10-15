@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { C, FONT_DISPLAY, FONT_UI, NUMERALS, RADIUS, TAP, TYPE, glass, unitSize, SHEET } from '../theme.js';
+import { C, FONT_DISPLAY, FONT_UI, NUMERALS, RADIUS, TAP, TYPE, glass, unitSize, SHEET, GLASS_DIVIDER } from '../theme.js';
 import { S, DIR, unitFor } from '../i18n/strings.js';
 import { money, money2, ABSENT } from '../lib/format.js';
 
@@ -9,7 +9,8 @@ const withUnit = (amount, currency) => {
   const base = money(amount);
   return base === ABSENT ? ABSENT : `${base} ${unitFor(currency || 'EGP')}`;
 };
-import { SectionLabel, Chip, LATIN, ISOLATE } from '../components/Primitives.jsx';
+import { SectionLabel, Chip, LATIN, ISOLATE, ReadProgress } from '../components/Primitives.jsx';
+import { expectedReadMs } from '../state/readTimes.js';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, reconcile, remaining, needsHim, headlineFor } from '../state/inboxOutcomes.js';
 import { findLookalikes } from '../state/duplicates.js';
@@ -647,10 +648,13 @@ export { cardKey };
  * a small count while photos are being read or waiting for him.
  */
 export function PhotosShortcut({ jobs = [], onOpen, active = false }) {
-  const n = jobs.filter((j) => j && j.stage !== 'dismissed')
-    .map((j) => effectiveStage(j)).filter((st) => st === 'queued' || st === 'reading' || st === 'ready').length;
+  const st = jobs.filter((j) => j && j.stage !== 'dismissed').map((j) => effectiveStage(j));
+  const n = st.filter((x) => x === 'queued' || x === 'reading' || x === 'ready').length;
+  // While a photo is being read the button says so by itself — a turning ring
+  // (Refactoring UI pass, 2026-10-16: an icon alone has to carry its state).
+  const reading = st.some((x) => x === 'queued' || x === 'reading');
   return (
-    <button data-photos-shortcut onClick={onOpen} aria-pressed={active} aria-label={n ? `${S.photosTitle} · ${n}` : S.photosTitle}
+    <button data-photos-shortcut onClick={onOpen} aria-pressed={active} aria-label={n ? `${S.photosTitle} · ${n}` : S.photosTitle} aria-busy={reading ? 'true' : undefined}
       style={{ ...glass('chip'), position: 'relative', minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: C.ink,
         // ON reads as a switch that is on: harbor fill, white mark (the Cash/Card chooser's grammar).
@@ -661,6 +665,12 @@ export function PhotosShortcut({ jobs = [], onOpen, active = false }) {
         <circle cx="8" cy="11.5" r="1.4" />
         <path d="M3.5 18.5l4-4 3 3 2-2 4 4" />
       </svg>
+      {reading && (
+        <svg data-photos-reading className="spin" aria-hidden="true" focusable="false" viewBox="0 0 52 52"
+          style={{ position: 'absolute', inset: -2, width: 'calc(100% + 4px)', height: 'calc(100% + 4px)', pointerEvents: 'none' }}>
+          <circle cx="26" cy="26" r="24" fill="none" stroke={active ? C.onDark : C.harbor} strokeWidth="2.5" strokeLinecap="round" strokeDasharray="38 113" />
+        </svg>
+      )}
       {n > 0 && (
         <span aria-hidden style={{ position: 'absolute', top: 0, insetInlineEnd: 0, minWidth: 20, height: 20, padding: '0 5px',
           borderRadius: RADIUS.capsule, background: active ? C.onDark : C.harbor, color: active ? C.harbor : C.onDark, fontSize: TYPE.caption, fontWeight: 800, lineHeight: '20px', textAlign: 'center', ...LATIN }}>{n}</span>
@@ -680,9 +690,12 @@ export function PhotosBar({ jobs = [], onOpen = null, initialOpen = false, open:
   const busy = stages.filter((st) => st === 'queued' || st === 'reading').length;
   const ready = stages.filter((st) => st === 'ready').length;
   return (
-    <div data-photos-bar style={{ marginBottom: 14 }}>
+    /* ONE card, not a card with a second card under it (Refactoring UI pass,
+       2026-10-16): the list unfolds inside the same glass as its header,
+       separated by a hairline. */
+    <div data-photos-bar style={{ ...glass('card'), borderRadius: RADIUS.glassWell, marginBottom: 14, overflow: 'hidden' }}>
       <button className="catchip" onClick={() => setOpen(!open)} aria-expanded={open}
-        style={{ ...glass('card'), borderRadius: RADIUS.glassWell, width: '100%', minHeight: 56, padding: '8px 16px',
+        style={{ background: 'transparent', width: '100%', minHeight: 56, padding: '8px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, color: C.ink, textAlign: 'start' }}>
         <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{ fontSize: TYPE.label, fontWeight: 700 }}>{busy ? S.photosBusyTitle(busy) : S.photosTitle}</span>
@@ -691,7 +704,7 @@ export function PhotosBar({ jobs = [], onOpen = null, initialOpen = false, open:
         <span aria-hidden style={{ fontSize: TYPE.row, fontWeight: 700, color: C.muted }}>{open ? '⌄' : DIR === 'rtl' ? '‹' : '›'}</span>
       </button>
       {open && (
-        <div style={{ ...glass('card'), marginTop: 8, padding: '4px 12px' }}>
+        <div data-photos-list style={{ borderTop: GLASS_DIVIDER, padding: '4px 16px' }}>
           {list.length ? list.map((j, i) => <PhotoRow key={j.id} job={j} stage={stages[i]} onOpen={onOpen} />)
             : <div style={{ fontSize: TYPE.label, color: C.muted, padding: '12px 0', lineHeight: 1.5 }}>{S.photosEmptyHow}</div>}
         </div>
@@ -723,6 +736,11 @@ function PhotoRow({ job, stage, onOpen }) {
       <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
         <span style={{ fontSize: TYPE.label, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...ISOLATE }} dir="auto">{name}</span>
         <span style={{ fontSize: TYPE.label, color: stage === 'ready' ? C.harborInk : C.muted, fontWeight: stage === 'ready' ? 700 : 500 }}>{jobLabel(job, stage)}</span>
+        {stage === 'reading' && (
+          <span style={{ display: 'block', marginTop: 6 }}>
+            <ReadProgress thin startedAt={job.readingAt || job.queuedAt} expectedMs={expectedReadMs()} label={jobLabel(job, stage)} />
+          </span>
+        )}
       </span>
       {onOpen && <span aria-hidden style={{ color: C.muted }}>{DIR === 'rtl' ? '‹' : '›'}</span>}
     </button>

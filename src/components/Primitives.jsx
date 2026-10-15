@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { money2, normalizeDigits } from '../lib/format.js';
 import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
-import { C, METHOD, DIVIDER, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG } from '../theme.js';
+import { C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG } from '../theme.js';
 import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
+import { readProgress } from '../state/readTimes.js';
 
 /**
  * Category names, merchant names and amounts are Latin text living inside an RTL
@@ -354,8 +355,11 @@ export function SectionLabel({ children }) {
     <div style={{
       // TYPE.label (A4b) — a muted section heading is PROSE he reads to find
       // his way; 14 was one drifted pixel under the senior prose floor.
-      fontSize: TYPE.label, fontWeight: 600, color: C.muted, margin: '2px 2px 12px',
-      letterSpacing: '.01em', ...DIVIDER,
+      // REFACTORING UI pass (Tarek, 2026-10-16): a heading leads by weight and ink,
+      // not by a line — the dashed harbor beads under it read as «tap me». Darker
+      // and bolder, no rule; the beads stay where they divide (the month's log card).
+      fontSize: TYPE.label, fontWeight: 700, color: C.ink, margin: '2px 2px 10px',
+      letterSpacing: '.01em',
     }}>
       {children}
     </div>
@@ -700,5 +704,32 @@ export function DateField({ value, onChange, style, invalid = false }) {
       onChange={(e) => onChange(isoToDmy(e.target.value))}
       style={{ ...style, ...(invalid ? { borderColor: C.conflictInk } : null), minHeight: 52, WebkitAppearance: 'none', appearance: 'none', textAlign: 'start' }}
     />
+  );
+}
+
+/**
+ * THE READING BAR (Tarek's debug send 2026-10-14: «We need a progress bar»).
+ * An estimate, said as one: it fills toward the usual read time on this phone
+ * (state/readTimes.js) and never reaches the end on its own — the answer
+ * arriving is what replaces it. Reduced motion still gets the fill, without the
+ * glide.
+ */
+export function ReadProgress({ startedAt, expectedMs, label = null, thin = false }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, []);
+  const p = readProgress(now - (startedAt || now), expectedMs);
+  const pct = Math.round(p * 100);
+  return (
+    <span style={{ display: 'block', width: '100%' }}>
+      <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={label || undefined}
+        data-read-progress
+        style={{ display: 'block', height: thin ? 4 : 8, borderRadius: RADIUS.capsule, background: 'rgba(44, 67, 86, 0.10)', overflow: 'hidden' }}>
+        <span className="read-bar" style={{ display: 'block', height: '100%', width: `${Math.max(3, pct)}%`, borderRadius: RADIUS.capsule, background: C.harbor,
+          transition: 'width 250ms linear' }} />
+      </span>
+    </span>
   );
 }

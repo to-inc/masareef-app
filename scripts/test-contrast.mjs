@@ -121,8 +121,8 @@ function decorative(where, fg, bg, carriedBy) {
 for (const [name, bg] of [['shell', C.shell], ['card', C.card], ['mist', C.mist]]) {
   check(`body ink on ${name}`, C.ink, bg, 17);
 }
-canonical('secondary (muted) on shell', C.muted, C.shell, 13, false, 'muted → #5C6871 (5.35 / 5.72 / 4.62 on shell / card / mist)');
-canonical('secondary (muted) on card', C.muted, C.card, 13, false, 'muted → #5C6871');
+canonical('secondary (muted) on shell', C.muted, C.shell, 13, false, 'muted → #556068 (2026-10-16; was #5C6871)');
+canonical('secondary (muted) on card', C.muted, C.card, 13, false, 'muted → #556068 (2026-10-16; was #5C6871)');
 /**
  * The period strip's inactive label is `ink`, not `muted`, and it stays that way.
  *

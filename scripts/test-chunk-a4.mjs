@@ -93,15 +93,10 @@ const styleOfContent = (html, content) => {
 
 // ═══ 2. i18n — the worded prev, BOTH locales (this leaf's own half) ═══
 {
+  // R0 re-cut (2026-10-16, Refactoring UI pass): a real zero last period prints NOTHING
+  // under the figure — «was 0 — Last week» said nothing. The worded template is retired.
   for (const [name, L] of [['ar', AR], ['en', EN]]) {
-    const fn = L.prevWorded;
-    ok(typeof fn === 'function' && fn.length === 2,
-      `A4.4 ${name}.prevWorded exists as an (amount, prevName) template — the naked «0» has words to become`);
-    if (typeof fn !== 'function') continue;
-    const out = fn('0', name === 'ar' ? 'يوليو' : 'July');
-    ok(typeof out === 'string' && out.includes('0') && out.length > 3
-      && out.includes(name === 'ar' ? 'يوليو' : 'July'),
-      `A4.5 ${name}.prevWorded('0', …) is «0 last month» IN WORDS — figure and period both present, got ${JSON.stringify(out)}`);
+    ok(!('prevWorded' in L), `A4.4 ${name}.prevWorded is retired — a zero last period is not printed`);
   }
 }
 
@@ -197,10 +192,10 @@ try {
      * this card sits under a hero that may be in another currency entirely.
      * Both laws hold at once, so the pin states both.
      */
-    const worded = typeof AR.prevWorded === 'function'
-      ? AR.prevWorded(`${moneyRound(0)} ${AR.currencyShort}`, AR.lastWeek) : null;
-    ok(!!worded && text(html).includes(worded),
-      `A4.16 [cross-file Charts.jsx] a method card’s «0» prev is WORDED — expected ${JSON.stringify(worded)} in the card`);
+    // R0 re-cut (2026-10-16): the card's zero prev prints nothing — no naked 0 and no
+    // worded one either (the A4 worry, a 0 he must diagnose, is answered by absence).
+    ok(!/كان\s*0/.test(text(html)) && /كاش\s*0/.test(text(html)),
+      'A4.16 [cross-file Charts.jsx] a method card’s «0» prev prints nothing — not a naked 0, not «كان 0»');
   }
 
   // ═══ [cross-file] BigAmount’s unit — non-serif, floored (Primitives leaf) ═══

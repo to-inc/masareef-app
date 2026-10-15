@@ -130,6 +130,8 @@ textarea {
 .pulse { animation: pulse calc(var(--dur-draw) * 2) var(--ease-settle) infinite; }
 
 @media (prefers-reduced-motion: reduce) {
+  /* The reading bar still fills, without the glide. */
+  .read-bar { transition: none !important; }
   .pulse,
   .card-in,
   .view-in,

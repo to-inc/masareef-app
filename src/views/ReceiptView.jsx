@@ -14,7 +14,8 @@ import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
 import { debugOn } from '../state/settings.js';
 import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
-import { ISOLATE, SectionLabel, LATIN, Sheet, DateField } from '../components/Primitives.jsx';
+import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress } from '../components/Primitives.jsx';
+import { expectedReadMs } from '../state/readTimes.js';
 
 /**
  * Two-phase receipt capture (contract §3.3–§3.4).
@@ -63,6 +64,8 @@ export default function ReceiptView({
 }) {
   const [stage, setStage] = useState(initialReview ? 'review' : 'idle');
   const [slow, setSlow] = useState(false);
+  // When the «Reading…» screen began — the bar's start until the worker stamps `readingAt`.
+  const workingSince = useRef(Date.now());
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingCount, setPendingCount] = useState(0);
   const [jobs, setJobs] = useState([]);
@@ -197,6 +200,7 @@ export default function ReceiptView({
     if (!file) return;
 
     setStage('working');
+    workingSince.current = Date.now();
     setSlow(false);
     clearTimeout(slowTimer.current);
     // Escape hatch at 20 s, well inside the 45 s transport timeout — he should
@@ -413,6 +417,13 @@ export default function ReceiptView({
         <div style={{ fontSize: GLYPH.illustration }}>🧾</div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.receiptReading}
+        </div>
+        {/* «We need a progress bar» (debug send 2026-10-14): from the moment he chose the
+            photo (preparing and waiting count — that is the wait he feels), toward the
+            usual time. Never measured from a later start, so it never runs backwards. */}
+        <div style={{ width: 240, maxWidth: '80%', marginTop: 16 }}>
+          <ReadProgress startedAt={workingSince.current} expectedMs={expectedReadMs()} label={S.receiptReading} />
+          <div style={{ color: C.muted, fontSize: TYPE.label, marginTop: 8 }}>{S.readUsually(Math.max(1, Math.round(expectedReadMs() / 1000)))}</div>
         </div>
         {slow && (
           <>
@@ -764,7 +775,11 @@ export default function ReceiptView({
           </button>
         )}
 
-        <button className="catchip" onClick={reset} style={{ ...ghostBtn, width: '100%', marginTop: 8 }}>
+        {/* ONE strong button per screen (Refactoring UI pass, 2026-10-16): «Log it» is the
+            action; «Cancel» is the way out, so it is a quiet text button — the same 48pt
+            target, without a second slab of glass competing with the blue. */}
+        <button data-receipt-cancel className="catchip" onClick={reset}
+          style={{ width: '100%', marginTop: 4, minHeight: TAP, background: 'transparent', color: C.harborInk, fontSize: TYPE.body, fontWeight: 600 }}>
           {S.receiptCancel}
         </button>
       </div>

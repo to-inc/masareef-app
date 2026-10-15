@@ -120,7 +120,7 @@ try {
     amount: '', setAmount: noop, desc: '', setDesc: noop, cat: null, setCat: noop, method: 'Cash', setMethod: noop, ...p,
   }));
   const blank = sheet({});
-  ok(/data-amount="true"[^>]*color:#5C6871[^>]*>0</.test(blank) && blank.includes(`aria-label="${AR.entryNeedAmount}"`),
+  ok(/data-amount="true"[^>]*color:#556068[^>]*>0</.test(blank) && blank.includes(`aria-label="${AR.entryNeedAmount}"`),
     'A9.7a an empty amount reads as a muted «0» on the sheet — the missing step is visible without words');
   ok(!blank.includes('✓'), 'A9.7b and no category wears ✓ until one is chosen');
   ok(sheet({ cat: 'Eating out' }).includes('✓ '), 'A9.7c …and the chosen one does');

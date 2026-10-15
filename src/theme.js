@@ -45,7 +45,7 @@ export const C = {
 
   // ——— canonical: ink
   ink: '#2C4356',       // body text
-  muted: '#5C6871',     // secondary text — see the contrast table for its floor
+  muted: '#556068',     // secondary text — darkened from #5C6871 (2026-10-16) so it clears 4.5:1 on chip glass over dawn; see the contrast table
 
   // ——— canonical: primary
   harbor: '#3E7CA6',    // active tabs, primary buttons, chart stroke, suggested category
