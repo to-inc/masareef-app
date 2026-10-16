@@ -155,6 +155,7 @@ export const AR = {
   receiptCancel: 'إلغاء',
 
   receiptCheck: 'راجع وأكّد',
+  receiptPending: 'لسه معلّقة في البنك — سجّلها لو الدفع تم.',
   receiptSaw: 'شفنا:',           // precedes raw_total_line, verbatim from the receipt
   receiptAmount: 'المبلغ',
   receiptMerchant: 'المحل',

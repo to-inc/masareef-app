@@ -17,7 +17,7 @@
  */
 import { nextJob, resultStage } from './receiptStages.js';
 
-export function createWorker({ queue, extract, onChange, onRead }) {
+export function createWorker({ queue, extract, onChange, onRead, onOutcome }) {
   let running = false;
   let processed = 0;
   /** id → the controller aborting THAT job's extraction, while it is in flight. */
@@ -81,6 +81,8 @@ export function createWorker({ queue, extract, onChange, onRead }) {
         const outcome = resultStage(res, threw);
         // A finished read (any answer, not a failure to reach the server) teaches the estimate.
         if (!threw) onRead?.(Date.now() - readingAt);
+        // The outcome, for anyone who files what went wrong (state/autoDebug.js). Never awaited.
+        try { onOutcome?.(job, outcome, res); } catch { /* a reporter never stops the queue */ }
         await queue.update(job.id, {
           stage: outcome.stage,
           error: outcome.error,

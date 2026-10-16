@@ -623,6 +623,15 @@ export default function ReceiptView({
             )}
           </Field>
 
+          {/* A PENDING card payment is read, not refused (2026-10-16, his Revolut «Smartum
+              · Pending»): the money is held and almost always settles. Said once, plainly,
+              so logging it is his informed choice. */}
+          {extraction.is_pending && (
+            <div data-pending-note style={{ fontSize: TYPE.label, color: C.ink, marginTop: 8, padding: '8px 12px', borderRadius: RADIUS.inset, ...glass('advisory') }}>
+              {S.receiptPending}
+            </div>
+          )}
+
           {/* The verbatim line the number came from — he can check our reading
               against the paper in his hand without trusting us. */}
           {extraction.raw_total_line && (

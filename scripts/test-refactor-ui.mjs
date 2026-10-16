@@ -99,6 +99,23 @@ try {
     const rv = src('src/views/ReceiptView.jsx'); const inbox = src('src/views/InboxView.jsx');
     ok(/role="progressbar"/.test(bar) && /aria-valuenow="\d+"/.test(bar) && /<ReadProgress startedAt=\{workingSince\.current\}/.test(rv) && /stage === 'reading' && \(/.test(inbox),
       'D2c', 'the bar is on «Reading the receipt…» and under a reading photo in the list'); }
+  // ——— AUTO: a refused or unreadable photo files itself into «Debug screenshots» (2026-10-16)
+  { const { shouldFile, fileFailedRead } = await vite.ssrLoadModule('/src/state/autoDebug.js');
+    ok(shouldFile({ stage: 'notReceipt' }) && shouldFile({ stage: 'failed', error: 'bad_extraction' })
+      && !shouldFile({ stage: 'failed', error: 'offline' }) && !shouldFile({ stage: 'ready' }),
+      'AUTO.1', 'refusals and broken reads are filed; offline retries and good reads are not');
+    const mem = new Map(); const store = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+    const sent = [];
+    const opts = { store, build: { actions: ['debug_shot', 'debug_note'] },
+      note: async (b) => { sent.push(['note', b.note, b.batch]); return { ok: true }; },
+      shot: async (b) => { sent.push(['shot', b.batch, b.index]); return { ok: true }; } };
+    const job = { clientHash: 'abc123def456', base64: 'QUJD', mediaType: 'image/jpeg' };
+    const res = { ok: true, extraction: { doc_type: 'not_expense', not_expense_reason: 'pending_or_declined', merchant_display: 'Smartum' } };
+    const first = await fileFailedRead(job, { stage: 'notReceipt' }, res, opts);
+    const again = await fileFailedRead(job, { stage: 'notReceipt' }, res, opts);
+    const off = await fileFailedRead({ ...job, clientHash: 'zzz' }, { stage: 'notReceipt' }, res, { ...opts, build: { actions: [] } });
+    ok(first && !again && !off && sent.length === 2 && /pending_or_declined/.test(sent[0][1]) && /Smartum/.test(sent[0][1]) && sent[1][1] === sent[0][2],
+      'AUTO.2', `filed once (note + photo in one batch), never twice, never on a server without the verbs (${JSON.stringify(sent)})`); }
 } finally {
   await vite.close();
 }

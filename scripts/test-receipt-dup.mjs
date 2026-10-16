@@ -186,6 +186,12 @@ try {
     ok(bogus.includes(S.receiptDateNeeded) && saveOff(bogus), 'E012.3 an impossible date (31/2) is not a date');
     ok(/type="date"/.test(typed) && /value="2026-09-14"/.test(typed) && !/inputmode="numeric"/i.test(typed),
       'E012.5 the date is the phone\'s own date picker (no number pad without «/»), showing 14/9/2026 as 2026-09-14');
+    // A pending card payment is read with one plain line (2026-10-16, Revolut «Smartum · Pending»).
+    { const pendingCard = renderToStaticMarkup(createElement(ReceiptView, {
+        onSaved() {}, onManual() {}, onBatch() {},
+        initialReview: { extraction: { ...ex('2026-10-14'), is_pending: true }, dateStr: '14/10/2026', category: 'Eating out' } }));
+      ok(/data-pending-note/.test(pendingCard) && !/data-pending-note/.test(typed) && !saveOff(pendingCard),
+        'E012.7 a PENDING payment reads as a normal card with a «still pending» line — and Log it stays open'); }
     const { dmyToIso, isoToDmy } = await import('../src/lib/dates.js');
     ok(dmyToIso('4/9/2026') === '2026-09-04' && isoToDmy(dmyToIso('4/9/2026')) === '4/9/2026' && dmyToIso('') === '',
       'E012.6 the picker round-trips his d/m/yyyy exactly');

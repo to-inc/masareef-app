@@ -147,6 +147,7 @@ export const EN = {
   receiptCancel: 'Cancel',
 
   receiptCheck: 'Check and confirm',
+  receiptPending: 'Still pending at the bank — log it if the payment went through.',
   receiptSaw: 'We read:',
   receiptAmount: 'Amount',
   receiptMerchant: 'Shop',
