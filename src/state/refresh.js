@@ -76,3 +76,13 @@ export function createRefresher(run) {
     },
   };
 }
+
+/**
+ * WHAT A REFRESH READS (audit 2026-10-18, a bug: on the Book's Today and Year the
+ * button re-read nothing — the Book's row loader returns at once for periods with
+ * no row list, and the summary those screens show was never asked for). On the
+ * Book it now reads the summary AND the rows; elsewhere the summary.
+ */
+export const refreshFor = (onBook, rows, summary) => () => (onBook && rows
+  ? Promise.all([summary(), rows()]).then(([a, b]) => a !== false && b !== false)
+  : summary());

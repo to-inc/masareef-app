@@ -20,10 +20,19 @@ const SENT = 'masareef.usageSent.v1';
 const CAP = 3000;
 const DAY_MS = 20 * 3600 * 1000;
 
-let memory = [];          // used when storage is refused
+/**
+ * The diary lives IN MEMORY and is written to storage at most every 2 s and when
+ * the app is hidden (audit 2026-10-18: rewriting up to 3,000 events inside every
+ * tap handler was the app's heaviest per-tap cost).
+ */
 const store = () => { try { return globalThis.localStorage || null; } catch { return null; } };
-const load = () => { const s = store(); if (!s) return memory; try { return JSON.parse(s.getItem(KEY) || '[]'); } catch { return []; } };
-const save = (list) => { const s = store(); if (!s) { memory = list; return; } try { s.setItem(KEY, JSON.stringify(list.slice(-CAP))); } catch { memory = list; } };
+let cache = null;
+let timer = null;
+const read = () => { const s = store(); if (!s) return []; try { return JSON.parse(s.getItem(KEY) || '[]'); } catch { return []; } };
+const load = () => { if (!cache) cache = read(); return cache; };
+const persist = () => { clearTimeout(timer); timer = null; const s = store(); if (!s || !cache) return; try { s.setItem(KEY, JSON.stringify(cache.slice(-CAP))); } catch { /* kept in memory */ } };
+const save = (list) => { cache = list.slice(-CAP); if (!timer) timer = setTimeout(persist, 2000); };
+export const flushToStorage = persist;
 
 let screen = '';
 export const currentScreen = () => screen;
@@ -98,6 +107,8 @@ export function installUsage() {
   document.addEventListener('click', onTap, { capture: true, passive: true });
   window.addEventListener('error', (e) => track('error', { msg: String(e.message || '').slice(0, 80) }));
   window.addEventListener('unhandledrejection', (e) => track('error', { msg: `promise: ${String((e.reason && e.reason.message) || e.reason || '').slice(0, 70)}` }));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
+  window.addEventListener('pagehide', persist);
   track('open', { standalone: !!(window.navigator && window.navigator.standalone) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) });
 }
 
@@ -114,19 +125,29 @@ export function device() {
  * Send the diary once a day when the server can keep it. What was sent leaves
  * the phone's copy; anything recorded meanwhile stays for tomorrow.
  */
-export async function flushUsage(build, { now = Date.now(), send = usageLog } = {}) {
+let sending = null;   // one send at a time (audit 2026-10-18: a second, overlapping send deleted newer events)
+export function flushUsage(build, opts = {}) {
+  if (sending) return sending;
+  sending = flushOnce(build, opts).finally(() => { sending = null; });
+  return sending;
+}
+async function flushOnce(build, { now = Date.now(), send = usageLog } = {}) {
   if (!supportsAction(build, 'usage_log')) return false;
   const s = store();
   let last = 0; try { last = Number(s && s.getItem(SENT)) || 0; } catch { last = 0; }
   if (now - last < DAY_MS) return false;
-  const events = load();
+  const events = load().slice();   // a snapshot: taps during the send are not in it
   if (!events.length) return false;
   const d = new Date(now);
   const batch = `U${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${Math.random().toString(36).slice(2, 5)}`;
   try {
     const r = await send({ events, device: device(), batch });
     if (!r || !r.ok) return false;
-    save(load().slice(events.length));
+    // Drop exactly the events that were SENT, never a count: anything recorded
+    // while the send was out stays for tomorrow.
+    const sentSet = new Set(events);
+    cache = load().filter((e) => !sentSet.has(e));
+    persist();
     try { s && s.setItem(SENT, String(now)); } catch { /* sends again tomorrow */ }
     return true;
   } catch { return false; }
@@ -134,4 +155,4 @@ export async function flushUsage(build, { now = Date.now(), send = usageLog } = 
 
 /** For the suites: the diary as it stands, and a clean slate. */
 export const _peek = () => load();
-export const _reset = () => { save([]); memory = []; screen = ''; recent = []; try { store() && store().removeItem(SENT); } catch { /* none */ } };
+export const _reset = () => { cache = []; persist(); screen = ''; recent = []; sending = null; try { store() && store().removeItem(SENT); } catch { /* none */ } };

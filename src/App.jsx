@@ -10,7 +10,7 @@ import { flushSync } from 'react-dom';
 import { C, FONT_DISPLAY, FONT_UI, GROUND, GROUND_EDGE, STATUS_SHADE, RADIUS, SPACE, TYPE, NAV, TAP, glass, SHEET, SKELETON, GLASS_DIVIDER } from './theme.js';
 import { S, LOCALE, DIR, unitFor } from './i18n/strings.js';
 import { applyDocumentLang } from './state/lang.js';
-import { createRefresher, resultState } from './state/refresh.js';
+import { createRefresher, resultState, refreshFor } from './state/refresh.js';
 import { fetchSummary, fixCategory, postManual, postVoice, receiptConfirm, batchConfirm, sendDebugLog, ping, keepLookalike, keptList, USING_MOCK } from './api/index.js';
 import { getCreds, consumeHashCredentials } from './state/secret.js';
 import { loadSnapshot, saveSnapshot } from './state/cache.js';
@@ -501,9 +501,7 @@ export default function App() {
   const refresher = useRef(null);
   if (!refresher.current) {
     refresher.current = createRefresher(
-      () => (tabRef.current === 'book' && recentLoader.current
-        ? recentLoader.current()
-        : refresh()),
+      () => refreshFor(tabRef.current === 'book', recentLoader.current, refresh)(),
     );
   }
   // `tab` read through a ref so the refresher, created once, always sees the

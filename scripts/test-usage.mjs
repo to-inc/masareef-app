@@ -54,6 +54,22 @@ try {
   U._reset(); U.track('tap', { id: 'a' });
   const failed = await U.flushUsage({ actions: ['usage_log'] }, { send: async () => ({ ok: false }), now: 1_900_000_000_000 });
   ok(!failed && U._peek().length === 1, 'U4', 'a refused send keeps the diary');
+  // U5 — audit 2026-10-18: two overlapping sends are ONE send, and a tap during the send survives it
+  U._reset(); U.track('tap', { id: 'a' }); U.track('tap', { id: 'b' });
+  let release; const gate = new Promise((r) => { release = r; }); const got = [];
+  const slow = async (b) => { got.push(b.events.length); await gate; return { ok: true }; };
+  const p1 = U.flushUsage({ actions: ['usage_log'] }, { send: slow, now: 2_000_000_000_000 });
+  const p2 = U.flushUsage({ actions: ['usage_log'] }, { send: slow, now: 2_000_000_000_000 });
+  U.track('tap', { id: 'during' });
+  release(); await Promise.all([p1, p2]);
+  const left = U._peek();
+  ok(p1 === p2 && got.length === 1 && got[0] === 2 && left.length === 1 && left[0].id === 'during',
+    'U5', `overlapping sends share one upload, and the tap made during it is kept (sent ${JSON.stringify(got)}, left ${JSON.stringify(left.map((e) => e.id))})`);
+  // U6 — taps are written to storage in a batch, not on every tap
+  U._reset(); const before = mem.get('masareef.usage.v1');
+  U.track('tap', { id: 'x' }); const right = mem.get('masareef.usage.v1');
+  U.flushToStorage(); const after = JSON.parse(mem.get('masareef.usage.v1') || '[]');
+  ok(right === before && after.length === 1, 'U6', 'a tap is not written to storage inside the tap; the batch write keeps it');
 } finally { await vite.close(); }
 
 if (failures.length) { console.log(`❌ usage — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`); process.exit(1); }

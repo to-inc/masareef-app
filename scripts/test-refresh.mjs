@@ -18,7 +18,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import {
-  REFRESH_STATES, isRefreshState, nextOnPress, resultState, stampAfter, createRefresher,
+  REFRESH_STATES, isRefreshState, nextOnPress, resultState, stampAfter, createRefresher, refreshFor,
 } from '../src/state/refresh.js';
 import { readFile } from 'node:fs/promises';
 
@@ -294,6 +294,16 @@ try {
     ok(!u.raw, `…and carries no hand-rolled \`overflowX: 'auto'\` of its own`);
   }
 }
+
+// Audit 2026-10-18: on the Book the button must re-read the SUMMARY too (Today/Year show nothing else).
+{ const calls = [];
+  const summary = async () => { calls.push('summary'); return true; };
+  const rows = async () => { calls.push('rows'); return true; };
+  await refreshFor(true, rows, summary)();
+  await refreshFor(false, rows, summary)();
+  const failed = await refreshFor(true, async () => true, async () => false)();
+  ok(calls.join(',') === 'summary,rows,summary' && failed === false,
+    'R.book on the Book a refresh reads the summary AND the rows; elsewhere the summary; either failing says failed'); }
 
 const report = failures.length
   ? `❌ ${failures.length} / ${pass + failures.length} refresh checks failed:\n  - ${failures.join('\n  - ')}`
