@@ -425,7 +425,8 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
                   * value, never a second colour. No selection keeps the
                   * metric's own colour, with the live slot's harbor accent.
                   */}
-                <div style={{
+                <div className="bar-rise" style={{
+                  animationDelay: `${i * 40}ms`,   // motion 2: one after another
                   width: '38%', height: `${((cur[i] || 0) / max) * 100}%`,
                   // One colour per series (audit 2026-10-10: the live bar's own blue read
                   // as a third series the key never named); «today» is said by its label.
@@ -1157,7 +1158,7 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
   return (
     <div>
       {showCard && (
-      <div style={{ ...glass('card'), padding: '14px 12px 10px' }}>
+      <div style={{ ...glass('plate'), padding: '14px 12px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px 8px', gap: 8 }}>
           <span style={{ fontSize: TYPE.label, fontWeight: 700, color }}>
             {periodNames.cur} <span style={{ color: C.muted, fontWeight: 500 }}>{S.vs} {periodNames.prev}</span>
@@ -1401,7 +1402,7 @@ export function TopCategories({ items, unit, onPick = null, picked = null }) {
       {!lines.length ? (
         <div style={{ fontSize: TYPE.label, color: C.muted, marginTop: 8 }}>{S.topEmpty}</div>
       ) : (
-        <div style={{ ...glass('card'), padding: '6px 16px', marginTop: 8 }}>
+        <div style={{ ...glass('plate'), padding: '6px 16px', marginTop: 8 }}>
           {lines.map((l) => {
             const share = total ? Math.round((l.amount / total) * 100) : 0;
             const on = picked != null && picked === l.name;
@@ -1419,7 +1420,8 @@ export function TopCategories({ items, unit, onPick = null, picked = null }) {
                 </span>
                 {/* GEOMETRY EXEMPTION (ruling 4): a 6px share bar, its 3px corner bounded by its height */}
                 <span aria-hidden style={{ display: 'block', height: 6, borderRadius: 3, marginTop: 6, background: SHEET.handle }}>
-                  <span style={{ display: 'block', height: 6, borderRadius: 3, width: `${Math.max(share, 2)}%`, background: l.name == null ? C.muted : C.harbor }} />
+                  {/* motion 3: each share fills after the figure settles, one after another */}
+                  <span className="fill-in" style={{ display: 'block', height: 6, borderRadius: 3, width: `${Math.max(share, 2)}%`, background: l.name == null ? C.muted : C.harbor, animationDelay: `${200 + lines.indexOf(l) * 90}ms` }} />
                 </span>
               </>
             );

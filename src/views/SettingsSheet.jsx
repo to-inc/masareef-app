@@ -180,6 +180,26 @@ export function DebugShots({ send = debugShot, sendNote = debugNote, prepare = p
   );
 }
 
+/**
+ * SETTINGS IN SHORT GROUPS (design audit 2026-10-18): each group is one line —
+ * its name and what it is set to — and opens with a tap (the platform's own
+ * <details>, so it is keyboard- and VoiceOver-native). Currency & language, the
+ * one he changes most, starts open.
+ */
+const lookWord = (o) => S[`look${String(o)[0].toUpperCase()}${String(o).slice(1)}`] || o;
+
+function Group({ title, summary, open = false, children }) {
+  return (
+    <details data-settings-group open={open} style={{ marginTop: SPACE.gap, borderTop: `1px solid ${C.line}`, paddingTop: 4 }}>
+      <summary style={{ listStyle: 'none', cursor: 'pointer', minHeight: TAP, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>{title}</span>
+        <span style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'end', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary} <span aria-hidden>⌄</span></span>
+      </summary>
+      <div style={{ paddingTop: 6 }}>{children}</div>
+    </details>
+  );
+}
+
 export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose, build = loadBuild() }) {
   const [look, setLook] = useState(() => getDisplay());
   /**
@@ -257,8 +277,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
           </div>
 
           {/* ═══ the ONE named section — currency & language ═══ */}
-          <div style={{ marginTop: SPACE.gap }}>
-            <SectionLabel>{S.settingsLangCurrency}</SectionLabel>
+          <Group title={S.settingsLangCurrency} summary={`${S.langName} · ${unitFor(displayCurrency)}`} open>
 
             {/* The language switch — same contract it has today (it reloads;
                 state/lang.js owns the why). Row label + the primitive. */}
@@ -318,11 +337,10 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
             >
               {S.settingsCurrencyNote}
             </div>
-          </div>
+          </Group>
 
           {/* ═══ R10 — the look: frost, atmosphere, comfort zoom (state/settings.js) ═══ */}
-          <div style={{ marginTop: SPACE.gap }}>
-            <SectionLabel>{S.settingsLook}</SectionLabel>
+          <Group title={S.settingsLook} summary={`${lookWord(look.frost)} · ${lookWord(look.atmosphere)} · ${Math.round(look.zoom * 100)}%`}>
             {[['frost', S.frostLabel, Object.keys(FROST)], ['atmosphere', S.atmosphereLabel, Object.keys(ATMOSPHERE)]].map(([key, label, opts]) => (
               <div key={key} style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, marginBottom: 6 }}>{label}</div>
@@ -357,13 +375,12 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
                 ];
               })}
             </div>
-          </div>
+          </Group>
 
           {/* ═══ S2 — the default method (06 §3.10.3) ═══ */}
-          <div style={{ marginTop: SPACE.gap }}>
+          <Group title={S.settingsDefaultMethod} summary={methodLabel(defaultMethod)}>
             {/* Its own words (Tarek, 2026-10-10): this sets how NEW entries start —
                 «How you paid» read like a fact about some past expense. */}
-            <SectionLabel>{S.settingsDefaultMethod}</SectionLabel>
             {/**
               * The EntryView chooser's own grammar, verbatim: options from
               * METHODS (the wire vocabulary — also the sheet's columns),
@@ -391,7 +408,8 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
                 </button>
               ))}
             </div>
-          </div>
+          </Group>
+          <Group title={S.settingsHelp} summary={`${S.appVersion} ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'}`}>
           {supportsAction(build, 'debug_shot') && <DebugShots withNote={supportsAction(build, 'debug_note')} />}
           {/* Which build this phone runs — the commit it was built from (E-017). */}
           {/* Only the commit is Latin; «النسخة» reads in its own direction (audit 2026-10-10). */}
@@ -401,6 +419,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
                 app. A gap here IS the strip. Debug-only — a readout for us, not him (audit 2026-10-10). */}
             {debugOn() && <div style={{ marginTop: 2 }} dir="ltr">{screenFit()}</div>}
           </div>
+          </Group>
         </Sheet>
       </div>
     </>

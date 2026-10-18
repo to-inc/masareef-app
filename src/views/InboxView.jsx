@@ -173,7 +173,10 @@ export default function InboxView({
     return (
       <div>
       <PhotosBar jobs={photos} onOpen={onOpenPhoto} open={photosOpen} onToggle={onPhotosToggle} />
-      <div style={{ textAlign: 'center', paddingTop: 72 }}>
+      {/* ONE QUEUE (design audit 2026-10-18, UX 4): «All logged» only when nothing
+          needs him — a photo ready to check or one that could not be read does. */}
+      {!photosNeedHim(photos) && (
+      <div data-all-logged style={{ textAlign: 'center', paddingTop: 72 }}>
         <div data-geometry="empty-state-illustration" style={{ fontSize: 52 }}>🍵</div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.harborInk, marginTop: 10 }}>
           {S.inboxEmptyTitle}
@@ -182,6 +185,7 @@ export default function InboxView({
           {S.inboxEmptyBody}
         </div>
       </div>
+      )}
       </div>
     );
   }
@@ -678,6 +682,10 @@ export function PhotosShortcut({ jobs = [], onOpen, active = false }) {
     </button>
   );
 }
+
+/** Photos that need him: read and waiting to be checked, or not readable. */
+export const photosNeedHim = (jobs = []) => jobs.some((j) => j && j.stage !== 'dismissed'
+  && ['ready', 'failed', 'notReceipt'].includes(effectiveStage(j)));
 
 export function PhotosBar({ jobs = [], onOpen = null, initialOpen = false, open: shellOpen, onToggle }) {
   const [ownOpen, setOwnOpen] = useState(initialOpen);

@@ -218,6 +218,13 @@ try {
         await pg.locator('[role=dialog]').getByRole('button', { name }).first().click(); await pg.waitForTimeout(600);
       }
       if (errs.length) { ok(false, `R9 [${mode}] opening it threw: ${JSON.stringify(errs)}`); break; }
+      if (mode === 'receipt') {
+        // R0 re-cut (2026-10-18, design audit UX 1): a chosen photo is read BEHIND him — the
+        // sheet closes at once and a toast says so; «← Receipt» opens from the Photos list.
+        const after = await pg.evaluate(() => ({ sheet: !!document.querySelector('[role=dialog]'), text: document.body.innerText }));
+        ok(!after.sheet && /Reading your receipt/.test(after.text), `R9 [receipt] the photo reads behind him: the sheet closes and says so (sheet open: ${after.sheet})`);
+        continue;
+      }
       const head = await pg.evaluate(() => document.querySelector('header')?.innerText || '');
       ok(head.includes(title) && /[←→]/.test(head), `R9 [${mode}] the screen opens under «← ${title}» (got ${JSON.stringify(head.slice(0, 40))})`);
       await pg.getByRole('button', { name: /^Back to the entry$/ }).click(); await pg.waitForTimeout(500);

@@ -147,6 +147,9 @@ export const EN = {
 
   receiptCheck: 'Check and confirm',
   receiptPending: 'Still pending at the bank — log it if the payment went through.',
+  readingBehind: (n) => (n === 1 ? 'Reading your receipt — it will be in To review' : `Reading ${n} receipts — they will be in To review`),
+  photoReady: (n) => (n === 1 ? 'A receipt is ready — open Photos in To review' : `${n} receipts are ready — open Photos in To review`),
+  jobByHand: 'Enter it by hand',
   receiptSaw: 'We read:',
   receiptAmount: 'Amount',
   receiptMerchant: 'Shop',
@@ -596,6 +599,8 @@ export const EN = {
 
   // ——— the sheet's address, on the setup screen (A7) — optional.
   setupSheet: 'Sheet link (optional)',
+  settingsHelp: 'Help',
+  langName: 'English',
   settingsLook: 'Look', // R10 display settings
   frostLabel: 'Glass',
   lookSheer: 'Sheer', lookDesigned: 'Standard', lookDeep: 'Frosted',

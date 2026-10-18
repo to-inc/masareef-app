@@ -155,6 +155,9 @@ export const AR = {
 
   receiptCheck: 'راجع وأكّد',
   receiptPending: 'لسه معلّقة في البنك — سجّلها لو الدفع تم.',
+  readingBehind: (n) => (n === 1 ? 'بنقرا الفاتورة — هتلاقيها في للمراجعة' : `بنقرا ${n} فواتير — هتلاقيهم في للمراجعة`),
+  photoReady: (n) => (n === 1 ? 'الفاتورة جاهزة — افتح الصور في للمراجعة' : `${n} فواتير جاهزين — افتح الصور في للمراجعة`),
+  jobByHand: 'اكتبها بإيدك',
   receiptSaw: 'شفنا:',           // precedes raw_total_line, verbatim from the receipt
   receiptAmount: 'المبلغ',
   receiptMerchant: 'المحل',
@@ -601,6 +604,8 @@ export const AR = {
 
   // ——— رابط الشيت في شاشة الإعداد (A7) — اختياري.
   setupSheet: 'رابط الشيت (اختياري)',
+  settingsHelp: 'مساعدة',
+  langName: 'العربي',
   settingsLook: 'الشكل', // R10 display settings
   frostLabel: 'الزجاج',
   lookSheer: 'شفاف', lookDesigned: 'عادي', lookDeep: 'مثلّج',

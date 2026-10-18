@@ -12,6 +12,7 @@ import { runner, onJobsChange, jobsChanged } from '../state/receiptRunner.js';
 import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
 import { debugOn } from '../state/settings.js';
+import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
 import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress } from '../components/Primitives.jsx';
@@ -802,7 +803,9 @@ export default function ReceiptView({
       <p style={{ color: C.muted, fontSize: TYPE.body, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
         {S.receiptIntro}
       </p>
-      <JobsList jobs={jobs} onReview={review} onRetry={retry} onCancel={cancelJob} onDebugLog={onDebugLog} />
+      <JobsList jobs={jobs} onReview={review} onRetry={retry} onCancel={cancelJob}
+        onDebugLog={supportsAction(loadBuild(), 'debug_note') ? null : onDebugLog}
+        onManual={onManual ? () => { reset(); onManual(); } : null} />
       <label className="bigbtn" style={{ ...primaryBtn, display: 'inline-block', cursor: 'pointer' }}>
         {S.receiptStart}
         {/* `capture="environment"` opens the native camera directly. Deliberately
@@ -864,7 +867,7 @@ export default function ReceiptView({
  * "waiting" would imply five failures; one line saying how many are held until
  * tomorrow is the truth, and it is a system working rather than breaking.
  */
-export function JobsList({ jobs, onReview, onRetry, onCancel, onDebugLog }) {
+export function JobsList({ jobs, onReview, onRetry, onCancel, onDebugLog, onManual = null }) {
   if (!jobs.length) return null;
   const held = cappedCount(jobs);
   return (
@@ -874,7 +877,7 @@ export function JobsList({ jobs, onReview, onRetry, onCancel, onDebugLog }) {
         {held > 0 && <span style={{ color: C.ink }}>{' · '}{S.jobsCapped(held)}</span>}
       </div>
       {jobs.map((j) => (
-        <JobRow key={j.id} job={j} onReview={onReview} onRetry={onRetry} onCancel={onCancel} onDebugLog={onDebugLog} />
+        <JobRow key={j.id} job={j} onReview={onReview} onRetry={onRetry} onCancel={onCancel} onDebugLog={onDebugLog} onManual={onManual} />
       ))}
     </div>
   );
@@ -921,7 +924,7 @@ export function jobLabel(job, stage) {
  * The STAGE comes from `effectiveStage`, never `job.stage` — that is what stops
  * a not-a-receipt from announcing itself as «جاهز — راجعه».
  */
-function JobRow({ job, onReview, onRetry, onCancel, onDebugLog }) {
+function JobRow({ job, onReview, onRetry, onCancel, onDebugLog, onManual = null }) {
   const stage = effectiveStage(job);
   const [thumb, setThumb] = useState(null);
   const [logged, setLogged] = useState(false);
@@ -980,8 +983,17 @@ function JobRow({ job, onReview, onRetry, onCancel, onDebugLog }) {
   if (stage === 'ready') {
     actions.push({ key: 'review', primary: true, label: S.jobCheck, onTap: () => onReview(job) });
   }
+  /**
+   * ONE WAY FORWARD on a read that did not work (design audit 2026-10-18, UX 5):
+   * «Enter it by hand» leads; «Read it again» stays as the second choice; the
+   * verdict's reason is already the row's label. The ⚑ log button is gone where
+   * the app files failed reads by itself (the server keeps notes: debug_note).
+   */
+  if ((stage === 'notReceipt' || stage === 'failed') && onManual) {
+    actions.push({ key: 'manual', primary: true, label: S.jobByHand, onTap: () => onManual() });
+  }
   if (stage === 'notReceipt') {
-    actions.push({ key: 'verdict', primary: false, label: S.jobWhy, onTap: () => onReview(job) });
+    if (!onManual) actions.push({ key: 'verdict', primary: false, label: S.jobWhy, onTap: () => onReview(job) });
     /**
      * READ IT AGAIN — the way forward a not-a-receipt job never had.
      * Nearly free: `receipt_extract` is cached by `rcpthash_<clientHash>` for

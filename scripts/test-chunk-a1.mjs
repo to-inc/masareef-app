@@ -89,7 +89,8 @@ pin(/DUPLICATE information available elsewhere/,
 eq(SPACE?.gutter, 20, 'SPACE.gutter — the screen side margin');
 eq(SPACE?.gap, 12, 'SPACE.gap — between siblings');
 eq(SPACE?.cardPad, 16, 'SPACE.cardPad — a card’s own inset');
-eq(SPACE?.section, 32, 'SPACE.section — between titled groups');
+// R0 re-cut (2026-10-18, design audit): two steps of rhythm — 12 within, 28 between.
+eq(SPACE?.section, 28, 'SPACE.section — between titled groups');
 
 /**
  * ——— 4. MOTION — complete: four durations, two easings (north-star §3).

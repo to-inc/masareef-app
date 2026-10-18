@@ -269,7 +269,7 @@ export const TYPE = {
  * the New screen got «all very cramped» (GAP 1) — each site locally
  * reasonable, no two of them in agreement.
  */
-export const SPACE = { gutter: 20, gap: 12, cardPad: 16, section: 32 };
+export const SPACE = { gutter: 20, gap: 12, cardPad: 16, section: 28 };   // section 32 → 28 (design audit 2026-10-18: two steps, 12 within and 28 between)
 
 /**
  * Four durations and two easings (§3). `tap` acknowledges, `move` relocates
@@ -545,6 +545,12 @@ const blur = (px, sat, f = 1) =>
 export const GLASS = {
   card:     { bg: `linear-gradient(155deg, ${W(0.72)}, ${W(0.40)})`, blur: 26, sat: 160,
               rim: W(0.7), cast: `0 12px 32px ${alpha(C.ink, 0.12)}`, inset: `inset 0 1px 0 ${W(0.95)}`, radius: 'card' },
+  /** The card's FLAT twin (design audit 2026-10-18): the same glass and the same
+   *  text contrast (R13 holds — it IS a card surface), without the drop cast, so
+   *  the headline card is the one thing on a screen that lifts. Secondary panels
+   *  (the chart, the weekly average, Where it went) sit on this. */
+  plate:    { bg: `linear-gradient(155deg, ${W(0.72)}, ${W(0.40)})`, blur: 26, sat: 160,
+              rim: W(0.6), inset: `inset 0 1px 0 ${W(0.9)}`, radius: 'card' },
   chip:     { bg: `linear-gradient(155deg, ${W(0.66)}, ${W(0.32)})`, blur: 18, sat: 150,
               rim: W(0.75), cast: `0 4px 12px ${alpha(C.ink, 0.08)}`, radius: 'capsule' },
   /** Owner ruling 2026-10-09 (after measuring R16): the BAR carries more white

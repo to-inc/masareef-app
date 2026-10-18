@@ -117,7 +117,8 @@ try {
 
   // ——— the chips exist: icon+word, 48pt, over the list
   const plain = render(mixed, { Visa: 180, Cash: 0 });
-  const chipRe = (label) => new RegExp(`<button[^>]*aria-pressed="(true|false)"[^>]*style="([^"]*)"[^>]*>(?:<span[^>]*>([^<]*)</span>)?\\s*${label}<`);
+  // R0 re-cut (2026-10-18, design audit): the icon is a line-icon <svg>, not an emoji <span>.
+  const chipRe = (label) => new RegExp(`<button[^>]*aria-pressed="(true|false)"[^>]*style="([^"]*)"[^>]*>(?:<span[^>]*>([^<]*)</span>|(<svg[\\s\\S]*?</svg>))?\\s*${label}<`);
   for (const g of PRIORITY_GROUPS) {
     const label = typeof AR.lensGroup === 'function' ? AR.lensGroup(g.key) : null;
     const m = label ? plain.match(chipRe(label)) : null;
@@ -125,7 +126,7 @@ try {
     if (m) {
       ok(m[2].includes(`min-height:${TAP}px`),
         `N7.11 …at the ${TAP}pt senior floor`);
-      ok(!!m[3] && m[3].trim().length > 0,
+      ok((!!m[3] && m[3].trim().length > 0) || /<path d="M/.test(m[4] || ''),
         'N7.12 …with its icon beside the word — never word-only');
       eq(m[1], 'false', 'N7.13 …and unpressed while no filter is chosen');
     }

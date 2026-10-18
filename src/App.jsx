@@ -54,7 +54,7 @@ import DictateView from './views/DictateView.jsx';
 import BookView from './views/BookView.jsx';
 import BatchReviewView from './views/BatchReviewView.jsx';
 import * as receiptQueue from './state/receiptQueue.js';
-import { runner, onJobsChange } from './state/receiptRunner.js';
+import { runner, onJobsChange, enqueueFiles } from './state/receiptRunner.js';
 import { syncKept } from './state/keptLookalikes.js';
 import { setCategoryUse } from './state/catOrder.js';
 import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
@@ -222,10 +222,24 @@ export default function App() {
   const keptSynced = useRef(false);
   useEffect(() => {
     if (keptSynced.current || !supportsAction(build, 'kept_list')) return;
+    // Once a day is enough for a list that changes when he taps «Keep this» on
+    // another phone (efficiency audit #9: one call fewer on most opens).
+    let last = 0; try { last = Number(localStorage.getItem('masareef.keptSyncedAt')) || 0; } catch { last = 0; }
+    if (Date.now() - last < 20 * 3600 * 1000) { keptSynced.current = true; return; }
+    try { localStorage.setItem('masareef.keptSyncedAt', String(Date.now())); } catch { /* syncs again next open */ }
     keptSynced.current = true;
     syncKept(keptList, keepLookalike).catch(() => { keptSynced.current = false; });
   }, [build]);
   const [photoJobs, setPhotoJobs] = useState([]);
+  // «Your receipt is ready» once per job that turns ready while he is elsewhere.
+  const readyTold = useRef(null);
+  useEffect(() => {
+    const ready = photoJobs.filter((j) => j && j.stage === 'ready').map((j) => j.id);
+    if (readyTold.current === null) { readyTold.current = new Set(ready); return; }
+    const fresh = ready.filter((id) => !readyTold.current.has(id));
+    ready.forEach((id) => readyTold.current.add(id));
+    if (fresh.length && !(tab === 'entry' && entryMode === 'receipt')) { showToast(S.photoReady(fresh.length)); setPhotosOpen(true); }
+  }, [photoJobs]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const load = () => receiptQueue.all().then(setPhotoJobs).catch(() => {});
     const kick = () => { load(); runner().pump(); };
@@ -448,6 +462,10 @@ export default function App() {
   // v4 P8: reads in flight — the startup read and the after-save refresh too, not
   // only a press of the pill — so the pill can say «بنجيب من الشيت…» / «آخر تحديث».
   const [reading, setReading] = useState(0);
+  // When the summary was last read: coming back to the app within a minute does
+  // not read it again (efficiency audit 2026-10-18, #3).
+  const lastRead = useRef(0);
+  const lastBuildFromSummary = useRef(false);
   const refresh = useCallback(async () => {
     setReading((n) => n + 1);
     try {
@@ -464,8 +482,12 @@ export default function App() {
         // card is gone and so is its record.
         setSettled((s) => pruneSettled(s, clean.pending));
         setSavedAt(Date.now());
+        lastRead.current = Date.now();
         saveSnapshot(clean);
         setOffline(false);
+        // The summary carries the server's capabilities (build 20261018+), so the
+        // separate ping at start is only a fallback for older servers.
+        if (res.build && Array.isArray(res.build.actions)) { lastBuildFromSummary.current = true; setBuild(saveBuild(res.build)); }
         return true;
       }
       setOffline(true);
@@ -604,7 +626,7 @@ export default function App() {
     }
     setBooted(true);
     setStaleQueue(partition().stale); setPhoneRows(onPhone());
-    refresh();
+    const first = refresh();
     runOutbox();
     /**
      * FIRE AND FORGET. `ping` is the only response carrying `build`, and the
@@ -612,14 +634,19 @@ export default function App() {
      * the first paint or make a failed launch look broken. A rejection leaves
      * the cached answer in place, which is the honest previous state.
      */
-    ping().then((res) => { if (res && res.build) setBuild(saveBuild(res.build)); }).catch(() => {});
+    // Only when the summary did not bring the build (an older server): one call fewer at start.
+    first.then((ok) => { if (!ok || !(lastBuildFromSummary.current)) ping().then((res) => { if (res && res.build) setBuild(saveBuild(res.build)); }).catch(() => {}); });
   }, [refresh, runOutbox]);
 
   // Flush on reconnect and whenever he brings the app back to the front — the
   // two moments a queued entry can finally land.
   useEffect(() => {
     const onOnline = () => { refresh(); runOutbox(); };
-    const onVisible = () => { if (!document.hidden) { refresh(); runOutbox(); } };
+    const onVisible = () => {
+      if (document.hidden) return;
+      runOutbox();
+      if (Date.now() - lastRead.current > 60000) refresh();
+    };
     window.addEventListener('online', onOnline);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -1305,7 +1332,17 @@ export default function App() {
                       : undefined}
                     onCamera={() => pushDetail(() => setEntryMode('receipt'))}
                     // A photo or file chosen ON the sheet: the receipt screen reads it at once.
-                    onReceiptFile={(f) => pushDetail(() => { setReceiptFile(f); setEntryMode('receipt'); })}
+                    // Read BEHIND him (design audit UX 1): the sheet closes at once, the photo
+                    // reads in the background, and To review shows it when it is ready.
+                    onReceiptFile={(f) => {
+                      const n = [].concat(f).length;
+                      closeEntry();
+                      showToast(S.readingBehind(n));
+                      track('receipt_behind', { n });
+                      enqueueFiles(f).then((r) => {
+                        if (r.refused) showToast(r.refused === 'too-large' ? S.receiptTooLarge : S.receiptFailed);
+                      });
+                    }}
                     acceptPdf={supportsDocument(build, 'application/pdf')}
                     /**
                       * SHOWN ONLY IF THE SERVER KNOWS THE VERB. Absent

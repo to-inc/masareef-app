@@ -733,3 +733,34 @@ export function ReadProgress({ startedAt, expectedMs, label = null, thin = false
     </span>
   );
 }
+
+/**
+ * MOTION 1 — THE FIGURE COUNTS (design audit 2026-10-18). When fresh numbers
+ * arrive, the headline rolls from the value it showed to the new one in
+ * MOTION.draw with the settling curve; the first paint shows the value as it
+ * is (nothing to compare with), and Reduce Motion jumps straight there. Digits
+ * are tabular wherever this is used, so the roll never jiggles the line.
+ */
+export function CountUp({ value, format = (v) => String(v) }) {
+  const n = Number(value);
+  const [shown, setShown] = useState(n);
+  const from = useRef(n);
+  useEffect(() => {
+    const to = Number(value);
+    const start = from.current;
+    from.current = to;
+    if (!Number.isFinite(to) || !Number.isFinite(start) || start === to) { setShown(to); return undefined; }
+    const reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || typeof requestAnimationFrame === 'undefined') { setShown(to); return undefined; }
+    let raf = 0; const t0 = performance.now();
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / MOTION.draw);
+      const e = 1 - Math.pow(1 - p, 3);
+      setShown(p < 1 ? start + (to - start) * e : to);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{format(Number.isFinite(shown) ? shown : value)}</>;
+}

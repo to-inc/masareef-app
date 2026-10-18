@@ -92,7 +92,9 @@ function pinPlainCard(file, component, label) {
 // edge and cast come from glass('card'); nothing hand-written rides beside it.
 function pinGlassCard(file, component, label) {
   const slice = componentSlice(src(file), component) || '';
-  ok(/glass\('card'\)/.test(slice), `${label} — the card is glass('card') (G04/G05, v4 tokens; a state may pick its tint)`);
+  // R0 re-cut (2026-10-18, design audit): a secondary panel may sit on glass('plate') — the
+  // card's flat twin (same glass and contrast, no lift) — so the headline is the one raised card.
+  ok(/glass\('(card|plate)'\)/.test(slice), `${label} — the card is glass('card') or its flat twin glass('plate') (G04/G05, v4 tokens; a state may pick its tint)`);
   ok(!/boxShadow:\s*[`'"]/.test(slice) && !/background: C\.card, borderRadius: RADIUS\.card/.test(slice), `${label} — no hand-rolled shadow or solid card beside it`);
 }
 pinGlassCard('src/components/Charts.jsx', 'CategoryCompare', 'A2.1 Charts/CategoryCompare');

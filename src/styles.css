@@ -129,9 +129,35 @@ textarea {
 @keyframes pulse { 50% { opacity: 0.35; } }
 .pulse { animation: pulse calc(var(--dur-draw) * 2) var(--ease-settle) infinite; }
 
+/* ═══ MINIMAL MOTION (design audit 2026-10-18) — each confirms something that
+   happened, none loops, all use the timing vars above, all stop under Reduce
+   Motion (below). The hidden state lives only inside @keyframes + `backwards`,
+   so a static render and a reduced-motion phone see the finished picture. ═══ */
+/* 2 · the week rises: bars grow from the baseline one after another */
+@keyframes bar-rise { from { transform: scaleY(0); } }
+.bar-rise { transform-origin: bottom; animation: bar-rise calc(var(--dur-draw) * 0.75) var(--ease-settle) backwards; }
+/* 3 · where it went fills: each share opens left to right after the figure */
+@keyframes fill-in { from { clip-path: inset(0 100% 0 0); } }
+[dir="rtl"] .fill-in { animation-name: fill-in-rtl; }
+@keyframes fill-in-rtl { from { clip-path: inset(0 0 0 100%); } }
+.fill-in { animation: fill-in calc(var(--dur-draw) * 0.85) var(--ease-settle) backwards; }
+/* 4 · a logged expense lands at the top of the list with a brief harbor wash */
+@keyframes row-land { from { opacity: 0; transform: translateY(-8px); box-shadow: inset 0 0 0 999px rgba(62, 124, 166, 0.16); } }
+.row-land { animation: row-land calc(var(--dur-move) * 2) var(--ease-settle) backwards; }
+/* 6 · reading, quietly: one soft sheen passes through the bar */
+@keyframes sheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.read-bar { position: relative; overflow: hidden; }
+.read-bar::after { content: ""; position: absolute; inset: 0; transform: translateX(100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: sheen calc(var(--dur-draw) * 2.2) var(--ease-settle) 600ms 1 backwards; }
+
 @media (prefers-reduced-motion: reduce) {
   /* The reading bar still fills, without the glide. */
   .read-bar { transition: none !important; }
+  .bar-rise,
+  .fill-in,
+  .row-land,
+  .read-bar::after,
   .pulse,
   .card-in,
   .view-in,

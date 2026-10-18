@@ -133,6 +133,61 @@ try {
   { const st = src('src/views/SettingsSheet.jsx');
     ok(/data-send-progress/.test(st) && !/debugShotsHelp/.test(st) && !/readUsually/.test(src('src/views/ReceiptView.jsx')),
       'D3', 'sending shows a 1-of-N bar; the «they go to the folder» line and «usually N seconds» are gone'); }
+  // ═══ BUILD-ALL (2026-10-18: «yes build all of them») ═══
+  { const app = src('src/App.jsx'); const book = src('src/views/BookView.jsx');
+    ok(/if \(Date\.now\(\) - lastRead\.current > 60000\) refresh\(\);/.test(app) && /lastRead\.current = Date\.now\(\);/.test(app),
+      'E3', 'coming back to the app within a minute does not re-read the summary');
+    ok(/if \(data\.month && data\.month\.tab\) \{ setLiveTab\(data\.month\.tab\); return undefined; \}/.test(book),
+      'E4', 'the month\'s tab name comes from the summary — no extra call');
+    ok(/const BOOK_MONTHS = new Map\(\);/.test(book) && /useRef\(BOOK_MONTHS\)/.test(book) && /BOOK_LAST\.period = p/.test(book) && /@\$\{data\.serverTime/.test(book),
+      'E5', 'the Book keeps its rows and period across tab switches; the current month only for the summary it was read beside');
+    ok(/res\.build && Array\.isArray\(res\.build\.actions\)/.test(app) && /masareef\.keptSyncedAt/.test(app) && /!\(lastBuildFromSummary\.current\)/.test(app),
+      'E9', 'the summary brings the build (ping only as a fallback); the kept list syncs once a day'); }
+
+  { const { enqueueFiles } = await vite.ssrLoadModule('/src/state/receiptRunner.js');
+    const { ReceiptImageError } = await vite.ssrLoadModule('/src/lib/receipt-image.js');
+    const queued = []; let pumped = 0;
+    const prep = { prepareReceipt: async (f) => { if (f.big) throw new ReceiptImageError('too-large'); return { base64: 'QUJD', clientHash: f.name }; },
+      prepareDocument: async (f) => ({ base64: 'UERG', clientHash: f.name, mediaType: 'application/pdf' }) };
+    const q = { enqueue: async (j) => { queued.push(j); return true; } };
+    const r = await enqueueFiles([{ name: 'a', type: 'image/jpeg' }, { name: 'b', type: 'application/pdf' }, { name: 'c', type: 'image/jpeg', big: true }], { prep, q, pump: () => { pumped++; } });
+    ok(r.queued === 2 && r.refused === 'too-large' && pumped === 1 && queued[1].mediaType === 'application/pdf' && /^\d{4}-\d{2}-\d{2}$/.test(queued[0].snapDate),
+      'UX1', `photos and PDFs are queued and read behind him; a refusal is named (${JSON.stringify(r)})`);
+    const app = src('src/App.jsx');
+    ok(/closeEntry\(\);\s*showToast\(S\.readingBehind\(n\)\);/.test(app) && /showToast\(S\.photoReady\(fresh\.length\)\)/.test(app),
+      'UX1b', 'choosing a receipt closes the sheet at once; a ready receipt is announced'); }
+
+  { const Inbox = (await vite.ssrLoadModule('/src/views/InboxView.jsx')).default;
+    const base = { pending: [], settled: {}, onConfirm() {}, photosOpen: false, onPhotosToggle() {} };
+    const empty = h(Inbox, { ...base, photos: [] });
+    const waiting = h(Inbox, { ...base, photos: [{ id: 'x', stage: 'ready', queuedAt: 1, extraction: { amount: 4 } }] });
+    ok(/data-all-logged/.test(empty) && !/data-all-logged/.test(waiting), 'UX4', '«All logged» only when no photo needs him'); }
+
+  { const { JobsList } = await vite.ssrLoadModule('/src/views/ReceiptView.jsx');
+    const job = { id: 'n', stage: 'notReceipt', queuedAt: 1, base64: 'QUJD', notExpenseReason: 'other' };
+    const html = h(JobsList, { jobs: [job], onReview() {}, onRetry() {}, onCancel() {}, onDebugLog: null, onManual() {} });
+    const btns = [...html.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]).filter((t) => t && t !== '✕');
+    ok(btns[0] === S.jobByHand && btns.includes(S.jobReadAgain) && !btns.includes(S.debugLogSend) && !btns.includes(S.jobWhy),
+      'UX5', `a failed read leads with «Enter it by hand»; no flag where reads file themselves (${btns.join(' | ')})`); }
+
+  { const html = h(SettingsSheet, { displayCurrency: 'EUR', onFlipCurrency() {}, onClose() {}, build: { actions: ['debug_shot', 'debug_note'] } });
+    const groups = (html.match(/<details data-settings-group/g) || []).length;
+    ok(groups === 4 && /<details data-settings-group="true" open=""/.test(html) && (html.match(/ open=""/g) || []).length === 1,
+      'SET', `Settings is four one-line groups, Currency & language open (${groups})`); }
+
+  { const { CountUp } = await vite.ssrLoadModule('/src/components/Primitives.jsx');
+    ok(h(CountUp, { value: 27.5, format: (v) => v.toFixed(2) }) === '27.50', 'M1', 'the figure renders its real value at rest (the roll happens only between values)');
+    const css = src('src/styles.css'); const charts = src('src/components/Charts.jsx'); const book = src('src/views/BookView.jsx');
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+    ok(/className="bar-rise"/.test(charts) && /className="fill-in"/.test(charts) && /className=\{r\.held \? 'row-land'/.test(book) && /data-week-pill/.test(book) && /\.read-bar::after/.test(css)
+      && ['.bar-rise', '.fill-in', '.row-land', '.read-bar::after'].every((c) => reduced.includes(c)),
+      'M2-6', 'bars rise, shares fill, a logged row lands, the day pill slides, the reading bar sheens — and Reduce Motion stops all of them'); }
+
+  { const { PriorityIcon } = await vite.ssrLoadModule('/src/views/BookView.jsx');
+    const { GLASS } = await import('../src/theme.js');
+    ok(/<svg[^>]*stroke-width="1\.8"/.test(h(PriorityIcon, { k: 'joy' })) && !/[🏠🩺🎈🧰]/u.test(src('src/views/BookView.jsx'))
+      && GLASS.plate && !GLASS.plate.cast && GLASS.plate.bg === GLASS.card.bg && /glass\('plate'\)/.test(src('src/components/Charts.jsx')),
+      'UI', 'line icons replace the emoji; secondary panels sit on the flat «plate» (same glass, no lift)'); }
 } finally {
   await vite.close();
 }

@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
+import { Fragment, useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import {
   C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG,
 } from '../theme.js';
@@ -15,7 +15,7 @@ import { findLookalikes, lookalikeCounts, likeness } from '../state/duplicates.j
 import { loadKept, keepRow, withoutKept } from '../state/keptLookalikes.js';
 import { canonCategory, sameCategory } from '../state/catOrder.js';
 import { TopCategories, PeriodSummary, CategoryCompare, PriorityLens, MonthStack } from '../components/Charts.jsx';
-import { Chip, LATIN, ISOLATE, SectionLabel, Rail, Sheet } from '../components/Primitives.jsx';
+import { Chip, LATIN, ISOLATE, SectionLabel, Rail, Sheet, CountUp } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, needsHim } from '../state/inboxOutcomes.js';
 import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay, parseSheetDate, weekWindow, lastWeekWindow, recentDays, dayKey } from '../state/recent.js';
@@ -33,6 +33,12 @@ import { setBookPeriod, track } from '../state/usage.js';
  * amounts ended at different places. A slot as wide as the widest mark (ج.م)
  * lines every figure's last digit up, row under row.
  */
+/** What the Book keeps while the app is open (efficiency audit 2026-10-18, #5). */
+const BOOK_MONTHS = new Map();
+// Layout timing in the browser; a plain effect in a static render (no warning there).
+const useLayoutIfClient = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+const BOOK_LAST = { period: null };
+
 /** Calendar arithmetic on civil dates (no clock involved). */
 const shiftDays = (ymd, n) => {
   const t = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d + n));
@@ -49,15 +55,37 @@ export function WeekDays({ today, pick, onPick }) {
   const days = recentDays(today, 14);
   const name = (ymd, i) => (i === 0 ? S.dayToday : i === 1 ? S.dayYesterday
     : `${WEEK_DAYS[new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d)).getUTCDay()]} ${ymd.d}`);
-  const chip = (key, label, on) => (
-    <button key={String(key)} className="catchip" aria-pressed={on} onClick={() => onPick(on && key !== null ? null : key)}
-      style={{ ...glass('chip'), ...(on ? { background: C.harbor, color: C.onDark, borderColor: C.harbor } : { color: C.ink }),
-        minHeight: TAP, padding: '0 16px', flex: '0 0 auto', whiteSpace: 'nowrap', fontSize: TYPE.label, fontWeight: on ? 700 : 600, ...NUMERALS }}>
+  /**
+   * MOTION 5 — THE CHOICE SLIDES (design audit 2026-10-18): one harbor pill moves
+   * to the chosen button instead of two fills swapping, the period switch's rule.
+   * Measured after layout; until then (and in a static render) the chosen button
+   * wears the fill itself, so nothing is ever unmarked.
+   */
+  const refs = useRef(new Map());
+  const [box, setBox] = useState(null);
+  const key = pick === null ? 'null' : String(pick);
+  useLayoutIfClient(() => {
+    const el = refs.current.get(key);
+    if (!el) { setBox(null); return; }
+    setBox({ x: el.offsetLeft, w: el.offsetWidth });
+    if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }, [key]);
+  const chip = (k, label, on) => (
+    <button key={String(k)} ref={(el) => { if (el) refs.current.set(String(k), el); }} className="catchip" aria-pressed={on}
+      onClick={() => onPick(on && k !== null ? null : k)}
+      style={{ ...glass('chip'), ...(on ? (box ? { background: 'transparent', color: C.onDark, borderColor: 'transparent', boxShadow: 'none' } : { background: C.harbor, color: C.onDark, borderColor: C.harbor }) : { color: C.ink }),
+        position: 'relative', zIndex: 1, minHeight: TAP, padding: '0 16px', flex: '0 0 auto', whiteSpace: 'nowrap', fontSize: TYPE.label, fontWeight: on ? 700 : 600, ...NUMERALS,
+        transition: `color ${MOTION.move}ms ${MOTION.easeSettle}` }}>
       {label}
     </button>
   );
   return (
-    <Rail data-week-days role="group" aria-label={S.weekDaysLabel} style={{ gap: 8, paddingBottom: 2, marginBottom: 14 }}>
+    <Rail data-week-days role="group" aria-label={S.weekDaysLabel} style={{ gap: 8, paddingBottom: 2, marginBottom: 14, position: 'relative' }}>
+      {box && (
+        <span aria-hidden data-week-pill style={{ position: 'absolute', top: 0, left: 0, height: TAP, width: box.w, borderRadius: RADIUS.capsule,
+          background: C.harbor, transform: `translateX(${box.x}px)`, zIndex: 0,
+          transition: `transform ${MOTION.move}ms ${MOTION.easeSettle}, width ${MOTION.move}ms ${MOTION.easeSettle}` }} />
+      )}
       {chip(null, S.thisWeek, pick === null)}
       {chip('last', S.lastWeek, pick === 'last')}
       {days.map((ymd, i) => chip(dayKey(ymd), name(ymd, i), pick === dayKey(ymd)))}
@@ -141,7 +169,24 @@ function useReducedMotion() {
  * presentation constants, exactly like the map they decorate: re-drawable at
  * any time, touching nothing stored.
  */
-export const PRIORITY_ICONS = { essentials: '🏠', health: '🩺', joy: '🎈', projects: '🧰' };
+/**
+ * The priority chips' icons are LINE ICONS in the app's one stroke (1.8, round),
+ * like the camera, clip and photos marks — not emoji (design audit 2026-10-18).
+ * Each value is an SVG path on a 24-unit grid.
+ */
+export const PRIORITY_ICONS = {
+  essentials: 'M4 11l8-7 8 7v9h-5v-6h-6v6H4z',
+  health: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+  joy: 'M12 3.5l2.3 5.1 5.6.6-4.2 3.8 1.2 5.5L12 15.7l-4.9 2.8 1.2-5.5-4.2-3.8 5.6-.6z',
+  projects: 'M4 8.5h16V19H4zM9 8.5V5.5h6v3M4 13h16',
+};
+export function PriorityIcon({ k }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true" focusable="false" style={{ marginInlineEnd: 6, flex: '0 0 auto' }}>
+      <path d={PRIORITY_ICONS[k]} />
+    </svg>
+  );
+}
 
 export default function BookView({
   data, settled = {}, onEdit, onGoToInbox, onBusyChange, onRowRemoved = null,
@@ -186,7 +231,9 @@ export default function BookView({
   /** SSR seam: the server-authored live tab (an effect cannot run under SSR). */
   initialLiveTab = '',
 }) {
-  const [period, setPeriod] = useState(initialPeriod);
+  // The period survives leaving the Book (efficiency audit #5) unless a suite seeds one.
+  const [period, setPeriodState] = useState(() => (initialPeriod === 'today' && BOOK_LAST.period) || initialPeriod);
+  const setPeriod = (p) => { BOOK_LAST.period = p; setPeriodState(p); };
   /**
    * N7 — WHICH PRIORITY GROUP THE LIST IS READ THROUGH, or null for all of it.
    * A lens over the rows, never a claim about them: the chips are always on
@@ -246,7 +293,10 @@ export default function BookView({
    * that grows, and the server's own 60 s blob is the freshness authority.
    * Session-lifetime only (a ref, not storage): a new visit re-reads truth.
    */
-  const monthCache = useRef(new Map());
+  // At MODULE level (efficiency audit #5): leaving the Book and coming back keeps
+  // what was read. Closed months keep forever; the current month keeps only for
+  // the summary it was read beside (a new summary — after any write — reads it again).
+  const monthCache = useRef(BOOK_MONTHS);
   const [undated, setUndated] = useState(0);
   const [open, setOpen] = useState(initialOpenKey);
   /**
@@ -299,12 +349,15 @@ export default function BookView({
   const needsFetch = rowsSource(period, browsing) === 'fetch';
   useEffect(() => {
     if (!today) return undefined;
+    // The summary names the month's tab (server 20261018+): no extra call. Older
+    // servers still get the one-off read (efficiency audit 2026-10-18, #4).
+    if (data.month && data.month.tab) { setLiveTab(data.month.tab); return undefined; }
     let live = true;
     fetchEntries({ y: today.y, m: today.m })
       .then((a) => { if (live && a && a.ok !== false && a.tab) setLiveTab(a.tab); })
       .catch(() => {});
     return () => { live = false; };
-  }, [today && today.y, today && today.m]);
+  }, [today && today.y, today && today.m, data.month && data.month.tab]);
 
   const load = useCallback(async (force) => {
     /**
@@ -335,8 +388,8 @@ export default function BookView({
       // one place staleness hides.
       monthCache.current.clear();
     }
-    const cacheKey = (ref) => `${ref.y}_${ref.m}`;
     const isClosed = (ref) => !(ref.y === today.y && ref.m === today.m);
+    const cacheKey = (ref) => `${ref.y}_${ref.m}${isClosed(ref) ? '' : `@${data.serverTime || ''}`}`;
     try {
       /**
        * N6 — a browsed month is fetched WITH the month before it, because the
@@ -360,7 +413,7 @@ export default function BookView({
         if (hit) return hit;
         try {
           const a = await fetchEntries(ref);
-          if (a && Array.isArray(a.entries) && isClosed(ref)) {
+          if (a && Array.isArray(a.entries)) {
             monthCache.current.set(cacheKey(ref), a);
           }
           return a;
@@ -434,7 +487,7 @@ export default function BookView({
       if (ticket === fetchSeq.current) { setLoadingRows(false); setLoadError(true); }
       return false;
     }
-  }, [period, browsing, today, needsFetch, weekStart]);
+  }, [period, browsing, today && today.y, today && today.m, today && today.d, data.serverTime, needsFetch, weekStart]);
 
   useEffect(() => { load(); }, [load]);
   // The header's refresh button reloads THIS view's data while it is showing.
@@ -639,7 +692,7 @@ export default function BookView({
         const total = hv.period && hv.period.prev ? sumTo(comb(hv.period.prev.Visa || [], hv.period.prev.Cash || [])) : 0;
         if (!(total > 0)) return null;
         return (
-          <div data-new-week style={{ ...glass('card'), padding: '14px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div data-new-week style={{ ...glass('plate'), padding: '14px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <span style={{ minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: TYPE.row, fontWeight: 700, color: C.ink }}>{S.newWeekTitle}</span>
               <span style={{ display: 'block', fontSize: TYPE.label, color: C.muted }}>
@@ -831,7 +884,7 @@ export default function BookView({
                   color: C.ink, fontSize: TYPE.label, fontWeight: active ? 700 : 500,
                 }}
               >
-                <span aria-hidden="true" style={{ marginInlineEnd: 6 }}>{PRIORITY_ICONS[g.key]}</span>
+                <PriorityIcon k={g.key} />
                 {S.lensGroup(g.key)}
               </button>
             );
@@ -1490,7 +1543,7 @@ export function RollingWeek({ month, todayD, displayCurrency }) {
   const r = rollingWeek(mv.period, todayD);
   if (!r) return null;
   return (
-    <div data-rolling-week style={{ ...glass('card'), padding: '12px 16px', marginBottom: SPACE.section }}>
+    <div data-rolling-week style={{ ...glass('plate'), padding: '12px 16px', marginBottom: SPACE.section }}>
       {r.days < 7 ? (
         <div style={{ fontSize: TYPE.label, color: C.muted, lineHeight: 1.5 }}>{S.rollingSoon}</div>
       ) : (
@@ -1579,7 +1632,7 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
           big number is the only hero. */}
       <div style={{ fontSize: TYPE.label, fontWeight: 600, color: C.muted }}>{S.todaySpent}</div>
       <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.heroBook, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.1, marginTop: 4 }}>
-        {money(lead.amount)}
+        <CountUp value={lead.amount} format={money} />
         {/**
           * A4 — the unit rides the figure: inline, NON-serif, muted, at the
           * floored ratio (`unitSize`, ruling 5). It used to sit on the meta
@@ -2008,7 +2061,7 @@ export function PeriodBlock({
           </div>
         )}
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
-          {moneyRound(lead.amount)}
+          <CountUp value={lead.amount} format={moneyRound} />
           {/**
             * A4 — the unit ALWAYS rides the figure now: inline, NON-serif,
             * muted, at the floored ratio (`unitSize`, ruling 5). A bare 80
@@ -2385,7 +2438,8 @@ function RowList({
       {phone.map((r, i) => (
         // v4 P5: a row still on the phone — sand wash, a clock, and what will
         // happen to it. Not a button: there is no sheet row to open yet.
-        <div key={r.id} data-on-phone style={{ minHeight: 68, padding: '10px 16px', display: 'grid', gridTemplateColumns: '1fr auto',
+        // motion 4: a just-logged row (held for undo) lands at the top of the list
+        <div key={r.id} data-on-phone className={r.held ? 'row-land' : undefined} style={{ minHeight: 68, padding: '10px 16px', display: 'grid', gridTemplateColumns: '1fr auto',
           alignItems: 'center', gap: 4, background: PHONE_ROW_BG, borderTop: i === 0 ? 'none' : GLASS_DIVIDER }}>
           <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
             <span style={{ fontSize: TYPE.body, fontWeight: 600, ...ISOLATE }}>{r.description}</span>
