@@ -162,11 +162,20 @@ export function DebugShots({ send = debugShot, sendNote = debugNote, prepare = p
           background: canSend ? C.harbor : C.line, color: canSend ? C.onDark : C.muted, border: 'none' }}>
         {busy ? S.debugShotsSending(state.i, state.n) : S.debugShotsSend}
       </button>
-      <div role="status" aria-live="polite" style={{ fontSize: TYPE.label, color: state && state.failed ? C.conflictInk : C.muted, marginTop: 6, lineHeight: 1.5 }}>
-        {state && state.n == null
-          ? (state.failed ? S.debugShotsFailed(state.failed) : S.debugShotsSent(state.sent))
-          : S.debugShotsHelp}
-      </div>
+      {/* «1 of 3, 2 of 3» as a bar (debug send 8a33117f, 2026-10-18), and nothing
+          else under the button until there is an outcome to say. */}
+      {busy && (
+        <div role="progressbar" data-send-progress aria-valuemin={0} aria-valuemax={state.n} aria-valuenow={state.i - 1}
+          aria-label={S.debugShotsSending(state.i, state.n)}
+          style={{ height: 8, borderRadius: RADIUS.capsule, background: 'rgba(44, 67, 86, 0.10)', overflow: 'hidden', marginTop: 8 }}>
+          <div className="read-bar" style={{ height: '100%', width: `${Math.round(((state.i - 0.5) / state.n) * 100)}%`, background: C.harbor, borderRadius: RADIUS.capsule, transition: 'width 250ms linear' }} />
+        </div>
+      )}
+      {state && state.n == null && (
+        <div role="status" aria-live="polite" style={{ fontSize: TYPE.label, color: state.failed ? C.conflictInk : C.muted, marginTop: 6, lineHeight: 1.5 }}>
+          {state.failed ? S.debugShotsFailed(state.failed) : S.debugShotsSent(state.sent)}
+        </div>
+      )}
     </div>
   );
 }

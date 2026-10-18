@@ -141,7 +141,6 @@ export const AR = {
   // النسخة القصيرة — بتقعد جنب عنوان شاشة «جديد» من غير ما تاخد سطر (M1).
   receiptShort: '📷 فاتورة',
   receiptIntro: 'صوّر الفاتورة وهنقرا المبلغ لوحدنا. مش هيتسجل حاجة غير لما توافق.',
-  readUsually: (s) => `عادةً حوالي ${s} ثانية`,
   receiptReading: 'بنقرا الفاتورة…',
   photosTitle: 'الصور',
   photosEmpty: 'مفيش حاجة بتتقري',
@@ -228,7 +227,7 @@ export const AR = {
   jobRetry: 'جرّب تاني',
   debugLogSend: '⚑ ابعت سجل القراية',
   debugLogSent: '⚑ السجل اتبعت ✓',
-  debugLogPrivacy: 'بيطلع سجل القراية بس — الصورة نفسها مش بتطلع من الموبايل.',
+  debugLogPrivacy: 'الصورة اتبعتت للتصليح على الدرايف؛ ده بيضيف سجل القراية للشيت.',
   jobsCapped: (n) => `${n} مستنيين حد بكرة`,
   // كل صورة بتقول هي إيه: اسم المحل لما نقراه، ووقت التصوير لحد ما نقراه.
   jobPhotoAt: (time) => `صورة الساعة ${time}`,
@@ -465,7 +464,6 @@ export const AR = {
   debugShotsThumb: (n) => `صورة ${n}`,
   debugShotsNote: 'إيه اللي حصل؟ وكنت متوقع إيه؟',
   debugShotsSend: 'ابعت للتصليح',
-  debugShotsHelp: 'بتروح على فولدر «Debug screenshots» في الدرايف، وبتتشاف من هناك.',
   debugShotsSending: (i, n) => `بنبعت ${i} من ${n}…`,
   debugShotsSent: (n) => (n === 1 ? 'اتبعتت ✓' : `${n} اتبعتوا ✓`),
   debugShotsFailed: (n) => `${n} متبعتش — اتأكد من النت وجرب تاني`,
@@ -505,6 +503,12 @@ export const AR = {
   todayEmptyTitle: 'لسه مفيش حاجة اتسجلت النهاردة',
   todayEmptyBody: 'أكّد العمليات من «للمراجعة»، أو سجّل مصروف جديد.',
 
+  dayToday: 'النهاردة',
+  dayYesterday: 'امبارح',
+  weekDaysLabel: 'اختار يوم',
+  newWeekTitle: 'أسبوع جديد بدأ',
+  newWeekBody: 'الأسبوع اللي فات صرفت',
+  seeLastWeek: 'شوف الأسبوع اللي فات',
   thisWeek: 'الأسبوع ده',
   lastWeek: 'الأسبوع اللي فات',
 

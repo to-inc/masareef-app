@@ -23,8 +23,9 @@ export function expectedReadMs(store = globalThis.localStorage) {
 }
 
 /**
- * The bar's fill at `elapsed`: about 90% at the usual time, creeping toward
- * 95% after it, and never «done» — only the answer arriving finishes it.
+ * The bar's fill at `elapsed`: a straight line TIMED to the usual read (Tarek,
+ * 2026-10-18: «you can time the bar to be 21 seconds»), reaching 95% at that
+ * time and holding there — only the answer arriving finishes it. No words beside it.
  */
 export const readProgress = (elapsed, expected) =>
-  Math.min(0.95, Math.max(0, 1 - Math.exp((-2.3 * Math.max(0, elapsed)) / Math.max(1000, expected))));
+  Math.min(0.95, Math.max(0, (0.95 * Math.max(0, elapsed)) / Math.max(1000, expected)));

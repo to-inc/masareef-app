@@ -133,7 +133,6 @@ export const EN = {
   // vertical space (M1).
   receiptShort: '📷 Receipt',
   receiptIntro: 'Photograph the receipt and we read the amount. Nothing is logged until you agree.',
-  readUsually: (s) => `Usually about ${s} seconds`,
   receiptReading: 'Reading the receipt…',
   photosTitle: 'Photos',
   photosEmpty: 'Nothing being processed',
@@ -224,7 +223,7 @@ export const EN = {
   jobRetry: 'Try again',
   debugLogSend: '⚑ Send debug log',
   debugLogSent: '⚑ Log sent ✓',
-  debugLogPrivacy: 'Only the reading log leaves the phone — never the photo.',
+  debugLogPrivacy: 'The photo is already filed for fixing on your Drive; this adds the reading log to your sheet.', // 2026-10-18: auto-filed reads made «never the photo» untrue
   jobsCapped: (n) => `${n} waiting for tomorrow`,
   // Every job card names itself: the shop once we have read one, the time it
   // was taken until then. "No name… that's terrible UX." — his words.
@@ -459,7 +458,6 @@ export const EN = {
   debugShotsThumb: (n) => `Screenshot ${n}`,
   debugShotsNote: 'What went wrong? What did you expect?',
   debugShotsSend: 'Send for debugging',
-  debugShotsHelp: 'They go to the «Debug screenshots» folder on your Drive, and get looked at from there.',
   debugShotsSending: (i, n) => `Sending ${i} of ${n}…`,
   debugShotsSent: (n) => (n === 1 ? 'Sent ✓' : `${n} sent ✓`),
   debugShotsFailed: (n) => `${n} didn't send — check the connection and try again`,
@@ -501,6 +499,12 @@ export const EN = {
   todayEmptyTitle: 'Nothing logged today yet',
   todayEmptyBody: 'Confirm from the Inbox, or add a new expense.',
 
+  dayToday: 'Today',
+  dayYesterday: 'Yesterday',
+  weekDaysLabel: 'Show a day',
+  newWeekTitle: 'A new week has started',
+  newWeekBody: 'Last week you spent',
+  seeLastWeek: 'See last week',
   thisWeek: 'This week',
   lastWeek: 'Last week',
 

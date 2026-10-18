@@ -5,7 +5,7 @@ import {
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
 import { money, money2, moneyRound } from '../lib/format.js';
-import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, typicalBand, inReadingUnit, catsInReadingUnit, homeOffPlot, rollingWeek } from '../lib/series.js';
+import { periodTotals, comparisonOf, seriesFor, lastIdxOf, comb, sumTo, typicalBand, inReadingUnit, catsInReadingUnit, homeOffPlot, rollingWeek } from '../lib/series.js';
 import { PRIORITY_GROUPS, groupOf } from '../lib/priorities.js';
 import { hasForeign, mayCompare, foreignLines, unsizedForeign } from '../state/foreign.js';
 import { leadAndAsides, allInLead, unconvertedLines, getDisplayCurrency, HOME_CURRENCY } from '../state/display.js';
@@ -18,13 +18,14 @@ import { TopCategories, PeriodSummary, CategoryCompare, PriorityLens, MonthStack
 import { Chip, LATIN, ISOLATE, SectionLabel, Rail, Sheet } from '../components/Primitives.jsx';
 import { OutcomeNote, CategoryActions } from '../components/CategoryPicker.jsx';
 import { cardKey, needsHim } from '../state/inboxOutcomes.js';
-import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay, parseSheetDate } from '../state/recent.js';
+import { monthStrip, monthsFor, filterEntries, undatedIn, sortForDisplay, parseSheetDate, weekWindow, lastWeekWindow, recentDays, dayKey } from '../state/recent.js';
 import { bookPeriods, rowsSource, travelOf, egpTotalOf, needsCategory } from '../state/book.js';
 import { getSheetUrl } from '../state/secret.js';
 import { lensOpen as loadLensOpen, setLensOpen } from '../state/lens.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
 import LogCard from '../components/LogCard.jsx';
 import EditSheet from './EditSheet.jsx';
+import { setBookPeriod, track } from '../state/usage.js';
 
 /**
  * THE UNIT HOLDS A FIXED SLOT in a list row (Refactoring UI pass, 2026-10-16):
@@ -32,6 +33,38 @@ import EditSheet from './EditSheet.jsx';
  * amounts ended at different places. A slot as wide as the widest mark (ج.م)
  * lines every figure's last digit up, row under row.
  */
+/** Calendar arithmetic on civil dates (no clock involved). */
+const shiftDays = (ymd, n) => {
+  const t = new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d + n));
+  return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
+};
+
+/**
+ * THE WEEK SCREEN'S DAY BUTTONS (Tarek, 2026-10-18: «I open the week tab because I
+ * want to see what I spent yesterday, and then I see nothing»). One swipeable row:
+ * This week · Last week · Today · Yesterday · Fri 16 … two weeks back. The choice
+ * narrows the list and «Where it went»; the week's figure and chart stay the week's.
+ */
+export function WeekDays({ today, pick, onPick }) {
+  const days = recentDays(today, 14);
+  const name = (ymd, i) => (i === 0 ? S.dayToday : i === 1 ? S.dayYesterday
+    : `${WEEK_DAYS[new Date(Date.UTC(ymd.y, ymd.m - 1, ymd.d)).getUTCDay()]} ${ymd.d}`);
+  const chip = (key, label, on) => (
+    <button key={String(key)} className="catchip" aria-pressed={on} onClick={() => onPick(on && key !== null ? null : key)}
+      style={{ ...glass('chip'), ...(on ? { background: C.harbor, color: C.onDark, borderColor: C.harbor } : { color: C.ink }),
+        minHeight: TAP, padding: '0 16px', flex: '0 0 auto', whiteSpace: 'nowrap', fontSize: TYPE.label, fontWeight: on ? 700 : 600, ...NUMERALS }}>
+      {label}
+    </button>
+  );
+  return (
+    <Rail data-week-days role="group" aria-label={S.weekDaysLabel} style={{ gap: 8, paddingBottom: 2, marginBottom: 14 }}>
+      {chip(null, S.thisWeek, pick === null)}
+      {chip('last', S.lastWeek, pick === 'last')}
+      {days.map((ymd, i) => chip(dayKey(ymd), name(ymd, i), pick === dayKey(ymd)))}
+    </Rail>
+  );
+}
+
 const ROW_UNIT = { display: 'inline-block', minWidth: '2.2em', paddingInlineStart: 4, textAlign: 'start' };
 
 /**
@@ -216,8 +249,15 @@ export default function BookView({
   const monthCache = useRef(new Map());
   const [undated, setUndated] = useState(0);
   const [open, setOpen] = useState(initialOpenKey);
-  const [weekDay, setWeekDay] = useState(null);   // 0 = Sunday — the Week chart's tapped day
-  useEffect(() => { setWeekDay(null); }, [period]);   // leaving Week forgets the day
+  /**
+   * THE WEEK SCREEN'S DAY (Tarek, 2026-10-18: «I want to go to certain days, like
+   * yesterday or even last Wednesday»). null = this week; 'last' = last week; a
+   * dayKey = that one day. The day buttons and a tapped chart bar both set it.
+   */
+  const [dayPick, setDayPick] = useState(null);
+  useEffect(() => { setDayPick(null); }, [period]);   // leaving Week forgets the day
+  useEffect(() => { setBookPeriod(period); }, [period]);   // the usage diary names «book:week»
+  useEffect(() => { if (dayPick !== null) track('week_pick', { day: dayPick === 'last' ? 'last' : 'day' }); }, [dayPick]);
   useEffect(() => { setCatPick(null); }, [period, browsing]);   // «Where it went» picks are per screen
   /**
    * U1 — which row's edit sheet is up ({item, key}), and the rows the sheet
@@ -236,7 +276,19 @@ export default function BookView({
   const reducedMotion = useReducedMotion();
 
   const today = data.today_cairo;
-  const liveWeekIndex = new Date(Date.UTC(today.y, today.m - 1, today.d)).getUTCDay();
+  // Which weekday slot 0 of the week series is (2026-10-18): Monday on his book.
+  const weekStart = data.week && data.week.startDow === 1 ? 1 : 0;
+  const weekLabels = weekStart ? WEEK_DAYS.slice(1).concat(WEEK_DAYS[0]) : WEEK_DAYS;
+  const liveWeekIndex = (new Date(Date.UTC(today.y, today.m - 1, today.d)).getUTCDay() - weekStart + 7) % 7;
+  const thisWeek = today ? weekWindow(today, weekStart) : null;
+  const lastWeek = today ? lastWeekWindow(today, weekStart) : null;
+  const inWeekPick = (list) => list.filter((r) => {
+    const k = dayKey(parseSheetDate(r && r.date));
+    if (k === null || !thisWeek) return false;
+    if (typeof dayPick === 'number') return k === dayPick;
+    const w = dayPick === 'last' ? lastWeek : thisWeek;
+    return k >= dayKey(w.from) && k <= dayKey(w.to);
+  });
 
   /**
    * Today's rows ride on the `summary` every screen already fetched; week and
@@ -292,7 +344,7 @@ export default function BookView({
        * May, never against whatever the live screen happens to compare with.
        * The cache makes the second read free on a revisit.
        */
-      const months = browsing ? [browsing, monthBefore(browsing)] : monthsFor(period === 'year' ? 'month' : period, today);
+      const months = browsing ? [browsing, monthBefore(browsing)] : monthsFor(period === 'year' ? 'month' : period, today, weekStart);
       /**
        * LOADING IS A STATE THE SCREEN ADMITS TO. The old code kept the previous
        * rows on screen while the next month loaded — so a slow read left August
@@ -368,7 +420,7 @@ export default function BookView({
       // fields — the server's match fingerprint — are untouched.
       const all = answers.flatMap((a) => (a && Array.isArray(a.entries) ? a.entries : [])
         .map((e) => (e && typeof e === 'object' && a.tab ? Object.defineProperty(e, '_tab', { value: a.tab, enumerable: false, configurable: true }) : e)));
-      const shown = filterEntries(all, period, today);
+      const shown = filterEntries(all, period === 'week' ? 'fortnight' : period, today, weekStart);
       setFetched(sortForDisplay(shown));
       setFetchedTab(answers.length === 1 && answers[0] ? answers[0].tab || '' : '');
       // Counted from the rows ON SCREEN: a week spanning two months is assembled
@@ -382,7 +434,7 @@ export default function BookView({
       if (ticket === fetchSeq.current) { setLoadingRows(false); setLoadError(true); }
       return false;
     }
-  }, [period, browsing, today, needsFetch]);
+  }, [period, browsing, today, needsFetch, weekStart]);
 
   useEffect(() => { load(); }, [load]);
   // The header's refresh button reloads THIS view's data while it is showing.
@@ -436,7 +488,7 @@ export default function BookView({
   // the chart reads All (audit r2: a tap during loading stranded it on Card).
   useEffect(() => { if (birdsOn && metric !== 'all') setMetric('all'); }, [birdsOn, metric]);
   // A category pick lives only as long as its control is on screen (audit r2).
-  useEffect(() => { setCatPick(null); }, [displayCurrency, weekDay, priorityFilter]);
+  useEffect(() => { setCatPick(null); }, [displayCurrency, dayPick, priorityFilter]);
   const rowHome = (r) => (r && r.currency === bookHome && typeof r.amount === 'number' ? r.amount
     : r && typeof r.home === 'number' ? r.home : null);
   const tally = (list) => {
@@ -477,10 +529,9 @@ export default function BookView({
     : sorted)
     // «Where it went»: a tapped category narrows the list too (2026-10-10).
     .filter((r) => !catPick || !birdsOn || (catPick === '❓' ? !canonCategory(r && r.category) : sameCategory(r && r.category, catPick)));
-  // A tapped day on the Week chart narrows the list to that day (2026-10-10).
-  const rows = period === 'week' && weekDay != null
-    ? byPriority.filter((r) => { const d = parseSheetDate(r && r.date); return !!d && new Date(d.y, d.m - 1, d.d).getDay() === weekDay; })
-    : byPriority;
+  // The Week screen shows this week, last week, or one day (dayPick) — the rows
+  // were read for the whole fortnight, so every choice is already in hand.
+  const rows = period === 'week' ? inWeekPick(byPriority) : byPriority;
 
   /**
    * v4 P5 — ROWS STILL ON THE PHONE (held for undo, or waiting for the network).
@@ -577,15 +628,40 @@ export default function BookView({
         />
       )}
 
+      {period === 'week' && today && (
+        <WeekDays today={today} pick={dayPick} onPick={setDayPick} />
+      )}
+      {/* A NEW WEEK opens on last week (2026-10-18: «When it's a new week … here's
+          your preview of your last week»): on its first day, one card with last
+          week's total and the way to its days. */}
+      {period === 'week' && liveWeekIndex === 0 && dayPick === null && (() => {
+        const hv = inReadingUnit(data.week, displayCurrency, HOME_CURRENCY);
+        const total = hv.period && hv.period.prev ? sumTo(comb(hv.period.prev.Visa || [], hv.period.prev.Cash || [])) : 0;
+        if (!(total > 0)) return null;
+        return (
+          <div data-new-week style={{ ...glass('card'), padding: '14px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: TYPE.row, fontWeight: 700, color: C.ink }}>{S.newWeekTitle}</span>
+              <span style={{ display: 'block', fontSize: TYPE.label, color: C.muted }}>
+                {S.newWeekBody} <b style={{ color: C.ink, ...LATIN, ...NUMERALS }}>{moneyRound(total)} {unitFor(hv.unit)}</b>
+              </span>
+            </span>
+            <button className="catchip" onClick={() => setDayPick('last')}
+              style={{ ...glass('chip'), minHeight: TAP, padding: '0 16px', flex: '0 0 auto', fontSize: TYPE.label, fontWeight: 700, color: C.harborInk }}>
+              {S.seeLastWeek}
+            </button>
+          </div>
+        );
+      })()}
       {period === 'week' && (
         <PeriodBlock
-          data={data.week} labels={WEEK_DAYS} liveIndex={liveWeekIndex}
+          data={data.week} labels={weekLabels} liveIndex={liveWeekIndex}
           metric={metric} setMetric={setMetric}
           names={{ cur: S.thisWeek, prev: S.lastWeek }} showBars
           displayCurrency={displayCurrency}
-          onRange={(r) => setWeekDay(r ? r.a : null)}
+          onRange={(r) => setDayPick(r && thisWeek ? dayKey(shiftDays(thisWeek.from, r.a)) : null)}
           birdsEye={birdsOn && !loadingRows && !loadError
-            ? <><RollingWeek month={data.month} todayD={today.d} displayCurrency={displayCurrency} />{topCats(tally(weekDay == null ? sorted : sorted.filter((r) => { const d = parseSheetDate(r && r.date); return !!d && new Date(d.y, d.m - 1, d.d).getDay() === weekDay; })), true)}</>
+            ? <><RollingWeek month={data.month} todayD={today.d} displayCurrency={displayCurrency} />{topCats(tally(inWeekPick(sorted)), true)}</>
             : null}
         />
       )}

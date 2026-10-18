@@ -47,6 +47,7 @@ import { useUpdatePrompt } from './state/update.js';
 import InstallCoach from './components/InstallCoach.jsx';
 import SetupView from './views/SetupView.jsx';
 import InboxView, { PhotosShortcut } from './views/InboxView.jsx';
+import { installUsage, flushUsage, setScreen, track, bookScreen } from './state/usage.js';
 import EntryView, { EntryDock } from './views/EntryView.jsx';
 import ReceiptView from './views/ReceiptView.jsx';
 import DictateView from './views/DictateView.jsx';
@@ -803,6 +804,7 @@ export default function App() {
    */
   const submitEntry = () => {
     if (!entryReady({ amount: entryAmount, cat: entryCat, busy: entryBusy })) return;
+    track('entry_logged', { path: 'keypad' });
     const amount = parseFloat(entryAmount);
     const clientId = newClientId();
     const payload = manualPayload({
@@ -828,6 +830,7 @@ export default function App() {
   };
 
   const undoEntry = () => {
+    track('undo');
     clearTimeout(undoTimer.current);
     if (!undo) return;
     /**
@@ -883,6 +886,23 @@ export default function App() {
     setStaleQueue(partition().stale); setPhoneRows(onPhone());
   };
 
+  /**
+   * THE USAGE DIARY (state/usage.js, 2026-10-18): installed once; the screen he is
+   * on is named on every change; the day's diary is sent when the server keeps it.
+   */
+  useEffect(() => { installUsage(); }, []);
+  useEffect(() => { if (build) flushUsage(build); }, [build]);
+  useEffect(() => {
+    const hide = () => { if (document.visibilityState === 'hidden') flushUsage(build); };
+    document.addEventListener('visibilitychange', hide);
+    return () => document.removeEventListener('visibilitychange', hide);
+  }, [build]);
+  useEffect(() => {
+    const dock = !needsSetup && tab === 'entry' && entryMode === 'keypad';
+    setScreen(needsSetup ? 'setup' : settingsOpen ? 'settings' : dock ? 'new'
+      : tab === 'entry' ? entryMode : tab === 'book' ? bookScreen() : tab);
+    if (dock) track('entry_open');
+  }, [tab, entryMode, settingsOpen, needsSetup]);
   // Going to the Book folds the shortcut's list again (a receipt opened from it comes back to it open).
   useEffect(() => { if (tab === 'book') setPhotosOpen(false); }, [tab]);
   if (!booted) return null;
@@ -1102,6 +1122,7 @@ export default function App() {
                     openJobId={openJobId}
                     key={receiptFile ? `f-${[].concat(receiptFile).map((f) => `${f.name}${f.size}${f.lastModified}`).join('|')}` : openJobId ? `j-${openJobId}` : 'receipt'}
                     onSaved={(msg, queuedPayload) => {
+                      track('entry_logged', { path: 'receipt', queued: !!queuedPayload });
                       // A confirm that could not reach the server still has to
                       // append a row, so it goes through the normal outbox —
                       // age-gated and clientId-idempotent, exactly like cash.

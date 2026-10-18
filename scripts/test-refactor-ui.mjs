@@ -90,7 +90,8 @@ try {
   { const exp = 10000;
     const ps = [0, 2000, 5000, 10000, 30000, 300000].map((t) => readProgress(t, exp));
     const monotone = ps.every((p, i) => i === 0 || p >= ps[i - 1]);
-    ok(monotone && ps[0] === 0 && Math.abs(ps[3] - 0.9) < 0.01 && ps[5] <= 0.95, 'D2a', `the estimate climbs, ~90% at the usual time, never «done» on its own (${ps.map((p) => p.toFixed(2)).join(' ')})`);
+    // 2026-10-18 (debug a7421763): a straight line timed to the usual read — 95% at that time, then held.
+    ok(monotone && ps[0] === 0 && Math.abs(ps[1] - 0.19) < 0.01 && Math.abs(ps[3] - 0.95) < 0.01 && ps[5] === 0.95, 'D2a', `the bar runs straight to 95% at the usual time and holds (${ps.map((p) => p.toFixed(2)).join(' ')})`);
     const mem = new Map(); const store = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
     const before = expectedReadMs(store);
     [8000, 20000, 9000].forEach((ms) => recordReadTime(ms, store));
@@ -116,6 +117,22 @@ try {
     const off = await fileFailedRead({ ...job, clientHash: 'zzz' }, { stage: 'notReceipt' }, res, { ...opts, build: { actions: [] } });
     ok(first && !again && !off && sent.length === 2 && /pending_or_declined/.test(sent[0][1]) && /Smartum/.test(sent[0][1]) && sent[1][1] === sent[0][2],
       'AUTO.2', `filed once (note + photo in one batch), never twice, never on a server without the verbs (${JSON.stringify(sent)})`); }
+  // ——— WEEK (debug ba90a13a, 2026-10-18): Monday weeks, day buttons, a new week opens on last week
+  { const { WeekDays } = await vite.ssrLoadModule('/src/views/BookView.jsx');
+    const html = h(WeekDays, { today: { y: 2026, m: 10, d: 18 }, pick: 'last', onPick() {} });
+    const labels = [...html.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]);
+    ok(labels.length === 16 && labels[0] === S.thisWeek && labels[1] === S.lastWeek && labels[2] === S.dayToday && labels[3] === S.dayYesterday
+      && /aria-pressed="true"[^>]*>[^<]*<\/button>/.test(html) && (html.match(/aria-pressed="true"/g) || []).length === 1,
+      'W1', `This week · Last week · Today · Yesterday · then two weeks of days, one chosen (${labels.slice(0, 5).join(' | ')} …)`);
+    const book = src('src/views/BookView.jsx');
+    ok(/const weekStart = data\.week && data\.week\.startDow === 1 \? 1 : 0;/.test(book) && /labels=\{weekLabels\}/.test(book)
+      && /liveWeekIndex === 0 && dayPick === null/.test(book) && /filterEntries\(all, period === 'week' \? 'fortnight' : period, today, weekStart\)/.test(book),
+      'W2', 'the week follows the server\'s start day, reads the fortnight, and opens on last week on its first day'); }
+
+  // ——— SEND BAR (debug 8a33117f): «2 of 3» is a bar, and no folder sentence under the button
+  { const st = src('src/views/SettingsSheet.jsx');
+    ok(/data-send-progress/.test(st) && !/debugShotsHelp/.test(st) && !/readUsually/.test(src('src/views/ReceiptView.jsx')),
+      'D3', 'sending shows a 1-of-N bar; the «they go to the folder» line and «usually N seconds» are gone'); }
 } finally {
   await vite.close();
 }

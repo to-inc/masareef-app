@@ -181,6 +181,11 @@ export const debugNote = ({ note, batch }) =>
   (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
     : call({ action: 'debug_note', note, batch }, 'write'));
 
+/** The app's usage diary for the day — «Usage logs» on his Drive (2026-10-18). */
+export const usageLog = ({ events, device, batch }) =>
+  (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
+    : call({ action: 'usage_log', events, device, batch }, 'write'));
+
 export const removeEntry = ({ tab, rowHint, match }) =>
   (USING_MOCK ? mockRemoveEntry({ tab, rowHint, match })
     : call({ action: 'remove_entry', tab, rowHint, match }, 'write'));

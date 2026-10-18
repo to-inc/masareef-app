@@ -95,7 +95,10 @@ const book = readFileSync(new URL('../src/views/BookView.jsx', import.meta.url),
   const pc = catsInReadingUnit([{ name: 'Eating out', now: 0, prev: 0, homeNow: 25 }, { name: 'Car', now: 10, prev: 0 }], null, 'EGP', 'EUR');
   ok(pc.cats.map((c) => c.name).join() === 'Car', 'HS.off3 in pounds, a euro-only category is not drawn as «0»');
 }
-ok(/period === 'week' && weekDay != null/.test(book) && /getDay\(\) === weekDay/.test(book) && /useEffect\(\(\) => \{ setWeekDay\(null\); \}, \[period\]\)/.test(book),
+// R0 re-cut (2026-10-18): the tapped bar and the day buttons share ONE choice (dayPick) —
+// a day, last week, or this week — matched on the row's own date, not a weekday number.
+ok(/onRange=\{\(r\) => setDayPick\(r && thisWeek \? dayKey\(shiftDays\(thisWeek\.from, r\.a\)\) : null\)\}/.test(book)
+  && /period === 'week' \? inWeekPick\(byPriority\)/.test(book) && /useEffect\(\(\) => \{ setDayPick\(null\); \}, \[period\]\)/.test(book),
   'HS.24 a tapped day narrows the week\'s list to that day, and leaving Week forgets it');
 {
   // ——— a BROWSED month in his unit: euro rows at face, pound rows at their stamp, the rest named

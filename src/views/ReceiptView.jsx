@@ -423,7 +423,6 @@ export default function ReceiptView({
             usual time. Never measured from a later start, so it never runs backwards. */}
         <div style={{ width: 240, maxWidth: '80%', marginTop: 16 }}>
           <ReadProgress startedAt={workingSince.current} expectedMs={expectedReadMs()} label={S.receiptReading} />
-          <div style={{ color: C.muted, fontSize: TYPE.label, marginTop: 8 }}>{S.readUsually(Math.max(1, Math.round(expectedReadMs() / 1000)))}</div>
         </div>
         {slow && (
           <>

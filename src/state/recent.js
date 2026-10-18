@@ -78,10 +78,23 @@ const shift = (ymd, days) => {
  * this is safe: the inputs and outputs are civil dates, and UTC is just a
  * calendar that has no daylight saving to trip over.
  */
-export function weekWindow(todayCairo) {
-  const dow = new Date(Date.UTC(todayCairo.y, todayCairo.m - 1, todayCairo.d)).getUTCDay();
+export function weekWindow(todayCairo, startDow = 0) {
+  // `startDow` (2026-10-18): the server says which weekday a week starts on —
+  // Monday on his book, Sunday on Dad's (summary.week.startDow).
+  const dow = (new Date(Date.UTC(todayCairo.y, todayCairo.m - 1, todayCairo.d)).getUTCDay() - startDow + 7) % 7;
   const from = shift(todayCairo, -dow);
   return { from, to: shift(from, 6) };
+}
+
+/** Last week's window — the seven days before this week's first. */
+export function lastWeekWindow(todayCairo, startDow = 0) {
+  const { from } = weekWindow(todayCairo, startDow);
+  return { from: shift(from, -7), to: shift(from, -1) };
+}
+
+/** The last `n` days ending today, newest first — the Week screen's day buttons. */
+export function recentDays(todayCairo, n = 14) {
+  return Array.from({ length: n }, (_, i) => shift(todayCairo, -i));
 }
 
 /**
@@ -92,11 +105,20 @@ export function weekWindow(todayCairo) {
  * would silently drop five days of his spending from a view labelled "this week".
  * Deduped, so a week inside one month is still one request.
  */
-export function monthsFor(filter, todayCairo) {
+export function monthsFor(filter, todayCairo, startDow = 0) {
   if (filter !== 'week') return [{ y: todayCairo.y, m: todayCairo.m }];
-  const { from, to } = weekWindow(todayCairo);
+  // The Week screen also opens LAST week and any of the last 14 days (2026-10-18),
+  // so it reads from the earliest of those through the end of this week.
+  const { to } = weekWindow(todayCairo, startDow);
+  const lw = lastWeekWindow(todayCairo, startDow).from;
+  const d14 = shift(todayCairo, -13);
+  const from = dayKey(lw) < dayKey(d14) ? lw : d14;
   const months = [{ y: from.y, m: from.m }];
-  if (from.y !== to.y || from.m !== to.m) months.push({ y: to.y, m: to.m });
+  if (from.y !== to.y || from.m !== to.m) {
+    const mid = { y: to.m === 1 ? to.y - 1 : to.y, m: to.m === 1 ? 12 : to.m - 1 };
+    if ((mid.y !== from.y || mid.m !== from.m) && (mid.y > from.y || mid.m > from.m)) months.push(mid);
+    months.push({ y: to.y, m: to.m });
+  }
   return months;
 }
 
@@ -108,13 +130,15 @@ export function monthsFor(filter, todayCairo) {
  * unknown. Today and Week can place neither, so they leave them out, and the
  * view says how many were left out rather than pretending the list is complete.
  */
-export function filterEntries(entries, filter, todayCairo) {
+export function filterEntries(entries, filter, todayCairo, startDow = 0) {
   const rows = Array.isArray(entries) ? entries : [];
   if (filter === 'month') return rows.slice();
 
   const today = dayKey(todayCairo);
-  const { from, to } = weekWindow(todayCairo);
-  const lo = filter === 'today' ? today : dayKey(from);
+  const { from, to } = weekWindow(todayCairo, startDow);
+  // 'fortnight': everything the Week screen can show — the last 14 days and all of last week.
+  const fortLo = Math.min(dayKey(lastWeekWindow(todayCairo, startDow).from), dayKey(shift(todayCairo, -13)));
+  const lo = filter === 'today' ? today : filter === 'fortnight' ? fortLo : dayKey(from);
   const hi = filter === 'today' ? today : dayKey(to);
 
   return rows.filter((e) => {

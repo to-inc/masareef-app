@@ -94,8 +94,19 @@ eq(dayKey(null), null, 'an unreadable date has no key');
     'Today needs one month');
   eq(JSON.stringify(monthsFor('month', { y: 2026, m: 8, d: 9 })), '[{"y":2026,"m":8}]',
     'and so does Month');
-  eq(JSON.stringify(monthsFor('week', { y: 2026, m: 8, d: 9 })), '[{"y":2026,"m":8}]',
-    'a week inside one month is ONE request, not two');
+  // R0 re-cut (2026-10-18): the Week screen reads last week and the last 14 days too, so
+  // «inside one month» means the whole fortnight is. 26 Aug: last week 17–23, 14 days back 13.
+  eq(JSON.stringify(monthsFor('week', { y: 2026, m: 8, d: 26 })), '[{"y":2026,"m":8}]',
+    'a fortnight inside one month is ONE request, not two');
+  eq(JSON.stringify(monthsFor('week', { y: 2026, m: 8, d: 9 })), '[{"y":2026,"m":7},{"y":2026,"m":8}]',
+    'early in a month the fortnight reaches back into the month before (9 Aug → from 26 Jul)');
+  { const { weekWindow, lastWeekWindow } = await import('../src/state/recent.js');
+    const sun18 = { y: 2026, m: 10, d: 18 };
+    eq(JSON.stringify(weekWindow(sun18, 1)), '{"from":{"y":2026,"m":10,"d":12},"to":{"y":2026,"m":10,"d":18}}',
+      'a Monday week: Sunday 18 Oct is the LAST day of the week that began Monday 12');
+    eq(JSON.stringify(weekWindow(sun18, 0).from), '{"y":2026,"m":10,"d":18}', 'a Sunday week (Dad) begins on the 18th');
+    eq(JSON.stringify(lastWeekWindow(sun18, 1)), '{"from":{"y":2026,"m":10,"d":5},"to":{"y":2026,"m":10,"d":11}}',
+      'last week (Monday start) is 5–11 Oct'); }
   eq(JSON.stringify(monthsFor('week', { y: 2026, m: 8, d: 1 })),
     '[{"y":2026,"m":7},{"y":2026,"m":8}]',
     'a week that straddles the boundary fetches BOTH — July first, as it runs');
