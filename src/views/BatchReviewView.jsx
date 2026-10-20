@@ -629,16 +629,30 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                   </div>
                 </>
               )}
-              <button
-                className="catchip" onClick={onOverride}
-                style={{
-                  marginTop: 9, minHeight: TAP, width: '100%', borderRadius: RADIUS.row,
-                  background: C.card, border: `1px solid ${C.conflictLine}`,
-                  color: C.conflictInk, fontSize: 15, fontWeight: 700,
-                }}
-              >
-                {S.batchSaveAnyway}
-              </button>
+              {/* TWO WAYS OUT, side by side (Tarek, 2026-10-20: «there should be another button
+                  saying Discard … if I don't want to log it»): leave it out — the expected
+                  answer to a duplicate, so it leads — or log it anyway. */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 9 }}>
+                <button
+                  data-batch-discard className="catchip" onClick={() => { onTick(false); onToggleOpen(); }}
+                  style={{
+                    flex: 1, minHeight: TAP, borderRadius: RADIUS.row,
+                    background: C.harbor, border: 'none', color: C.onDark, fontSize: 15, fontWeight: 700,
+                  }}
+                >
+                  {S.batchLeaveOut}
+                </button>
+                <button
+                  className="catchip" onClick={onOverride}
+                  style={{
+                    flex: 1, minHeight: TAP, borderRadius: RADIUS.row,
+                    background: C.card, border: `1px solid ${C.conflictLine}`,
+                    color: C.conflictInk, fontSize: 15, fontWeight: 700,
+                  }}
+                >
+                  {S.batchSaveAnyway}
+                </button>
+              </div>
             </>
           )}
           {/* «save anyway» on a duplicate brings the picker back — it used to land as ❓ (audit 2026-10-10) */}

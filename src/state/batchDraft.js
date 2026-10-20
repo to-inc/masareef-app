@@ -209,7 +209,10 @@ export function initialTicks(rows) {
   const ticks = {};
   for (const row of Array.isArray(rows) ? rows : []) {
     if (!isWritable(row.row_status)) continue;       // no tick exists to set
-    ticks[rowKey(row)] = row.twinOf ? false : defaultTicked(row);
+    // A row the book ALREADY HAS starts unticked (Tarek, 2026-10-20: a duplicate sat ticked in
+    // «4 of 4 will be logged»); «Log it anyway» is the deliberate way to tick it.
+    const inBook = !!(row.dupBook && row.dupBook.checked && row.dupBook.match);
+    ticks[rowKey(row)] = row.twinOf || inBook ? false : defaultTicked(row);
   }
   return ticks;
 }

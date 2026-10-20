@@ -223,6 +223,15 @@ try {
       'F1', 'the figure leads; the comparison is one small line under it, and none on a week\'s first day');
     ok(/data-book-reading/.test(book) && /S\.photosBusyTitle\(busy\)/.test(book) && /photoJobs=\{photoJobs\} onOpenPhotos=/.test(src('src/App.jsx')),
       'R1', 'the Book says when a photo is being read, and opens Photos from there'); }
+  // ═══ statement review: a duplicate (2026-10-20) ═══
+  { const { initialTicks, rowKey } = await vite.ssrLoadModule('/src/state/batchDraft.js');
+    const dupRow = { sourceHash: 'h', index: 0, date: '2026-10-16', amount: 4, currency: 'EUR', merchant_display: 'Espresso House', row_status: 'completed', dupBook: { checked: true, match: { date: '16/10/2026' } } };
+    const fresh = { sourceHash: 'h', index: 1, date: '2026-10-17', amount: 78, currency: 'EUR', merchant_display: 'Weweller', row_status: 'completed', dupBook: { checked: true, match: null } };
+    const t = initialTicks([dupRow, fresh]);
+    ok(t[rowKey(dupRow)] === false && t[rowKey(fresh)] === true, 'B1', 'a row already in the book starts UNticked; a new one ticked');
+    const bv = src('src/views/BatchReviewView.jsx');
+    ok(/data-batch-discard className="catchip" onClick=\{\(\) => \{ onTick\(false\); onToggleOpen\(\); \}\}/.test(bv) && /\{S\.batchLeaveOut\}/.test(bv) && /\{S\.batchSaveAnyway\}/.test(bv),
+      'B2', '«Don\'t log it» sits beside «Log it anyway» and leaves the row out'); }
 } finally {
   await vite.close();
 }

@@ -392,6 +392,7 @@ export const AR = {
   outboxDupNote: 'الإيصال ده شبه مصروف موجود في الدفتر، فاتشال. ابعته برضه، أو شيله.',
   batchDupBookIntro: 'الدفتر فيه دي خلاص:',
   batchDupBatch: 'زي اللي فوق في نفس الصورة',
+  batchLeaveOut: 'متسجلهاش',
   batchDupUnchecked: 'ما قدرناش نتأكد إنها مش متسجلة قبل كده',
   batchSaveAnyway: 'سجّلها برضه',
   batchTruncated: (shown, total) => `ظاهر ${shown} من ${total} — الكشف مقصوص. صوّر الباقي وابعته.`,

@@ -377,6 +377,7 @@ export const EN = {
   outboxDupNote: 'This receipt matches an expense already in your book, so it was held back. Send it anyway, or drop it.',
   batchDupBookIntro: 'Your book already has this:',
   batchDupBatch: 'Same as the one above, in this photo',
+  batchLeaveOut: "Don't log it",
   batchDupUnchecked: 'Could not check your book for a duplicate',
   batchSaveAnyway: 'Log it anyway',
   batchTruncated: (shown, total) => `Showing ${shown} of ${total} — the list is cut off. Photograph the rest.`,
