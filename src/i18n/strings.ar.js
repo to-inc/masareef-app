@@ -394,6 +394,7 @@ export const AR = {
   batchDupBatch: 'زي اللي فوق في نفس الصورة',
   batchLeaveOut: 'متسجلهاش',
   batchDupUnchecked: 'ما قدرناش نتأكد إنها مش متسجلة قبل كده',
+  batchDupNoDate: 'مفيش تاريخ مقروء، فما قدرناش نقارنها بالدفتر',
   batchSaveAnyway: 'سجّلها برضه',
   batchTruncated: (shown, total) => `ظاهر ${shown} من ${total} — الكشف مقصوص. صوّر الباقي وابعته.`,
   // نتيجة كل صف بعد التسجيل — مش حكم واحد على الدفعة
@@ -509,6 +510,7 @@ export const AR = {
 
   dayToday: 'النهاردة',
   dayYesterday: 'امبارح',
+  dayLast: (wd) => `${wd} اللي فات`,
   weekDaysLabel: 'اختار يوم',
   newWeekTitle: 'أسبوع جديد بدأ',
   newWeekBody: 'الأسبوع اللي فات صرفت',

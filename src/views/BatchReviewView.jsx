@@ -549,7 +549,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               * The row keeps its default — unticking would invent a suspicion —
               * and differs in WORDS. The two must never render identically.
               */}
-            {!settled && unchecked && <span>{S.batchDupUnchecked}</span>}
+            {!settled && unchecked && <span>{dup.reason === 'no_date' ? S.batchDupNoDate : S.batchDupUnchecked}</span>}
             {!settled && writable && !category && (
               <span style={{ padding: '2px 8px', borderRadius: RADIUS.capsule, background: C.mist, fontWeight: 700 }}>
                 {S.batchNeedCategory}

@@ -379,6 +379,7 @@ export const EN = {
   batchDupBatch: 'Same as the one above, in this photo',
   batchLeaveOut: "Don't log it",
   batchDupUnchecked: 'Could not check your book for a duplicate',
+  batchDupNoDate: 'No date read, so it could not be checked against your book',
   batchSaveAnyway: 'Log it anyway',
   batchTruncated: (shown, total) => `Showing ${shown} of ${total} — the list is cut off. Photograph the rest.`,
   batchWritten: 'Logged',
@@ -505,6 +506,7 @@ export const EN = {
 
   dayToday: 'Today',
   dayYesterday: 'Yesterday',
+  dayLast: (wd) => `Last ${wd}`,
   weekDaysLabel: 'Show a day',
   newWeekTitle: 'A new week has started',
   newWeekBody: 'Last week you spent',

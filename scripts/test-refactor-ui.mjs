@@ -208,6 +208,15 @@ try {
     ok(plain(t).startsWith(S.dayToday) && /20 €/.test(plain(t)) && plain(yd).startsWith(S.dayYesterday) && /16/.test(plain(fri)) && !/\b10\b/.test(plain(fri))
       && /position:sticky/.test(t) && /role="heading"/.test(t),
       'L1', `a pinned header names the day — ${plain(t)} | ${plain(yd)} | ${plain(fri)}`);
+    const older = h(DayHeader, { dk: 20261010, rows: [], today, dayAmount: () => null });
+    const loc = /[\u0600-\u06FF]/.test(S.dayToday) ? 'ar-EG-u-nu-latn' : 'en-GB';
+    const f = (o, d) => new Intl.DateTimeFormat(loc, { ...o, timeZone: 'UTC' }).format(new Date(Date.UTC(2026, 9, d)));
+    ok(plain(fri) === `${S.dayLast(f({ weekday: 'long' }, 16))} ${f({ day: 'numeric', month: 'short' }, 16)}`
+      && plain(older) === `${f({ weekday: 'long' }, 10)} ${f({ day: 'numeric', month: 'short' }, 10)}` && /font-weight:400/.test(fri),
+      'L3', `older days read «Last Friday» with the date small; past a week the weekday stands alone — ${plain(fri)} | ${plain(older)}`);
+    { const { default: BRV } = await vite.ssrLoadModule('/src/views/BatchReviewView.jsx');
+      ok(/dup\.reason === 'no_date' \? S\.batchDupNoDate : S\.batchDupUnchecked/.test(src('src/views/BatchReviewView.jsx')) && typeof BRV === 'function',
+        'L4', 'a statement row with no date says so, instead of «Could not check your book»'); }
     const book = src('src/views/BookView.jsx');
     ok(/const header = dayHeaders && \(i === 0 \|\| dk !== prevDk\)/.test(book) && /<Fragment key=\{key\}>/.test(book) && /overflow: 'clip'/.test(book)
       && /dayHeaders=\{period !== 'today' && sortBy === 'date'\}/.test(book),

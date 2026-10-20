@@ -589,7 +589,12 @@ export default function BookView({
     .filter((r) => !catPick || !birdsOn || (catPick === '❓' ? !canonCategory(r && r.category) : sameCategory(r && r.category, catPick)));
   // The Week screen shows this week, last week, or one day (dayPick) — the rows
   // were read for the whole fortnight, so every choice is already in hand.
-  const rows = period === 'week' ? inWeekPick(byPriority) : byPriority;
+  // This week's list keeps going back through the fortnight already read (Tarek, 2026-10-20:
+  // «it should go all the way back»), each older day under its «Last Sunday» header. The figure,
+  // chart and «Where it went» above stay this week's. A fuller version would page further back on scroll.
+  const rows = period !== 'week' ? byPriority
+    : dayPick === null ? byPriority.filter((r) => dayKey(parseSheetDate(r && r.date)) !== null)
+      : inWeekPick(byPriority);
 
   /**
    * v4 P5 — ROWS STILL ON THE PHONE (held for undo, or waiting for the network).
@@ -2483,15 +2488,24 @@ export function DayHeader({ dk, rows, today, dayAmount, first }) {
   const d = dk ? { y: Math.floor(dk / 10000), m: Math.floor(dk / 100) % 100, d: dk % 100 } : null;
   const t = today ? dayKey(today) : null;
   const y = today ? dayKey(shiftDays(today, -1)) : null;
+  // Older days read «Last Sunday» with the date small beside it (Tarek, 2026-10-20 debug note);
+  // past a week back the weekday stands alone, since «last» would then mean the wrong one.
+  const loc = DIR === 'rtl' ? 'ar-EG-u-nu-latn' : 'en-GB';
+  const at = d ? new Date(Date.UTC(d.y, d.m - 1, d.d)) : null;
+  const back = d && today ? Math.round((Date.UTC(today.y, today.m - 1, today.d) - at) / 86400000) : null;
+  const wd = at ? new Intl.DateTimeFormat(loc, { weekday: 'long', timeZone: 'UTC' }).format(at) : '';
   const name = !d ? S.dayUndated : dk === t ? S.dayToday : dk === y ? S.dayYesterday
-    : new Intl.DateTimeFormat(DIR === 'rtl' ? 'ar-EG-u-nu-latn' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
-      .format(new Date(Date.UTC(d.y, d.m - 1, d.d)));
+    : back != null && back > 1 && back < 7 ? S.dayLast(wd) : wd;
+  const small = d && dk !== t && dk !== y
+    ? new Intl.DateTimeFormat(loc, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(at) : null;
   const amt = dayAmount ? dayAmount(rows) : null;
   return (
     <div data-day-header role="heading" aria-level={3}
       style={{ position: 'sticky', top: -16, zIndex: 2, background: C.card, padding: '10px 16px 8px',
         borderTop: first ? 'none' : GLASS_DIVIDER, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-      <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>{name}</span>
+      <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>
+        {name}{small && <span style={{ fontWeight: 400, color: C.muted, marginInlineStart: 8, ...LATIN, ...NUMERALS }}>{small}</span>}
+      </span>
       {amt && (
         <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.muted, ...LATIN, ...NUMERALS }}>{moneyRound(amt.sum)} {amt.unit}</span>
       )}
