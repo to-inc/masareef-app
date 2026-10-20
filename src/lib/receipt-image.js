@@ -182,6 +182,16 @@ export async function prepareScreenshot(file) {
   return { base64: r.base64, mediaType: 'image/jpeg' };
 }
 
+/**
+ * The day a FILE was made, when the phone says (2026-10-20: «1 minute ago» on a screenshot is
+ * resolved against this, so a week-old screenshot must not be dated today). A missing or
+ * future timestamp falls back to now — iOS often hands over the moment of picking.
+ */
+export function fileSnapDate(file, now = Date.now()) {
+  const t = file && Number(file.lastModified);
+  return snapDateISO(new Date(t > 0 && t <= now ? t : now));
+}
+
 export function snapDateISO(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit',

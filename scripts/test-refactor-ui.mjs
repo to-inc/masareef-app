@@ -272,6 +272,16 @@ try {
     const again = retryRows([unk], { byKey: {} }, {}, {}, { [rowKey(unk)]: true }, { bookCurrency: 'EUR' });
     ok(first[0] && first[0].currency === 'EUR' && again[0] && again[0].currency === 'EUR',
       'A1', `an unread currency is written in the book's unit, never pounds — ${first[0] && first[0].currency}/${again[0] && again[0].currency}`);
+    { const { fileSnapDate } = await vite.ssrLoadModule('/src/lib/receipt-image.js');
+      const now = Date.UTC(2026, 9, 20, 12);
+      const PhotoPeek = (await vite.ssrLoadModule('/src/components/PhotoPeek.jsx')).default;
+      const peek = h(PhotoPeek, { base64: 'AAAA' });
+      ok(fileSnapDate({ lastModified: Date.UTC(2026, 9, 14, 8, 22) }, now) === '2026-10-14' && fileSnapDate({}, now) === '2026-10-20'
+        && fileSnapDate({ lastModified: now + 864e5 * 3 }, now) === '2026-10-20'
+        && /data-photo-peek/.test(peek) && /aria-label="[^"]+"/.test(peek)
+        && /<PhotoPeek base64=\{shot\.base64\}/.test(src('src/views/ReceiptView.jsx')) && /<PhotoPeek key=\{p\.hash\}/.test(bv)
+        && /createPortal\(/.test(src('src/components/PhotoPeek.jsx')),
+        'P1', 'the eye: receipt and statement screens open their photo full screen; the capture day is the file\'s own (never the future)'); }
     const mainSrc = src('src/main.jsx'); const bookSrc = src('src/views/BookView.jsx');
     ok(/\.catch\(\(\) => \{/.test(mainSrc) && /window\.location\.reload\(\)/.test(mainSrc)
       && /const newer = seededFor\.current !== /.test(bookSrc) && /dayPick === null && !priorityFilter && !catPick/.test(bookSrc)

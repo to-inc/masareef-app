@@ -153,6 +153,8 @@ export const AR = {
   receiptRetake: 'صوّر تاني',
   receiptCancel: 'إلغاء',
 
+  receiptSeePhoto: 'شوف الصورة',
+  receiptPhoto: 'الصورة',
   receiptCheck: 'راجع وأكّد',
   receiptPending: 'لسه معلّقة في البنك — سجّلها لو الدفع تم.',
   readingBehind: (n) => (n === 1 ? 'بنقرا الفاتورة — هتلاقيها في للمراجعة' : `بنقرا ${n} فواتير — هتلاقيهم في للمراجعة`),

@@ -4,7 +4,7 @@ import { receiptExtract } from '../api/index.js';
 import { recordReadTime } from './readTimes.js';
 import { fileFailedRead } from './autoDebug.js';
 import { track } from './usage.js';
-import { prepareReceipt, prepareDocument, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
+import { prepareReceipt, prepareDocument, fileSnapDate, ReceiptImageError } from '../lib/receipt-image.js';
 
 /**
  * THE ONE RECEIPT READER, for the whole app (2026-10-10, Tarek: «we can take
@@ -42,7 +42,7 @@ export async function enqueueFiles(files, { prep = { prepareReceipt, prepareDocu
   for (const file of [].concat(files).filter(Boolean)) {
     try {
       const p = file.type === 'application/pdf' ? await prep.prepareDocument(file) : await prep.prepareReceipt(file);
-      const ok = await q.enqueue({ id: p.clientHash, base64: p.base64, clientHash: p.clientHash, snapDate: snapDateISO(),
+      const ok = await q.enqueue({ id: p.clientHash, base64: p.base64, clientHash: p.clientHash, snapDate: fileSnapDate(file),
         ...(p.mediaType ? { mediaType: p.mediaType } : {}) });
       if (ok) queued++; else refused = refused || 'failed';
     } catch (err) {

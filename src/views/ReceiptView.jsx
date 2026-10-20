@@ -4,7 +4,7 @@ import { S, categoryLabel, unitFor } from '../i18n/strings.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, money2, normalizeDigits } from '../lib/format.js';
 import { newClientId, cairoClock, isoToDmy } from '../lib/dates.js';
-import { prepareReceipt, prepareDocument, snapDateISO, ReceiptImageError } from '../lib/receipt-image.js';
+import { prepareReceipt, prepareDocument, fileSnapDate, ReceiptImageError } from '../lib/receipt-image.js';
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
 import * as queue from '../state/receiptQueue.js';
@@ -16,6 +16,7 @@ import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
 import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress } from '../components/Primitives.jsx';
+import PhotoPeek from '../components/PhotoPeek.jsx';
 import { expectedReadMs } from '../state/readTimes.js';
 
 /**
@@ -219,7 +220,7 @@ export default function ReceiptView({
       return;
     }
 
-    const snapDate = snapDateISO();
+    const snapDate = fileSnapDate(file);
     clearTimeout(slowTimer.current);
 
     /**
@@ -274,7 +275,7 @@ export default function ReceiptView({
   /** Open a finished job's confirm card. Nothing is written until he taps أكّد. */
   const review = (job) => {
     if (!job?.extraction) return;
-    setShot({ base64: job.base64, clientHash: job.clientHash, snapDate: job.snapDate });
+    setShot({ base64: job.base64, clientHash: job.clientHash, snapDate: job.snapDate, mediaType: job.mediaType });
     setReviewingId(job.id);
     applyExtraction(job.extraction, job.snapDate, job.clientHash);
   };
@@ -534,7 +535,12 @@ export default function ReceiptView({
 
     return (
       <div>
-        <SectionLabel>{S.receiptCheck}</SectionLabel>
+        {/* THE PHOTO, ONE TAP AWAY (Tarek, 2026-10-20: «it would be very interesting if I can
+            view the images again … maybe a little eye icon»): check a field against the picture. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <SectionLabel>{S.receiptCheck}</SectionLabel>
+          {shot && shot.base64 && shot.mediaType !== 'application/pdf' && <PhotoPeek base64={shot.base64} />}
+        </div>
 
         {/* FIELD-TEST ONLY — enable with localStorage['masareef.debug']='1'.
             Tarek-facing; Dad never sets this flag and never sees this line.
@@ -1264,3 +1270,4 @@ const inputStyle = {
   border: `1.5px solid ${C.harbor}`, background: C.shell, color: C.ink,
   fontSize: 20, fontWeight: 600, outline: 'none',
 };
+

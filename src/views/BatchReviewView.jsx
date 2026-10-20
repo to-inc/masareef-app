@@ -5,6 +5,8 @@ import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, money2 } from '../lib/format.js';
 import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
 import { LATIN, ISOLATE, DateField } from '../components/Primitives.jsx';
+import PhotoPeek from '../components/PhotoPeek.jsx';
+import * as receiptQueue from '../state/receiptQueue.js';
 import {
   rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows, BATCH_MAX_ROWS,
   outcomeFor, isRetryable, retryRows, unsettledCount, saveBatchUi, restoreUi,
@@ -57,6 +59,18 @@ export default function BatchReviewView({
   });
   const [edits, setEdits] = useState(saved.edits);
   const [open, setOpen] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const hashes = jobs.map((j) => j.sourceHash).join('|');
+  useEffect(() => {
+    let live = true;
+    receiptQueue.all().then((items) => {
+      if (!live) return;
+      const by = new Map(items.map((it) => [it.clientHash || it.id, it]));
+      setPhotos(jobs.map((j) => by.get(j.sourceHash)).filter((it) => it && it.base64 && it.mediaType !== 'application/pdf')
+        .map((it) => ({ hash: it.clientHash || it.id, base64: it.base64 })));
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [hashes]); // eslint-disable-line react-hooks/exhaustive-deps
   const [overridden, setOverridden] = useState(saved.overridden);
   useEffect(() => { saveBatchUi({ ticks, edits, overridden }); }, [ticks, edits, overridden]);
 
@@ -175,6 +189,16 @@ export default function BatchReviewView({
           </>
         )}
       </div>
+
+      {/* THE PHOTOS, to check rows against (Tarek, 2026-10-20 — the eye). Shown while the phone
+          still holds them (the receipt queue); a photo it no longer holds simply has no eye. */}
+      {photos.length > 0 && (
+        <div data-batch-photos style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
+          {photos.map((p, i) => (
+            <PhotoPeek key={p.hash} base64={p.base64} label={photos.length > 1 ? `${S.receiptPhoto} ${i + 1}` : null} />
+          ))}
+        </div>
+      )}
 
       {!settled && (
         <div style={{ display: 'flex', gap: 7 }}>

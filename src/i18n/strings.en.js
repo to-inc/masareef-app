@@ -145,6 +145,8 @@ export const EN = {
   receiptRetake: 'Photograph again',
   receiptCancel: 'Cancel',
 
+  receiptSeePhoto: 'See the photo',
+  receiptPhoto: 'Photo',
   receiptCheck: 'Check and confirm',
   receiptPending: 'Still pending at the bank — log it if the payment went through.',
   readingBehind: (n) => (n === 1 ? 'Reading your receipt — it will be in To review' : `Reading ${n} receipts — they will be in To review`),
