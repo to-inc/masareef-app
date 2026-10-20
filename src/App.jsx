@@ -622,7 +622,8 @@ export default function App() {
        */
       const hour = cairoHourOf(snap.data && snap.data.serverTime);
       const hasDay = !!(snap.data && snap.data.today && (snap.data.today.entries || []).length);
-      setTab(openingTab(hour, hasDay));
+      const euroBook = !!(snap.data && snap.data.month && snap.data.month.homeAgg && snap.data.month.homeAgg.currency && snap.data.month.homeAgg.currency !== 'EGP');
+      setTab(openingTab(hour, hasDay, euroBook ? (snap.data.pending || []).length : undefined));
     }
     setBooted(true);
     setStaleQueue(partition().stale); setPhoneRows(onPhone());
@@ -1210,6 +1211,7 @@ export default function App() {
                     onEdit={editRecent}
                     onRowRemoved={refresh}
                     onGoToInbox={() => setTab('inbox')}
+                    photoJobs={photoJobs} onOpenPhotos={() => { setPhotosOpen(true); setTab('inbox'); }}
                     onBusyChange={(fn) => { recentLoader.current = fn; }}
                   />
                 )}

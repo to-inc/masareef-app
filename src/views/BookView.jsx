@@ -192,6 +192,8 @@ export function PriorityIcon({ k }) {
 
 export default function BookView({
   data, settled = {}, onEdit, onGoToInbox, onBusyChange, onRowRemoved = null,
+  // Photos being read, and the way to them (usage audit 2026-10-20): the Book says so itself.
+  photoJobs = [], onOpenPhotos = null,
   unsettledBatch = 0, onOpenBatch, phoneRows = [],
   /**
    * N7 — the filter's seed, for the same reason PeriodBlock takes
@@ -640,6 +642,20 @@ export default function BookView({
       {/* The closed month, handed over on the first of the next one (W-6). */}
       <LogCard prevLog={data.month && data.month.prevLog} todayCairo={today} />
 
+      {/* READING, SAID ON THE BOOK (usage audit 2026-10-20: To review was opened and left
+          within a second, to check on a photo). While one is read, a quiet line here does it. */}
+      {(() => {
+        const busy = photoJobs.filter((j) => j && (j.stage === 'queued' || j.stage === 'reading')).length;
+        if (!busy) return null;
+        return (
+          <button data-book-reading className="catchip" onClick={onOpenPhotos || undefined}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: TAP, marginBottom: 10, padding: '0 14px',
+              ...glass('plate'), borderRadius: RADIUS.capsule, color: C.ink, fontSize: TYPE.label, fontWeight: 600, textAlign: 'start' }}>
+            <svg className="spin" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke={C.harbor} strokeWidth="2.5" strokeLinecap="round" strokeDasharray="20 40" /></svg>
+            {S.photosBusyTitle(busy)}
+          </button>
+        );
+      })()}
       {/* v4 P3: the track is a pressed glass well; the selected period a raised white capsule. */}
       <div style={{ display: 'flex', position: 'relative', ...glass('well'), borderRadius: RADIUS.capsule, padding: 4, marginBottom: 14, gap: 2 }}>
         {/**
@@ -2033,6 +2049,8 @@ export function PeriodBlock({
    * on which the head observes what the arithmetic refused.
    */
   const headWords = cmpShown ? headlineWords(cmpShown.direction, names.prev, 'last') : null;
+  // A week's first day compares one morning with a whole day: no line at all then.
+  const firstDayOfWeek = labels.length === 7 && liveIndex === 0;
 
   /**
    * E3 — THE WINDOW, IN WORDS, DERIVED FROM THE SAME ARRAYS THE MATHS USED.
@@ -2101,11 +2119,9 @@ export function PeriodBlock({
           * already earned, and everywhere the comparison is refused this
           * line simply does not exist — no sentence, not a hedged one.
           */}
-        {headWords && (
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, fontWeight: 650, color: C.ink, lineHeight: 1.3, marginTop: 2 }}>
-            {headWords}
-          </div>
-        )}
+        {/* FIGURE FIRST (design audit 2026-10-18, Tarek: «proceed with all»): the words that
+            led the head («Lighter than Last week») now sit in the one small line under
+            the figure — what he can act on is read first, the comparison second. */}
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, ...NUMERALS, ...LATIN, lineHeight: 1.05 }}>
           <CountUp value={lead.amount} format={moneyRound} />
           {/**
@@ -2207,7 +2223,7 @@ export function PeriodBlock({
           </Sheet>
         )}
 
-        {cmpShown ? (
+        {firstDayOfWeek ? null : cmpShown ? (
           /**
            * The arithmetic detail under the words. Direction `same` states no
            * percentage — its whole sentence is the head's word-first line now
@@ -2215,10 +2231,10 @@ export function PeriodBlock({
            * screen — so this block renders only what the words do NOT carry:
            * the percentage with its «was» figure, and E3's window qualifier.
            */
-          (cmpShown.direction !== 'same' || windowLine) && (
-          <div style={{ fontSize: TYPE.body, marginTop: 6 }}>
+          (
+          <div data-head-compare style={{ fontSize: TYPE.body, marginTop: 6 }}>
             {cmpShown.direction === 'same'
-              ? null
+              ? <span>{headWords}</span>
               : (
                 <>
                   {cmpShown.direction === 'down' ? S.lessThan(names.prev) : S.moreThan(names.prev)}{' '}

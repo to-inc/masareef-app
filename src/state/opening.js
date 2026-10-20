@@ -41,7 +41,14 @@ export const RECAP_HOUR = 19;
  *               «النهاردة» at 8pm because he spent nothing tells him less than
  *               the Inbox would, and reads like the app lost his day.
  */
-export function openingTab(hour, hasDay) {
+/**
+ * `waiting` (usage audit 2026-10-20, approved: «proceed with all»): on his book the
+ * diary showed To review opened 8 times in two days and left within a second —
+ * checking a count the tab already shows. With NOTHING waiting he opens on the Book.
+ * Absent (Dad's book, or not yet known) → the rule above, unchanged.
+ */
+export function openingTab(hour, hasDay, waiting) {
+  if (waiting === 0) return 'book';
   const h = Number(hour);
   if (!isFinite(h) || h < 0 || h > 23) return 'inbox';   // unreadable clock → the safe default
   return (h >= RECAP_HOUR && hasDay) ? 'book' : 'inbox';

@@ -55,6 +55,9 @@ const { CASH_QUICK } = await import('../src/lib/constants.js');
 {
   const DAY = true;
   eq(openingTab(9, DAY), 'inbox', 'the morning opens on what needs him');
+  // 2026-10-20 (usage audit): with nothing waiting on his book, the Book is the front door; one waiting keeps To review.
+  eq(openingTab(9, DAY, 0), 'book', 'nothing waiting → the Book, at any hour');
+  eq(openingTab(9, DAY, 2), 'inbox', 'something waiting → To review, as before');
   eq(openingTab(14, DAY), 'inbox', 'and so does the afternoon');
   eq(openingTab(RECAP_HOUR, DAY), 'book', `from ${RECAP_HOUR}:00 the day's account is the useful screen`);
   eq(openingTab(23, DAY), 'book', 'and it stays that way to midnight');

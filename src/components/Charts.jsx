@@ -65,8 +65,10 @@ const DRAW_CSS = `
   to { stroke-dasharray: 1; stroke-dashoffset: 0; }
 }
 .chart-draw { animation: chart-draw ${MOTION.draw}ms ${MOTION.easeOut}; }
+@keyframes tide-fill { from { clip-path: inset(0 100% 0 0); } }
+.tide-fill { animation: tide-fill ${MOTION.draw}ms ${MOTION.easeSettle} backwards; }
 @media (prefers-reduced-motion: reduce) {
-  .chart-draw { animation: none; }
+  .chart-draw, .tide-fill { animation: none; }
 }
 `;
 
@@ -263,10 +265,22 @@ export function CumulativeChart({ cur, prev, color, labelled = true, prevName = 
         <line key={f} x1={P} x2={W - P} y1={y(max * f)} y2={y(max * f)} stroke={C.line} strokeWidth="0.6" strokeDasharray="3 4" />
       ))}
       <line x1={x(li)} x2={x(li)} y1={y(Math.max(cumC[li] || 0, prevAt))} y2={H - 2} stroke={C.muted} strokeWidth="0.8" />
-      <path d={path(cumP, cumP.length - 1)} stroke={C.muted} strokeOpacity={PREV_SERIES_OPACITY} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      {/**
+        * THE TIDE (design audit 2026-10-18, approved 20 Oct: «proceed with all»): the
+        * running total is a soft AREA rising day by day against last period's faint
+        * dashed line, and today's point settles as a filled dot — ahead or behind, at a
+        * glance. The area reveals left to right once (`.tide-fill`), never under
+        * Reduce Motion; its hidden state lives only in the keyframes.
+        */}
+      {li > 0 && (
+        <path data-tide d={`${path(cumC, li)}L${x(li).toFixed(1)},${(H - P).toFixed(1)} L${x(cumC.findIndex((v) => v != null)).toFixed(1)},${(H - P).toFixed(1)} Z`}
+          fill={color} fillOpacity="0.16" stroke="none" className="tide-fill" />
+      )}
+      <path d={path(cumP, cumP.length - 1)} stroke={C.muted} strokeOpacity={PREV_SERIES_OPACITY} strokeWidth="2.5" strokeDasharray="4 4" fill="none" strokeLinecap="round" />
       <path d={path(cumC, li)} stroke={color} strokeWidth="3.2" fill="none" strokeLinecap="round" pathLength={1} className="chart-draw" />
       {hasPrev && <circle cx={x(li)} cy={prevY} r="4" fill={C.muted} fillOpacity={PREV_SERIES_OPACITY} />}
-      <circle cx={x(li)} cy={curY} r="5.5" fill={C.shell} stroke={color} strokeWidth="3" />
+      {/* Today's point is the line's own colour, filled (amber stays the screen's one action — the one-amber law). */}
+      <circle cx={x(li)} cy={curY} r="5.5" fill={color} stroke={C.shell} strokeWidth="2.5" />
 
       {/* The grey one first, so the coloured one wins any remaining overlap. */}
       {labelled && hasPrev && (

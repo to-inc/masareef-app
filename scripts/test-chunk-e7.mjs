@@ -138,18 +138,21 @@ async function sweep(lang, L, monthNameOf) {
     // ═══ 3. the RENDERED head — word-first where earned, silent where refused ═══
     const downHtml = pbHtml(week());                       // 50 vs 100 → down
     const downText = text(downHtml);
-    ok(!!lighter && downText.includes(lighter),
-      `E7.12 [${lang}] a lighter week LEADS WITH THE WORDS — «${lighter}» is on the screen`);
-    ok(!!lighter && downText.indexOf(lighter) !== -1
-      && downText.indexOf(lighter) < downText.indexOf('50'),
-      `E7.13 [${lang}] …and the words come BEFORE the figure — word-first, the figure beside it`);
+    // R0 re-cut (2026-10-20, «figure first», Tarek: «proceed with all»): the figure leads; the
+    // comparison is ONE small line under it, in words («Less than Last week by 50%»).
+    const less = typeof L.lessThan === 'function' ? L.lessThan(L.lastWeek) : null;
+    ok(!!less && downText.includes(less) && !downText.includes(lighter),
+      `E7.12 [${lang}] a lighter week is said in words under the figure — «${less}», no headline sentence above it`);
+    ok(!!less && downText.indexOf('50') !== -1 && downText.indexOf('50') < downText.indexOf(less),
+      `E7.13 [${lang}] …and the figure comes FIRST, the comparison after it`);
     ok(heroOf(downHtml) === '50',
       `E7.14 [${lang}] the figure is still the hero (TYPE.hero) — the words lead it, they do not replace it`);
     ok(downText.includes('%'),
       `E7.15 [${lang}] the arithmetic detail keeps its percentage below — the observation adds words, it deletes no fact`);
 
     const upText = text(pbHtml(week({ cur: { Visa: [300, null], Cash: [0, null] } })));
-    ok(!!heavier && upText.includes(heavier),
+    const more = typeof L.moreThan === 'function' ? L.moreThan(L.lastWeek) : null;
+    ok(!!more && upText.includes(more),
       `E7.16 [${lang}] a heavier week says so in the same grammar — stated, never colored, never scolded`);
 
     const sameText = text(pbHtml(week({ cur: { Visa: [100, null], Cash: [0, null] } })));
@@ -195,8 +198,8 @@ async function sweep(lang, L, monthNameOf) {
     const july = monthNameOf('July');
     const monthLighter = typeof L.headLighter === 'function' ? L.headLighter(july) : null;
     const monthLess = typeof L.lessThan === 'function' ? L.lessThan(july) : null;
-    ok(!!monthLighter && text(monthHtml).includes(monthLighter),
-      `E7.22 [${lang}] a lighter month leads with «${monthLighter}» — the observation names the month it is against`);
+    ok(!!monthLess && text(monthHtml).includes(monthLess),
+      `E7.22 [${lang}] a lighter month says «${monthLess}» under its figure — the observation names the month it is against`);
     ok(!!monthLess && text(monthHtml).includes(monthLess),
       `E7.23 [${lang}] …and the month's percentage sentence stays beneath it — N6/E3's pinned arithmetic is untouched`);
 

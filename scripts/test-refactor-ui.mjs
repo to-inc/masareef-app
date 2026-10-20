@@ -215,6 +215,14 @@ try {
     const fil = book.slice(book.indexOf('<details data-book-filter'), book.indexOf('</details>', book.indexOf('<details data-book-filter')));
     ok(fil.length > 0 && /PRIORITY_GROUPS\.map/.test(fil) && /\['date', 'amount', 'name'\]\.map/.test(fil) && /S\.filterLabel/.test(fil),
       'L3', 'sort and the four priorities sit behind one «Filter» button that says what is on'); }
+  // ═══ «proceed with all» (2026-10-20) ═══
+  { const charts = src('src/components/Charts.jsx'); const book = src('src/views/BookView.jsx'); const css = charts;
+    ok(/data-tide d=\{/.test(charts) && /fillOpacity="0\.16"/.test(charts) && /strokeDasharray="4 4"/.test(charts) && /\.tide-fill \{ animation: tide-fill/.test(css) && /\.chart-draw, \.tide-fill \{ animation: none; \}/.test(css),
+      'T1', 'the tide: the running total as a soft area against last period\'s dashed line; stops under Reduce Motion');
+    ok(!/fontSize: TYPE\.section, fontWeight: 650, color: C\.ink, lineHeight: 1\.3, marginTop: 2 \}\}>\s*\{headWords\}/.test(book) && /const firstDayOfWeek = labels\.length === 7 && liveIndex === 0;/.test(book) && /\{firstDayOfWeek \? null : cmpShown \?/.test(book),
+      'F1', 'the figure leads; the comparison is one small line under it, and none on a week\'s first day');
+    ok(/data-book-reading/.test(book) && /S\.photosBusyTitle\(busy\)/.test(book) && /photoJobs=\{photoJobs\} onOpenPhotos=/.test(src('src/App.jsx')),
+      'R1', 'the Book says when a photo is being read, and opens Photos from there'); }
 } finally {
   await vite.close();
 }
