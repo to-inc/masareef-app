@@ -217,6 +217,15 @@ try {
     { const { default: BRV } = await vite.ssrLoadModule('/src/views/BatchReviewView.jsx');
       ok(/dup\.reason === 'no_date' \? S\.batchDupNoDate : S\.batchDupUnchecked/.test(src('src/views/BatchReviewView.jsx')) && typeof BRV === 'function',
         'L4', 'a statement row with no date says so, instead of «Could not check your book»'); }
+    { const { retryRows, rowKey } = await vite.ssrLoadModule('/src/state/batchDraft.js');
+      const row = { sourceHash: 'h', index: 0, row_status: 'completed', amount: 13.25, date: null };
+      const settled = { byKey: { [rowKey(row)]: { status: 'error', error: 'bad_date' } } };
+      const none = retryRows([row], settled, {}, {}, {});
+      const dated = retryRows([row], settled, {}, { [rowKey(row)]: { date: '2026-10-15' } }, {});
+      const other = retryRows([row], { byKey: { [rowKey(row)]: { status: 'error', error: 'bad_category' } } }, {}, { [rowKey(row)]: { date: '2026-10-15' } }, {});
+      const n = (x) => (Array.isArray(x) ? x.length : Object.keys(x || {}).length);
+      ok(n(none) === 0 && n(dated) === 1 && n(other) === 0 && /data-batch-date/.test(src('src/views/BatchReviewView.jsx')),
+        'L5', `an undated row refused for its date rides again once he picks the day — ${n(none)}/${n(dated)}/${n(other)}`); }
     const book = src('src/views/BookView.jsx');
     ok(/const header = dayHeaders && \(i === 0 \|\| dk !== prevDk\)/.test(book) && /<Fragment key=\{key\}>/.test(book) && /overflow: 'clip'/.test(book)
       && /dayHeaders=\{period !== 'today' && sortBy === 'date'\}/.test(book),

@@ -397,6 +397,7 @@ export const EN = {
   batchRefusedDup: 'Your book already has one like it — not logged',
   batchRetryPending: 'Will be logged anyway',
   batchErrored: 'Not logged',
+  batchPickDay: 'No date on it — pick the day',
   /**
    * NOT named `batchDone` — that key already exists lower in this SAME object
    * (the outbox flush toast), and in a literal the LAST definition silently

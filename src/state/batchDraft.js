@@ -540,6 +540,9 @@ export function retryRows(rows, settled, overridden, edits = {}, ticks = {}) {
     const answer = answers.get(key);
     if (answer) {
       if (isRetryable(answer) && overridden && overridden[key]) send[key] = true;
+      // A row refused for having no date rides again once he has picked its day
+      // (Tarek, 2026-10-20: K-Citymarket sat «Not logged» with nothing on screen to fix it).
+      else if (answer.status === 'error' && answer.error === 'bad_date' && edits[key] && edits[key].date) send[key] = true;
       continue;
     }
     if (ticks && ticks[key] === true) send[key] = true;

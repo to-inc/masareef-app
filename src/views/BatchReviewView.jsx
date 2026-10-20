@@ -3,8 +3,8 @@ import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BO
 import { S, categoryLabel, unitFor, headlineUnitFor } from '../i18n/strings.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, money2 } from '../lib/format.js';
-import { isoToDmy } from '../lib/dates.js';
-import { LATIN, ISOLATE } from '../components/Primitives.jsx';
+import { isoToDmy, dmyToIso } from '../lib/dates.js';
+import { LATIN, ISOLATE, DateField } from '../components/Primitives.jsx';
 import {
   rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows, BATCH_MAX_ROWS,
   outcomeFor, isRetryable, retryRows, unsettledCount, saveBatchUi, restoreUi,
@@ -200,6 +200,7 @@ export default function BatchReviewView({
               }}
               onPick={(cat) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), category: cat } }))}
               onMethod={(m) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), method: m } }))}
+              onDate={(iso) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), date: iso } }))}
             />
           ))}
         </div>
@@ -371,7 +372,7 @@ function statusNote(row) {
   }
 }
 
-function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTick, onOverride, onPick, onMethod }) {
+function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTick, onOverride, onPick, onMethod, onDate }) {
   /**
    * Per-row, collapsing when the row closes — 27 chips left open on every row
    * would turn the reconciliation list back into the five-row grid EntryView
@@ -598,6 +599,18 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
             : `${money2(Math.abs(row.amount))} ${row.currency === 'UNKNOWN' ? '؟' : unitFor(row.currency || 'EGP')}`}
         </span>
       </div>
+
+      {/* NO DATE READ — he picks the day here, before sending or after the server refused it
+          (bad_date); without it the row could never reach his book from this screen. */}
+      {writable && !row.date && onDate && (!settled || (outcome.status === 'error' && outcome.error === 'bad_date')) && (
+        <label data-batch-date style={{ display: 'block', padding: '0 12px 12px', fontSize: TYPE.label, fontWeight: 700, color: C.conflictInk }}>
+          {S.batchPickDay}
+          <DateField value={edit && edit.date ? isoToDmy(edit.date) : ''} invalid={!(edit && edit.date)}
+            onChange={(dmy) => onDate(dmyToIso(dmy) || undefined)}
+            style={{ display: 'block', width: '100%', marginTop: 6, boxSizing: 'border-box', padding: '0 12px',
+              borderRadius: RADIUS.inset, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 16, fontWeight: 400 }} />
+        </label>
+      )}
 
       {isOpen && canOpen && (
         <div style={{ padding: '0 12px 12px' }}>
