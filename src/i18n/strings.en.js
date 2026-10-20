@@ -508,6 +508,7 @@ export const EN = {
   newWeekTitle: 'A new week has started',
   newWeekBody: 'Last week you spent',
   seeLastWeek: 'See last week',
+  pickCount: (n) => (n === 0 ? 'Nothing logged' : n === 1 ? '1 expense' : `${n} expenses`),
   thisWeek: 'This week',
   lastWeek: 'Last week',
 

@@ -191,9 +191,16 @@ const lookWord = (o) => S[`look${String(o)[0].toUpperCase()}${String(o).slice(1)
 function Group({ title, summary, open = false, children }) {
   return (
     <details data-settings-group open={open} style={{ marginTop: SPACE.gap, borderTop: `1px solid ${C.line}`, paddingTop: 4 }}>
-      <summary style={{ listStyle: 'none', cursor: 'pointer', minHeight: TAP, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>{title}</span>
-        <span style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'end', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary} <span aria-hidden>⌄</span></span>
+      {/* It must LOOK like a button (debug send 68e257ec, «Doesn't look like a button»):
+          the whole row is the target, with a chevron in a glass disc that turns when open. */}
+      <summary className="catchip" style={{ listStyle: 'none', cursor: 'pointer', minHeight: TAP + 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderRadius: RADIUS.row, padding: '4px 4px 4px 0' }}>
+        <span style={{ fontSize: TYPE.row, fontWeight: 700, color: C.ink }}>{title}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <span style={{ fontSize: TYPE.label, color: C.muted, textAlign: 'end', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>
+          <span aria-hidden className="set-chev" style={{ ...glass('chip'), width: 36, height: 36, flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: C.harborInk }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" focusable="false"><path d="M6 9l6 6 6-6" /></svg>
+          </span>
+        </span>
       </summary>
       <div style={{ paddingTop: 6 }}>{children}</div>
     </details>

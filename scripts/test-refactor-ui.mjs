@@ -188,6 +188,15 @@ try {
     ok(/<svg[^>]*stroke-width="1\.8"/.test(h(PriorityIcon, { k: 'joy' })) && !/[🏠🩺🎈🧰]/u.test(src('src/views/BookView.jsx'))
       && GLASS.plate && !GLASS.plate.cast && GLASS.plate.bg === GLASS.card.bg && /glass\('plate'\)/.test(src('src/components/Charts.jsx')),
       'UI', 'line icons replace the emoji; secondary panels sit on the flat «plate» (same glass, no lift)'); }
+  // ═══ DEBUG SENDS 18 Oct ═══
+  { const book = src('src/views/BookView.jsx'); const charts = src('src/components/Charts.jsx');
+    ok(/weekPick=\{typeof dayPick === 'number'/.test(book) && /if \(weekPick == null\) return r && r\.a === r\.b \? null : r;/.test(charts) && /data-pick-card/.test(book) && /S\.pickCount\(picked\.length\)/.test(book),
+      'D4', '«Not updating»: a picked day lights its bar and a card says its total and count');
+    const html = h(SettingsSheet, { displayCurrency: 'EUR', onFlipCurrency() {}, onClose() {}, build: { actions: [] } });
+    ok((html.match(/class="set-chev"/g) || []).length === 4 && /<summary class="catchip"/.test(html) && /\[data-settings-group\]\[open\] \.set-chev/.test(src('src/styles.css')),
+      'D5', '«Doesn\'t look like a button»: each group row is a button with a chevron disc that turns when open');
+    ok(/backdropFilter: 'none', WebkitBackdropFilter: 'none'/.test(book), 'D6', 'the day buttons draw no dark ring inside the fading rail');
+    ok(/Math\.floor\(\(\(e\.clientX - r\.left\) \/ r\.width\) \* 7\)/.test(charts) && /onRangeTap\(i\);/.test(charts), 'U-dead', 'the week\'s line chart picks the day under the finger (the diary\'s dead taps)'); }
 } finally {
   await vite.close();
 }

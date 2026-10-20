@@ -512,6 +512,7 @@ export const AR = {
   newWeekTitle: 'أسبوع جديد بدأ',
   newWeekBody: 'الأسبوع اللي فات صرفت',
   seeLastWeek: 'شوف الأسبوع اللي فات',
+  pickCount: (n) => (n === 0 ? 'مفيش حاجة متسجلة' : n === 1 ? 'مصروف واحد' : `${n} مصاريف`),
   thisWeek: 'الأسبوع ده',
   lastWeek: 'الأسبوع اللي فات',
 

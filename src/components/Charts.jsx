@@ -1016,7 +1016,7 @@ export function PriorityLens({ cats, uncategorized, open, onToggle, selectedGrou
 // total of 0, so an EGP chart flat at zero would tell a foreign week as
 // «nothing happened». This component only ever RENDERS that verdict — the
 // doctrine lives where the inputs do, in views/BookView.jsx.
-export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot: rawOffPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads: rawZeroMisleads = false,
+export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric, periodNames, showBars, footnote, offPlot: rawOffPlot = {}, comparable = true, rangeSeed = null, stack = null, ariaLabels = null, homeZeroMisleads: rawZeroMisleads = false, weekPick = null,
   /** D27 — the unit he is READING in; the cards follow it where the wire can. */
   displayCurrency = HOME_CURRENCY, onRange = null,
   /** «Where it went» — replaces the method split on a book read in its own unit (2026-10-10). */
@@ -1056,6 +1056,15 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
       ? (i) => { if (cur[i] == null) return; setRange((r) => (r && r.a === i && r.b === i ? null : { a: i, b: i })); }
       : null;
   useEffect(() => { if (onRange) onRange(range); }, [range]);   // the screen narrows its list to the day
+  // The Week's day buttons drive the same choice (debug send 9a2bf8cc, «Not updating»:
+  // tapping «Today» changed only the list, so the chart looked frozen).
+  useEffect(() => {
+    if (!weekAxis) return;
+    setRange((r) => {
+      if (weekPick == null) return r && r.a === r.b ? null : r;
+      return r && r.a === weekPick && r.b === weekPick ? r : { a: weekPick, b: weekPick };
+    });
+  }, [weekPick]); // eslint-disable-line react-hooks/exhaustive-deps
   const rangeWords = range
     ? (weekAxis ? labels[range.a]
       : range.a === range.b ? monthWord(range.a) : `${monthWord(range.a)}–${monthWord(range.b)}`)
@@ -1276,11 +1285,22 @@ export function PeriodSummary({ data: raw, labels, liveIndex, metric, setMetric,
             * new coat. Every other period keeps the classic line.
             */}
           {stack || (
+          /* On the WEEK the line answers a tap too (usage diary, 18–19 Oct: taps on the
+             line chart did nothing): the day under the finger is chosen, as on its bar.
+             A pointer convenience only — the bars and the day buttons are the
+             keyboard and VoiceOver path, so this adds no second control. */
+          <div onClick={weekAxis && onRangeTap ? (e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            if (!r.width) return;
+            const i = Math.min(6, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * 7)));
+            onRangeTap(i);
+          } : undefined}>
           <CumulativeChart
             cur={cur} prev={prev} color={color}
             labelled={!((offPlot.Visa || 0) + (offPlot.Cash || 0))}
             prevName={periodNames.prev}
           />
+          </div>
           )}
           {showBars && (
             <PairedBars

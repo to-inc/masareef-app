@@ -129,6 +129,11 @@ textarea {
 @keyframes pulse { 50% { opacity: 0.35; } }
 .pulse { animation: pulse calc(var(--dur-draw) * 2) var(--ease-settle) infinite; }
 
+/* Settings groups: no browser marker; the chevron disc turns when a group is open. */
+[data-settings-group] > summary::-webkit-details-marker { display: none; }
+.set-chev { transition: transform var(--dur-move) var(--ease-settle); }
+[data-settings-group][open] .set-chev { transform: rotate(180deg); }
+
 /* ═══ MINIMAL MOTION (design audit 2026-10-18) — each confirms something that
    happened, none loops, all use the timing vars above, all stop under Reduce
    Motion (below). The hidden state lives only inside @keyframes + `backwards`,
@@ -154,6 +159,7 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   /* The reading bar still fills, without the glide. */
   .read-bar { transition: none !important; }
+  .set-chev,
   .bar-rise,
   .fill-in,
   .row-land,

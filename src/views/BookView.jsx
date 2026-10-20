@@ -73,7 +73,9 @@ export function WeekDays({ today, pick, onPick }) {
   const chip = (k, label, on) => (
     <button key={String(k)} ref={(el) => { if (el) refs.current.set(String(k), el); }} className="catchip" aria-pressed={on}
       onClick={() => onPick(on && k !== null ? null : k)}
-      style={{ ...glass('chip'), ...(on ? (box ? { background: 'transparent', color: C.onDark, borderColor: 'transparent', boxShadow: 'none' } : { background: C.harbor, color: C.onDark, borderColor: C.harbor }) : { color: C.ink }),
+      // No backdrop blur here: blurred glass inside the rail's fading scroll mask draws a dark
+      // ring on WebKit (Tarek's screenshot, 18 Oct) — the same glass, unblurred.
+      style={{ ...glass('chip'), backdropFilter: 'none', WebkitBackdropFilter: 'none', ...(on ? (box ? { background: 'transparent', color: C.onDark, borderColor: 'transparent', boxShadow: 'none' } : { background: C.harbor, color: C.onDark, borderColor: C.harbor }) : { color: C.ink }),
         position: 'relative', zIndex: 1, minHeight: TAP, padding: '0 16px', flex: '0 0 auto', whiteSpace: 'nowrap', fontSize: TYPE.label, fontWeight: on ? 700 : 600, ...NUMERALS,
         transition: `color ${MOTION.move}ms ${MOTION.easeSettle}` }}>
       {label}
@@ -684,6 +686,29 @@ export default function BookView({
       {period === 'week' && today && (
         <WeekDays today={today} pick={dayPick} onPick={setDayPick} />
       )}
+      {/* WHAT THE CHOICE IS (debug send 9a2bf8cc, «Not updating»): a picked day or last
+          week says its own total and count at once, above the week's figure. */}
+      {period === 'week' && dayPick !== null && !loadingRows && (() => {
+        const picked = inWeekPick(sorted);
+        const sum = picked.reduce((t, r) => { const x = rowHome(r); return x == null ? t : t + x; }, 0);
+        const name = dayPick === 'last' ? S.lastWeek
+          : (() => { const i = recentDays(today, 14).findIndex((d) => dayKey(d) === dayPick); const d = recentDays(today, 14)[i];
+            return i === 0 ? S.dayToday : i === 1 ? S.dayYesterday : d ? `${WEEK_DAYS[new Date(Date.UTC(d.y, d.m - 1, d.d)).getUTCDay()]} ${d.d}` : ''; })();
+        return (
+          <div data-pick-card className="row-land" style={{ ...glass('card'), padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: TYPE.row, fontWeight: 700, color: C.ink }}>{name}</span>
+              <span style={{ display: 'block', fontSize: TYPE.label, color: C.muted }}>{S.pickCount(picked.length)}</span>
+            </span>
+            {bookHome && (
+              <b style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.section, color: C.ink, whiteSpace: 'nowrap', ...LATIN, ...NUMERALS }}>
+                <CountUp value={Math.round(sum * 100) / 100} format={moneyRound} />
+                <span style={{ fontFamily: FONT_UI, fontWeight: 600, color: C.muted, fontSize: unitSize(TYPE.section) }}>{` ${unitFor(bookHome)}`}</span>
+              </b>
+            )}
+          </div>
+        );
+      })()}
       {/* A NEW WEEK opens on last week (2026-10-18: «When it's a new week … here's
           your preview of your last week»): on its first day, one card with last
           week's total and the way to its days. */}
@@ -713,6 +738,8 @@ export default function BookView({
           names={{ cur: S.thisWeek, prev: S.lastWeek }} showBars
           displayCurrency={displayCurrency}
           onRange={(r) => setDayPick(r && thisWeek ? dayKey(shiftDays(thisWeek.from, r.a)) : null)}
+          weekPick={typeof dayPick === 'number' && thisWeek && dayPick >= dayKey(thisWeek.from) && dayPick <= dayKey(thisWeek.to)
+            ? [0, 1, 2, 3, 4, 5, 6].find((i) => dayKey(shiftDays(thisWeek.from, i)) === dayPick) : null}
           birdsEye={birdsOn && !loadingRows && !loadError
             ? <><RollingWeek month={data.month} todayD={today.d} displayCurrency={displayCurrency} />{topCats(tally(inWeekPick(sorted)), true)}</>
             : null}
@@ -1829,6 +1856,7 @@ export function PeriodBlock({
   // threaded untouched to PeriodSummary. Only the year call site passes it.
   ariaLabels = null,
   onRange = null,
+  weekPick = null,
 }) {
   const totals = periodTotals(data, METRICS, offPlot || {});
   const shown = totals[metric] || totals.all;
@@ -2216,7 +2244,7 @@ export function PeriodBlock({
         metric={metric} setMetric={setMetric}
         periodNames={{ cur: names.cur, prev: names.prev }}
         showBars={showBars} footnote={footnote} offPlot={offPlot} stack={stack}
-        ariaLabels={ariaLabels} onRange={onRange} birdsEye={birdsEye}
+        ariaLabels={ariaLabels} onRange={onRange} birdsEye={birdsEye} weekPick={weekPick}
         // W1 — the card renders a verdict reached HERE, beside the head that
         // shares its inputs; it never re-decides from data it half-sees.
         homeZeroMisleads={homeZeroMisleads}
