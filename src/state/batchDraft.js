@@ -212,7 +212,9 @@ export function initialTicks(rows) {
     // A row the book ALREADY HAS starts unticked (Tarek, 2026-10-20: a duplicate sat ticked in
     // «4 of 4 will be logged»); «Log it anyway» is the deliberate way to tick it.
     const inBook = !!(row.dupBook && row.dupBook.checked && row.dupBook.match);
-    ticks[rowKey(row)] = row.twinOf || inBook ? false : defaultTicked(row);
+    // A row with no date read starts unticked too: the server refuses it (bad_date) until
+    // he picks the day, and picking it ticks the row (BatchReviewView `onDate`).
+    ticks[rowKey(row)] = row.twinOf || inBook || !row.date ? false : defaultTicked(row);
   }
   return ticks;
 }

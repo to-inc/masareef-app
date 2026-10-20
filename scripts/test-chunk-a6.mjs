@@ -60,7 +60,9 @@ const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 try {
   const { PeriodSummary, CumulativeChart } = await vite.ssrLoadModule('/src/components/Charts.jsx');
-  const { LOCALES, S } = await vite.ssrLoadModule('/src/i18n/strings.js');
+  const { S } = await vite.ssrLoadModule('/src/i18n/strings.js');
+  // R0 re-cut 2026-10-20: strings.js loads only the active locale now; both are read directly.
+  const LOCALES = { ar: (await vite.ssrLoadModule('/src/i18n/strings.ar.js')).AR_LOCALE, en: (await vite.ssrLoadModule('/src/i18n/strings.en.js')).EN_LOCALE };
   const { TAP } = await vite.ssrLoadModule('/src/theme.js');
 
   const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');

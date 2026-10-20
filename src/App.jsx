@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 /**
  * B6: `flushSync` is load-bearing, not a convenience. `startViewTransition`
  * snapshots the old frame, runs its callback, then snapshots the new — but
@@ -52,12 +52,15 @@ import EntryView, { EntryDock } from './views/EntryView.jsx';
 import ReceiptView from './views/ReceiptView.jsx';
 import DictateView from './views/DictateView.jsx';
 import BookView from './views/BookView.jsx';
-import BatchReviewView from './views/BatchReviewView.jsx';
+// Rare screens load on first open (efficiency audit #11): the service worker precaches
+// their chunks, so offline they open the same; only the first download is lighter.
+const BatchReviewView = lazy(() => import('./views/BatchReviewView.jsx'));
 import * as receiptQueue from './state/receiptQueue.js';
 import { runner, onJobsChange, enqueueFiles } from './state/receiptRunner.js';
 import { syncKept } from './state/keptLookalikes.js';
 import { setCategoryUse } from './state/catOrder.js';
-import SettingsSheet, { SettingsCog } from './views/SettingsSheet.jsx';
+import { SettingsCog } from './views/SettingsCog.jsx';
+const SettingsSheet = lazy(() => import('./views/SettingsSheet.jsx'));
 
 /**
  * ═══ THE FLOATING BAR (v4, OWNER-RULINGS R16) — its geometry lives in NAV ═══
@@ -1177,17 +1180,19 @@ export default function App() {
                   />
                 )}
                 {tab === 'entry' && entryMode === 'batch' && (
-                  <BatchReviewView
-                    bookCurrency={bookCurrency}
-                    jobs={batch.jobs}
-                    expired={batchExpired}
-                    busy={batchBusy}
-                    results={batch.settled}
-                    onConfirm={confirmBatch}
-                    onResnap={resnapBatch}
-                    onDiscard={discardBatch}
-                    onLeave={leaveBatch}
-                  />
+                  <Suspense fallback={null}>
+                    <BatchReviewView
+                      bookCurrency={bookCurrency}
+                      jobs={batch.jobs}
+                      expired={batchExpired}
+                      busy={batchBusy}
+                      results={batch.settled}
+                      onConfirm={confirmBatch}
+                      onResnap={resnapBatch}
+                      onDiscard={discardBatch}
+                      onLeave={leaveBatch}
+                    />
+                  </Suspense>
                 )}
                 {viewTab === 'book' && (
                   <BookView
@@ -1262,11 +1267,13 @@ export default function App() {
         * carried — N1b's no-reload law moved house with it, unchanged.
         */}
       {settingsOpen && !needsSetup && (
-        <SettingsSheet
-          displayCurrency={displayCurrency}
-          onFlipCurrency={flipDisplayCurrency}
-          onClose={() => setSettingsOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <SettingsSheet
+            displayCurrency={displayCurrency}
+            onFlipCurrency={flipDisplayCurrency}
+            onClose={() => setSettingsOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/**

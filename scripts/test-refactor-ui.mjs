@@ -224,8 +224,17 @@ try {
       const dated = retryRows([row], settled, {}, { [rowKey(row)]: { date: '2026-10-15' } }, {});
       const other = retryRows([row], { byKey: { [rowKey(row)]: { status: 'error', error: 'bad_category' } } }, {}, { [rowKey(row)]: { date: '2026-10-15' } }, {});
       const n = (x) => (Array.isArray(x) ? x.length : Object.keys(x || {}).length);
+      const { initialTicks } = await vite.ssrLoadModule('/src/state/batchDraft.js');
+      const ti = initialTicks([row, { ...row, index: 1, date: '2026-10-15' }]);
+      ok(ti['h#0'] === false && ti['h#1'] === true && /if \(iso\) setTicks/.test(src('src/views/BatchReviewView.jsx')),
+        'L6', 'an undated row starts unticked (the server would refuse it) and picking its day ticks it');
       ok(n(none) === 0 && n(dated) === 1 && n(other) === 0 && /data-batch-date/.test(src('src/views/BatchReviewView.jsx')),
         'L5', `an undated row refused for its date rides again once he picks the day — ${n(none)}/${n(dated)}/${n(other)}`); }
+    { const bk = src('src/views/BookView.jsx');
+      const seed = bk.slice(bk.indexOf('if (!force && Array.isArray(data.rows))'), bk.indexOf('if (!force && Array.isArray(data.rows))') + 400);
+      ok(/monthCache\.current\.set\(cacheKey\(r\), r\)/.test(seed) && bk.indexOf('if (!force && Array.isArray(data.rows))') < bk.indexOf('const allCached = months.every')
+        && bk.indexOf('if (!force && Array.isArray(data.rows))') > bk.indexOf('monthCache.current.clear()'),
+        'O1', 'the Book seeds this month and last from the summary before it decides to fetch; a forced refresh clears and skips the seed'); }
     const book = src('src/views/BookView.jsx');
     ok(/const header = dayHeaders && \(i === 0 \|\| dk !== prevDk\)/.test(book) && /<Fragment key=\{key\}>/.test(book) && /overflow: 'clip'/.test(book)
       && /dayHeaders=\{period !== 'today' && sortBy === 'date'\}/.test(book),

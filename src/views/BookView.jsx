@@ -395,6 +395,14 @@ export default function BookView({
     }
     const isClosed = (ref) => !(ref.y === today.y && ref.m === today.m);
     const cacheKey = (ref) => `${ref.y}_${ref.m}${isClosed(ref) ? '' : `@${data.serverTime || ''}`}`;
+    // The summary carries this month's and last month's rows (2026-10-20, «combine the opening
+    // calls into one»): seeded under the same keys, so opening the Book asks for nothing more.
+    // A forced refresh skips them — it promises a fresh read.
+    if (!force && Array.isArray(data.rows)) {
+      for (const r of data.rows) {
+        if (r && r.ok !== false && Array.isArray(r.entries) && !monthCache.current.has(cacheKey(r))) monthCache.current.set(cacheKey(r), r);
+      }
+    }
     try {
       /**
        * N6 — a browsed month is fetched WITH the month before it, because the

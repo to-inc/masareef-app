@@ -9,23 +9,28 @@
  * ARABIC IS THE DEFAULT. An install that has never been told otherwise — and
  * one whose storage was cleared — speaks Arabic. CLAUDE.md #6.
  */
-import { AR_LOCALE } from './strings.ar.js';
-import { EN_LOCALE } from './strings.en.js';
 import { getLang } from '../state/lang.js';
+import { PRELOADED } from '#locale-preload';
 import { HOME_CURRENCY } from '../state/travel.js';
 
-export const LOCALES = { ar: AR_LOCALE, en: EN_LOCALE };
-
-export const LOCALE = LOCALES[getLang()] || AR_LOCALE;
-
-export const S = LOCALE.S;
-export const DIR = LOCALE.dir;
+/**
+ * ONLY THE LANGUAGE HE READS IS DOWNLOADED (efficiency audit #11, 2026-10-20).
+ * Each locale is its own chunk; main.jsx awaits `loadLocale()` before it imports
+ * the app, so every module that reads `S` evaluates after it is set. The bindings
+ * below are LIVE (`export let`), which is what makes the late assignment visible
+ * to every importer. Under SSR and plain Node (the suites) both locales arrive
+ * through `#locale-preload`, so `S` is ready on import exactly as before.
+ */
+export let LOCALE = null;
+export let S = null;
+// The direction needs no strings: theme.js reads it before any locale has loaded.
+export const DIR = getLang() === 'en' ? 'ltr' : 'rtl';
 
 /** Server month names ("July") → the reader's language. */
-export const monthName = LOCALE.monthName;
+export let monthName = null;
 
 /** His TAB name ("Jul") → the reader's language. Opaque in, readable out. */
-export const monthByTab = LOCALE.monthByTab;
+export let monthByTab = null;
 
 /**
  * A category's VALUE → its LABEL (finding M2).
@@ -37,20 +42,34 @@ export const monthByTab = LOCALE.monthByTab;
  * `{c}` directly is rendering a wire value at a person, which is the whole
  * finding.
  */
-export const categoryLabel = LOCALE.categoryLabel;
+export let categoryLabel = null;
 
-export const WEEK_DAYS = LOCALE.WEEK_DAYS;
-export const MONTH_LABELS = LOCALE.MONTH_LABELS;
+export let WEEK_DAYS = null;
+export let MONTH_LABELS = null;
 
 /** Initials, per language — «أ.ع.» / "A.O." (W-6). */
-export const CAPTAIN_INITIALS = LOCALE.CAPTAIN_INITIALS;
+export let CAPTAIN_INITIALS = null;
 
 /**
  * The toggle's label, always written in the language it switches TO — so it
  * reads as an offer rather than as a description of where you are. He never has
  * to understand the current language to find his way out of it.
  */
-export const SWITCH_TO = LOCALE.switchTo;
+export let SWITCH_TO = null;
+
+function useLocale(L) {
+  LOCALE = L; S = L.S; monthName = L.monthName; monthByTab = L.monthByTab;
+  categoryLabel = L.categoryLabel; WEEK_DAYS = L.WEEK_DAYS; MONTH_LABELS = L.MONTH_LABELS;
+  CAPTAIN_INITIALS = L.CAPTAIN_INITIALS; SWITCH_TO = L.switchTo;
+  return L;
+}
+
+export const loadLocale = () => (getLang() === 'en'
+  ? import('./strings.en.js').then((m) => useLocale(m.EN_LOCALE))
+  : import('./strings.ar.js').then((m) => useLocale(m.AR_LOCALE)));
+
+// Node/SSR resolve `#locale-preload` to both locales, so the suites read `S` on import as before.
+if (PRELOADED) useLocale(PRELOADED[getLang() === 'en' ? 'en' : 'ar']);
 
 /**
  * THE UNIT A CURRENCY IS WRITTEN AS (HANDOFF:57, :61).

@@ -1,9 +1,9 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import './styles.css';
 import { NIGHT, C, themeChoice } from './theme.js';
+import { loadLocale } from './i18n/strings.js';
 
 /**
  * NIGHT (2026-10-18): the theme was decided in theme.js before anything rendered;
@@ -20,10 +20,13 @@ if (themeChoice() === 'auto' && window.matchMedia) {
   if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
 }
 
-createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>,
-);
+// The language first, then the app: every screen reads `S` as it loads (i18n/strings.js).
+loadLocale().then(() => import('./App.jsx')).then(({ default: App }) => {
+  createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>,
+  );
+});

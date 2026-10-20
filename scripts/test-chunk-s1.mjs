@@ -100,8 +100,11 @@ ok(!/<LangToggle|<CurrencyToggle/.test(header),
 
 ok(!/<LangToggle|<CurrencyToggle/.test(app),
   'S1.7 App.jsx mounts neither toggle any more — both live in the Settings sheet now');
-ok(/import SettingsSheet, \{ SettingsCog \} from '\.\/views\/SettingsSheet\.jsx'/.test(app),
-  'S1.8 App imports the sheet and its cog from the one new view');
+// R0 re-cut 2026-10-20 (efficiency audit #11): the sheet loads on first open, so the
+// always-visible cog moved to its own small file; the sheet still re-exports it.
+ok(/import \{ SettingsCog \} from '\.\/views\/SettingsCog\.jsx'/.test(app) && /lazy\(\(\) => import\('\.\/views\/SettingsSheet\.jsx'\)\)/.test(app)
+  && /export \{ SettingsCog \} from '\.\/SettingsCog\.jsx'/.test(src('src/views/SettingsSheet.jsx') || ''),
+  'S1.8 App imports the cog eagerly and the sheet on first open; the sheet re-exports the cog');
 ok(/settingsOpen && !needsSetup[\s\S]{0,120}<SettingsSheet/.test(app),
   'S1.9 the sheet mounts behind its own open state, shell-level — never inside a tab');
 ok(!/tab === '[a-z]+' &&\s*[\s\S]{0,60}<Settings(Cog|Sheet)/.test(app),
@@ -168,7 +171,7 @@ ok(sheet !== null && !/@keyframes|animation:/.test(sh),
 ok(sheet !== null && !/C\.amber|amberInk|amberRim|#D9A441/i.test(sh),
   'S1.25 the sheet claims no amber — one warm action per screen stays the keypad\'s');
 {
-  const cog = componentSlice(sh, 'SettingsCog');
+  const cog = componentSlice(src('src/views/SettingsCog.jsx') || '', 'SettingsCog');  // R0 re-cut 2026-10-20: its own file
   ok(cog !== null && /minHeight: TAP/.test(cog) && /minWidth: TAP/.test(cog),
     'S1.26 the cog sits at the senior TAP floor in both dimensions');
   ok(cog !== null && /aria-label=\{S\.settingsTitle\}/.test(cog) && /aria-hidden/.test(cog),

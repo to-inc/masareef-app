@@ -200,7 +200,10 @@ export default function BatchReviewView({
               }}
               onPick={(cat) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), category: cat } }))}
               onMethod={(m) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), method: m } }))}
-              onDate={(iso) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), date: iso } }))}
+              onDate={(iso) => {
+                setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), date: iso } }));
+                if (iso) setTicks((t) => ({ ...t, [rowKey(r)]: true }));
+              }}
             />
           ))}
         </div>
@@ -603,7 +606,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
       {/* NO DATE READ — he picks the day here, before sending or after the server refused it
           (bad_date); without it the row could never reach his book from this screen. */}
       {writable && !row.date && onDate && (!settled || (outcome.status === 'error' && outcome.error === 'bad_date')) && (
-        <label data-batch-date style={{ display: 'block', padding: '0 12px 12px', fontSize: TYPE.label, fontWeight: 700, color: C.conflictInk }}>
+        <label data-batch-date style={{ display: 'block', padding: '0 12px 12px', fontSize: TYPE.label, fontWeight: 700, color: edit && edit.date ? C.muted : C.conflictInk }}>
           {S.batchPickDay}
           <DateField value={edit && edit.date ? isoToDmy(edit.date) : ''} invalid={!(edit && edit.date)}
             onChange={(dmy) => onDate(dmyToIso(dmy) || undefined)}
