@@ -1,3 +1,4 @@
+import { NIGHT } from './night.js';
 /**
  * His categories, VERBATIM (docs/02-data-context.md).
  *
@@ -112,8 +113,9 @@ export const UNKNOWN_CATEGORY = '❓';
  * means "the cash keypad's button" exactly once in this app, and a second use
  * would empty the first of meaning.
  */
+// Night (2026-10-18): the series lighten so a line and its heading stay readable on dark.
 export const METRICS = [
-  { key: 'all', labelKey: 'metricAll', color: '#2C4356' },
-  { key: 'Visa', labelKey: 'metricVisa', color: '#3E7CA6' },
-  { key: 'Cash', labelKey: 'metricCash', color: '#7B8B96' },
+  { key: 'all', labelKey: 'metricAll', color: NIGHT ? '#E3ECF2' : '#2C4356' },
+  { key: 'Visa', labelKey: 'metricVisa', color: NIGHT ? '#8CC0E6' : '#3E7CA6' },
+  { key: 'Cash', labelKey: 'metricCash', color: NIGHT ? '#A2B1BC' : '#7B8B96' },
 ];

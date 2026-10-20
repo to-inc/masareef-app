@@ -25,6 +25,13 @@
      tint choice; the rgb is the token's, pinned equal by test-chunk-c2. */
 }
 
+/* NIGHT (2026-10-18): the page-level tokens follow theme.js's night palette; main.jsx
+   sets data-night on <html> from the same decision (theme.js NIGHT). */
+:root[data-night="true"] {
+  --ink: #E3ECF2;
+  color-scheme: dark;
+}
+
 /* A1 (glass audit Tier 1): `*` does not match pseudo-elements, so ::before and
    ::after were still content-box — a padded ::after hit-area expander computes
    wider than declared. The design brief names border-box a HARD floor and

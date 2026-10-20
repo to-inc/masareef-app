@@ -694,7 +694,9 @@ try {
   const src = await readFile(new URL('../src/views/BookView.jsx', import.meta.url), 'utf8');
   ok(/mayCompare\(foreign, prevForeign\) \? comparisonOf/.test(src),
     'the gate is consulted BEFORE the percentage is computed — there is no path on which the misleading figure exists');
-  ok(/showDate=\{period !== 'today'\}/.test(src),
+  // R0 re-cut (2026-10-18, the day ledger): under a day header the date is said once, by the
+  // header; sorted by size or name (no headers) every row still carries its date.
+  ok(/showDate=\{period !== 'today' && sortBy !== 'date'\}/.test(src) && /dayHeaders=\{period !== 'today' && sortBy === 'date'\}/.test(src),
     'and the other periods DO get it, where the date is what tells the rows apart');
 } finally {
   await vite.close();

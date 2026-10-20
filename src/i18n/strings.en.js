@@ -509,6 +509,8 @@ export const EN = {
   newWeekBody: 'Last week you spent',
   seeLastWeek: 'See last week',
   pickCount: (n) => (n === 0 ? 'Nothing logged' : n === 1 ? '1 expense' : `${n} expenses`),
+  filterLabel: 'Filter',
+  dayUndated: 'No clear day',
   thisWeek: 'This week',
   lastWeek: 'Last week',
 
@@ -602,6 +604,10 @@ export const EN = {
   setupSheet: 'Sheet link (optional)',
   settingsHelp: 'Help',
   langName: 'English',
+  themeLabel: 'Theme',
+  themeAuto: 'Auto',
+  themeLight: 'Light',
+  themeNight: 'Night',
   settingsLook: 'Look', // R10 display settings
   frostLabel: 'Glass',
   lookSheer: 'Sheer', lookDesigned: 'Standard', lookDeep: 'Frosted',

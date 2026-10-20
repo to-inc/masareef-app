@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { money2, normalizeDigits } from '../lib/format.js';
 import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
-import { C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG } from '../theme.js';
+import { C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG, alpha } from '../theme.js';
 import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 import { readProgress } from '../state/readTimes.js';
@@ -726,7 +726,7 @@ export function ReadProgress({ startedAt, expectedMs, label = null, thin = false
     <span style={{ display: 'block', width: '100%' }}>
       <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={label || undefined}
         data-read-progress
-        style={{ display: 'block', height: thin ? 4 : 8, borderRadius: RADIUS.capsule, background: 'rgba(44, 67, 86, 0.10)', overflow: 'hidden' }}>
+        style={{ display: 'block', height: thin ? 4 : 8, borderRadius: RADIUS.capsule, background: alpha(C.ink, 0.12), overflow: 'hidden' }}>
         <span className="read-bar" style={{ display: 'block', height: '100%', width: `${Math.max(3, pct)}%`, borderRadius: RADIUS.capsule, background: C.harbor,
           transition: 'width 250ms linear' }} />
       </span>

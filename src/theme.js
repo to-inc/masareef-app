@@ -6,10 +6,13 @@ import { DIR } from './i18n/strings.js';
  * Replaces "Nile ledger" (deep green / sand paper / brass), which is retired —
  * it lives in git history and nowhere else.
  *
- * LIGHT ONLY, DELIBERATELY. There is no dark variant and none is planned: this
- * is a senior-first day app used in Cairo daylight by one 70-year-old man, and a
- * second theme would double the surface every honest-render and contrast check
- * has to cover in exchange for a mode he has never asked for.
+ * LIGHT BY DEFAULT — AND «NIGHT» SINCE 2026-10-18 (Tarek: «build … dark mode»).
+ * The original reason for light-only stands for Dad's phone (a senior-first day
+ * app in Cairo daylight), so Dad's install stays Light unless someone switches it;
+ * Tarek's euro book follows the phone's own setting (Auto). Night is a PALETTE
+ * SWAP decided once at start-up (`NIGHT` below): the same tokens, night values —
+ * every view keeps reading `C`, `GLASS` and `GROUND` and never branches. Changing
+ * the setting reloads the app, as the language switch does.
  *
  * Every value below is either canonical (given by the Owner) or DERIVED and
  * marked as such. The canonical set does not assign colours to a few roles the
@@ -20,7 +23,26 @@ import { DIR } from './i18n/strings.js';
  * every pair this file is used in and fails the build if one drops below its
  * WCAG floor. Change a value, run `npm run check:contrast`.
  */
-export const C = {
+/**
+ * THE THEME, decided once before anything renders: «masareef.theme» = auto | light
+ * | night. With no choice saved, a euro book (his) follows the phone and Dad's
+ * pound book stays light. No storage or no matchMedia (the suites, Node) → light.
+ */
+export { THEME_KEY, themeChoice, NIGHT } from './lib/night.js';
+import { NIGHT } from './lib/night.js';
+
+/** Night's values for the same tokens: a deep harbor dusk, light ink, the same harbor and amber fills. */
+const NIGHT_C = {
+  shell: '#0E171E', mist: '#16232D', card: '#18242E', line: '#2B3A45',
+  ink: '#E3ECF2', muted: '#A2B1BC',
+  harbor: '#3E7CA6', harborInk: '#8CC0E6', harborDeep: '#34688C',
+  sand: '#3A3122', amber: '#D9A441', amberInk: '#3d2f0d', amberRim: '#A87F2E',
+  conflictInk: '#F0A493', conflictBg: '#3A2420', conflictLine: '#5C3A33',
+  settledInk: '#9BD3A3', settledBg: '#1E3024', settledLine: '#2F4A36',
+  onDark: '#FFFFFF',
+};
+
+const LIGHT_C = {
   // ——— canonical: ground and surfaces
   shell: '#FAF7F1',     // the page
   mist: '#DCE9F0',      // secondary surface / the morning sky
@@ -115,6 +137,9 @@ export const C = {
 
   onDark: '#FFFFFF',    // text on harbor / ink / muted fills
 };
+export const C = NIGHT ? { ...LIGHT_C, ...NIGHT_C } : LIGHT_C;
+/** What casts a shadow: ink by day, black at night (an ink shadow at night would glow). */
+const SH = NIGHT ? '#000000' : LIGHT_C.ink;
 
 /**
  * ═══ ANTI-DRIFT — role casting, not decoration (north-star §3; vis-F2) ═══
@@ -449,7 +474,8 @@ export const alpha = (hex, a) => {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 };
 
-const W = (a) => `rgba(255,255,255,${a})`;   // white is not a palette token
+// The glass's light: white by day; at night a deep slate (so glass reads as dark glass).
+const W = (a) => (NIGHT ? `rgba(30,44,56,${a})` : `rgba(255,255,255,${a})`);   // white is not a palette token
 
 /**
  * 1 · GROUNDS — what the glass refracts. Three atmospheres, built only from
@@ -461,7 +487,10 @@ const W = (a) => `rgba(255,255,255,${a})`;   // white is not a palette token
  * here, and inventing token names for them would imply they are reusable
  * elsewhere — they are not, they are three specific skies.
  */
-export const GROUND = {
+const NIGHT_GROUND = 'radial-gradient(85% 45% at 10% 0%, #1F3346 0%, rgba(31,51,70,0) 70%),'
+  + ' radial-gradient(75% 40% at 100% 14%, #2A2518 0%, rgba(42,37,24,0) 70%),'
+  + ' radial-gradient(110% 55% at 25% 100%, #12293B 0%, rgba(18,41,59,0) 72%), #0E171E';
+export const GROUND = NIGHT ? { dawn: NIGHT_GROUND, tide: NIGHT_GROUND, haze: NIGHT_GROUND } : {
   /** v4 Dawn (R15) — amber · sand · harbor; the mauve stop is GONE. Verbatim from
    *  `Masareef Glass PWA.dc.html` P3. The ground for the P-screens. */
   dawn: 'radial-gradient(85% 45% at 10% 0%, #F2D3A6 0%, rgba(242,211,166,0) 70%),'
@@ -496,7 +525,7 @@ export const GROUND = {
 // fading only across the bar's last 40% (icons' lower edge ≥ 3.0:1, the graphics bar).
 export const STATUS_SHADE = 'linear-gradient(rgba(44,67,86,0.72), rgba(44,67,86,0.72) 60%, rgba(44,67,86,0))';
 
-export const GROUND_EDGE = { dawn: '#CEDDE6', tide: '#EEF2F2', haze: '#FAF7F1' };
+export const GROUND_EDGE = NIGHT ? { dawn: '#0E171E', tide: '#0E171E', haze: '#0E171E' } : { dawn: '#CEDDE6', tide: '#EEF2F2', haze: '#FAF7F1' };
 
 /**
  * Every colour a ground can show at full strength — its base and each stop's
@@ -544,7 +573,7 @@ const blur = (px, sat, f = 1) =>
 
 export const GLASS = {
   card:     { bg: `linear-gradient(155deg, ${W(0.72)}, ${W(0.40)})`, blur: 26, sat: 160,
-              rim: W(0.7), cast: `0 12px 32px ${alpha(C.ink, 0.12)}`, inset: `inset 0 1px 0 ${W(0.95)}`, radius: 'card' },
+              rim: W(0.7), cast: `0 12px 32px ${alpha(SH, 0.12)}`, inset: `inset 0 1px 0 ${W(0.95)}`, radius: 'card' },
   /** The card's FLAT twin (design audit 2026-10-18): the same glass and the same
    *  text contrast (R13 holds — it IS a card surface), without the drop cast, so
    *  the headline card is the one thing on a screen that lifts. Secondary panels
@@ -552,23 +581,23 @@ export const GLASS = {
   plate:    { bg: `linear-gradient(155deg, ${W(0.72)}, ${W(0.40)})`, blur: 26, sat: 160,
               rim: W(0.6), inset: `inset 0 1px 0 ${W(0.9)}`, radius: 'card' },
   chip:     { bg: `linear-gradient(155deg, ${W(0.66)}, ${W(0.32)})`, blur: 18, sat: 150,
-              rim: W(0.75), cast: `0 4px 12px ${alpha(C.ink, 0.08)}`, radius: 'capsule' },
+              rim: W(0.75), cast: `0 4px 12px ${alpha(SH, 0.08)}`, radius: 'capsule' },
   /** Owner ruling 2026-10-09 (after measuring R16): the BAR carries more white
    *  than v4's .55→.26 — at .26 its grey labels fell to 1.66:1 over a harbor
    *  button scrolling beneath. .94→.88 is the thinnest stop at which every
    *  label clears 4.5:1 over ANY paint in the palette (measured: .84 and .86
    *  still failed the darkest case). Still blurred, still frosted. */
   chrome:   { bg: `linear-gradient(160deg, ${W(0.94)}, ${W(0.88)})`, blur: 30, sat: 180,
-              rim: W(0.8), cast: `0 10px 30px ${alpha(C.ink, 0.16)}`, inset: `inset 0 1px 0 ${W(0.85)}`, radius: 'capsule' },
-  well:     { bg: `linear-gradient(175deg, ${alpha(C.ink, 0.08)}, ${W(0.30)})`,
-              inset: `inset 0 2px 5px ${alpha(C.ink, 0.14)}, inset 0 -1px 0 ${W(0.7)}`,
-              rim: alpha(C.ink, 0.1), radius: 'glassWell' },
+              rim: W(0.8), cast: `0 10px 30px ${alpha(SH, 0.16)}`, inset: `inset 0 1px 0 ${W(0.85)}`, radius: 'capsule' },
+  well:     { bg: `linear-gradient(175deg, ${alpha(SH, 0.08)}, ${W(0.30)})`,
+              inset: `inset 0 2px 5px ${alpha(SH, 0.14)}, inset 0 -1px 0 ${W(0.7)}`,
+              rim: alpha(SH, 0.1), radius: 'glassWell' },
   /** Sand glass, blur pinned at 16 (A15). Offline, outbox, caveats, old expenses. */
   advisory: { bg: `linear-gradient(165deg, ${W(0.5)}, ${alpha(C.sand, 0.75)} 45%, ${alpha(C.sand, 0.5)})`, blur: 16,
               rim: 'rgba(210,190,150,.75)', cast: '0 3px 10px rgba(160,130,60,.1)', radius: 'sheet' },
   /** A raised capsule INSIDE a well — the selected period (v4 P3). No blur: it sits on glass. */
   raised:   { bg: `linear-gradient(160deg, ${W(0.95)}, ${W(0.7)})`,
-              cast: `0 4px 12px ${alpha(C.ink, 0.14)}`, inset: `inset 0 1px 0 ${W(1)}`, radius: 'capsule' },
+              cast: `0 4px 12px ${alpha(SH, 0.14)}`, inset: `inset 0 1px 0 ${W(1)}`, radius: 'capsule' },
   /** Terracotta glass — the uncategorised row (v4 P3). Text: conflictInk. v4 draws .85→.5;
    *  at .5 terracotta measured 4.16:1 over dawn's darkest stop — .9→.8 clears 4.5 (4.61). */
   alert:    { bg: `linear-gradient(160deg, ${alpha(C.conflictBg, 0.9)}, ${alpha(C.conflictBg, 0.8)})`, blur: 18,
@@ -585,10 +614,10 @@ export const GLASS = {
   /** The «نسخة جديدة جاهزة» card (v4 P8) — light glass above the bar; ink text on it. v4 draws
    *  .62→.34; the muted caption measured 4.26:1 over dawn's darkest stop — .7→.5 clears (4.61). */
   prompt:   { bg: `linear-gradient(160deg, ${W(0.7)}, ${W(0.5)})`, blur: 24, sat: 170,
-              rim: W(0.85), cast: `0 12px 30px ${alpha(C.ink, 0.18)}`, radius: 'sheet' },
+              rim: W(0.85), cast: `0 12px 30px ${alpha(SH, 0.18)}`, radius: 'sheet' },
   /** The «اتحفظ ✓ — رجوع» undo toast (R19) — white text on dark glass. */
-  toast:    { bg: `linear-gradient(160deg, ${alpha(C.ink, 0.72)}, rgba(31,43,53,.62))`, blur: 24,
-              cast: `0 10px 30px ${alpha(C.ink, 0.22)}`, radius: 'capsule' },
+  toast:    { bg: `linear-gradient(160deg, ${alpha(SH, 0.72)}, rgba(31,43,53,.62))`, blur: 24,
+              cast: `0 10px 30px ${alpha(SH, 0.22)}`, radius: 'capsule' },
 };
 
 /** A tier → a React style object. The only way a view gets glass. */
@@ -600,14 +629,14 @@ export const TOAST_ACTION_BG = W(0.16);
 /** A text field's edge on white — muted at .8, 3.71:1 (WCAG 1.4.11 wants 3:1; .7 gave a bare 3.04). C.line was ≈1.3:1. */
 export const FIELD_EDGE = alpha(C.muted, 0.8);
 /** v4 P8 — loading placeholders: warm blocks that hold the layout steady. Not text. */
-export const SKELETON = { strong: '#ECE5D8', row: '#F0EBE1', faint: '#F4F0E8' };
+export const SKELETON = NIGHT ? { strong: '#22303A', row: '#1E2A33', faint: '#1A252D' } : { strong: '#ECE5D8', row: '#F0EBE1', faint: '#F4F0E8' };
 export const PHONE_ROW_BG = `linear-gradient(90deg, ${alpha(C.sand, 0)}, ${alpha(C.sand, 0.5)})`;
 
 /** v4 P4 — the entry sheet's furniture. */
 export const SHEET = {
   top: 64,                                   // the sheet's top edge below the status bar
   dim: alpha('#1F2B35', 0.18),              // the screen behind, dimmed
-  handle: '#CFC8BA',                        // the 40×5 grab bar
+  handle: NIGHT ? '#3A4852' : '#CFC8BA',     // the 40×5 grab bar
   pickedRim: `1.5px solid ${alpha(C.harbor, 0.75)}`, // a chosen category chip's edge
   saveBottom: 30,                           // the amber «سجّل» above the home indicator
   saveHeight: 62,
@@ -633,8 +662,8 @@ export const glass = (tier, f = 1) => {
  * stops looking like a control: an ink hairline under the white one. HANDOFF.
  */
 export const SMART_EDGE = {
-  border: `1px solid ${alpha(C.ink, 0.13)}`,
-  boxShadow: `inset 0 1px 0 ${W(0.85)}, 0 4px 12px ${alpha(C.ink, 0.08)}`,
+  border: `1px solid ${alpha(SH, 0.13)}`,
+  boxShadow: `inset 0 1px 0 ${W(0.85)}, 0 4px 12px ${alpha(SH, 0.08)}`,
 };
 
 /** Canonical gradients (R1/R13): they START at the tokens; v4's lighter starts were illustrative. */
@@ -657,7 +686,7 @@ export const STATE_BOX = {
   offline: { bg: `linear-gradient(165deg, ${W(0.55)}, ${alpha(C.sand, 0.62)} 40%, ${alpha(C.sand, 0.38)})`,
              border: 'rgba(210,190,150,.8)', ink: C.ink, cast: 'rgba(160,130,60,.12)' },
   pending: { bg: `linear-gradient(160deg, ${alpha(C.shell, 0.92)}, ${alpha(C.shell, 0.7)})`,
-             border: alpha(C.ink, 0.14), ink: C.ink, cast: alpha(C.ink, 0.06) },
+             border: alpha(SH, 0.14), ink: C.ink, cast: alpha(SH, 0.06) },
 };
 
 /**

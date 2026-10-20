@@ -513,6 +513,8 @@ export const AR = {
   newWeekBody: 'الأسبوع اللي فات صرفت',
   seeLastWeek: 'شوف الأسبوع اللي فات',
   pickCount: (n) => (n === 0 ? 'مفيش حاجة متسجلة' : n === 1 ? 'مصروف واحد' : `${n} مصاريف`),
+  filterLabel: 'فلتر',
+  dayUndated: 'من غير يوم',
   thisWeek: 'الأسبوع ده',
   lastWeek: 'الأسبوع اللي فات',
 
@@ -607,6 +609,10 @@ export const AR = {
   setupSheet: 'رابط الشيت (اختياري)',
   settingsHelp: 'مساعدة',
   langName: 'العربي',
+  themeLabel: 'الشكل',
+  themeAuto: 'تلقائي',
+  themeLight: 'فاتح',
+  themeNight: 'ليلي',
   settingsLook: 'الشكل', // R10 display settings
   frostLabel: 'الزجاج',
   lookSheer: 'شفاف', lookDesigned: 'عادي', lookDeep: 'مثلّج',

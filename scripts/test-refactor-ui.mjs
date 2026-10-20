@@ -197,6 +197,24 @@ try {
       'D5', '«Doesn\'t look like a button»: each group row is a button with a chevron disc that turns when open');
     ok(/backdropFilter: 'none', WebkitBackdropFilter: 'none'/.test(book), 'D6', 'the day buttons draw no dark ring inside the fading rail');
     ok(/Math\.floor\(\(\(e\.clientX - r\.left\) \/ r\.width\) \* 7\)/.test(charts) && /onRangeTap\(i\);/.test(charts), 'U-dead', 'the week\'s line chart picks the day under the finger (the diary\'s dead taps)'); }
+  // ═══ THE DAY LEDGER (2026-10-18, «build the day ledger») ═══
+  { const { DayHeader } = await vite.ssrLoadModule('/src/views/BookView.jsx');
+    const today = { y: 2026, m: 10, d: 18 };
+    const amt = (rows) => ({ sum: rows.length * 10, unit: '€' });
+    const t = h(DayHeader, { dk: 20261018, rows: [1, 2], today, dayAmount: amt, first: true });
+    const yd = h(DayHeader, { dk: 20261017, rows: [1], today, dayAmount: amt });
+    const fri = h(DayHeader, { dk: 20261016, rows: [], today, dayAmount: () => null });
+    const plain = (x) => x.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    ok(plain(t).startsWith(S.dayToday) && /20 €/.test(plain(t)) && plain(yd).startsWith(S.dayYesterday) && /16/.test(plain(fri)) && !/\b10\b/.test(plain(fri))
+      && /position:sticky/.test(t) && /role="heading"/.test(t),
+      'L1', `a pinned header names the day — ${plain(t)} | ${plain(yd)} | ${plain(fri)}`);
+    const book = src('src/views/BookView.jsx');
+    ok(/const header = dayHeaders && \(i === 0 \|\| dk !== prevDk\)/.test(book) && /<Fragment key=\{key\}>/.test(book) && /overflow: 'clip'/.test(book)
+      && /dayHeaders=\{period !== 'today' && sortBy === 'date'\}/.test(book),
+      'L2', 'the Week and Month lists break into days where the day changes, under headers that can pin');
+    const fil = book.slice(book.indexOf('<details data-book-filter'), book.indexOf('</details>', book.indexOf('<details data-book-filter')));
+    ok(fil.length > 0 && /PRIORITY_GROUPS\.map/.test(fil) && /\['date', 'amount', 'name'\]\.map/.test(fil) && /S\.filterLabel/.test(fil),
+      'L3', 'sort and the four priorities sit behind one «Filter» button that says what is on'); }
 } finally {
   await vite.close();
 }

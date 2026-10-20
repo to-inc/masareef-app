@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM, alpha, THEME_KEY, themeChoice } from '../theme.js';
 import { S, unitFor } from '../i18n/strings.js';
 import { Sheet, LangToggle, SectionLabel, LATIN } from '../components/Primitives.jsx';
 import { otherDisplayCurrency } from '../state/display.js';
@@ -167,7 +167,7 @@ export function DebugShots({ send = debugShot, sendNote = debugNote, prepare = p
       {busy && (
         <div role="progressbar" data-send-progress aria-valuemin={0} aria-valuemax={state.n} aria-valuenow={state.i - 1}
           aria-label={S.debugShotsSending(state.i, state.n)}
-          style={{ height: 8, borderRadius: RADIUS.capsule, background: 'rgba(44, 67, 86, 0.10)', overflow: 'hidden', marginTop: 8 }}>
+          style={{ height: 8, borderRadius: RADIUS.capsule, background: alpha(C.ink, 0.12), overflow: 'hidden', marginTop: 8 }}>
           <div className="read-bar" style={{ height: '100%', width: `${Math.round(((state.i - 0.5) / state.n) * 100)}%`, background: C.harbor, borderRadius: RADIUS.capsule, transition: 'width 250ms linear' }} />
         </div>
       )}
@@ -209,6 +209,7 @@ function Group({ title, summary, open = false, children }) {
 
 export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose, build = loadBuild() }) {
   const [look, setLook] = useState(() => getDisplay());
+  const theme = themeChoice();
   /**
    * S2 — the DEFAULT METHOD (06 §3.10.3). Owned HERE rather than threaded
    * from the shell: the language toggle already set the precedent (a control
@@ -347,7 +348,22 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
           </Group>
 
           {/* ═══ R10 — the look: frost, atmosphere, comfort zoom (state/settings.js) ═══ */}
-          <Group title={S.settingsLook} summary={`${lookWord(look.frost)} · ${lookWord(look.atmosphere)} · ${Math.round(look.zoom * 100)}%`}>
+          <Group title={S.settingsLook} summary={`${S[`theme${theme[0].toUpperCase()}${theme.slice(1)}`]} · ${lookWord(look.frost)} · ${Math.round(look.zoom * 100)}%`}>
+            {/* NIGHT (2026-10-18): Auto follows the phone; the app reloads into the palette. */}
+            <div data-theme-switch style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, marginBottom: 6 }}>{S.themeLabel}</div>
+              <div role="group" aria-label={S.themeLabel} style={{ display: 'flex', gap: 4, ...glass('well'), borderRadius: RADIUS.capsule, padding: 4 }}>
+                {['auto', 'light', 'night'].map((o) => (
+                  <button key={o} className="catchip" aria-pressed={theme === o}
+                    onClick={() => { if (theme === o) return; try { localStorage.setItem(THEME_KEY, o); } catch { /* stays as it is */ } window.location.reload(); }}
+                    style={{ flex: 1, minHeight: TAP, fontSize: TYPE.label,
+                      ...(theme === o ? glass('raised') : { background: 'transparent', borderRadius: RADIUS.capsule }),
+                      color: theme === o ? C.ink : C.muted, fontWeight: theme === o ? 700 : 600 }}>
+                    {S[`theme${o[0].toUpperCase()}${o.slice(1)}`]}
+                  </button>
+                ))}
+              </div>
+            </div>
             {[['frost', S.frostLabel, Object.keys(FROST)], ['atmosphere', S.atmosphereLabel, Object.keys(ATMOSPHERE)]].map(([key, label, opts]) => (
               <div key={key} style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, marginBottom: 6 }}>{label}</div>

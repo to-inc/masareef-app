@@ -276,6 +276,7 @@ export default function BookView({
   const [loadingRows, setLoadingRows] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [sortBy, setSortBy] = useState('date');   // 'date' | 'amount' | 'name'
+  const [filterOpen, setFilterOpen] = useState(false);
   /**
    * THE FETCH SEQUENCE — answers are only as ordered as the network feels like.
    *
@@ -892,7 +893,24 @@ export default function BookView({
         * subset can never pass for the whole list. No filter, no count: a
         * count of the unfiltered list would restate the list.
         */}
+      {/**
+        * ONE FILTER BUTTON (design audit 2026-10-18, «build the day ledger»): sort and
+        * the four priorities lived in two rows of chips above the list. They now sit
+        * behind one «Filter» row that says what is on — the list starts right under it.
+        * The platform's <details>, so it is a real button for touch, keyboard and VoiceOver.
+        */}
       {period !== 'year' && !loadingRows && !loadError && sorted.length > 0 && (
+        <details data-book-filter open={filterOpen} onToggle={(e) => setFilterOpen(e.currentTarget.open)} style={{ marginTop: 10 }}>
+          <summary className="catchip" style={{ listStyle: 'none', cursor: 'pointer', minHeight: TAP, display: 'inline-flex', alignItems: 'center', gap: 8,
+            ...glass('chip'), borderRadius: RADIUS.capsule, padding: '0 16px', color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+            {S.filterLabel}
+            {(priorityFilter || sortBy !== 'date') && (
+              <span style={{ fontWeight: 600, color: C.muted }}>
+                · {[priorityFilter ? S.lensGroup(priorityFilter) : null, sortBy !== 'date' ? S.sortName(sortBy) : null].filter(Boolean).join(' · ')}
+              </span>
+            )}
+          </summary>
         <Rail style={{ gap: 8, padding: '10px 0 4px' }}>
           {PRIORITY_GROUPS.map((g) => {
             const active = priorityFilter === g.key;
@@ -917,6 +935,24 @@ export default function BookView({
             );
           })}
         </Rail>
+        <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+          <span style={{ color: C.muted, fontSize: TYPE.label, fontWeight: 700 }}>{S.sortLabel}</span>
+          {['date', 'amount', 'name'].map((k) => (
+            <button
+              key={k} onClick={() => setSortBy(k)} aria-pressed={sortBy === k}
+              style={{
+                // A3: 34 -> TAP. Three <button aria-pressed> sort controls; the
+                // senior touch floor governs them like any other control.
+                minHeight: TAP, padding: '4px 12px', borderRadius: RADIUS.capsule, fontSize: TYPE.label,
+                ...glass('chip'), ...(sortBy === k ? { background: SELECTED_TINT } : null),
+                color: C.ink, fontWeight: sortBy === k ? 700 : 600,
+              }}
+            >
+              {S.sortName(k)}
+            </button>
+          ))}
+        </div>
+        </details>
       )}
       {period !== 'year' && !loadingRows && !loadError && priorityFilter && sorted.length > 0 && rows.length > 0 && (
         <div style={{ fontSize: TYPE.label, color: C.muted, margin: '2px 2px 0' }}>
@@ -965,30 +1001,6 @@ export default function BookView({
         }} />
       )}
       {/**
-        * The sort strip earns its place only when there is something to sort —
-        * two rows have an order already, whatever it is.
-        */}
-      {period !== 'year' && !loadingRows && !loadError && rows.length > 2 && (
-        // Breath BELOW too (Tarek, 2026-10-10: «this needs space») — the list card sat flush against it.
-        <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 12, marginBottom: SPACE.gap }}>
-          <span style={{ color: C.muted, fontSize: TYPE.label, fontWeight: 700 }}>{S.sortLabel}</span>
-          {['date', 'amount', 'name'].map((k) => (
-            <button
-              key={k} onClick={() => setSortBy(k)} aria-pressed={sortBy === k}
-              style={{
-                // A3: 34 -> TAP. Three <button aria-pressed> sort controls; the
-                // senior touch floor governs them like any other control.
-                minHeight: TAP, padding: '4px 12px', borderRadius: RADIUS.capsule, fontSize: TYPE.label,
-                ...glass('chip'), ...(sortBy === k ? { background: SELECTED_TINT } : null),
-                color: C.ink, fontWeight: sortBy === k ? 700 : 600,
-              }}
-            >
-              {S.sortName(k)}
-            </button>
-          ))}
-        </div>
-      )}
-      {/**
         * LOADING IS SAID, NOT PAPERED OVER. The alternative — the previous
         * month's rows under this month's chip — is the screenshot that filed
         * this bug.
@@ -1009,6 +1021,12 @@ export default function BookView({
       {period !== 'year' && !loadingRows && !loadError && (
         <RowList
           rows={rows} settled={settled} onEdit={editThenBust} phone={phone}
+          dayHeaders={period !== 'today' && sortBy === 'date'} today={today}
+          dayAmount={(list) => {
+            if (birdsOn) { let t = 0; let any = false; for (const r of list) { const x = rowHome(r); if (x != null) { t += x; any = true; } } return any ? { sum: t, unit: unitFor(bookHome) } : null; }
+            let t = 0; let any = false; for (const r of list) { if ((r.currency || HOME_CURRENCY) === displayCurrency && typeof r.amount === 'number') { t += r.amount; any = true; } }
+            return any ? { sum: t, unit: unitFor(displayCurrency) } : null;
+          }}
           open={open} setOpen={setOpen}
           canEdit={canEdit} onOpenEdit={openEditSheet} edited={editedRows}
           /**
@@ -1032,7 +1050,7 @@ export default function BookView({
             * heading six times. Under a week or a month the date is the one
             * thing distinguishing the rows, so it stays.
             */
-          showDate={period !== 'today'}
+          showDate={period !== 'today' && sortBy !== 'date'}   // under a day header the date is said once, by the header
           emptyTitle={period === 'today' && !priorityFilter ? S.todayEmptyTitle : null}
           /**
             * N7 — AN EMPTIED FILTER IS A SENTENCE NAMING ITS OWN ZERO
@@ -2440,9 +2458,36 @@ export function MonthScreen({ data, metric, setMetric, onGoToInbox, lensOpen, on
  * the category on one quiet line under the description, so nothing wraps and
  * nothing is repeated six times.
  */
+/**
+ * A DAY IN THE LEDGER (Tarek, 2026-10-18: «build the day ledger»). Pinned to the
+ * top of the screen while its rows scroll under it — «Today», «Yesterday», «Fri
+ * 16 Oct» — with the day's total on the right, so a week or a month reads as days.
+ */
+export function DayHeader({ dk, rows, today, dayAmount, first }) {
+  const d = dk ? { y: Math.floor(dk / 10000), m: Math.floor(dk / 100) % 100, d: dk % 100 } : null;
+  const t = today ? dayKey(today) : null;
+  const y = today ? dayKey(shiftDays(today, -1)) : null;
+  const name = !d ? S.dayUndated : dk === t ? S.dayToday : dk === y ? S.dayYesterday
+    : new Intl.DateTimeFormat(DIR === 'rtl' ? 'ar-EG-u-nu-latn' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+      .format(new Date(Date.UTC(d.y, d.m - 1, d.d)));
+  const amt = dayAmount ? dayAmount(rows) : null;
+  return (
+    <div data-day-header role="heading" aria-level={3}
+      style={{ position: 'sticky', top: -16, zIndex: 2, background: C.card, padding: '10px 16px 8px',
+        borderTop: first ? 'none' : GLASS_DIVIDER, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+      <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>{name}</span>
+      {amt && (
+        <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.muted, ...LATIN, ...NUMERALS }}>{moneyRound(amt.sum)} {amt.unit}</span>
+      )}
+    </div>
+  );
+}
+
 function RowList({
   rows, settled, onEdit, open, setOpen, tabName, showDate, emptyTitle, emptyBody, phone = [],
   canEdit = false, onOpenEdit = null, edited = null,
+  // The day ledger: headers where the day changes, each with that day's total (2026-10-18).
+  dayHeaders = false, today = null, dayAmount = null,
 }) {
   if (!rows.length && !phone.length) {
     return (
@@ -2462,7 +2507,8 @@ function RowList({
   }
 
   return (
-    <div style={{ ...glass('card'), overflow: 'hidden' }}>
+    // `clip`, not `hidden`: it rounds the corners without becoming a scroll box, so the day headers can pin.
+    <div style={{ ...glass('card'), overflow: 'clip' }}>
       {phone.map((r, i) => (
         // v4 P5: a row still on the phone — sand wash, a clock, and what will
         // happen to it. Not a button: there is no sheet row to open yet.
@@ -2512,9 +2558,17 @@ function RowList({
         // state/book.js for the version of this that shipped wrong.
         const gap = needsCategory(row);
 
+        // THE DAY LEDGER (2026-10-18): a pinned day header wherever the day changes.
+        const dk = dayHeaders ? dayKey(parseSheetDate(row && row.date)) : null;
+        const prevDk = dayHeaders && i > 0 ? dayKey(parseSheetDate(rows[i - 1] && rows[i - 1].date)) : null;
+        const header = dayHeaders && (i === 0 || dk !== prevDk) ? (
+          <DayHeader dk={dk} rows={rows.filter((x) => dayKey(parseSheetDate(x && x.date)) === dk)} today={today} dayAmount={dayAmount} first={i === 0 && !phone.length} />
+        ) : null;
         return (
+          <Fragment key={key}>
+          {header}
           <div
-            key={key} data-at={i} data-rowkey={encodeURIComponent(key)}
+            data-at={i} data-rowkey={encodeURIComponent(key)}
             style={{
               // v4 P3: rows share ONE glass card, parted by a white highlight line.
               borderTop: i === 0 && !phone.length ? 'none' : GLASS_DIVIDER,
@@ -2620,6 +2674,7 @@ function RowList({
               </div>
             )}
           </div>
+          </Fragment>
         );
       })}
     </div>
