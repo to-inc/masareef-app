@@ -226,7 +226,8 @@ try {
       const n = (x) => (Array.isArray(x) ? x.length : Object.keys(x || {}).length);
       const { initialTicks } = await vite.ssrLoadModule('/src/state/batchDraft.js');
       const ti = initialTicks([row, { ...row, index: 1, date: '2026-10-15' }]);
-      ok(ti['h#0'] === false && ti['h#1'] === true && /if \(iso\) setTicks/.test(src('src/views/BatchReviewView.jsx')),
+      // R0 re-cut 2026-10-20: a picked day ticks only when the server would take it (batchDayOk).
+      ok(ti['h#0'] === false && ti['h#1'] === true && /\[rowKey\(r\)\]: batchDayOk\(iso\)/.test(src('src/views/BatchReviewView.jsx')),
         'L6', 'an undated row starts unticked (the server would refuse it) and picking its day ticks it');
       ok(n(none) === 0 && n(dated) === 1 && n(other) === 0 && /data-batch-date/.test(src('src/views/BatchReviewView.jsx')),
         'L5', `an undated row refused for its date rides again once he picks the day — ${n(none)}/${n(dated)}/${n(other)}`); }
@@ -257,8 +258,25 @@ try {
     const t = initialTicks([dupRow, fresh]);
     ok(t[rowKey(dupRow)] === false && t[rowKey(fresh)] === true, 'B1', 'a row already in the book starts UNticked; a new one ticked');
     const bv = src('src/views/BatchReviewView.jsx');
-    ok(/data-batch-discard className="catchip" onClick=\{\(\) => \{ onTick\(false\); onToggleOpen\(\); \}\}/.test(bv) && /\{S\.batchLeaveOut\}/.test(bv) && /\{S\.batchSaveAnyway\}/.test(bv),
-      'B2', '«Don\'t log it» sits beside «Log it anyway» and leaves the row out'); }
+    // R0 re-cut 2026-10-20: «Don't log it» RECORDS the decision (leftOut) — it no longer just unticks.
+    const { unsettledCount, toConfirmRows, retryRows } = await vite.ssrLoadModule('/src/state/batchDraft.js');
+    const rowsU = [fresh, { ...fresh, index: 7 }];
+    const settledU = { byKey: { [rowKey(fresh)]: { status: 'book_duplicate' } } };
+    ok(/data-batch-discard className="catchip" onClick=\{\(\) => \{\s*onLeaveOut\(\); onToggleOpen\(\);/.test(bv) && /\{S\.batchLeaveOut\}/.test(bv) && /\{S\.batchSaveAnyway\}/.test(bv)
+      && unsettledCount({ rows: rowsU, settled: null }) === 2 && unsettledCount({ rows: rowsU, settled: null, leftOut: { [rowKey(fresh)]: true } }) === 1
+      && unsettledCount({ rows: rowsU, settled: settledU, leftOut: { [rowKey(fresh)]: true } }) === 1,
+      'B2', '«Don\'t log it» sits beside «Log it anyway» and the row stops counting as waiting');
+    // Audit 2026-10-20 (A1): an unread currency on a euro book goes out as the book's unit, first send and retry.
+    const unk = { ...fresh, currency: 'UNKNOWN', index: 9 };
+    const first = toConfirmRows([unk], { [rowKey(unk)]: true }, {}, { bookCurrency: 'EUR' });
+    const again = retryRows([unk], { byKey: {} }, {}, {}, { [rowKey(unk)]: true }, { bookCurrency: 'EUR' });
+    ok(first[0] && first[0].currency === 'EUR' && again[0] && again[0].currency === 'EUR',
+      'A1', `an unread currency is written in the book's unit, never pounds — ${first[0] && first[0].currency}/${again[0] && again[0].currency}`);
+    const mainSrc = src('src/main.jsx'); const bookSrc = src('src/views/BookView.jsx');
+    ok(/\.catch\(\(\) => \{/.test(mainSrc) && /window\.location\.reload\(\)/.test(mainSrc)
+      && /const newer = seededFor\.current !== /.test(bookSrc) && /dayPick === null && !priorityFilter && !catPick/.test(bookSrc)
+      && /init\[k\] === false && \(dup \|\| !r\.date\)/.test(bv),
+      'A2', 'a failed start offers Try again; a newer summary replaces seeded months; a filter narrows to this week; old saved ticks yield to the start-off rules'); }
 } finally {
   await vite.close();
 }

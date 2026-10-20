@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
 import { S, categoryLabel, unitFor, headlineUnitFor } from '../i18n/strings.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, money2 } from '../lib/format.js';
-import { isoToDmy, dmyToIso } from '../lib/dates.js';
+import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
 import { LATIN, ISOLATE, DateField } from '../components/Primitives.jsx';
 import {
   rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows, BATCH_MAX_ROWS,
@@ -36,11 +36,25 @@ import {
  */
 export default function BatchReviewView({
   jobs, expired, busy, results, onConfirm, onResnap, onDiscard, onLeave,
+  leftOut = {}, onLeaveOut = () => {},
   bookCurrency = 'EGP',   // an unread currency falls back to the BOOK's unit (audit 2026-10-10)
 }) {
   const rows = useMemo(() => mergeJobs(jobs), [jobs]);
   const [saved] = useState(() => restoreUi(rows));
-  const [ticks, setTicks] = useState(() => ({ ...initialTicks(rows), ...saved.ticks }));
+  const [ticks, setTicks] = useState(() => {
+    // Saved ticks win — except where the newer rules say a row must start OFF (in the book, or
+    // no day yet) and he has not answered that himself (audit 2026-10-20: a draft saved by an
+    // older build kept those rows ticked).
+    const init = initialTicks(rows);
+    const out = { ...init, ...saved.ticks };
+    for (const r of rows) {
+      const k = rowKey(r);
+      const dup = !!(r.dupBook && r.dupBook.checked && r.dupBook.match);
+      if (init[k] === false && (dup || !r.date) && !(saved.overridden && saved.overridden[k])
+        && !(saved.edits && saved.edits[k] && saved.edits[k].date)) out[k] = false;
+    }
+    return out;
+  });
   const [edits, setEdits] = useState(saved.edits);
   const [open, setOpen] = useState(null);
   const [overridden, setOverridden] = useState(saved.overridden);
@@ -64,9 +78,9 @@ export default function BatchReviewView({
        * Only refusals he has overridden and rows he never sent may ride; a
        * written row cannot be re-sent from here at all.
        */
-      ? retryRows(rows, results, overridden, edits, ticks)
+      ? retryRows(rows, results, overridden, edits, ticks, { leftOut, bookCurrency })
       : toConfirmRows(rows, ticks, edits, { overridden, bookCurrency })),
-    [settled, results, rows, ticks, edits, overridden, bookCurrency],
+    [settled, results, rows, ticks, edits, overridden, bookCurrency, leftOut],
   );
 
   /**
@@ -76,7 +90,7 @@ export default function BatchReviewView({
    * states what is still OUTSTANDING, and after a partial confirm those are
    * different sentences.
    */
-  const outstanding = settled ? unsettledCount({ rows, settled: results }) : 0;
+  const outstanding = settled ? unsettledCount({ rows, settled: results, leftOut }) : 0;
 
   /**
    * WHAT HE IS ABOUT TO WRITE, BEFORE HE READS A ROW — and it moves as he ticks.
@@ -108,7 +122,9 @@ export default function BatchReviewView({
       if (!isWritable(r.row_status)) continue;
       // A twin is never swept ON — the first copy carries the purchase, and a
       // second tick writes it twice. «اختار الكل» must not undo that.
-      next[rowKey(r)] = on ? !r.twinOf && !blockedByDup(r, overridden) : false;
+      // Nor a row with no day yet (the server refuses it), nor one he chose to leave out.
+      const k = rowKey(r);
+      next[k] = on ? !r.twinOf && !blockedByDup(r, overridden) && !!(r.date || (edits[k] && edits[k].date)) && !leftOut[k] : false;
     }
     setTicks(next);
   };
@@ -193,7 +209,12 @@ export default function BatchReviewView({
               isOpen={open === rowKey(r)}
               overrode={!!overridden[rowKey(r)]}
               onToggleOpen={() => setOpen(open === rowKey(r) ? null : rowKey(r))}
-              onTick={(on) => setTicks((t) => ({ ...t, [rowKey(r)]: on }))}
+              left={!!leftOut[rowKey(r)]}
+              onTick={(on) => {
+                setTicks((t) => ({ ...t, [rowKey(r)]: on }));
+                if (on && leftOut[rowKey(r)]) onLeaveOut(rowKey(r), false);   // ticking again un-decides it
+              }}
+              onLeaveOut={() => { onLeaveOut(rowKey(r), true); setTicks((t) => ({ ...t, [rowKey(r)]: false })); }}
               onOverride={() => {
                 setOverridden((o) => ({ ...o, [rowKey(r)]: true }));
                 setTicks((t) => ({ ...t, [rowKey(r)]: true }));
@@ -202,7 +223,8 @@ export default function BatchReviewView({
               onMethod={(m) => setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), method: m } }))}
               onDate={(iso) => {
                 setEdits((e) => ({ ...e, [rowKey(r)]: { ...(e[rowKey(r)] || {}), date: iso } }));
-                if (iso) setTicks((t) => ({ ...t, [rowKey(r)]: true }));
+                // A picked day ticks the row; clearing it unticks (it would only be refused).
+                setTicks((t) => ({ ...t, [rowKey(r)]: batchDayOk(iso) }));
               }}
             />
           ))}
@@ -375,7 +397,21 @@ function statusNote(row) {
   }
 }
 
-function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTick, onOverride, onPick, onMethod, onDate }) {
+/** The earliest day a statement row may carry: the server's SLIP_DATE_BACK_DAYS (60). */
+function batchMinDate() {
+  const t = cairoParts();
+  const d = new Date(Date.UTC(t.y, t.m - 1, t.d - 60));
+  return d.toISOString().slice(0, 10);
+}
+
+/** A picked day the server will take (iOS's picker ignores min/max): today−60 … today. */
+function batchDayOk(iso) {
+  const t = cairoParts();
+  const today = `${t.y}-${String(t.m).padStart(2, '0')}-${String(t.d).padStart(2, '0')}`;
+  return !!iso && iso >= batchMinDate() && iso <= today;
+}
+
+function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onToggleOpen, onTick, onLeaveOut, onOverride, onPick, onMethod, onDate }) {
   /**
    * Per-row, collapsing when the row closes — 27 chips left open on every row
    * would turn the reconciliation list back into the five-row grid EntryView
@@ -384,6 +420,8 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
    * the chosen name in the row's chip line.
    */
   const [catsOpen, setCatsOpen] = useState(false);
+  // «Don't log it» removes the button he pressed; focus returns to the row (audit 2026-10-20).
+  const titleRef = useRef(null);
   const writable = isWritable(row.row_status);
   const note = statusNote(row);
   const dup = row.dupBook;
@@ -419,7 +457,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
 
   const tone = {
     bad: { fg: C.conflictInk, bg: C.conflictBg },
-    warn: { fg: C.amberInk, bg: C.sand },
+    warn: { fg: C.sandInk, bg: C.sand },
   };
 
   // G06 (v4 tokens): a row is glass; its STATE picks the tier — written/failed
@@ -471,7 +509,9 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               // it toward a circle: an affordance change, not a style.
               width: 30, height: 30, borderRadius: 8, boxSizing: 'border-box',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: `2px ${ticked ? 'solid' : 'dashed'} ${ticked ? C.harbor : C.line}`,
+              // Unticked edge in muted (6.4:1), not line (1.35:1): duplicates and undated rows START
+              // unticked, so this empty box is the thing to find (audit 2026-10-20).
+              border: `2px ${ticked ? 'solid' : 'dashed'} ${ticked ? C.harbor : C.muted}`,
               background: ticked ? C.harbor : 'transparent',
               color: C.onDark, fontSize: 16, fontWeight: 700,
             }}>
@@ -487,6 +527,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               48pt floor and pulled back with a negative margin, so the row does
               not grow. It is the row's one keyboard / VoiceOver door to open. */}
           <TitleTag
+            ref={titleRef}
             onClick={canOpen ? onToggleOpen : undefined}
             aria-expanded={canOpen ? isOpen : undefined}
             style={{ display: 'block', width: '100%', textAlign: 'start', background: 'transparent',
@@ -553,7 +594,10 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
               * The row keeps its default — unticking would invent a suspicion —
               * and differs in WORDS. The two must never render identically.
               */}
-            {!settled && unchecked && <span>{dup.reason === 'no_date' ? S.batchDupNoDate : S.batchDupUnchecked}</span>}
+            {left && !(settled && outcome && (outcome.status === 'written' || outcome.status === 'duplicate')) && (
+              <b data-batch-left style={{ color: C.muted }}>{S.batchLeftOut}</b>
+            )}
+            {!settled && !left && unchecked && <span>{dup.reason === 'no_date' ? S.batchDupNoDate : S.batchDupUnchecked}</span>}
             {!settled && writable && !category && (
               <span style={{ padding: '2px 8px', borderRadius: RADIUS.capsule, background: C.mist, fontWeight: 700 }}>
                 {S.batchNeedCategory}
@@ -605,10 +649,11 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
 
       {/* NO DATE READ — he picks the day here, before sending or after the server refused it
           (bad_date); without it the row could never reach his book from this screen. */}
-      {writable && !row.date && onDate && (!settled || (outcome.status === 'error' && outcome.error === 'bad_date')) && (
+      {/* Also when the server refused a date it READ (older than 60 days, a misread year). */}
+      {writable && onDate && (settled ? (outcome.status === 'error' && outcome.error === 'bad_date') : !row.date) && (
         <label data-batch-date style={{ display: 'block', padding: '0 12px 12px', fontSize: TYPE.label, fontWeight: 700, color: edit && edit.date ? C.muted : C.conflictInk }}>
           {S.batchPickDay}
-          <DateField value={edit && edit.date ? isoToDmy(edit.date) : ''} invalid={!(edit && edit.date)}
+          <DateField value={edit && edit.date ? isoToDmy(edit.date) : ''} invalid={!(edit && edit.date)} min={batchMinDate()}
             onChange={(dmy) => onDate(dmyToIso(dmy) || undefined)}
             style={{ display: 'block', width: '100%', marginTop: 6, boxSizing: 'border-box', padding: '0 12px',
               borderRadius: RADIUS.inset, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 16, fontWeight: 400 }} />
@@ -650,7 +695,10 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, onToggleOpen, onTic
                   answer to a duplicate, so it leads — or log it anyway. */}
               <div style={{ display: 'flex', gap: 8, marginTop: 9 }}>
                 <button
-                  data-batch-discard className="catchip" onClick={() => { onTick(false); onToggleOpen(); }}
+                  data-batch-discard className="catchip" onClick={() => {
+                    onLeaveOut(); onToggleOpen();
+                    requestAnimationFrame(() => titleRef.current && titleRef.current.focus && titleRef.current.focus());
+                  }}
                   style={{
                     flex: 1, minHeight: TAP, borderRadius: RADIUS.row,
                     background: C.harbor, border: 'none', color: C.onDark, fontSize: 15, fontWeight: 700,

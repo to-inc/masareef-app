@@ -560,7 +560,14 @@ export function mockSummary() {
 
 // Same latency shape as a warm Apps Script call, so the loading states are real.
 export function mockFetchSummary() {
-  return new Promise((resolve) => setTimeout(() => resolve(mockSummary()), 420));
+  // MOCK PARITY (2026-10-20): the server's summary carries this month's and last month's
+  // rows in the `entries` shape (06 «summary.rows»), so the mock's does too.
+  return new Promise((resolve) => setTimeout(() => {
+    const sum = mockSummary();
+    const t = sum.today_cairo || cairoToday();
+    const prev = t.m === 1 ? { y: t.y - 1, m: 12 } : { y: t.y, m: t.m - 1 };
+    resolve({ ...sum, rows: [t, prev].map((ym) => ({ ...mockEntriesNow(ym), y: ym.y, m: ym.m })) });
+  }, 420));
 }
 
 /**
@@ -851,7 +858,11 @@ const MOCK_MONTH_ROWS = (y, m, today, pendingToday, todayEntries) => {
   return [];
 };
 
-export function mockEntries({ y, m }) {
+export function mockEntries(ref) {
+  return new Promise((resolve) => setTimeout(() => resolve(mockEntriesNow(ref)), 380));
+}
+
+function mockEntriesNow({ y, m }) {
   const today = cairoToday();
   const base = mockSummary();
   const MONTH_ABBR_ = MONTH_ABBR[Number(m) - 1] || String(m);
@@ -864,7 +875,7 @@ export function mockEntries({ y, m }) {
    */
   const rows = mockLiveRows_(MONTH_ABBR_,
     MOCK_MONTH_ROWS(Number(y), Number(m), today, null, base.today.entries)).filter(Boolean);
-  return new Promise((resolve) => setTimeout(() => resolve({
+  return {
     ok: true,
     v: 1,
     tab: MONTH_ABBR_,
@@ -873,7 +884,7 @@ export function mockEntries({ y, m }) {
     // themselves so the mock cannot disagree with its own list.
     unpriced: rows.filter((r) => r.amount == null).length,
     undated: rows.filter((r) => !/^\s*\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}\s*$/.test(String(r.date))).length,
-  }), 380));
+  };
 }
 
 /**

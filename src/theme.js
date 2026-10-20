@@ -36,7 +36,7 @@ const NIGHT_C = {
   shell: '#0E171E', mist: '#16232D', card: '#18242E', line: '#2B3A45',
   ink: '#E3ECF2', muted: '#A2B1BC',
   harbor: '#3E7CA6', harborInk: '#8CC0E6', harborDeep: '#34688C',
-  sand: '#3A3122', amber: '#D9A441', amberInk: '#3d2f0d', amberRim: '#A87F2E',
+  sand: '#3A3122', sandInk: '#E2C27A', amber: '#D9A441', amberInk: '#3d2f0d', amberRim: '#A87F2E',
   conflictInk: '#F0A493', conflictBg: '#3A2420', conflictLine: '#5C3A33',
   settledInk: '#9BD3A3', settledBg: '#1E3024', settledLine: '#2F4A36',
   onDark: '#FFFFFF',
@@ -101,6 +101,9 @@ const LIGHT_C = {
 
   // ——— canonical: tertiary
   sand: '#E7D9BE',      // chips, and the calm advisory surfaces (offline, outbox)
+  // Warm text ON sand/advisory (audit 2026-10-20): the amber ink in light; at night amberInk
+  // stays dark for the amber button, so text on night sand needs its own light value (7.45:1).
+  sandInk: '#3d2f0d',
 
   /**
    * canonical: THE one warm action. Reserved for the cash keypad's submit

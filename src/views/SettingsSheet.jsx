@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM, alpha, THEME_KEY, themeChoice } from '../theme.js';
 import { S, unitFor } from '../i18n/strings.js';
 import { Sheet, LangToggle, SectionLabel, LATIN } from '../components/Primitives.jsx';
@@ -179,6 +179,17 @@ function Group({ title, summary, open = false, children }) {
 export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose, build = loadBuild() }) {
   const [look, setLook] = useState(() => getDisplay());
   const theme = themeChoice();
+  // A dialog behaves like one (audit 2026-10-20): focus lands on Close when it opens — not on the
+  // page-wide backdrop — and Escape closes it.
+  const closeRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;                 // the shell passes a fresh arrow each render
+  useEffect(() => {
+    if (closeRef.current) closeRef.current.focus({ preventScroll: true });
+    const onKey = (e) => { if (e.key === 'Escape') onCloseRef.current(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   /**
    * S2 — the DEFAULT METHOD (06 §3.10.3). Owned HERE rather than threaded
    * from the shell: the language toggle already set the precedent (a control
@@ -195,6 +206,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
       <button
         onClick={onClose}
         aria-label={S.settingsClose}
+        tabIndex={-1} aria-hidden="true"
         style={{ position: 'fixed', inset: 0, zIndex: 44, background: 'transparent', cursor: 'default' }}
       />
       {/**
@@ -212,7 +224,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
         }}
       >
         <Sheet
-          role="dialog"
+          role="dialog" aria-modal="true"
           aria-label={S.settingsTitle}
           style={{
             background: C.card, border: `1px solid ${C.line}`,
@@ -242,6 +254,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
               {S.settingsTitle}
             </div>
             <button
+              ref={closeRef}
               onClick={onClose}
               style={{
                 minHeight: TAP, padding: '0 18px', borderRadius: RADIUS.capsule,

@@ -393,6 +393,7 @@ export const AR = {
   batchDupBookIntro: 'الدفتر فيه دي خلاص:',
   batchDupBatch: 'زي اللي فوق في نفس الصورة',
   batchLeaveOut: 'متسجلهاش',
+  batchLeftOut: 'مش هتتسجل',
   batchDupUnchecked: 'ما قدرناش نتأكد إنها مش متسجلة قبل كده',
   batchDupNoDate: 'مفيش تاريخ مقروء، فما قدرناش نقارنها بالدفتر',
   batchSaveAnyway: 'سجّلها برضه',

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { money2, normalizeDigits } from '../lib/format.js';
 import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
-import { C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG, alpha } from '../theme.js';
+import { C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, RADIUS, ICON, MOTION, SPACE, TYPE, unitSize, NAV, GRADIENT, glass, TOAST_ACTION_BG, alpha, NIGHT } from '../theme.js';
 import { S, SWITCH_TO, DIR, unitFor } from '../i18n/strings.js';
 import { getLang, setLang, otherLang } from '../state/lang.js';
 import { readProgress } from '../state/readTimes.js';
@@ -533,8 +533,9 @@ export function TabButton({ active, onClick, label, icon, badge, big }) {
       {badge ? (
         <span
           style={{
-            position: 'absolute', top: 4, right: 22, minWidth: 20, height: 20, padding: '0 5px',
-            boxSizing: 'border-box', borderRadius: RADIUS.capsule, background: C.conflictInk, color: C.onDark,
+            position: 'absolute', top: 4, insetInlineEnd: 22, minWidth: 20, height: 20, padding: '0 5px',
+            // At night conflictInk is a light terracotta: the count goes dark on it (9.00:1), not white (2.01:1).
+            boxSizing: 'border-box', borderRadius: RADIUS.capsule, background: C.conflictInk, color: NIGHT ? C.shell : C.onDark,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             // GEOMETRY EXEMPTION (ruling 2, R16): the badge's count text at 12 — a
             // 20px disc on the tab's corner; the review screen carries every item.
@@ -694,15 +695,17 @@ export function BigAmount({ amount, currency, size = 30 }) {
  * mix-up. The value stays his sheet's d/m/yyyy text on both sides, so nothing
  * downstream changes. The future is greyed out (`max` = today in Cairo).
  */
-export function DateField({ value, onChange, style, invalid = false }) {
+export function DateField({ value, onChange, style, invalid = false, min = undefined }) {
   const t = cairoParts();
   const max = `${t.y}-${String(t.m).padStart(2, '0')}-${String(t.d).padStart(2, '0')}`;
   return (
     <input
-      type="date" data-date-field dir="ltr" max={max}
+      type="date" data-date-field dir="ltr" max={max} min={min}
       value={dmyToIso(normalizeDigits(String(value == null ? '' : value)))}
       onChange={(e) => onChange(isoToDmy(e.target.value))}
-      style={{ ...style, ...(invalid ? { borderColor: C.conflictInk } : null), minHeight: 52, WebkitAppearance: 'none', appearance: 'none', textAlign: 'start' }}
+      style={{ ...style, ...(invalid ? { borderColor: C.conflictInk } : null), minHeight: 52, WebkitAppearance: 'none', appearance: 'none',
+        // dir=ltr keeps the digits in order; the box still sits on the reading side (audit 2026-10-20).
+        textAlign: DIR === 'rtl' ? 'right' : 'left' }}
     />
   );
 }

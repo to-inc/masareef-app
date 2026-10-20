@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import {
-  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG,
+  C, METHOD, FONT_DISPLAY, FONT_UI, NUMERALS, TAP, TYPE, RADIUS, SPACE, GLYPH, MOTION, unitSize, glass, GLASS_DIVIDER, SELECTED_TINT, PHONE_ROW_BG, GRADIENT,
 } from '../theme.js';
 import { S, DIR, monthName, monthByTab, categoryLabel, WEEK_DAYS, MONTH_LABELS, unitFor } from '../i18n/strings.js';
 import { METRICS } from '../lib/constants.js';
@@ -68,7 +68,8 @@ export function WeekDays({ today, pick, onPick }) {
     const el = refs.current.get(key);
     if (!el) { setBox(null); return; }
     setBox({ x: el.offsetLeft, w: el.offsetWidth });
-    if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: still ? 'auto' : 'smooth' });
   }, [key]);
   const chip = (k, label, on) => (
     <button key={String(k)} ref={(el) => { if (el) refs.current.set(String(k), el); }} className="catchip" aria-pressed={on}
@@ -302,6 +303,9 @@ export default function BookView({
   // what was read. Closed months keep forever; the current month keeps only for
   // the summary it was read beside (a new summary — after any write — reads it again).
   const monthCache = useRef(BOOK_MONTHS);
+  // Which summary last seeded the month cache: a NEWER summary's rows replace what is there
+  // (audit 2026-10-20 — a closed month seeded once was otherwise never refreshed).
+  const seededFor = useRef(null);
   const [undated, setUndated] = useState(0);
   const [open, setOpen] = useState(initialOpenKey);
   /**
@@ -399,9 +403,11 @@ export default function BookView({
     // calls into one»): seeded under the same keys, so opening the Book asks for nothing more.
     // A forced refresh skips them — it promises a fresh read.
     if (!force && Array.isArray(data.rows)) {
+      const newer = seededFor.current !== (data.serverTime || '');
       for (const r of data.rows) {
-        if (r && r.ok !== false && Array.isArray(r.entries) && !monthCache.current.has(cacheKey(r))) monthCache.current.set(cacheKey(r), r);
+        if (r && r.ok !== false && Array.isArray(r.entries) && (newer || !monthCache.current.has(cacheKey(r)))) monthCache.current.set(cacheKey(r), r);
       }
+      seededFor.current = data.serverTime || '';
     }
     try {
       /**
@@ -600,8 +606,10 @@ export default function BookView({
   // This week's list keeps going back through the fortnight already read (Tarek, 2026-10-20:
   // «it should go all the way back»), each older day under its «Last Sunday» header. The figure,
   // chart and «Where it went» above stay this week's. A fuller version would page further back on scroll.
+  // A priority or a «Where it went» category narrows to THIS week again (audit 2026-10-20): its
+  // count and total must match the figure above, which is this week's.
   const rows = period !== 'week' ? byPriority
-    : dayPick === null ? byPriority.filter((r) => dayKey(parseSheetDate(r && r.date)) !== null)
+    : dayPick === null && !priorityFilter && !catPick ? byPriority.filter((r) => dayKey(parseSheetDate(r && r.date)) !== null)
       : inWeekPick(byPriority);
 
   /**
@@ -1026,7 +1034,7 @@ export default function BookView({
           const el = document.querySelector(`[data-at="${at}"]`);
           if (!el) return;
           setOpen(decodeURIComponent(el.dataset.rowkey));
-          setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 60);
+          setTimeout(() => el.scrollIntoView({ block: 'center', behavior: reducedMotion ? 'auto' : 'smooth' }), 60);
         }} />
       )}
       {/**
@@ -1785,7 +1793,7 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
           style={{
             marginTop: 12, minHeight: TAP, borderRadius: RADIUS.row, padding: '8px 8px 8px 16px',
             ...glass('advisory'), borderRadius: RADIUS.glassWell,
-            color: C.amberInk, fontSize: TYPE.label, fontWeight: 700,
+            color: C.sandInk, fontSize: TYPE.label, fontWeight: 700,
             display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'start',
           }}
         >
@@ -1809,7 +1817,8 @@ function TodayHead({ totals: sheetTotals, entries, onGoToInbox, unsettledBatch =
             style={{
               flexShrink: 0, minHeight: 40, display: 'flex', alignItems: 'center',
               padding: '0 16px', borderRadius: RADIUS.capsule,
-              background: `linear-gradient(160deg, ${C.harbor}, ${C.harborInk})`,
+              // GRADIENT.harbor (harbor → harborDeep): harborInk turns LIGHT at night (1.94:1 under white).
+              background: GRADIENT.harbor,
               color: C.onDark, fontSize: TYPE.label, fontWeight: 600,
             }}
           >
@@ -2512,7 +2521,7 @@ export function DayHeader({ dk, rows, today, dayAmount, first }) {
       style={{ position: 'sticky', top: -16, zIndex: 2, background: C.card, padding: '10px 16px 8px',
         borderTop: first ? 'none' : GLASS_DIVIDER, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
       <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.ink }}>
-        {name}{small && <span style={{ fontWeight: 400, color: C.muted, marginInlineStart: 8, ...LATIN, ...NUMERALS }}>{small}</span>}
+        {name}{small && <span style={{ fontWeight: 400, color: C.muted, marginInlineStart: 8, ...ISOLATE, ...NUMERALS }}>{small}</span>}
       </span>
       {amt && (
         <span style={{ fontSize: TYPE.label, fontWeight: 700, color: C.muted, ...LATIN, ...NUMERALS }}>{moneyRound(amt.sum)} {amt.unit}</span>

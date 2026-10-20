@@ -98,7 +98,7 @@ const book = readFileSync(new URL('../src/views/BookView.jsx', import.meta.url),
 // R0 re-cut (2026-10-18): the tapped bar and the day buttons share ONE choice (dayPick) —
 // a day, last week, or this week — matched on the row's own date, not a weekday number.
 ok(/onRange=\{\(r\) => setDayPick\(r && thisWeek \? dayKey\(shiftDays\(thisWeek\.from, r\.a\)\) : null\)\}/.test(book)
-  && /dayPick === null \? byPriority\.filter/.test(book) && /: inWeekPick\(byPriority\)/.test(book)  /* R0 re-cut 2026-10-20: the week's list continues back */ && /useEffect\(\(\) => \{ setDayPick\(null\); \}, \[period\]\)/.test(book),
+  && /dayPick === null && !priorityFilter && !catPick \? byPriority\.filter/.test(book) && /: inWeekPick\(byPriority\)/.test(book)  /* R0 re-cut 2026-10-20: the week's list continues back */ && /useEffect\(\(\) => \{ setDayPick\(null\); \}, \[period\]\)/.test(book),
   'HS.24 a tapped day narrows the week\'s list to that day, and leaving Week forgets it');
 {
   // ——— a BROWSED month in his unit: euro rows at face, pound rows at their stamp, the rest named

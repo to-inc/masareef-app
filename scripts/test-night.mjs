@@ -29,7 +29,12 @@ try {
   const pairs = [['ink on card', C.ink, C.card, 4.5], ['muted on card', C.muted, C.card, 4.5], ['muted on shell', C.muted, C.shell, 4.5],
     ['harbor text on card', C.harborInk, C.card, 4.5], ['white on harbor', C.onDark, C.harbor, 4.5],
     ['conflict on its box', C.conflictInk, C.conflictBg, 4.5], ['settled on its box', C.settledInk, C.settledBg, 4.5],
-    ['amber button text', C.amberInk, C.amber, 4.5]];
+    ['amber button text', C.amberInk, C.amber, 4.5],
+    // Audit 2026-10-20: the pairs the night palette broke without a test noticing.
+    ['warm text on sand (waiting rows, statement chips)', C.sandInk, C.sand, 4.5],
+    ['badge count on its terracotta disc', C.shell, C.conflictInk, 4.5],
+    ['white on the Review pill\'s darker stop', C.onDark, C.harborDeep, 4.5],
+    ['unticked checkbox edge on card (non-text, 3:1)', C.muted, C.card, 3]];
   for (const [name, fg, bg, floor] of pairs) { const r = ratio(rgb(fg), rgb(bg)); ok(r >= floor, `N.2 ${name} ${r.toFixed(2)}:1 ≥ ${floor}`); }
   // Text on the night glass (its thinnest stop, .40 slate) over every stop of the night ground.
   const stops = [...new Set(GROUND.dawn.match(/#[0-9A-Fa-f]{6}/g))].map(rgb);

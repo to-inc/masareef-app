@@ -378,6 +378,7 @@ export const EN = {
   batchDupBookIntro: 'Your book already has this:',
   batchDupBatch: 'Same as the one above, in this photo',
   batchLeaveOut: "Don't log it",
+  batchLeftOut: 'Left out',
   batchDupUnchecked: 'Could not check your book for a duplicate',
   batchDupNoDate: 'No date read, so it could not be checked against your book',
   batchSaveAnyway: 'Log it anyway',
@@ -615,7 +616,7 @@ export const EN = {
   settingsLook: 'Look', // R10 display settings
   frostLabel: 'Glass',
   lookSheer: 'Sheer', lookDesigned: 'Standard', lookDeep: 'Frosted',
-  atmosphereLabel: 'Light',
+  atmosphereLabel: 'Tint',  // was «Light» — it sat under the Theme switch's own «Light» (audit 2026-10-20)
   lookMorning: 'Morning', lookGolden: 'Golden', lookDusk: 'Dusk',
   zoomLabel: 'Text size',
   zoomSmaller: 'Smaller',

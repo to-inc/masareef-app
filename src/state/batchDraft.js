@@ -283,7 +283,9 @@ export function toConfirmRows(rows, ticks, edits = {}, opts = {}) {
       // these rows are exactly the ones that are usually NOT in EGP.
       // An UNREAD currency is the book's own unit, never pounds by accident
       // (audit 2026-10-10: on his euro book, «UNKNOWN» became EGP server-side).
-      currency: edited.currency || (row.currency && row.currency !== 'UNKNOWN' ? row.currency : bookCurrency),
+      // `edited` spreads the row, so `edited.currency` was the row's own «UNKNOWN» and the
+      // book fallback never fired (audit 2026-10-20): his edit, else a READ currency, else the book's.
+      currency: (edits[key] && edits[key].currency) || (row.currency && row.currency !== 'UNKNOWN' ? row.currency : bookCurrency),
       /**
        * An explicit cash hint on the row wins; otherwise the server's own
        * per-list ruling (defaultMethod, D19). The client composes from what the
@@ -534,7 +536,7 @@ export function mergeOutcomes(prev, res, sent) {
  * and still says «not logged», because the honest report of an unfixable row is
  * that it is unfixed, not that it is finished.
  */
-export function retryRows(rows, settled, overridden, edits = {}, ticks = {}) {
+export function retryRows(rows, settled, overridden, edits = {}, ticks = {}, opts = {}) {
   const answers = outcomeMap(settled);
   const send = {};
   for (const row of Array.isArray(rows) ? rows : []) {
@@ -547,9 +549,9 @@ export function retryRows(rows, settled, overridden, edits = {}, ticks = {}) {
       else if (answer.status === 'error' && answer.error === 'bad_date' && edits[key] && edits[key].date) send[key] = true;
       continue;
     }
-    if (ticks && ticks[key] === true) send[key] = true;
+    if (ticks && ticks[key] === true && !(opts.leftOut && opts.leftOut[key])) send[key] = true;
   }
-  return toConfirmRows(rows, send, edits, { overridden });
+  return toConfirmRows(rows, send, edits, { overridden, bookCurrency: opts.bookCurrency });
 }
 
 /**
@@ -599,7 +601,10 @@ export function reattachEdits(oldEdits, oldRows, newRows) {
 export function unsettledCount(draft) {
   if (!draft) return 0;
   const rows = Array.isArray(draft.rows) ? draft.rows : [];
-  const waiting = rows.filter((r) => isWritable(r && r.row_status));
+  // A row he chose «Don't log it» on is decided, not waiting (audit 2026-10-20: the button
+  // used to record nothing, so the row kept counting on the Book).
+  const left = draft.leftOut || {};
+  const waiting = rows.filter((r) => isWritable(r && r.row_status) && !left[rowKey(r)]);
   if (!draft.settled) return waiting.length;
 
   /**

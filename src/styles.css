@@ -190,6 +190,14 @@ textarea {
   .quickchip {
     transition: none;
   }
+  /* Inline transitions win over a class rule, so these need the override (audit 2026-10-20):
+     the week's sliding pill and its chips, the Settings chevron's turn, a swiped inbox card. */
+  [data-week-pill],
+  [data-week-days] .catchip,
+  .set-chev,
+  .card-in {
+    transition: none !important;
+  }
 }
 
 /* ═══ A5 — GLASS FALLS BACK TO SOLID (OWNER-RULINGS R19, ARCHITECTURE A5) ═══
@@ -202,12 +210,20 @@ textarea {
           --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356;
           --glass-solid-raised: #FFFFFF; --glass-solid-alert: #FDF1EE;
           --glass-solid-sheet: #FAF7F1; --glass-solid-peek: #FFFFFF; --glass-solid-prompt: #FFFFFF; }
+  /* Night (audit 2026-10-20): the solid fallbacks follow the palette, or light ink lands on white. */
+  :root[data-night="true"] { --glass-solid-card: #18242E; --glass-solid-chip: #16232D; --glass-solid-chrome: #0E171E;
+          --glass-solid-advisory: #3A3122; --glass-solid-raised: #18242E; --glass-solid-alert: #3A2420;
+          --glass-solid-sheet: #0E171E; --glass-solid-peek: #18242E; --glass-solid-prompt: #18242E; }
 }
 @media (prefers-reduced-transparency: reduce) {
   :root { --glass-solid-card: #FFFFFF; --glass-solid-chip: #FFFFFF; --glass-solid-chrome: #FAF7F1;
           --glass-solid-advisory: #E7D9BE; --glass-solid-toast: #2C4356;
           --glass-solid-raised: #FFFFFF; --glass-solid-alert: #FDF1EE;
           --glass-solid-sheet: #FAF7F1; --glass-solid-peek: #FFFFFF; --glass-solid-prompt: #FFFFFF; }
+  /* Night (audit 2026-10-20): the solid fallbacks follow the palette, or light ink lands on white. */
+  :root[data-night="true"] { --glass-solid-card: #18242E; --glass-solid-chip: #16232D; --glass-solid-chrome: #0E171E;
+          --glass-solid-advisory: #3A3122; --glass-solid-raised: #18242E; --glass-solid-alert: #3A2420;
+          --glass-solid-sheet: #0E171E; --glass-solid-peek: #18242E; --glass-solid-prompt: #18242E; }
 }
 
 /* R10/A22 — the ATMOSPHERE tints the ground layer only (App's .ground), never an

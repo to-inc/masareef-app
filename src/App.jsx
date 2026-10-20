@@ -1191,6 +1191,10 @@ export default function App() {
                       onResnap={resnapBatch}
                       onDiscard={discardBatch}
                       onLeave={leaveBatch}
+                      leftOut={batch.leftOut || {}}
+                      onLeaveOut={(key, on) => setBatch((prev) => saveDraft({
+                        ...prev, leftOut: { ...(prev.leftOut || {}), [key]: on || undefined },
+                      }))}
                     />
                   </Suspense>
                 )}
@@ -1210,7 +1214,7 @@ export default function App() {
                       */
                     displayCurrency={displayCurrency}
                     unsettledBatch={unsettledCount({
-                      rows: mergeJobs(batch.jobs), settled: batch.settled,
+                      rows: mergeJobs(batch.jobs), settled: batch.settled, leftOut: batch.leftOut,
                     })}
                     onOpenBatch={() => pushDetail(() => { setEntryMode('batch'); setTab('entry'); })}
                     onEdit={editRecent}
