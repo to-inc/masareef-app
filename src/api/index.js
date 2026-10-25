@@ -1,3 +1,4 @@
+import { cairoParts } from '../lib/dates.js';
 /**
  * The single seam between the app and the backend.
  *
@@ -71,6 +72,8 @@ export const ping = () => (USING_MOCK
   ? Promise.resolve({
     ok: true,
     v: 1,
+    // Parity (2026-10-25): handlePing_ answers today's civil date; «Check the app» compares it.
+    today: cairoParts(),
     /**
      * BOTH advertisements, because the serving backend publishes both
      * (`buildIdentity_`: `actions: KNOWN_ACTIONS.slice()`,

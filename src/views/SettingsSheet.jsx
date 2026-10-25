@@ -9,6 +9,7 @@ import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { debugShot, debugNote } from '../api/index.js';
 import { prepareScreenshot } from '../lib/receipt-image.js';
 import { newClientId } from '../lib/dates.js';
+import { gatherFacts, judge } from '../state/selfCheck.js';
 
 /**
  * S1 — THE SETTINGS SHEET BEHIND THE COG (Owner field ruling 2026-08-27).
@@ -415,6 +416,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
             </div>
           </Group>
           <Group title={S.settingsHelp} summary={`${S.appVersion} ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'}`}>
+          <SelfCheck />
           {supportsAction(build, 'debug_shot') && <DebugShots withNote={supportsAction(build, 'debug_note')} />}
           {/* Which build this phone runs — the commit it was built from (E-017). */}
           {/* Only the commit is Latin; «النسخة» reads in its own direction (audit 2026-10-10). */}
@@ -428,5 +430,42 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
         </Sheet>
       </div>
     </>
+  );
+}
+
+/**
+ * «CHECK THE APP» (2026-10-25): the phone tests itself — server, clock, stuck photos and
+ * entries, offline copy, storage — and says each in one line, green / amber / red.
+ * Read-only (one ping). The logic is state/selfCheck.js, where the suite tests it.
+ */
+function SelfCheck() {
+  const [rows, setRows] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try { setRows(judge(await gatherFacts(), S)); } finally { setBusy(false); }
+  };
+  // No amber here: amber is each screen's one primary action (S1.25); a warning is the warm sand ink.
+  const tone = { ok: { dot: C.settledInk, label: '✓' }, warn: { dot: C.sandInk, label: '!' }, bad: { dot: C.conflictInk, label: '✕' } };
+  return (
+    <div data-self-check style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: SPACE.gap }}>
+      <button className="catchip" onClick={run} disabled={busy} aria-busy={busy}
+        style={{ minHeight: TAP, borderRadius: RADIUS.row, ...glass('chip'), color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
+        {busy ? S.checkRunning : rows ? S.checkAgain : S.checkTitle}
+      </button>
+      {rows && (
+        <ul aria-live="polite" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {rows.map((r) => (
+            <li key={r.key} data-check={r.key} data-tone={r.tone}
+              style={{ display: 'grid', gridTemplateColumns: '24px 1fr', gap: 10, alignItems: 'start', fontSize: TYPE.label, color: C.ink, lineHeight: 1.5 }}>
+              {/* GEOMETRY EXEMPTION (ruling 2): the mark's text size is 12 inside a 22px disc — a glyph sized by its disc, not reading type. */}
+              <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: RADIUS.capsule, background: tone[r.tone].dot, color: C.card,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, marginTop: 1 }}>{tone[r.tone].label}</span>
+              <span>{r.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

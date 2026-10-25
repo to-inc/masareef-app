@@ -58,7 +58,7 @@ try {
   const props = { jobs: [job], onReview() {}, onRetry() {}, onCancel() {} };
   const on = renderToStaticMarkup(createElement(JobsList, { ...props, onDebugLog() {} }));
   ok(on.includes(AR.debugLogSend) && on.includes(AR.debugLogPrivacy), 'S.20 a failed read offers «⚑» with its privacy line');
-  ok(/dashed #A05446[^"]*min-height:48px|min-height:48px[^"]*dashed #A05446/.test(on), 'S.21 the dashed terracotta ghost, at 48px (R3: the 44 exception is withdrawn)');
+  ok(/dashed #9A4F41[^"]*min-height:48px|min-height:48px[^"]*dashed #9A4F41/.test(on), 'S.21 the dashed terracotta ghost, at 48px (R3: the 44 exception is withdrawn)');
   ok(!renderToStaticMarkup(createElement(JobsList, props)).includes(AR.debugLogSend), 'S.22 no handler, no button — a server without `debuglog` shows nothing');
 } finally { await vite.close(); }
 // ——— E-017: full screen on iPhone, and a version he can read

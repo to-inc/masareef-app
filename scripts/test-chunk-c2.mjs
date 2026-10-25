@@ -60,7 +60,7 @@ try {
   ok(big.includes(`color:${C.onDark}`) && big.includes('font-weight:700'), 'C2.9 «جديد» is white 700 on the pill');
   ok(big.includes(`flex:${NAV.newFlex}`), 'C2.10 «جديد» is the wider pill (flex 1.15)');
   const badged = r({ active: false, badge: 3 });
-  ok(/background:#A05446[^"]*font-size:12px/.test(badged) && badged.includes('>3<'), 'C2.11 the review badge is a terracotta disc with its count');
+  ok(/background:#9A4F41[^"]*font-size:12px/.test(badged) && badged.includes('>3<'), 'C2.11 the review badge is a terracotta disc with its count');
 } finally { await vite.close(); }
 
 if (failures.length) {

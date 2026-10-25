@@ -282,6 +282,18 @@ try {
         && /<PhotoPeek base64=\{shot\.base64\}/.test(src('src/views/ReceiptView.jsx')) && /<PhotoPeek key=\{p\.hash\}/.test(bv)
         && /createPortal\(/.test(src('src/components/PhotoPeek.jsx')),
         'P1', 'the eye: receipt and statement screens open their photo full screen; the capture day is the file\'s own (never the future)'); }
+    { const { judge } = await vite.ssrLoadModule('/src/state/selfCheck.js');
+      const now = Date.UTC(2026, 9, 25, 12), day = { y: 2026, m: 10, d: 25 };
+      const good = { now, phoneDay: day, server: { ok: true, ms: 1800, build: 'b', today: day }, photos: [], outbox: [], statement: 0, offline: true, storage: { used: 1, quota: 100 }, figuresAt: now - 60000 };
+      const tones = (f) => Object.fromEntries(judge(f, S).map((r) => [r.key, r.tone]));
+      const g = tones(good);
+      const bad = tones({ ...good, server: { ok: true, ms: 1800, build: 'b', today: { y: 2026, m: 10, d: 24 } }, photos: [{ stage: 'queued', queuedAt: now - 3 * 3600e3 }],
+        outbox: [{ queuedAt: now - 2 * 3600e3, blocked: false }], statement: 2 });
+      const down = tones({ ...good, server: { ok: false, ms: 15000 } });
+      ok(Object.values(g).every((t) => t === 'ok') && bad.clock === 'bad' && bad.photos === 'warn' && bad.outbox === 'warn' && bad.statement === 'warn'
+        && down.server === 'bad' && !('clock' in down),
+        'C1', `«Check the app» is green on a healthy phone and flags a wrong clock, a stuck photo, an old unsent entry, statement rows and a dead server — ${JSON.stringify(bad)}`);
+      ok(/<SelfCheck \/>/.test(src('src/views/SettingsSheet.jsx')), 'C2', '«Check the app» sits in Settings → Help'); }
     const mainSrc = src('src/main.jsx'); const bookSrc = src('src/views/BookView.jsx');
     ok(/\.catch\(\(\) => \{/.test(mainSrc) && /window\.location\.reload\(\)/.test(mainSrc)
       && /const newer = seededFor\.current !== /.test(bookSrc) && /dayPick === null && !priorityFilter && !catPick/.test(bookSrc)

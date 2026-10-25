@@ -131,7 +131,9 @@ const LIGHT_C = {
   amberRim: '#A87F2E',  // 3.42:1 on shell — the CTA's boundary, never its fill
 
   // ——— canonical: the two settled/unsettled card states (WS3-C)
-  conflictInk: '#A05446',
+  // #9A4F41, was #A05446 (audit 2026-10-25): measured on screen, the uncategorised row's
+  // glass lets the blue ground through and #A05446 read 4.21:1 there; this reads 4.6:1.
+  conflictInk: '#9A4F41',
   conflictBg: '#FDF1EE',
   conflictLine: '#ECCDC5',
   settledInk: '#4C7950',
