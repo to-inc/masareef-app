@@ -226,6 +226,8 @@ try {
     await page.click('[data-photo-peek]'); await page.waitForTimeout(500);
     const box = await page.$eval('[data-photo-view]', (e) => { const r = e.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight, top: document.elementFromPoint(innerWidth / 2, innerHeight / 2)?.closest('[data-photo-view]') !== null }; }).catch(() => null);
     ok(!!box && box.w === box.vw && box.h === box.vh && box.top, `F5 the photo viewer covers the whole screen and is on top — ${JSON.stringify(box)}`);
+    if (box) { await page.mouse.click(box.vw / 2, box.vh - 6); await page.waitForTimeout(300); }
+    ok(!(await page.$('[data-photo-view]')), 'F5b a tap on the dark below the picture closes the viewer');
     await page.evaluate(async () => { const q = await import('/masareef/src/state/receiptQueue.js'); for (const j of await q.all()) await q.remove(j.id); });
     await ctx.close();
   }

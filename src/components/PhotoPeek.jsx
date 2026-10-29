@@ -43,7 +43,9 @@ export default function PhotoPeek({ base64, label = null }) {
               {S.settingsClose}
             </button>
           </div>
-          <div style={{ flex: 1, overflow: 'auto', WebkitOverflowScrolling: 'touch', display: zoom ? 'block' : 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
+          {/* A tap on the dark around the picture closes it (usage diary 2026-10-23: five taps in a
+              row on the open viewer, and his note «there's no way to dismiss the screenshot»). */}
+          <div onClick={(e) => { if (e.target === e.currentTarget) close(); }} style={{ flex: 1, overflow: 'auto', WebkitOverflowScrolling: 'touch', display: zoom ? 'block' : 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
             <img src={url} alt={S.receiptSeePhoto} onClick={() => setZoom((z) => !z)}
               style={zoom ? { width: '250%', maxWidth: 'none', display: 'block' } : { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
           </div>
