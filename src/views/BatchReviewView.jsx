@@ -104,7 +104,9 @@ export default function BatchReviewView({
    * states what is still OUTSTANDING, and after a partial confirm those are
    * different sentences.
    */
-  const outstanding = settled ? unsettledCount({ rows, settled: results, leftOut }) : 0;
+  // Before a settle it counts what the discard would throw away (Tarek, 2026-10-22: «no way
+  // to dismiss» — the unsent screen's only control was «Log N»).
+  const outstanding = unsettledCount({ rows, settled: settled ? results : null, leftOut });
 
   /**
    * WHAT HE IS ABOUT TO WRITE, BEFORE HE READS A ROW — and it moves as he ticks.
@@ -337,10 +339,11 @@ export default function BatchReviewView({
 
         {/**
           * DISCARD IS ITS OWN ACT, and it says the price out loud. It appears
-          * only once there is a price to say — on a fully-written batch the
-          * button above already is this one.
+          * once there is a price to say — on a fully-written batch the button
+          * above already is this one. Before a settle it is always there: it is
+          * the screen's only way out (Tarek, 2026-10-22, «it's a little bit stuck»).
           */}
-        {settled && outstanding > 0 && (
+        {(!settled || outstanding > 0) && (
           <button
             className="catchip" onClick={onDiscard}
             style={{
@@ -349,7 +352,7 @@ export default function BatchReviewView({
               color: C.muted, fontSize: TYPE.label,
             }}
           >
-            {S.batchDiscardWaiting(outstanding)}
+            {outstanding > 0 ? S.batchDiscardWaiting(outstanding) : S.batchDiscard}
           </button>
         )}
       </div>

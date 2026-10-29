@@ -466,7 +466,7 @@ export function PairedBars({ cur, prev, labels, liveIndex, color, range = null, 
                 * to `caption` would make every tick wider than its column
                 * and hand back the collisions the thinning just removed.
                 */}
-              <div data-geometry="chart-axis-tick" style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: within(i) || (!range && isLive) ? 800 : 500, color: within(i) || (!range && isLive) ? C.harbor : C.muted }}>
+              <div data-geometry="chart-axis-tick" style={{ fontSize: labels.length > 8 ? 9.5 : 11, marginTop: 5, fontWeight: within(i) || (!range && isLive) ? 800 : 500, color: within(i) || (!range && isLive) ? C.harborInk : C.muted }}>
                 {/* The WEEK names today (audit 2026-10-10: «•» hid which day it was); the
                     year and month axes keep A12's live dot. */}
                 {isLive ? (labels.length === 7 ? lb : '•') : speaks(i) ? lb : ''}

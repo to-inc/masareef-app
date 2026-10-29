@@ -769,6 +769,10 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
     ok(partial.includes(AR.batchWaiting(2)),
       'and both the refusal and the unsent row are counted as waiting');
 
+    // ——— the unsent screen has a way out (Tarek, 2026-10-22: «there's no way to dismiss»)
+    ok(t.includes(AR.batchDiscardWaiting(3)),
+      'before anything is logged the review can still be discarded, and it names what goes with it');
+
     // ——— the expired draft never silently drops his work
     const exp = text(render({ jobs, expired: true }));
     ok(exp.includes(AR.batchExpired), 'an expired extraction says what happened…');
