@@ -211,7 +211,12 @@ import { dirname, join } from 'node:path';
  * vanished: each way a read can stall lands on its own name and is reported —
  * orphan (2), lease (4), network stays `offline` (1), a refused write never spins (1).
  */
-const EXPECTED_ASSERTIONS = 7050;
+/**
+ * 7082 on 2026-10-31 (fourth pass). +32, all i18n (3366 → 3398), nothing vanished:
+ * `batchEditEntry`, `batchRemoved`, `batchOpening`, `batchOpenFailed`. The
+ * test-batch canOpen assertion was re-cut in place (count unchanged).
+ */
+const EXPECTED_ASSERTIONS = 7082;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

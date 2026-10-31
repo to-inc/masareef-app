@@ -7,6 +7,10 @@ import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
 import { LATIN, ISOLATE, DateField } from '../components/Primitives.jsx';
 import PhotoPeek from '../components/PhotoPeek.jsx';
 import * as receiptQueue from '../state/receiptQueue.js';
+import EditSheet from './EditSheet.jsx';
+import { fetchEntries, fixCategory } from '../api/index.js';
+import { editPayload } from '../state/fixPayload.js';
+import { supportsAction, loadBuild } from '../state/capabilities.js';
 import {
   rowKey, isWritable, mergeJobs, initialTicks, toConfirmRows, BATCH_MAX_ROWS,
   outcomeFor, isRetryable, retryRows, unsettledCount, saveBatchUi, restoreUi,
@@ -37,7 +41,7 @@ import {
  * ═══════════════════════════════════════════════════════════════════════════
  */
 export default function BatchReviewView({
-  jobs, expired, busy, results, onConfirm, onResnap, onDiscard, onLeave, onReread = null,
+  jobs, expired, busy, results, onConfirm, onResnap, onDiscard, onLeave, onReread = null, onEntryChanged = null,
   leftOut = {}, onLeaveOut = () => {},
   bookCurrency = 'EGP',   // an unread currency falls back to the BOOK's unit (audit 2026-10-10)
 }) {
@@ -60,6 +64,41 @@ export default function BatchReviewView({
   const [edits, setEdits] = useState(saved.edits);
   const [open, setOpen] = useState(null);
   const [photos, setPhotos] = useState([]);
+  /**
+   * A LOGGED ROW OPENS ITS EXPENSE (Tarek, 2026-10-31: «I tried to click this but it
+   * didn't take me to the actual expense»). The server answered with the row it wrote
+   * (`outcome.entry`); its month is fetched for the TAB name — only the server knows
+   * his tab names — and the book's own copy of the row is what the edit card matches.
+   */
+  const [editing, setEditing] = useState(null);   // { key, item } — the edit card, while open
+  const [entryNote, setEntryNote] = useState({});  // key → 'loading' | 'failed' | 'saving' | 'saved'
+  const canEditBook = supportsAction(loadBuild(), 'edit_entry');
+  const note = (key, v) => setEntryNote((n) => ({ ...n, [key]: v }));
+  const resolveItem = async (entry) => {
+    const [, m, y] = String(entry.date || '').split('/').map(Number);
+    if (!y || !m) return null;
+    let a = null;
+    try { a = await fetchEntries({ y, m }); } catch { a = null; }
+    if (!a || a.ok === false || !a.tab) return null;
+    const same = (r) => r && r.date === entry.date && Number(r.amount) === Number(entry.amount) && r.description === entry.description;
+    const match = (Array.isArray(a.entries) ? a.entries : []).find(same) || entry;
+    return { tab: a.tab, rowHint: `${match.date}|${match.amount}`, match };
+  };
+  const openEntry = async (key, entry) => {
+    note(key, 'loading');
+    const item = await resolveItem(entry);
+    note(key, item ? null : 'failed');
+    if (item) setEditing({ key, item });
+  };
+  /** A category tap on a logged row: the same `fix_category` the Book's rows use. */
+  const fixEntryCategory = async (key, entry, category) => {
+    note(key, 'saving');
+    const item = await resolveItem(entry);
+    let res = null;
+    try { res = item ? await fixCategory(editPayload(item, category)) : null; } catch { res = null; }
+    if (res && res.ok === true) { note(key, 'saved'); if (onEntryChanged) onEntryChanged(key, { ...entry, category }); }
+    else note(key, 'failed');
+  };
   // How many of this review's photos the phone still holds (PDFs too) — what «Read again» can resend.
   const [held, setHeld] = useState(0);
   const hashes = jobs.map((j) => j.sourceHash).join('|');
@@ -249,6 +288,12 @@ export default function BatchReviewView({
               isOpen={open === rowKey(r)}
               overrode={!!overridden[rowKey(r)]}
               onToggleOpen={() => setOpen(open === rowKey(r) ? null : rowKey(r))}
+              {...(() => {
+                const o = settled ? outcomeFor(results, r) : null;
+                if (!(canEditBook && o && o.entry && (o.status === 'written' || o.status === 'duplicate'))) return {};
+                return { onOpenEntry: () => openEntry(rowKey(r), o.entry), onFixEntry: (c) => fixEntryCategory(rowKey(r), o.entry, c) };
+              })()}
+              entryNote={entryNote[rowKey(r)] || null}
               left={!!leftOut[rowKey(r)]}
               onTick={(on) => {
                 setTicks((t) => ({ ...t, [rowKey(r)]: on }));
@@ -370,6 +415,15 @@ export default function BatchReviewView({
           </button>
         )}
       </div>
+      {editing && editing.item && (
+        <EditSheet
+          item={editing.item}
+          onClose={() => setEditing(null)}
+          onSaved={(entry) => { if (onEntryChanged) onEntryChanged(editing.key, entry); }}
+          canRemove={supportsAction(loadBuild(), 'remove_entry')}
+          onRemoved={() => { if (onEntryChanged) onEntryChanged(editing.key, null); setEditing(null); }}
+        />
+      )}
     </div>
   );
 }
@@ -452,7 +506,7 @@ function batchDayOk(iso) {
   return !!iso && iso >= batchMinDate() && iso <= today;
 }
 
-function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onToggleOpen, onTick, onLeaveOut, onOverride, onPick, onMethod, onDate }) {
+function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onToggleOpen, onOpenEntry = null, onFixEntry = null, entryNote = null, onTick, onLeaveOut, onOverride, onPick, onMethod, onDate }) {
   /**
    * Per-row, collapsing when the row closes — 27 chips left open on every row
    * would turn the reconciliation list back into the five-row grid EntryView
@@ -468,7 +522,8 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
   const dup = row.dupBook;
   const bookDup = dup && dup.checked && dup.match;
   const unchecked = dup && dup.checked === false;
-  const category = (edit && edit.category) || row.category;
+  // A logged row shows what his BOOK holds — after an edit, the edited category.
+  const category = (outcome && outcome.entry && outcome.entry.category) || (edit && edit.category) || row.category;
   const method = effectiveMethod(row, edit);
   const settled = !!outcome;
 
@@ -493,7 +548,10 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
     : (bookDup ? dup.match : null);
   const showOverride = (settled ? retryable : !!bookDup) && !overrode;
   // Nothing to open is nothing to tap: a written row's title is not a control.
-  const canOpen = !settled || showOverride;
+  // A LOGGED row opens too (Tarek, 2026-10-31): its category, and «Edit» for the rest.
+  const logged = !!onOpenEntry;
+  const canOpen = !settled || showOverride || logged;
+  const tap = onToggleOpen;
   const TitleTag = canOpen ? 'button' : 'div';
 
   const tone = {
@@ -569,8 +627,9 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
               not grow. It is the row's one keyboard / VoiceOver door to open. */}
           <TitleTag
             ref={titleRef}
-            onClick={canOpen ? onToggleOpen : undefined}
-            aria-expanded={canOpen ? isOpen : undefined}
+            onClick={canOpen ? tap : undefined}
+            aria-expanded={canOpen && tap === onToggleOpen ? isOpen : undefined}
+            data-batch-logged={logged ? '' : undefined}
             style={{ display: 'block', width: '100%', textAlign: 'start', background: 'transparent',
               padding: canOpen ? '13px 0' : 0, margin: canOpen ? '-13px 0' : 0 }}
           >
@@ -597,7 +656,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
               its words opens the row too (a pointer convenience — the name above
               is the accessible control, so this is not a second button). */}
           <div
-            onClick={canOpen ? onToggleOpen : undefined}
+            onClick={canOpen ? tap : undefined}
             style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: TYPE.label, color: C.muted, marginTop: 2 }}
           >
             {/**
@@ -616,6 +675,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
                   : outcome.status === 'written' ? C.settledInk : C.conflictInk,
               }}>
                 {awaitingRetry ? S.batchRetryPending
+                  : outcome.status === 'removed' ? S.batchRemoved
                   : outcome.status === 'written' ? S.batchWritten
                     : outcome.status === 'error' ? S.batchErrored
                       : outcome.status === 'book_duplicate' ? S.batchRefusedDup
@@ -645,6 +705,11 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
               </span>
             )}
             {category && <span dir="auto">{categoryLabel(category)}</span>}
+            {entryNote && entryNote !== 'saved' && (
+              <span data-batch-entry-note style={{ color: entryNote === 'failed' ? C.conflictInk : C.muted }}>
+                {entryNote === 'failed' ? S.batchOpenFailed : S.batchOpening}
+              </span>
+            )}
 
           {/**
             * U3 — THE METHOD CHIP, on the collapsed row (§3.10.2: the review
@@ -761,7 +826,13 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
             </>
           )}
           {/* «save anyway» on a duplicate brings the picker back — it used to land as ❓ (audit 2026-10-10) */}
-          {!settled && writable && (!bookDup || overrode) && (
+          {logged && (
+            <button data-batch-edit-entry className="catchip" onClick={onOpenEntry}
+              style={{ ...glass('chip'), width: '100%', minHeight: TAP, marginBottom: 8, color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
+              {S.batchEditEntry}
+            </button>
+          )}
+          {((!settled && writable && (!bookDup || overrode)) || logged) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {/**
                 * FIELD-FOUND (Tarek, 2026-08-24, first real batch): the picker
@@ -774,7 +845,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
                 */}
               {(catsOpen ? allCategories() : shortCategories()).map((c) => (
                 <button
-                  key={c} className="catchip" onClick={() => onPick(c)}
+                  key={c} className="catchip" onClick={() => (logged ? onFixEntry(c) : onPick(c))} disabled={logged && entryNote === 'saving'}
                   style={{
                     // A3: 44 -> TAP, senior touch floor.
                     padding: '9px 13px', minHeight: TAP, borderRadius: RADIUS.capsule,

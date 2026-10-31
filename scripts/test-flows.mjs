@@ -425,6 +425,53 @@ try {
     await ctx.close();
   }
 
+  // ═══ F10 — a LOGGED statement row opens: change its category, or edit the rest (2026-10-31)
+  for (const theme of ['night', 'light']) {
+    const { ctx, page, errors } = await openApp({ theme });
+    const seeded = await page.evaluate(async () => {
+      const api = await import('/masareef/src/api/index.js');
+      const { cairoParts } = await import('/masareef/src/lib/dates.js');
+      const t = cairoParts(new Date());
+      const a = await api.fetchEntries({ y: t.y, m: t.m });
+      const row = (a.entries || []).find((e) => e && e.date && e.description && e.category && e.category !== '❓');
+      if (!row) return null;
+      const [d, m, y] = row.date.split('/').map(Number);
+      const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const draft = { jobs: [{ sourceHash: 'h9', defaultMethod: 'Visa', entries: [
+        { date: iso, amount: Number(row.amount), currency: row.currency || 'EUR', merchant_display: row.description, row_status: 'completed', category: row.category },
+        { date: iso, amount: 7.5, currency: 'EUR', merchant_display: 'Second shop', row_status: 'completed', category: 'Groceries' },
+      ] }], settled: { byKey: { 'h9#0': { status: 'written', entry: row }, 'h9#1': { status: 'book_duplicate' } }, written: 1, skipped: 1, errored: 0 } };
+      localStorage.setItem('masareef.batchDraft.v1', JSON.stringify(draft));
+      return row;
+    });
+    await page.reload(); await page.waitForTimeout(1200);
+    await clickText(page, /^Book$/); await page.waitForTimeout(800);
+    await clickText(page, /not logged yet/); await page.waitForTimeout(1200);
+    await page.click('[data-batch-logged]'); await page.waitForTimeout(300);
+    const opened = !!(await page.$('[data-batch-edit-entry]'));
+    ok(!!seeded && opened, `F10.${theme}.open tapping a «Logged» row opens it, with «Edit amount, date or card» — row ${seeded && seeded.description} · opened ${opened}`);
+    if (theme === 'night') {
+      const scan = await contrastScan(page, 'Logged row open');
+      if (process.env.FLOW_SHOTS) await page.screenshot({ path: `${process.env.FLOW_SHOTS}/logged-night.png` });
+      // The page title is measured by F2; here its glyphs fill a box fitted to them and read as their own ground.
+      scan.bad = scan.bad.filter((b) => !b.startsWith('«Review the statement»'));
+      ok(scan.bad.length === 0, `F10.night.read the open logged row reads at night — ${scan.bad.slice(0, 3).join('; ')}`);
+      const target = await page.evaluate((cur) => {
+        const b = [...document.querySelectorAll('[data-batch-logged]')][0].closest('div[style]').parentElement.parentElement.querySelectorAll('button.catchip');
+        const pick = [...b].find((x) => !x.hasAttribute('data-batch-edit-entry') && !/✓/.test(x.innerText) && x.innerText.trim() && !/More|…/.test(x.innerText));
+        if (pick) pick.click(); return pick && pick.innerText.trim();
+      }, seeded && seeded.category);
+      let saved = null;
+      for (let i = 0; i < 20 && !saved; i++) { await page.waitForTimeout(200); saved = await page.evaluate(() => { const d = JSON.parse(localStorage.getItem('masareef.batchDraft.v1') || '{}'); return d.settled && d.settled.byKey['h9#0'].entry.category; }); if (saved === (seeded && seeded.category)) saved = null; }
+      ok(!!target && !!saved, `F10.category tapping another category on a logged row changes it in the book and on the review — tapped «${target}», now ${saved}`);
+      await page.click('[data-batch-edit-entry]'); await page.waitForTimeout(1200);
+      const dlg = await page.evaluate(() => !!document.querySelector('[role=dialog][aria-label="Edit the row"]'));
+      ok(dlg, 'F10.edit «Edit amount, date or card» opens the same edit card the Book uses');
+      ok(errors.length === 0, `F10.clean no script errors ${errors.slice(0, 2).join(' | ')}`);
+    }
+    await ctx.close();
+  }
+
   // ═══ F6 — a failed download says so instead of a blank screen
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });

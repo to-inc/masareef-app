@@ -1224,6 +1224,14 @@ export default function App() {
                       onResnap={resnapBatch}
                       onDiscard={discardBatch}
                       onReread={rereadBatch}
+                      onEntryChanged={(key, entry) => setBatch((prev) => {
+                        // An edit from the review's own card: the review shows what the book now holds;
+                        // a removal is decided, so the row stops counting as waiting.
+                        const byKey = Object.fromEntries(outcomeMap(prev.settled));   // older drafts keep answers positionally
+                        byKey[key] = entry ? { ...byKey[key], entry } : { ...byKey[key], status: 'removed', entry: null };
+                        return saveDraft({ ...prev, settled: { ...prev.settled, byKey },
+                          ...(entry ? {} : { leftOut: { ...(prev.leftOut || {}), [key]: true } }) });
+                      })}
                       onLeave={leaveBatch}
                       leftOut={batch.leftOut || {}}
                       onLeaveOut={(key, on) => setBatch((prev) => saveDraft({

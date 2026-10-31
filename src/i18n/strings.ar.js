@@ -409,6 +409,10 @@ export const AR = {
   batchTruncated: (shown, total) => `ظاهر ${shown} من ${total} — الكشف مقصوص. صوّر الباقي وابعته.`,
   // نتيجة كل صف بعد التسجيل — مش حكم واحد على الدفعة
   batchWritten: 'اتسجلت',
+  batchEditEntry: 'عدّل المبلغ أو التاريخ أو الطريقة',
+  batchRemoved: 'اتشالت من الدفتر',
+  batchOpening: 'بنفتحها…',
+  batchOpenFailed: 'مقدرناش نفتحها — دوّر عليها في الدفتر',
   batchSkippedDup: 'كانت متسجلة قبل كده',
   /**
    * الرفض مش إعادة — ولازم ما يتقروش زي بعض.

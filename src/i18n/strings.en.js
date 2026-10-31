@@ -393,6 +393,10 @@ export const EN = {
   batchSaveAnyway: 'Log it anyway',
   batchTruncated: (shown, total) => `Showing ${shown} of ${total} — the list is cut off. Photograph the rest.`,
   batchWritten: 'Logged',
+  batchEditEntry: 'Edit amount, date or card',
+  batchRemoved: 'Removed from your book',
+  batchOpening: 'Opening…',
+  batchOpenFailed: 'Could not open it — find it in the Book',
   batchSkippedDup: 'Was already logged',
   /**
    * A REFUSAL IS NOT A REPLAY, AND THEY MUST NOT READ THE SAME.

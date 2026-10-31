@@ -808,8 +808,10 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
    */
   ok(!/isOpen && !settled/.test(src),
     'the panel is no longer closed by the settle itself — that gate WAS the missing door');
-  ok(/isOpen && canOpen/.test(src) && /const canOpen = !settled \|\| showOverride;/.test(src),
-    'it opens whenever there is something to open — before the settle, or on a refusal after it');
+  // RE-CUT 2026-10-31: a LOGGED row opens too (its category, and «Edit» for the rest) — Tarek
+  // tapped one and nothing happened. The flow suite (F10) taps it in the real app.
+  ok(/isOpen && canOpen/.test(src) && /const canOpen = !settled \|\| showOverride \|\| logged;/.test(src),
+    'it opens whenever there is something to open — before the settle, on a refusal after it, or a logged row');
   ok(/const showOverride = \(settled \? retryable : !!bookDup\) && !overrode;/.test(src),
     'and post-settle it is the RETRYABLE outcome that earns the override, not any refusal');
   /**
