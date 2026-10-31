@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM, alpha, THEME_KEY, themeChoice } from '../theme.js';
+import { C, FONT_DISPLAY, RADIUS, SPACE, TAP, TYPE, ICON, glass, FROST, ATMOSPHERE, COMFORT_ZOOM, alpha, THEME_KEY, themeChoice, FIELD_EDGE } from '../theme.js';
 import { S, unitFor } from '../i18n/strings.js';
 import { Sheet, LangToggle, SectionLabel, LATIN } from '../components/Primitives.jsx';
 import { otherDisplayCurrency } from '../state/display.js';
@@ -10,6 +10,7 @@ import { debugShot, debugNote } from '../api/index.js';
 import { prepareScreenshot } from '../lib/receipt-image.js';
 import { newClientId } from '../lib/dates.js';
 import { gatherFacts, judge } from '../state/selfCheck.js';
+import { setupCode } from '../state/secret.js';
 
 /**
  * S1 — THE SETTINGS SHEET BEHIND THE COG (Owner field ruling 2026-08-27).
@@ -417,6 +418,7 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
           </Group>
           <Group title={S.settingsHelp} summary={`${S.appVersion} ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'}`}>
           <SelfCheck />
+          <SaveSetup />
           {supportsAction(build, 'debug_shot') && <DebugShots withNote={supportsAction(build, 'debug_note')} />}
           {/* Which build this phone runs — the commit it was built from (E-017). */}
           {/* Only the commit is Latin; «النسخة» reads in its own direction (audit 2026-10-10). */}
@@ -430,6 +432,35 @@ export default function SettingsSheet({ displayCurrency, onFlipCurrency, onClose
         </Sheet>
       </div>
     </>
+  );
+}
+
+/**
+ * «COPY MY SETUP» (Tarek, 2026-11-01, Q1 · B): the setup as one code for his password
+ * manager, so a phone that ever clears the app is set up again with one paste. The code
+ * is never shown on screen — it goes to the clipboard on his tap. Hidden without a setup.
+ */
+export function SaveSetup({ code = setupCode(), copy = (t) => navigator.clipboard.writeText(t) }) {
+  const [state, setState] = useState('idle'); // idle | copied | failed
+  if (!code) return null;
+  const run = async () => {
+    try { await copy(code); setState('copied'); } catch { setState('failed'); }
+  };
+  return (
+    <div data-save-setup style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: SPACE.gap }}>
+      <button className="catchip" onClick={run}
+        style={{ minHeight: TAP, borderRadius: RADIUS.row, ...glass('chip'), color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
+        {S.setupCopy}
+      </button>
+      <span aria-live="polite" style={{ fontSize: TYPE.label, color: state === 'failed' ? C.conflictInk : C.muted, lineHeight: 1.6 }}>
+        {state === 'copied' ? S.setupCopied : state === 'failed' ? S.setupCopyFailed : S.setupCopyHint}
+      </span>
+      {/* The clipboard refused: the code, selected, for a press-and-hold Copy — never a dead end. */}
+      {state === 'failed' && (
+        <input data-setup-code readOnly dir="ltr" value={code} aria-label={S.setupCopy} onFocus={(e) => e.target.select()} autoFocus
+          style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: RADIUS.row, border: `1.5px solid ${FIELD_EDGE}`, background: C.card, color: C.ink, fontSize: TYPE.label }} />
+      )}
+    </div>
   );
 }
 

@@ -71,6 +71,33 @@ export function getSheetUrl() {
   }
 }
 
+/**
+ * «SAVE MY SETUP» (Tarek, 2026-11-01, Q1 · B): the three setup values as ONE code he
+ * keeps in his password manager. A code, not a link — iOS opens a link in Safari, whose
+ * storage is not the home-screen app's, so a link could never restore the app.
+ * Encoded, NOT encrypted: the code IS the key, and lives only where he puts it.
+ */
+const CODE_PREFIX = 'masareef-setup:';
+
+export function setupCode(creds = getCreds(), sheetUrl = getSheetUrl()) {
+  if (!creds) return null;
+  const v = { u: creds.execUrl, s: creds.secret, ...(sheetUrl ? { h: sheetUrl } : {}) };
+  return CODE_PREFIX + btoa(encodeURIComponent(JSON.stringify(v)));
+}
+
+/** A pasted code → { execUrl, secret, sheetUrl }, or null for anything else. */
+export function readSetupCode(text) {
+  try {
+    const t = String(text || '').trim();
+    if (!t.startsWith(CODE_PREFIX)) return null;
+    const v = JSON.parse(decodeURIComponent(atob(t.slice(CODE_PREFIX.length))));
+    if (!v || typeof v.s !== 'string' || !v.s || typeof v.u !== 'string' || !/^https:\/\//.test(v.u)) return null;
+    return { execUrl: v.u, secret: v.s, sheetUrl: typeof v.h === 'string' ? v.h : '' };
+  } catch {
+    return null;
+  }
+}
+
 export function clearCreds() {
   try {
     localStorage.removeItem(K_SECRET);

@@ -227,7 +227,12 @@ import { dirname, join } from 'node:path';
  * photo reported, update check on return, one statement batch id), +16 i18n (checkKeptOk/No),
  * +1 names (storageKeep.js). Checked per suite against the stashed tree; nothing vanished.
  */
-const EXPECTED_ASSERTIONS = 7182;
+/**
+ * 2026-11-01 · 7182 → 7227, «Copy my setup» (Tarek’s Q1 · B): +5 pwa-life (S1–S5: the code
+ * round-trips, junk is refused, Setup fills from it, Settings never shows it, a refused clipboard shows it), +40 i18n (five
+ * strings). Checked per suite against the stashed tree; nothing vanished.
+ */
+const EXPECTED_ASSERTIONS = 7227;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

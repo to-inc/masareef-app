@@ -9,7 +9,10 @@
  * C · a stalled photo reaches «Check the app» (its error was dropped on the way).
  * U · a resumed app looks for a new build on return, at most hourly.
  * B · a statement re-sent after a lost answer keeps its batch id, so it replays.
+ * S · «Copy my setup» (Q1 · B): one code restores the setup with one paste.
  */
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -80,6 +83,33 @@ try {
   ok(/const batchClientId = batch\.batchClientId \|\| newClientId\(\);/.test(app) && /saveDraft\(\{ \.\.\.prev, batchClientId \}\)/.test(app)
     && !/batchClientId: newClientId\(\)/.test(app) && /\[batch\.jobs, batch\.batchClientId\]/.test(app),
     'B1', 'a statement re-sent from the same draft carries the same batch id (a lost answer replays as duplicate, not a second batch)');
+
+  // ——— S
+  const sec = await vite.ssrLoadModule('/src/state/secret.js');
+  if (sec.setupCode && sec.readSetupCode) {
+    const creds = { execUrl: 'https://script.google.com/macros/s/X/exec', secret: 'sé/cret+=' };
+    const code = sec.setupCode(creds, 'https://docs.google.com/spreadsheets/d/1/edit');
+    const back = sec.readSetupCode(`  ${code}\n`);
+    ok(back && back.execUrl === creds.execUrl && back.secret === creds.secret && back.sheetUrl.endsWith('/edit')
+      && sec.readSetupCode(sec.setupCode(creds, null)).sheetUrl === '' && sec.setupCode(null) === null && !code.includes('cret'),
+      'S1', 'a setup code carries URL, key and sheet and reads back exactly (pasted with stray spaces too); no setup, no code');
+    ok([null, '', 'hello', 'masareef-setup:', 'masareef-setup:!!!', 'masareef-setup:' + btoa(encodeURIComponent('{"u":"http://x","s":"k"}')),
+      'masareef-setup:' + btoa(encodeURIComponent('{"u":"https://x","s":""}'))].every((t) => sec.readSetupCode(t) === null),
+      'S2', 'anything that is not a whole, https code is refused (the boxes keep what he typed)');
+  } else { ok(false, 'S1', 'no setupCode / readSetupCode in state/secret.js'); ok(false, 'S2', 'no readSetupCode'); }
+  const setup = src('src/views/SetupView.jsx');
+  ok((setup.match(/if \(!fromCode\(e\.target\.value\)\)/g) || []).length === 2 && /S\.setupCodeHint/.test(setup),
+    'S3', 'pasting the code into the URL or key box fills all three, and the screen says so');
+  const ss = await vite.ssrLoadModule('/src/views/SettingsSheet.jsx');
+  if (ss.SaveSetup) {
+    const on = renderToStaticMarkup(createElement(ss.SaveSetup, { code: 'masareef-setup:SECRETCODE' }));
+    const off = renderToStaticMarkup(createElement(ss.SaveSetup, { code: null }));
+    ok(on.includes(S.setupCopy) && on.includes(S.setupCopyHint) && !on.includes('SECRETCODE') && off === ''
+      && /<SaveSetup \/>/.test(src('src/views/SettingsSheet.jsx')),
+      'S4', '«Copy my setup» sits in Settings → Help, never shows the code, and hides with no setup');
+    ok(/state === 'failed' && \(\s*<input data-setup-code readOnly/.test(src('src/views/SettingsSheet.jsx')),
+      'S5', 'a refused clipboard shows the code to copy by hand, and only then');
+  } else ok(false, 'S4', 'no SaveSetup in Settings');
 } finally {
   await vite.close();
 }
@@ -88,4 +118,4 @@ if (failures.length) {
   console.log(`❌ pwa-life — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`);
   process.exit(1);
 }
-console.log(`✅ all ${pass} pwa-life checks passed · storage kept, the stall reported, updates found on return, statements replay`);
+console.log(`✅ all ${pass} pwa-life checks passed · storage kept, the stall reported, updates found on return, statements replay, setup restored by one paste`);

@@ -3,7 +3,7 @@ import { C, FONT_DISPLAY, RADIUS, TYPE, glass, GRADIENT, FIELD_EDGE } from '../t
 import { S } from '../i18n/strings.js';
 import { LangToggle } from '../components/Primitives.jsx';
 import { probe } from '../api/client.js';
-import { setCreds } from '../state/secret.js';
+import { setCreds, readSetupCode } from '../state/secret.js';
 import { askBadgeOnce } from '../state/badge.js';
 
 /**
@@ -28,6 +28,14 @@ export default function SetupView({ onDone }) {
   const [sheet, setSheet] = useState('');
   const [state, setState] = useState('idle');   // idle | testing | error
   const [error, setError] = useState('');
+
+  // A saved setup code pasted into either box fills all three (Settings → «Copy my setup»).
+  const fromCode = (text) => {
+    const c = readSetupCode(text);
+    if (!c) return false;
+    setUrl(c.execUrl); setSecret(c.secret); setSheet(c.sheetUrl); setState('idle');
+    return true;
+  };
 
   const test = async () => {
     if (!url.trim() || !secret.trim()) {
@@ -81,6 +89,7 @@ export default function SetupView({ onDone }) {
       {/* G08: the three fields and the action sit on ONE glass card. */}
       <div style={{ ...glass('card'), padding: '18px 16px 16px' }}>
 
+      <p style={{ fontSize: TYPE.label, color: C.muted, lineHeight: 1.6, margin: '0 0 12px' }}>{S.setupCodeHint}</p>
       <label style={{ display: 'block', fontSize: TYPE.label, fontWeight: 600, color: C.muted }}>
         {S.setupUrl}
         <input
@@ -89,7 +98,7 @@ export default function SetupView({ onDone }) {
           dir="ltr"
           autoComplete="off"
           value={url}
-          onChange={(e) => { setUrl(e.target.value); setState('idle'); }}
+          onChange={(e) => { if (!fromCode(e.target.value)) { setUrl(e.target.value); setState('idle'); } }}
           placeholder="https://script.google.com/macros/s/…/exec"
           style={field}
         />
@@ -102,7 +111,7 @@ export default function SetupView({ onDone }) {
           dir="ltr"
           autoComplete="off"
           value={secret}
-          onChange={(e) => { setSecret(e.target.value); setState('idle'); }}
+          onChange={(e) => { if (!fromCode(e.target.value)) { setSecret(e.target.value); setState('idle'); } }}
           style={field}
         />
       </label>
