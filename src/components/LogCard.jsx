@@ -101,15 +101,14 @@ export default function LogCard({ prevLog, todayCairo, prevForeign, prevHomeAgg,
       {/* At most three, already ranked and filtered by the server. An empty
           `top` renders nothing at all rather than an empty-state sentence — a
           month with no categorised spending has nothing to list, and saying so
-          would be filler. The server ranks them in POUNDS only, so in a month
-          with any other currency they are hidden rather than shown beside a
-          total they do not add up to (ranking in the home unit needs the server). */}
+          would be filler. Ranked in the hero's own unit (`fig.top`): euros
+          from `homeTop`, pounds only when pounds are the whole month. */}
       <div style={{ marginTop: 14 }}>
-        {fig.egpOnly && prevLog.top.map((c) => (
+        {fig.top && fig.top.list.map((c) => (
           <div key={c.name} style={line}>
             <span style={{ fontSize: TYPE.body, color: C.ink }} dir="auto">{categoryLabel(c.name)}</span>
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.body, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>
-              {money(c.amount)}
+              {fig.top.currency === 'EGP' ? money(c.amount) : amt({ amount: c.amount, currency: fig.top.currency })}
             </span>
           </div>
         ))}

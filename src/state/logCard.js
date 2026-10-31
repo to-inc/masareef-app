@@ -98,8 +98,12 @@ export function shouldShowLog(prevLog, todayCairo, dismissed) {
  *             the sum spelled out, shown only when more than one currency was used.
  *   unconverted  money in the month no stamped rate covers — said beside the
  *             home hero even when it is the only other currency, never added in.
- *   egpOnly   true when the pound sum is the whole month, so the server's
- *             pound-ranked top categories are honest to show.
+ *   egpOnly   true when the pound sum is the whole month.
+ *   top       { currency, list } — the top categories in the unit they were
+ *             ranked in: the server's euro ranking (`homeTop`, build 1988+) when
+ *             the hero is the home total, the pound ranking when pounds are the
+ *             whole month, else null (an older server: ranked pounds would not
+ *             add up to a euro hero).
  */
 export function logFigures(prevLog, prevForeign, prevHomeAgg, readingCurrency) {
   const sums = {};
@@ -136,5 +140,7 @@ export function logFigures(prevLog, prevForeign, prevHomeAgg, readingCurrency) {
     total: Number(home.total),
   } : null;
 
-  return { hero, each: several ? each : [], inHome, unconverted, egpOnly };
+  const top = home && Array.isArray(prevLog.homeTop) ? { currency: home.currency, list: prevLog.homeTop }
+    : egpOnly ? { currency: 'EGP', list: prevLog.top } : null;
+  return { hero, each: several ? each : [], inHome, unconverted, egpOnly, top };
 }

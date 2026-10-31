@@ -274,6 +274,13 @@ try {
       'then in euros: what was paid in euros, the rest converted, and the total');
     ok(mixed.includes('450.00 SEK') && mixed.includes('لسه متحوّلتش'), 'money no rate covers is said beside the total, not added in');
     ok(!mixed.includes(categoryLabel('Groceries')), 'pound-ranked top categories are hidden when pounds are not the whole month');
+    // Server 1988+ ranks the closed month in euros too (prevLog.homeTop).
+    const ranked = text(renderWith({ ...MIXED, homeTop: [{ name: 'Groceries', amount: 412.3 }, { name: 'Eating out', amount: 201 }] },
+      { count: 9, byCurrency: { EUR: 800, SAR: 185 } }, home(800, 44.11), 'EUR'));
+    ok(ranked.includes(categoryLabel('Groceries')) && ranked.includes('412.30 €') && ranked.includes('201.00 €'),
+      'with the server\'s euro ranking, the top categories show in euros');
+    eq(logFigures({ ...MIXED, homeTop: [] }, { byCurrency: { EUR: 800 } }, home(800, 0), 'EUR').top.currency, 'EUR',
+      'and never the pound-ranked list beside a euro total');
 
     const f = logFigures(MIXED, { byCurrency: { EUR: 800, SEK: 450 } }, home(800, 95.5, { SEK: 450 }), 'EUR');
     eq(f.each.map((l) => l.currency).join(','), 'EUR,EGP,SEK', 'the reading unit is listed first, then pounds, then the rest');

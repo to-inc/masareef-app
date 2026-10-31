@@ -222,7 +222,7 @@ import { dirname, join } from 'node:path';
  * +1 names and +1 jsx-comment for the new ActionStrip.jsx. Checked per suite against the stashed tree;
  * chips, refactor-ui and p8 re-cut to the strip without losing an assertion.
  */
-const EXPECTED_ASSERTIONS = 7154;
+const EXPECTED_ASSERTIONS = 7156;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

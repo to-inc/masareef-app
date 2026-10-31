@@ -468,6 +468,8 @@ export function mockSummary() {
         ],
         unpriced: 1,
         undated: 0,
+        // Server 1988+: the same ranking in the home unit — null with no home unit, as this mock's default.
+        homeTop: MOCK_HOMEAGG_CURRENCY === false ? null : [],
         /**
          * The month's most-visited place — the fact that replaced A8's weekly
          * question. The server sends `null` far more often than not (a tie has
