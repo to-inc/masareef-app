@@ -272,6 +272,12 @@ try {
     await page.evaluate(() => { const r = [...document.querySelectorAll('[data-photos-list] [data-photo-row]')].find((x) => /Stopped before/.test(x.innerText)); r.querySelector('[data-photo-retry]').click(); });
     await until('stuck1', /^ready/);
     ok((await stageOf('stuck1')).startsWith('ready'), `F7.retry «Try now» sends the stalled photo again and it is read — ${await stageOf('stuck1')}`);
+    {
+      const diary = (type) => page.evaluate(async (t) => (await import('/masareef/src/state/usage.js'))._peek().filter((e) => e.type === t), type);
+      const reads = (await diary('read')).map((e) => `${e.stage}/${e.error}`), acts = (await diary('photo')).map((e) => `${e.act}:${e.result || e.error || ''}`);
+      ok(reads.includes('failed/stalled') && acts.includes('retry:stalled') && acts.includes('save:downloaded'),
+        `F7.diary the usage diary records the stall by its own name, the retry and the save — reads ${JSON.stringify(reads)} · acts ${JSON.stringify(acts)}`);
+    }
     // (d) a read that never answers fails once its lease runs out (lease shortened to 400 ms here; 3 min in the app)
     const leased = await page.evaluate(async (b64) => {
       const q = await import('/masareef/src/state/receiptQueue.js');
@@ -352,6 +358,11 @@ try {
       `F8.clear one Discard removes the draft AND its photos: no badge, no «not logged yet» — ${JSON.stringify(after)}`);
     ok(reloaded.draft === null && reloaded.queue === 0 && !/·/.test(reloaded.badge) && !reloaded.waiting,
       `F8.reload nothing comes back after a reload — ${JSON.stringify(reloaded)}`);
+    {
+      const diary = (type) => page.evaluate(async (t) => (await import('/masareef/src/state/usage.js'))._peek().filter((e) => e.type === t), type);
+      const d = (await diary('batch')).filter((e) => e.act === 'discard').pop();
+      ok(!!d && d.photos === 5 && d.removed === 5 && d.left === 0, `F8.diary the diary records the clear with its count: photos 5 · removed 5 · draft left 0 — ${JSON.stringify(d)}`);
+    }
     ok(errors.length === 0, `F8.clean no script errors through open × 5, discard and reload ${errors.slice(0, 2).join(' | ')}`);
     await ctx.close();
   }
@@ -399,6 +410,12 @@ try {
     ok(read.every((j) => !/:(queued|reading)$/.test(j)), `F9.read both photos were read again (the mock answered) — ${JSON.stringify(read)}`);
     await page.evaluate(() => document.querySelector('[data-photos-list] [data-photo-row] [data-photo-remove]').click()); await page.waitForTimeout(400);
     ok((await jobsNow()).length === 1, `F9.remove «Remove» takes a photo off the list — ${JSON.stringify(await jobsNow())}`);
+    {
+      const diary = (type) => page.evaluate(async (t) => (await import('/masareef/src/state/usage.js'))._peek().filter((e) => e.type === t), type);
+      const b = (await diary('batch')).find((e) => e.act === 'reread'), acts = (await diary('photo')).map((e) => e.act);
+      ok(!!b && b.photos === 2 && b.found === 2 && acts.filter((a) => a === 'reread').length === 2 && acts.includes('remove'),
+        `F9.diary the diary records «Read again» (2 photos, 2 found) and the remove — ${JSON.stringify(b)} · ${JSON.stringify(acts)}`);
+    }
     // the top Discard clears a review and its photos too
     await seed(); await page.waitForTimeout(300); await openAll();
     await page.click('[data-batch-discard-top]'); await page.waitForTimeout(600);

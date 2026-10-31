@@ -48,6 +48,7 @@ export function jobsChanged() { listeners.forEach((fn) => fn()); }
 export async function rereadNow(job, { q = queue, w = runner() } = {}) {
   const base = job.baseHash || job.clientHash || job.id;
   const rereads = (job.rereads || 0) + 1;
+  track('photo', { act: 'reread', stage: job.stage || '', n: rereads });
   w.cancel(job.id);
   await q.update(job.id, { clientHash: `${base}~r${rereads}`, baseHash: base, rereads,
     stage: 'queued', error: null, retryable: false, extraction: null, notExpenseReason: null, readingAt: null });
@@ -57,6 +58,7 @@ export async function rereadNow(job, { q = queue, w = runner() } = {}) {
 
 /** Take a photo off the phone's list, stopping its read if one is in flight. */
 export async function removeJob(job, { q = queue, w = runner() } = {}) {
+  track('photo', { act: 'remove', stage: job.stage || '' });
   w.cancel(job.id);
   await q.remove(job.id);
   jobsChanged();
@@ -64,6 +66,7 @@ export async function removeJob(job, { q = queue, w = runner() } = {}) {
 }
 
 export async function retryNow(job, { q = queue, w = runner() } = {}) {
+  track('photo', { act: 'retry', stage: job.stage || '', error: job.error || '' });
   w.cancel(job.id);
   await q.update(job.id, { stage: 'queued', error: null, retryable: false, readingAt: null });
   jobsChanged();

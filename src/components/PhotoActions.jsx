@@ -4,6 +4,7 @@ import { S } from '../i18n/strings.js';
 import PhotoPeek from './PhotoPeek.jsx';
 import { savePhoto } from '../lib/jobThumb.js';
 import { retryNow, rereadNow, removeJob } from '../state/receiptRunner.js';
+import { track } from '../state/usage.js';
 
 /** Stages still waiting on the app — the ones that get these three actions. */
 export const UNFINISHED = ['queued', 'reading', 'failed', 'capped'];
@@ -22,7 +23,11 @@ export default function PhotoActions({ job, stage = job && job.stage, retry = tr
   if (!job || !job.base64) return null;
   const chip = { ...glass('chip'), minHeight: TAP, padding: '0 14px', borderRadius: RADIUS.capsule, color: C.ink,
     fontSize: TYPE.label, fontWeight: 700, whiteSpace: 'nowrap' };
-  const save = async () => setSaved(await savePhoto(job.base64, job.mediaType, `masareef-${job.id.slice(0, 8)}`));
+  const save = async () => {
+    const r = await savePhoto(job.base64, job.mediaType, `masareef-${job.id.slice(0, 8)}`);
+    track('photo', { act: 'save', result: r });
+    setSaved(r);
+  };
   return (
     <div data-photo-actions style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 8 }}>
       {job.mediaType !== 'application/pdf' && <PhotoPeek base64={job.base64} />}

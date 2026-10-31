@@ -103,7 +103,8 @@ try {
   // ——— AUTO: a refused or unreadable photo files itself into «Debug screenshots» (2026-10-16)
   { const { shouldFile, fileFailedRead } = await vite.ssrLoadModule('/src/state/autoDebug.js');
     ok(shouldFile({ stage: 'notReceipt' }) && shouldFile({ stage: 'failed', error: 'bad_extraction' })
-      && !shouldFile({ stage: 'failed', error: 'offline' }) && !shouldFile({ stage: 'ready' }),
+      && !shouldFile({ stage: 'failed', error: 'offline' }) && !shouldFile({ stage: 'ready' })
+      && shouldFile({ stage: 'failed', error: 'stalled' }),
       'AUTO.1', 'refusals and broken reads are filed; offline retries and good reads are not');
     const mem = new Map(); const store = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
     const sent = [];

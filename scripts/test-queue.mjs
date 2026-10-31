@@ -617,6 +617,47 @@ function fakeQueue(initial) {
   delete globalThis.Blob;
 }
 
+/* ——— THE RIGHT ERROR FOR EACH WAY A READ CAN STALL (2026-10-31) ———
+ * Each case must land on its OWN name, and be REPORTED (onOutcome feeds the
+ * Debug-screenshots folder and the usage diary): a stall that is fixed but
+ * silent is a stall nobody learns from. */
+{
+  // 1 · the app closed mid-read: the job is stored `reading`, nothing is reading it
+  const q = fakeQueue([job('x', 'reading', 1, { clientHash: 'x', readingAt: 1 }), job('y', 'queued', 2, { clientHash: 'y' })]);
+  const told = [];
+  const w = createWorker({ queue: q, extract: async () => okRes(), onOutcome: (j, o) => told.push(`${j.id}:${o.stage}/${o.error || ''}`) });
+  await w.pump();
+  const x = q.snapshot().find((j) => j.id === 'x');
+  eq(`${x.stage}/${x.error}/${x.retryable}`, 'failed/stalled/true', 'ORPHAN: a read left by a closed app becomes failed/stalled, retryable');
+  eq(told.join(' '), 'x:failed/stalled y:ready/', 'ORPHAN: the stall is REPORTED (debug folder + diary), then the photo behind it is read');
+}
+{
+  // 2 · the call never answers: the lease aborts it and names it `stalled`
+  const q = fakeQueue([job('h', 'queued', 1, { clientHash: 'h' })]);
+  const told = []; let sig = null;
+  const w = createWorker({ queue: q, leaseMs: 20, extract: ({ signal }) => { sig = signal; return new Promise(() => {}); }, onOutcome: (j, o) => told.push(o.error) });
+  await w.pump();
+  eq(`${q.snapshot()[0].stage}/${q.snapshot()[0].error}`, 'failed/stalled', 'LEASE: a read that never answers fails as stalled');
+  eq(sig && sig.aborted, true, 'LEASE: and the request itself is aborted, not left running');
+  eq(told.join(), 'stalled', 'LEASE: and the stall is reported');
+  eq(w.isRunning(), false, 'LEASE: the worker is free for the next photo');
+}
+{
+  // 3 · no network is NOT a stall — it keeps its own name (and is never filed: it retries by itself)
+  const q = fakeQueue([job('n', 'queued', 1, { clientHash: 'n' })]);
+  const w = createWorker({ queue: q, leaseMs: 5000, extract: async () => { throw new Error('network'); } });
+  await w.pump();
+  eq(`${q.snapshot()[0].stage}/${q.snapshot()[0].error}`, 'failed/offline', 'NETWORK: a call that throws is failed/offline, not stalled');
+}
+{
+  // 4 · storage refuses the stall write: the worker stops instead of spinning forever
+  const q = fakeQueue([job('r', 'reading', 1, { clientHash: 'r' })]);
+  q.update = async () => false;
+  const w = createWorker({ queue: q, extract: async () => okRes() });
+  const done = await Promise.race([w.pump().then(() => 'returned'), new Promise((r) => setTimeout(() => r('spinning'), 500))]);
+  eq(done, 'returned', 'REFUSED WRITE: a stall the queue will not record does not lock the worker in a loop');
+}
+
 const report = failures.length
   ? `❌ ${failures.length} / ${pass + failures.length} queue assertions failed:\n  - ${failures.join('\n  - ')}`
   : `✅ all ${pass} queue assertions passed`;

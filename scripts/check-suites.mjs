@@ -206,7 +206,12 @@ import { dirname, join } from 'node:path';
  * 7042 on 2026-10-31 (second pass). +16, all i18n, nothing vanished: the two new
  * keys `photoRemove` and `batchReread` (the renamed `batchNone` costs nothing).
  */
-const EXPECTED_ASSERTIONS = 7042;
+/**
+ * 7050 on 2026-10-31 (third pass). +8, all test-queue (118 → 126), nothing
+ * vanished: each way a read can stall lands on its own name and is reported —
+ * orphan (2), lease (4), network stays `offline` (1), a refused write never spins (1).
+ */
+const EXPECTED_ASSERTIONS = 7050;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

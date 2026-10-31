@@ -424,7 +424,8 @@ export default function App() {
   const discardBatch = useCallback(() => {
     const hashes = ((loadDraft() || {}).jobs || []).map((j) => j && j.sourceHash);
     clearDraft();
-    receiptQueue.removeMany(hashes).then(jobsChanged);
+    // The diary says how many photos went with it — a clear that left photos behind shows as removed < photos.
+    receiptQueue.removeMany(hashes).then((removed) => { track('batch', { act: 'discard', photos: hashes.length, removed, left: loadDraft() ? 1 : 0 }); jobsChanged(); });
     pushDetail(() => {
       setBatch({ jobs: [], settled: null });
       setBatchExpired(false);
@@ -443,6 +444,7 @@ export default function App() {
     const hashes = new Set(((loadDraft() || {}).jobs || []).map((j) => j && j.sourceHash));
     clearDraft();
     const jobs = (await receiptQueue.all()).filter((j) => hashes.has(j.clientHash) || hashes.has(j.id));
+    track('batch', { act: 'reread', photos: hashes.size, found: jobs.length });
     for (const j of jobs) await rereadNow(j);
     pushDetail(() => {
       setBatch({ jobs: [], settled: null });

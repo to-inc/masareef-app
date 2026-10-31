@@ -38,7 +38,12 @@ export function createWorker({ queue, extract, onChange, onRead, onOutcome, leas
         // A job a closed or killed page left in `reading` would block every photo behind it.
         const stalled = stalledJobs(jobs, (id) => inFlight.has(id));
         let moved = 0;
-        for (const s of stalled) if (await queue.update(s.id, STALLED)) moved += 1;
+        for (const s of stalled) {
+          if (!(await queue.update(s.id, STALLED))) continue;
+          moved += 1;
+          // Reported like any failed read — the debug folder and the diary hear of it.
+          try { onOutcome?.(s, STALLED, null); } catch { /* a reporter never stops the queue */ }
+        }
         // Only loop again when something moved — a refused write must not spin here.
         if (moved) { onChange?.(); continue; }
         const job = nextJob(jobs);
