@@ -56,11 +56,27 @@ export async function rereadNow(job, { q = queue, w = runner() } = {}) {
   w.pump();
 }
 
+/** Told whenever a photo is removed, with the job as it was — the shell offers «Undo». */
+const removedListeners = new Set();
+export function onJobRemoved(fn) { removedListeners.add(fn); return () => removedListeners.delete(fn); }
+
 /** Take a photo off the phone's list, stopping its read if one is in flight. */
 export async function removeJob(job, { q = queue, w = runner() } = {}) {
   track('photo', { act: 'remove', stage: job.stage || '' });
   w.cancel(job.id);
   await q.remove(job.id);
+  jobsChanged();
+  removedListeners.forEach((fn) => { try { fn(job); } catch { /* a listener never blocks a removal */ } });
+  w.pump();
+}
+
+/**
+ * UNDO A REMOVE (version A: Remove is one tap, so it gets a way back). The job is
+ * put back exactly as it was; a read that was in flight starts again from its turn.
+ */
+export async function restoreJob(job, { q = queue, w = runner() } = {}) {
+  track('photo', { act: 'undo_remove', stage: job.stage || '' });
+  await q.enqueue(job.stage === 'reading' ? { ...job, stage: 'queued', readingAt: null } : job);
   jobsChanged();
   w.pump();
 }

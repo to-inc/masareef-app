@@ -8,7 +8,7 @@ import { prepareReceipt, prepareDocument, fileSnapDate, ReceiptImageError } from
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
 import * as queue from '../state/receiptQueue.js';
-import { runner, onJobsChange, jobsChanged, retryNow, rereadNow } from '../state/receiptRunner.js';
+import { runner, onJobsChange, jobsChanged, retryNow, rereadNow, removeJob } from '../state/receiptRunner.js';
 import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
 import { debugOn } from '../state/settings.js';
@@ -17,7 +17,8 @@ import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
 import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress } from '../components/Primitives.jsx';
 import PhotoPeek from '../components/PhotoPeek.jsx';
-import PhotoActions, { UNFINISHED } from '../components/PhotoActions.jsx';
+import PhotoActions from '../components/PhotoActions.jsx';
+import ActionStrip from '../components/ActionStrip.jsx';
 import { expectedReadMs } from '../state/readTimes.js';
 
 /**
@@ -309,8 +310,8 @@ export default function ReceiptView({
    * removes is a photo waiting to be read.
    */
   const cancelJob = async (job) => {
-    workerRef.current.cancel(job.id);
-    await queue.remove(job.id);
+    // removeJob aborts first, then deletes, and tells the shell (which offers «Undo»).
+    await removeJob(job, { w: workerRef.current });
     // If he cancelled the card he currently has open, close it too — leaving a
     // confirm card on screen for a job that no longer exists is the same class
     // of lie as the zombie it replaces.
@@ -991,37 +992,18 @@ function JobRow({ job, onReview, onRetry, onReread = onRetry, onCancel, onDebugL
    * name can never collide with an action again no matter how many actions a
    * stage grows, which is the property the one-line layout silently lacked.
    */
-  const actions = [];
-  if (stage === 'ready') {
-    actions.push({ key: 'review', primary: true, label: S.jobCheck, onTap: () => onReview(job) });
-    if (job.base64) actions.push({ key: 'reread', primary: false, label: S.jobReadAgain, onTap: () => onReread(job) });
-  }
   /**
-   * ONE WAY FORWARD on a read that did not work (design audit 2026-10-18, UX 5):
-   * «Enter it by hand» leads; «Read it again» stays as the second choice; the
-   * verdict's reason is already the row's label. The ⚑ log button is gone where
-   * the app files failed reads by itself (the server keeps notes: debug_note).
+   * VERSION A — ONE STRIP (Tarek, 2026-10-31). The row's next step leads (Check · By hand ·
+   * See why), then see · save · again · | remove, on one line. It replaces the wrapping
+   * chips and the ✕: «Remove» is in the strip, with «Undo» after it.
+   *
+   * ONE WAY FORWARD on a read that did not work (design audit 2026-10-18, UX 5): «By hand»
+   * leads; «again» stays the second choice. Again on an answered photo is a FRESH read.
    */
-  if ((stage === 'notReceipt' || stage === 'failed') && onManual) {
-    actions.push({ key: 'manual', primary: true, label: S.jobByHand, onTap: () => onManual() });
-  }
-  if (stage === 'notReceipt') {
-    if (!onManual) actions.push({ key: 'verdict', primary: false, label: S.jobWhy, onTap: () => onReview(job) });
-    /**
-     * READ IT AGAIN — the way forward a not-a-receipt job never had.
-     * Nearly free: `receipt_extract` is cached by `rcpthash_<clientHash>` for
-     * six hours, so a re-read inside that window returns the same extraction
-     * without a second vision call (06 §5). Deliberately not automatic — a
-     * verdict he has read is settled; this puts the tap in his hand.
-     */
-    if (job.base64) {
-      // A FRESH read (rereadNow): the same hash would only return the kept verdict.
-      actions.push({ key: 'reread', primary: false, label: S.jobReadAgain, onTap: () => onReread(job) });
-    }
-  }
-  if (stage === 'failed' && isActionable(job)) {
-    actions.push({ key: 'retry', primary: false, label: S.jobRetry, onTap: () => onRetry(job) });
-  }
+  const primary = stage === 'ready' ? { key: 'review', icon: 'check', label: S.photoCheck, onTap: () => onReview(job) }
+    : (stage === 'notReceipt' || stage === 'failed') && onManual ? { key: 'manual', icon: 'pen', label: S.photoByHand, onTap: () => onManual() }
+      : stage === 'notReceipt' ? { key: 'verdict', icon: 'why', label: S.jobWhy, onTap: () => onReview(job) } : null;
+  const canAgain = stage === 'failed' ? isActionable(job) : stage !== 'dismissed' && !!job.base64;
   // G9: every unread photo can be gathered — absent handler, absent control (N4).
   const canLog = !!onDebugLog && (stage === 'failed' || stage === 'notReceipt');
 
@@ -1073,51 +1055,12 @@ function JobRow({ job, onReview, onRetry, onReread = onRetry, onCancel, onDebugL
           </div>
         </div>
 
-        {/*
-          CANCEL, ON EVERY STAGE (R-receipts 3) — including `reading`, which is the
-          one that needs it most: a photo being read is a photo he cannot get rid
-          of, and that is exactly when he decided it was the wrong photo.
-          It stays on the IDENTITY line: removing is about the photo, not about
-          any one action, and its position should not move as actions come and go.
-        */}
-        <button
-          className="catchip"
-          onClick={() => onCancel(job)}
-          aria-label={S.jobRemoveTitle}
-          title={S.jobRemoveTitle}
-          style={{ minWidth: TAP, minHeight: TAP, borderRadius: RADIUS.capsule, flexShrink: 0,
-            background: 'transparent', border: `1px solid ${C.line}`,
-            color: C.muted, fontSize: 16, fontWeight: 700, lineHeight: 1 }}
-        >
-          ✕
-        </button>
+        {/* CANCEL, ON EVERY STAGE (R-receipts 3) — now «Remove» at the end of the strip below. */}
       </div>
 
-      {/* See it · save it · try now — on every photo not yet read (2026-10-31).
-          A failed row keeps its own «Try again» below, so no second one here. */}
-      {UNFINISHED.includes(stage) && <PhotoActions job={job} retry={stage !== 'failed'} />}
-      {actions.length > 0 && (
-        <div style={{
-          display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end',
-          marginTop: 8,
-        }}>
-          {actions.map((a) => (
-            <button
-              key={a.key} className="catchip" onClick={a.onTap}
-              style={{
-                padding: '8px 14px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: TYPE.label,
-                whiteSpace: 'nowrap',
-                background: a.primary ? C.harbor : C.shell,
-                color: a.primary ? C.onDark : C.ink,
-                fontWeight: a.primary ? 700 : 600,
-                border: a.primary ? 'none' : `1px solid ${C.line}`,
-              }}
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* A settled (dismissed) photo keeps see · save · remove. A PDF or a picture-less job still gets its remove. */}
+      {job.base64 ? <PhotoActions job={job} stage={stage} primary={primary} retry={canAgain} onRemove={onCancel} />
+        : <ActionStrip items={[primary, { key: 'remove', icon: 'trash', label: S.photoRemove, tone: 'muted', sep: !!primary, aria: S.jobRemoveTitle, attrs: { 'data-photo-remove': '' }, onTap: () => onCancel(job) }]} style={{ marginTop: 8 }} />}
 
       {canLog && (
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>

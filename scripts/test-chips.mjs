@@ -329,7 +329,8 @@ try {
    */
   for (const stage of ['queued', 'reading', 'ready', 'failed', 'capped', 'dismissed']) {
     const html = listHtml([{ id: 'r', stage, queuedAt: 1, retryable: true, extraction: isReceipt }]);
-    ok(html.includes('✕'), `a ${stage} job offers a remove button`);
+    // Version A (Tarek's pick, 2026-10-31): the ✕ became «Remove», the last button on the row's one-line strip.
+    ok(html.includes('data-photo-remove'), `a ${stage} job offers a remove button`);
     /**
      * PRESENT IS NOT USABLE, and a mutation proved the difference: adding
      * `hidden` to that button left the glyph in the markup, so a check for `✕`
@@ -337,10 +338,11 @@ try {
      * BUTTON's own markup — it is the last one opened before the glyph — is the
      * claim; asserting that the character exists somewhere is its neighbour.
      */
-    const btn = html.slice(html.lastIndexOf('<button', html.indexOf('✕')));
+    const btn = html.slice(html.lastIndexOf('<button', html.indexOf('data-photo-remove')));
     ok(btn.includes('aria-label'), `a ${stage} job's remove button is named for a screen reader`);
-    ok(!btn.includes('hidden'), `a ${stage} job's remove button is actually VISIBLE, not merely rendered`);
-    ok(btn.includes('min-width:48px'), `and it is at the tap floor on a ${stage} job`);
+    // The icon inside now carries aria-hidden, so judge the button's own tag, not its contents.
+    ok(!/\shidden[\s=>]/.test(btn.slice(0, btn.indexOf('>') + 1)), `a ${stage} job's remove button is actually VISIBLE, not merely rendered`);
+    ok(btn.includes('min-height:52px'), `and it is at the tap floor on a ${stage} job`);
   }
 
   /**

@@ -472,6 +472,49 @@ try {
     await ctx.close();
   }
 
+  // ═══ F11 — version A: every photo's actions on ONE line; Remove has Undo (Tarek's pick, 2026-10-31)
+  for (const [lang, theme] of [['en', 'light'], ['en', 'night'], ['ar', 'night']]) {
+    const { ctx, page, errors } = await openApp({ lang, theme });
+    await page.evaluate(async () => {
+      const c = document.createElement('canvas'); c.width = 200; c.height = 300; const g = c.getContext('2d'); g.fillStyle = '#ccc'; g.fillRect(0, 0, 200, 300);
+      const b64 = c.toDataURL('image/jpeg', 0.8).split(',')[1];
+      const q = await import('/masareef/src/state/receiptQueue.js');
+      for (const j of await q.all()) await q.remove(j.id);
+      await q.enqueue({ id: 'a1', base64: b64, clientHash: 'a1', snapDate: '2026-10-30', stage: 'ready', queuedAt: Date.now() - 9000, extraction: { ok: true, extraction: { is_receipt: true, merchant_display: 'Smartum', amount: 28.39 } } });
+      await q.enqueue({ id: 'a2', base64: b64, clientHash: 'a2', snapDate: '2026-10-30', stage: 'failed', error: 'stalled', retryable: true, queuedAt: Date.now() - 8000 });
+      await q.enqueue({ id: 'a3', base64: b64, clientHash: 'a3', snapDate: '2026-10-30', stage: 'queued', queuedAt: Date.now() - 7000 });
+      (await import('/masareef/src/state/receiptRunner.js')).jobsChanged();
+    });
+    await page.waitForTimeout(300);
+    await page.evaluate(() => { const b = document.querySelector('[data-photos-bar] button[aria-expanded="false"]'); if (b) b.click(); });
+    await page.waitForTimeout(400);
+    const strips = await page.$$eval('[data-photos-list] [data-photo-actions]', (ss) => ss.map((st) => {
+      const bs = [...st.querySelectorAll('button')]; const tops = new Set(bs.map((b) => Math.round(b.getBoundingClientRect().top)));
+      const r = st.getBoundingClientRect();
+      return { n: bs.length, oneLine: tops.size === 1, h: Math.round(r.height), fits: r.right <= innerWidth && r.left >= 0, minTap: Math.min(...bs.map((b) => b.getBoundingClientRect().height)),
+        clipped: bs.some((b) => { const sp = b.querySelector('span'); return sp && sp.scrollWidth > sp.clientWidth + 1; }) };
+    }));
+    ok(strips.length === 3 && strips.every((x) => x.oneLine && x.fits && x.h <= 64 && x.minTap >= 44 && x.n === 4 && !x.clipped),
+      `F11.${lang}.${theme}.line each photo's four actions sit on ONE line, ≥44 pt tall, words not cut off — ${JSON.stringify(strips)}`);
+    // The «receipt is ready» toast floats over the card below; measure once it has gone, not the text it covers.
+    for (let i = 0; i < 40 && await page.$('[role=status]'); i++) await page.waitForTimeout(250);
+    const scan = await contrastScan(page, `Photos A · ${lang} · ${theme}`);
+    if (process.env.FLOW_SHOTS) await page.screenshot({ path: `${process.env.FLOW_SHOTS}/A-${lang}-${theme}.png` });
+    ok(scan.bad.length === 0, `F11.${lang}.${theme}.read the strip reads in ${theme} — ${scan.measured} measured; ${scan.bad.slice(0, 3).join('; ')}`);
+    if (lang === 'en' && theme === 'light') {
+      await page.click('[data-photos-list] [data-photo-row] [data-photo-remove]'); await page.waitForTimeout(400);
+      const toast = await page.evaluate(() => [...document.querySelectorAll('[role=status]')].map((e) => e.innerText).join(' | '));
+      const n1 = await page.evaluate(async () => (await (await import('/masareef/src/state/receiptQueue.js')).all()).length);
+      await clickText(page, /^Undo$/); await page.waitForTimeout(500);
+      const back = await page.evaluate(async () => (await (await import('/masareef/src/state/receiptQueue.js')).all()).map((j) => `${j.id}:${j.stage}`));
+      ok(/Photo removed/.test(toast) && n1 === 2 && back.includes('a1:ready') && back.length === 3,
+        `F11.undo Remove takes the photo off and says «Photo removed · Undo»; Undo puts it back as it was — ${toast} · ${n1} left · back ${JSON.stringify(back)}`);
+      ok(errors.length === 0, `F11.clean no script errors ${errors.slice(0, 2).join(' | ')}`);
+    }
+    await page.evaluate(async () => { const q = await import('/masareef/src/state/receiptQueue.js'); for (const j of await q.all()) await q.remove(j.id); });
+    await ctx.close();
+  }
+
   // ═══ F6 — a failed download says so instead of a blank screen
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });

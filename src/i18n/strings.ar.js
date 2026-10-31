@@ -159,7 +159,6 @@ export const AR = {
   receiptPending: 'لسه معلّقة في البنك — سجّلها لو الدفع تم.',
   readingBehind: (n) => (n === 1 ? 'بنقرا الفاتورة — هتلاقيها في للمراجعة' : `بنقرا ${n} فواتير — هتلاقيهم في للمراجعة`),
   photoReady: (n) => (n === 1 ? 'الفاتورة جاهزة — افتح الصور في للمراجعة' : `${n} فواتير جاهزين — افتح الصور في للمراجعة`),
-  jobByHand: 'اكتبها بإيدك',
   receiptSaw: 'شفنا:',           // precedes raw_total_line, verbatim from the receipt
   receiptAmount: 'المبلغ',
   receiptMerchant: 'المحل',
@@ -171,7 +170,6 @@ export const AR = {
   // and a progress bar would be a number we invented (honest-render law).
   jobQueued: 'في الدور',
   jobReading: 'بيتقرا…',
-  jobCheck: 'راجعه وسجّله',
   jobReady: 'جاهز — راجعه',
   // حكم، مش كارت تأكيد. قبل كده كان بيقول «جاهز — راجعه» ومفيش حاجة تتراجع
   // (R-receipts 4).
@@ -186,7 +184,6 @@ export const AR = {
    * do about it.
    */
   jobWhy: 'اعرف ليه',
-  jobReadAgain: 'اقرأها تاني',
   notExpenseReason: (r) => ({
     balance_screen: 'دي شاشة رصيد مش عملية شرا. الرصيد مش مصروف — صوّر الفاتورة أو تأكيد الدفع.',
     pending_or_declined: 'الدفعة دي لسه ما تمتش أو اترفضت. مفيش فلوس خرجت، يبقى مفيش حاجة تتسجل.',
@@ -230,13 +227,17 @@ export const AR = {
   alsoFiled: (n) => `اتسجّلت — و${n} كمان من نفس المكان`,
   appVersion: 'النسخة', // the commit renders beside it in LATIN (audit 2026-10-10)
   jobStalled: 'وقفت قبل ما تخلص — جرّب تاني',
-  photoSave: 'احفظها على الموبايل',
   photoSaved: 'اتحفظت',
   photoSaveFailed: 'ماتحفظتش',
-  photoTryNow: 'جرّب دلوقتي',
+  photoSaveShort: 'احفظ',
+  photoReadAgain: 'اقرأ تاني',
+  photoAgainShort: 'تاني',
+  photoCheck: 'راجعه',
+  photoByHand: 'بإيدك',
+  photoRemoved: 'الصورة اتشالت',
+  photoTryNow: 'جرّب',
   photoRemove: 'شيلها',
   batchReread: 'اقرأ الصور تاني',
-  jobRetry: 'جرّب تاني',
   debugLogSend: '⚑ ابعت سجل القراية',
   debugLogSent: '⚑ السجل اتبعت ✓',
   debugLogPrivacy: 'الصورة اتبعتت للتصليح على الدرايف؛ ده بيضيف سجل القراية للشيت.',
@@ -431,6 +432,7 @@ export const AR = {
   // الصورة راحت من على السيرفر — تعبه محفوظ، القراية هي اللي بتنتهي
   batchExpired: 'الصورة عدى عليها وقت — صوّرها تاني وهنرجّع اللي اخترته',
   batchResnap: '📷 صوّرها تاني',
+  batchDiscardShort: 'امسح',
   batchDiscard: 'امسح المراجعة',
   /**
    * «سيبها» و«امسحها» فعلين مختلفين، وكان زرار واحد بيعملهم الاتنين: بعد
@@ -531,7 +533,7 @@ export const AR = {
   checkClockOk: 'تاريخ الموبايل زي تاريخ الدفتر',
   checkClockOff: (phone, book) => `الموبايل بيقول ${phone} والدفتر بيقول ${book} — المصاريف الجديدة هتتسجل في يوم غلط`,
   checkPhotosOk: (n) => (n ? `${n} صور على الموبايل، ولا واحدة واقفة` : 'مفيش صور مستنية'),
-  checkPhotosStuck: (n) => `${n} صور واقفة — افتح الصور واضغط «جرّب دلوقتي»`,
+  checkPhotosStuck: (n) => `${n} صور واقفة — افتح الصور واضغط «جرّب»`,
   checkOutboxEmpty: 'كل المصاريف وصلت الدفتر',
   checkOutboxWaiting: (n, age = '', blocked = 0) => `${n} مصاريف مستنية تتبعت${age ? `، أقدمها من ${age}` : ''}${blocked ? ` · ${blocked} محتاجة رأيك في المراجعة` : ''}`,
   checkStatementNone: 'مفيش كشف حساب مستني',

@@ -340,7 +340,8 @@ export function UndoToast({ undo, onUndo }) {
         color: C.onDark,
       }}>
       <span style={{ fontSize: TYPE.body, fontWeight: 600 }}>
-        {S.savedUndo} <span style={LATIN}>{money2(undo.amount)}</span> {unitFor(undo.currency)}
+        {/* `text`: the same bar for a removed photo (2026-10-31); otherwise the logged amount. */}
+        {undo.text || <>{S.savedUndo} <span style={LATIN}>{money2(undo.amount)}</span> {unitFor(undo.currency)}</>}
       </span>
       <button onClick={onUndo}
         style={{ minHeight: TAP, padding: '0 18px', borderRadius: RADIUS.capsule, background: TOAST_ACTION_BG, color: C.onDark, fontSize: TYPE.body, fontWeight: 700 }}>

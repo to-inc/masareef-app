@@ -167,8 +167,9 @@ try {
   { const { JobsList } = await vite.ssrLoadModule('/src/views/ReceiptView.jsx');
     const job = { id: 'n', stage: 'notReceipt', queuedAt: 1, base64: 'QUJD', notExpenseReason: 'other' };
     const html = h(JobsList, { jobs: [job], onReview() {}, onRetry() {}, onCancel() {}, onDebugLog: null, onManual() {} });
-    const btns = [...html.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]).filter((t) => t && t !== '✕');
-    ok(btns[0] === S.jobByHand && btns.includes(S.jobReadAgain) && !btns.includes(S.debugLogSend) && !btns.includes(S.jobWhy),
+    // Version A (2026-10-31): each button is an icon over its word, so read the word, not the button's first text.
+    const btns = [...html.matchAll(/<button[^>]*>.*?<\/button>/g)].map((m) => m[0].replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+    ok(btns[0] === S.photoByHand && btns.includes(S.photoAgainShort) && !btns.includes(S.debugLogSend) && !btns.includes(S.jobWhy),
       'UX5', `a failed read leads with «Enter it by hand»; no flag where reads file themselves (${btns.join(' | ')})`); }
 
   { const html = h(SettingsSheet, { displayCurrency: 'EUR', onFlipCurrency() {}, onClose() {}, build: { actions: ['debug_shot', 'debug_note'] } });

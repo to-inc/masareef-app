@@ -151,7 +151,6 @@ export const EN = {
   receiptPending: 'Still pending at the bank — log it if the payment went through.',
   readingBehind: (n) => (n === 1 ? 'Reading your receipt — it will be in To review' : `Reading ${n} receipts — they will be in To review`),
   photoReady: (n) => (n === 1 ? 'A receipt is ready — open Photos in To review' : `${n} receipts are ready — open Photos in To review`),
-  jobByHand: 'Enter it by hand',
   receiptSaw: 'We read:',
   receiptAmount: 'Amount',
   receiptMerchant: 'Shop',
@@ -162,7 +161,6 @@ export const EN = {
   jobQueued: 'In line',
   jobReading: 'Reading…',
   jobReady: 'Ready — check it',
-  jobCheck: 'Check and log', // the ready card's button — the status line already says «Ready»
   // A verdict, not a card to confirm. It used to say "Ready — check it" and
   // there was nothing to check (R-receipts 4).
   jobNotReceipt: 'Not a receipt',
@@ -177,7 +175,6 @@ export const EN = {
    * do about it.
    */
   jobWhy: 'See why',
-  jobReadAgain: 'Read it again',
   /**
    * WHY A REFUSAL WAS A REFUSAL (06 §6 `not_expense_reason`). Returns null for
    * an absent or unrecognised reason so the caller falls back to the generic
@@ -226,13 +223,17 @@ export const EN = {
   alsoFiled: (n) => `Filed — and ${n} more from the same place`,
   appVersion: 'Version', // the commit renders beside it in LATIN (audit 2026-10-10)
   jobStalled: 'Stopped before it finished — try again',
-  photoSave: 'Save to phone',
   photoSaved: 'Saved',
   photoSaveFailed: 'Could not save',
+  photoSaveShort: 'Save',
+  photoReadAgain: 'Read again',
+  photoAgainShort: 'Again',
+  photoCheck: 'Check',
+  photoByHand: 'By hand',
+  photoRemoved: 'Photo removed',
   photoTryNow: 'Try now',
   photoRemove: 'Remove',
   batchReread: 'Read the photos again',
-  jobRetry: 'Try again',
   debugLogSend: '⚑ Send debug log',
   debugLogSent: '⚑ Log sent ✓',
   debugLogPrivacy: 'The photo is already filed for fixing on your Drive; this adds the reading log to your sheet.', // 2026-10-18: auto-filed reads made «never the photo» untrue
@@ -424,6 +425,7 @@ export const EN = {
   batchBack: 'Done — back to the book',
   batchExpired: 'This photo has gone stale — take it again and we will restore your choices',
   batchResnap: '📷 Photograph it again',
+  batchDiscardShort: 'Discard',
   batchDiscard: 'Discard this review',
   /**
    * LEAVING AND DISCARDING ARE DIFFERENT ACTS, and one button used to do both.

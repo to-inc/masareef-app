@@ -30,7 +30,7 @@ ok(/registerType: 'prompt'/.test(cfg) && !/registerType: 'autoUpdate'/.test(cfg)
   'P8.1 the service worker registers in PROMPT mode — autoUpdate could reload under a half-typed amount (A6)');
 ok(/id: base/.test(cfg) && /theme_color: '#FAF7F1'/.test(cfg), 'P8.2 the manifest carries id: base and the paper theme colour (A6)');
 ok(/useRegisterSW/.test(upd) && /updateServiceWorker\(true\)/.test(upd), 'P8.3 the update is applied only through the hook\'s explicit updateServiceWorker(true)');
-ok(/\{update\.waiting && !sheetOpen && !undo && <UpdatePrompt onUpdate=\{update\.apply\} \/>\}/.test(app),
+ok(/\{update\.waiting && !sheetOpen && !undo && !photoUndo && <UpdatePrompt onUpdate=\{update\.apply\} \/>\}/.test(app),
   'P8.4 the prompt is mounted only while the entry sheet is CLOSED (and the undo toast has the floor first) — R19');
 ok(!/location\.reload\(\)/.test(app), 'P8.5 the shell itself never reloads the page');
 ok(/state=\{reading > 0 \? 'busy' : refreshState\}/.test(app), 'P8.6 the pill reads every in-flight read — the startup one too — not only a press');

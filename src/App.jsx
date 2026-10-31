@@ -56,7 +56,7 @@ import BookView from './views/BookView.jsx';
 // their chunks, so offline they open the same; only the first download is lighter.
 const BatchReviewView = lazy(() => import('./views/BatchReviewView.jsx'));
 import * as receiptQueue from './state/receiptQueue.js';
-import { runner, onJobsChange, enqueueFiles, jobsChanged, rereadNow } from './state/receiptRunner.js';
+import { runner, onJobsChange, enqueueFiles, jobsChanged, rereadNow, onJobRemoved, restoreJob } from './state/receiptRunner.js';
 import { syncKept } from './state/keptLookalikes.js';
 import { setCategoryUse } from './state/catOrder.js';
 import { SettingsCog } from './views/SettingsCog.jsx';
@@ -253,6 +253,15 @@ export default function App() {
     document.addEventListener('visibilitychange', vis);
     return () => { off(); window.removeEventListener('online', kick); document.removeEventListener('visibilitychange', vis); };
   }, []);
+  // «Photo removed · Undo» (version A, 2026-10-31): Remove is one tap, so it gets a way back.
+  const [photoUndo, setPhotoUndo] = useState(null);
+  const photoUndoTimer = useRef(null);
+  useEffect(() => onJobRemoved((job) => {
+    clearTimeout(photoUndoTimer.current);
+    setPhotoUndo({ text: S.photoRemoved, job });
+    photoUndoTimer.current = setTimeout(() => setPhotoUndo(null), UNDO_MS);
+  }), []);
+  useEffect(() => () => clearTimeout(photoUndoTimer.current), []);
   const [entryBusy, setEntryBusy] = useState(false);
 
   /**
@@ -1300,10 +1309,11 @@ export default function App() {
 
       <Toast message={toast} />
       <UndoToast undo={undo} onUndo={undoEntry} />
+      {!undo && <UndoToast undo={photoUndo} onUndo={() => { const j = photoUndo && photoUndo.job; setPhotoUndo(null); if (j) restoreJob(j); }} />}
       {/* v4 P2: iOS Safari only, never inside the installed app (state/installCoach.js). */}
       <InstallCoach />
       {/* R19: never while the entry sheet is open — and the undo toast has the floor first. */}
-      {update.waiting && !sheetOpen && !undo && <UpdatePrompt onUpdate={update.apply} />}
+      {update.waiting && !sheetOpen && !undo && !photoUndo && <UpdatePrompt onUpdate={update.apply} />}
 
       {/**
         * S1 — the Settings sheet, mounted at the SHELL so it opens over any

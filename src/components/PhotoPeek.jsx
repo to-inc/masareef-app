@@ -8,7 +8,7 @@ import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
  * THE EYE — the photo he is checking, full screen. Tap the picture to zoom (2.5×, then scroll);
  * the object URL lives only while it is open (jobThumb.js: every URL is revoked).
  */
-export default function PhotoPeek({ base64, label = null }) {
+export default function PhotoPeek({ base64, label = null, trigger = null }) {
   const [url, setUrl] = useState(null);
   const [zoom, setZoom] = useState(false);
   const closeRef = useRef(null);
@@ -24,14 +24,15 @@ export default function PhotoPeek({ base64, label = null }) {
   useEffect(() => () => revokeThumb(url), [url]);
   return (
     <>
-      <button data-photo-peek className="catchip" onClick={open} aria-label={S.receiptSeePhoto}
+      {/* `trigger(open)` draws the door itself (the action strip's «Photo»); otherwise the chip. */}
+      {trigger ? trigger(open) : <button data-photo-peek className="catchip" onClick={open} aria-label={S.receiptSeePhoto}
         style={{ minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule, ...glass('chip'), color: C.ink,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0 14px', fontSize: TYPE.label, fontWeight: 700 }}>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" />
         </svg>
         {label || S.receiptPhoto}
-      </button>
+      </button>}
       {/* Portalled to <body>: a glass ancestor's backdrop-filter is a containing block for
           position:fixed, and the viewer was trapped inside the card (seen 2026-10-20). */}
       {url && createPortal(

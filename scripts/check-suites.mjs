@@ -216,7 +216,13 @@ import { dirname, join } from 'node:path';
  * `batchEditEntry`, `batchRemoved`, `batchOpening`, `batchOpenFailed`. The
  * test-batch canOpen assertion was re-cut in place (count unchanged).
  */
-const EXPECTED_ASSERTIONS = 7082;
+/**
+ * 2026-10-31 · 7082 → 7100, version A (Tarek's pick): every photo's actions on one icon strip.
+ * +16 i18n (seven new labels, five retired: jobByHand, jobCheck, jobReadAgain, photoSave, jobRetry),
+ * +1 names and +1 jsx-comment for the new ActionStrip.jsx. Checked per suite against the stashed tree;
+ * chips, refactor-ui and p8 re-cut to the strip without losing an assertion.
+ */
+const EXPECTED_ASSERTIONS = 7100;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

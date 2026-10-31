@@ -6,6 +6,7 @@ import { money, money2 } from '../lib/format.js';
 import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
 import { LATIN, ISOLATE, DateField } from '../components/Primitives.jsx';
 import PhotoPeek from '../components/PhotoPeek.jsx';
+import ActionStrip, { StripButton } from '../components/ActionStrip.jsx';
 import * as receiptQueue from '../state/receiptQueue.js';
 import EditSheet from './EditSheet.jsx';
 import { fetchEntries, fixCategory } from '../api/index.js';
@@ -239,21 +240,17 @@ export default function BatchReviewView({
       {/* AND THE WAYS OUT, at the top where he looks (Tarek, 2026-10-31: «how can I discard
           this?» — Discard sat under the last row, behind the dock). «Read again» sends the
           photos for a fresh read and takes him to them; Discard clears the review and its photos. */}
-      <div data-batch-photos style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
-        {photos.map((p, i) => (
-          <PhotoPeek key={p.hash} base64={p.base64} label={photos.length > 1 ? `${S.receiptPhoto} ${i + 1}` : null} />
-        ))}
-        {onReread && held > 0 && (
-          <button data-batch-reread className="catchip" onClick={onReread} disabled={busy}
-            style={{ ...glass('chip'), minHeight: TAP, padding: '0 14px', color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
-            {S.batchReread}
-          </button>
-        )}
-        <button data-batch-discard-top className="catchip" onClick={onDiscard} disabled={busy}
-          style={{ ...glass('chip'), minHeight: TAP, padding: '0 14px', color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
-          {S.batchDiscard}
-        </button>
-      </div>
+      {/* Version A (2026-10-31): the photos, «Read again» and «Discard» on ONE strip. Past three
+          photos each eye is just its number, so the strip still fits one line. */}
+      <ActionStrip data-batch-photos style={{ marginBottom: 10 }} items={[
+        ...photos.map((p, i) => {
+          const label = photos.length > 3 ? String(i + 1) : photos.length > 1 ? `${S.receiptPhoto} ${i + 1}` : S.receiptPhoto;
+          return { key: p.hash, icon: 'eye', label, aria: `${S.receiptSeePhoto} ${i + 1}`,
+            render: (it) => <PhotoPeek key={p.hash} base64={p.base64} trigger={(open) => <StripButton item={{ ...it, onTap: open, attrs: { 'data-photo-peek': '' } }} />} /> };
+        }),
+        onReread && held > 0 && { key: 'reread', icon: 'again', label: S.photoReadAgain, aria: S.batchReread, disabled: busy, onTap: onReread, attrs: { 'data-batch-reread': '' } },
+        { key: 'discard', icon: 'trash', label: S.batchDiscardShort, aria: S.batchDiscard, tone: 'muted', sep: true, disabled: busy, onTap: onDiscard, attrs: { 'data-batch-discard-top': '' } },
+      ]} />
 
       {!settled && (
         <div style={{ display: 'flex', gap: 7 }}>
