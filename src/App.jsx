@@ -56,7 +56,7 @@ import BookView from './views/BookView.jsx';
 // their chunks, so offline they open the same; only the first download is lighter.
 const BatchReviewView = lazy(() => import('./views/BatchReviewView.jsx'));
 import * as receiptQueue from './state/receiptQueue.js';
-import { runner, onJobsChange, enqueueFiles } from './state/receiptRunner.js';
+import { runner, onJobsChange, enqueueFiles, jobsChanged } from './state/receiptRunner.js';
 import { syncKept } from './state/keptLookalikes.js';
 import { setCategoryUse } from './state/catOrder.js';
 import { SettingsCog } from './views/SettingsCog.jsx';
@@ -412,9 +412,19 @@ export default function App() {
     pushDetail(() => setEntryMode('keypad'));
   }, [pushDetail]);
 
-  /** Settled or abandoned — the draft goes, and so does the screen. */
+  /**
+   * Settled or abandoned — the draft goes, and so does the screen.
+   *
+   * ⚠️ AND SO DO ITS PHOTOS (Tarek, 2026-10-31: «whenever I say clear it doesn't
+   * fully clear»). A statement's photo stays in the receipt queue as `ready` so
+   * the review can show it; clearing only the draft left every one of them there,
+   * counted on the header's badge after any reload, and one tap on a photo built
+   * the review again. The draft and the photos it was read from leave together.
+   */
   const discardBatch = useCallback(() => {
+    const hashes = ((loadDraft() || {}).jobs || []).map((j) => j && j.sourceHash);
     clearDraft();
+    receiptQueue.removeMany(hashes).then(jobsChanged);
     pushDetail(() => {
       setBatch({ jobs: [], settled: null });
       setBatchExpired(false);

@@ -232,6 +232,130 @@ try {
     await ctx.close();
   }
 
+  // ═══ F7 — a photo that never finishes reading becomes one he can act on (2026-10-31)
+  {
+    const { ctx, page, errors } = await openApp();
+    const img = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 200; c.height = 300; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 200, 300); return c.toDataURL('image/jpeg', 0.8).split(',')[1]; });
+    const stageOf = (id) => page.evaluate(async (k) => { const q = await import('/masareef/src/state/receiptQueue.js'); const j = (await q.all()).find((x) => x.id === k); return j ? `${j.stage}/${j.error || ''}` : 'gone'; }, id);
+    // (a) the app was closed mid-read: the job is stored as `reading` and nothing is reading it
+    await page.evaluate(async (b64) => {
+      const q = await import('/masareef/src/state/receiptQueue.js');
+      for (const j of await q.all()) await q.remove(j.id);
+      await q.enqueue({ id: 'stuck1', base64: b64, clientHash: 'stuck1', snapDate: '2026-10-30', stage: 'reading', readingAt: Date.now() - 600000, queuedAt: Date.now() - 600000 });
+      await q.enqueue({ id: 'wait1', base64: b64, clientHash: 'wait1', snapDate: '2026-10-30', queuedAt: Date.now() });
+      (await import('/masareef/src/state/receiptRunner.js')).jobsChanged();
+    }, img);
+    await page.waitForTimeout(300);
+    await clickText(page, /photos? being processed|^Photos/); await page.waitForTimeout(400);
+    const rowsWithActions = await page.$$eval('[data-photos-list] [data-photo-row]', (rs) => rs.map((r) => ({
+      eye: !!r.querySelector('[data-photo-peek]'), save: !!r.querySelector('[data-photo-save]'), retry: !!r.querySelector('[data-photo-retry]') })));
+    ok(rowsWithActions.length === 2 && rowsWithActions.every((r) => r.eye && r.save && r.retry),
+      `F7.actions a stuck and a waiting photo each show see · save · try now — ${JSON.stringify(rowsWithActions)}`);
+    const dl = page.waitForEvent('download', { timeout: 4000 }).catch(() => null);
+    await page.click('[data-photos-list] [data-photo-row] [data-photo-save]');
+    const file = await dl;
+    ok(!!file && /\.jpg$/.test(file.suggestedFilename()), `F7.save «Save to phone» hands over the photo as a file (download where sharing files is not offered) — ${file && file.suggestedFilename()}`);
+    await page.click('[data-photos-list] [data-photo-row] [data-photo-peek]'); await page.waitForTimeout(300);
+    ok(!!(await page.$('[data-photo-view]')), 'F7.see the eye opens the stuck photo full screen');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    // the worker starts: the orphaned read fails (with its reason) instead of blocking the queue
+    await page.evaluate(async () => { (await import('/masareef/src/state/receiptRunner.js')).runner().pump(); });
+    // (waitForFunction treats an async predicate's Promise as truthy, so poll by hand)
+    const until = async (id, re) => { for (let i = 0; i < 40 && !re.test(await stageOf(id)); i++) await page.waitForTimeout(200); };
+    await until('wait1', /^ready/);
+    const s1 = await stageOf('stuck1'), w1 = await stageOf('wait1');
+    ok(s1 === 'failed/stalled' && w1.startsWith('ready'), `F7.orphan a read left by a closed app turns failed/stalled, and the photo behind it is read — ${s1} · ${w1}`);
+    await page.waitForTimeout(300);
+    const label = await page.evaluate(() => document.body.innerText.includes('Stopped before it finished'));
+    ok(label, 'F7.label the stalled photo says «Stopped before it finished — try again»');
+    // (c) «Try now» re-sends it: the mock reads it and it turns ready
+    await page.evaluate(() => { const r = [...document.querySelectorAll('[data-photos-list] [data-photo-row]')].find((x) => /Stopped before/.test(x.innerText)); r.querySelector('[data-photo-retry]').click(); });
+    await until('stuck1', /^ready/);
+    ok((await stageOf('stuck1')).startsWith('ready'), `F7.retry «Try now» sends the stalled photo again and it is read — ${await stageOf('stuck1')}`);
+    // (d) a read that never answers fails once its lease runs out (lease shortened to 400 ms here; 3 min in the app)
+    const leased = await page.evaluate(async (b64) => {
+      const q = await import('/masareef/src/state/receiptQueue.js');
+      const { createWorker } = await import('/masareef/src/state/receiptWorker.js');
+      for (const j of await q.all()) await q.remove(j.id);
+      await q.enqueue({ id: 'hang1', base64: b64, clientHash: 'hang1', snapDate: '2026-10-30', queuedAt: Date.now() });
+      let sent = 0;
+      const w = createWorker({ queue: q, leaseMs: 400, extract: () => { sent += 1; return new Promise(() => {}); } });
+      const t0 = Date.now(); await w.pump();
+      const j = (await q.all()).find((x) => x.id === 'hang1');
+      for (const x of await q.all()) await q.remove(x.id);
+      return { stage: j && j.stage, error: j && j.error, retryable: j && j.retryable, sent, ms: Date.now() - t0, running: w.isRunning() };
+    }, img);
+    ok(leased.stage === 'failed' && leased.error === 'stalled' && leased.retryable && leased.sent === 1 && !leased.running && leased.ms < 3000,
+      `F7.lease a read that never answers becomes a retryable failure after the lease, and the worker is free again — ${JSON.stringify(leased)}`);
+    ok(errors.length === 0, `F7.clean no script errors on the photo list ${errors.slice(0, 2).join(' | ')}`);
+    await page.evaluate(async () => { const q = await import('/masareef/src/state/receiptQueue.js'); for (const j of await q.all()) await q.remove(j.id); });
+    await ctx.close();
+  }
+
+  // ═══ F7n — the photo list with its new buttons reads in light and Night
+  for (const theme of ['light', 'night']) {
+    const { ctx, page } = await openApp({ theme });
+    await page.evaluate(async () => {
+      const c = document.createElement('canvas'); c.width = 200; c.height = 300; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 200, 300);
+      const q = await import('/masareef/src/state/receiptQueue.js');
+      for (const j of await q.all()) await q.remove(j.id);
+      await q.enqueue({ id: 'n1', base64: c.toDataURL('image/jpeg', 0.8).split(',')[1], clientHash: 'n1', snapDate: '2026-10-30', stage: 'failed', error: 'stalled', retryable: true, queuedAt: Date.now() - 60000 });
+      (await import('/masareef/src/state/receiptRunner.js')).jobsChanged();
+    });
+    await page.waitForTimeout(300);
+    await page.evaluate(() => { const b = document.querySelector('[data-photos-bar] button[aria-expanded="false"]'); if (b) b.click(); });
+    const scan = await contrastScan(page, `Photos · ${theme}`);
+    if (process.env.FLOW_SHOTS) await page.screenshot({ path: `${process.env.FLOW_SHOTS}/photos-${theme}.png` });
+    ok(scan.measured >= 5 && scan.bad.length === 0 && !!(await page.$('[data-photo-retry]')),
+      `F7n.${theme} the photo list with see · save · try now is readable (${theme}) — ${scan.measured} measured; ${scan.bad.slice(0, 4).join('; ')}`);
+    await page.evaluate(async () => { const q = await import('/masareef/src/state/receiptQueue.js'); for (const j of await q.all()) await q.remove(j.id); });
+    await ctx.close();
+  }
+
+  // ═══ F8 — «Discard» on a review built from MANY statement photos clears all of it, and it stays cleared
+  {
+    const { ctx, page, errors } = await openApp();
+    await page.evaluate(async () => {
+      const q = await import('/masareef/src/state/receiptQueue.js');
+      for (const j of await q.all()) await q.remove(j.id);
+      for (let p = 0; p < 5; p++) {
+        const entries = Array.from({ length: 6 }, (_, i) => ({ date: `2026-10-${String(10 + i).padStart(2, '0')}`, amount: 3 + i + p, currency: 'EUR', merchant_display: `Shop ${p}-${i}`, row_status: 'completed', category: 'Groceries' }));
+        await q.enqueue({ id: `list${p}`, base64: 'AAAA', clientHash: `list${p}`, snapDate: '2026-10-20', stage: 'ready', queuedAt: Date.now() - 1000 * (10 - p),
+          extraction: { ok: true, extraction: { doc_type: 'transaction_list', is_receipt: false, entries }, entriesTotal: 6, defaultMethod: 'Visa' } });
+      }
+      (await import('/masareef/src/state/receiptRunner.js')).jobsChanged();
+    });
+    await page.waitForTimeout(400);
+    for (let p = 0; p < 5; p++) {   // he opens each statement photo from To review's list
+      await page.evaluate(() => { const b = document.querySelector('[data-photos-bar] button[aria-expanded="false"]'); if (b) b.click(); });
+      await page.waitForTimeout(250);
+      await page.evaluate((k) => document.querySelectorAll('[data-photos-list] [data-photo-row] > button')[k].click(), p);
+      await page.waitForTimeout(900);
+      await clickText(page, /^To review/); await page.waitForTimeout(500);
+    }
+    const draftJobs = await page.evaluate(() => (JSON.parse(localStorage.getItem('masareef.batchDraft.v1') || '{}').jobs || []).length);
+    await clickText(page, /^Book$/); await page.waitForTimeout(700);
+    const waitingBefore = await page.evaluate(() => /(\d+) expenses not logged yet/.exec(document.body.innerText)?.[1] || '0');
+    await clickText(page, /not logged yet/); await page.waitForTimeout(1000);
+    await clickText(page, /^Discard/); await page.waitForTimeout(900);
+    const state = async () => page.evaluate(async () => {
+      const q = await import('/masareef/src/state/receiptQueue.js');
+      const badge = document.querySelector('[data-photos-shortcut]')?.getAttribute('aria-label') || '';
+      return { draft: localStorage.getItem('masareef.batchDraft.v1'), queue: (await q.all()).length, badge, waiting: /not logged yet/.test(document.body.innerText) };
+    });
+    const after = await state();
+    await page.reload(); await page.waitForTimeout(1500);
+    await clickText(page, /^Book$/); await page.waitForTimeout(700);
+    const reloaded = await state();
+    ok(draftJobs === 5 && waitingBefore === '30', `F8.setup a review built from 5 statement photos waits with 30 rows — ${draftJobs} photos · ${waitingBefore} rows`);
+    ok(after.draft === null && after.queue === 0 && !/·/.test(after.badge) && !after.waiting,
+      `F8.clear one Discard removes the draft AND its photos: no badge, no «not logged yet» — ${JSON.stringify(after)}`);
+    ok(reloaded.draft === null && reloaded.queue === 0 && !/·/.test(reloaded.badge) && !reloaded.waiting,
+      `F8.reload nothing comes back after a reload — ${JSON.stringify(reloaded)}`);
+    ok(errors.length === 0, `F8.clean no script errors through open × 5, discard and reload ${errors.slice(0, 2).join(' | ')}`);
+    await ctx.close();
+  }
+
   // ═══ F6 — a failed download says so instead of a blank screen
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });

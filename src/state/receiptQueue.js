@@ -114,6 +114,26 @@ export async function remove(id) {
   } catch { /* nothing to do */ }
 }
 
+/**
+ * Remove every job whose id or clientHash is in `keys`, in ONE transaction —
+ * a cleared statement review takes all its photos with it, or none.
+ */
+export async function removeMany(keys) {
+  const want = new Set([].concat(keys || []).filter(Boolean));
+  if (!want.size) return 0;
+  try {
+    const items = await all();
+    const ids = items.filter((i) => want.has(i.id) || want.has(i.clientHash)).map((i) => i.id);
+    if (!ids.length) return 0;
+    const db = await openDB();
+    await tx(db, 'readwrite', (s) => { let req = null; for (const id of ids) req = s.delete(id); return req; });
+    db.close();
+    return ids.length;
+  } catch {
+    return 0;
+  }
+}
+
 /** Fresh captures may be extracted automatically; old ones wait for a tap. */
 export async function partition(now = Date.now()) {
   const items = await all();

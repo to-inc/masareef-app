@@ -31,6 +31,20 @@ export function onJobsChange(fn) {
 export function jobsChanged() { listeners.forEach((fn) => fn()); }
 
 /**
+ * TRY IT NOW — on any photo not yet read, failed or not (Tarek, 2026-10-31:
+ * «retry even if it's not there»). A read in flight is abandoned first (its
+ * answer is then dropped unread), the job goes back to the front of its turn,
+ * and the worker starts. Within six hours the server answers a re-sent photo
+ * from its cache, so this does not spend a second read.
+ */
+export async function retryNow(job, { q = queue, w = runner() } = {}) {
+  w.cancel(job.id);
+  await q.update(job.id, { stage: 'queued', error: null, retryable: false, readingAt: null });
+  jobsChanged();
+  w.pump();
+}
+
+/**
  * READ IT BEHIND HIM (design audit 2026-10-18, UX 1: «never make him wait on a
  * receipt»). Photos and PDFs chosen on the New sheet are prepared, queued and read
  * by the one worker while he carries on; To review's Photos list and the header's

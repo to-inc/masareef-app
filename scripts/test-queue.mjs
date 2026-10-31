@@ -452,8 +452,14 @@ function fakeQueue(initial) {
    * deletion; in the app `cancelJob` removes it. That is exactly what makes the
    * assertion sharp: if the worker wrote its outcome, we would see `ready` here.
    */
-  eq(q.snapshot()[0].stage, 'reading',
-    "THE CANCELLED JOB'S OUTCOME IS DROPPED — no terminal stage is ever written back");
+  /**
+   * RE-CUT 2026-10-31 (the read lease): this used to expect `reading` — the job
+   * left exactly where it was. That is the stall the lease exists to end: a
+   * `reading` job nothing is reading now becomes `failed`/`stalled` on the next
+   * sweep. What must still never happen is the CANCELLED ANSWER landing: `ready`.
+   */
+  eq(`${q.snapshot()[0].stage}/${q.snapshot()[0].error}`, 'failed/stalled',
+    "THE CANCELLED JOB'S OUTCOME IS DROPPED — its answer is never written back; the sweep marks it stalled");
   eq(q.snapshot()[0].extraction, undefined, 'and no extraction body is stored for it');
   eq(worker.processedCount(), 0,
     'and nothing was counted as processed — there was no longer a job to finish');

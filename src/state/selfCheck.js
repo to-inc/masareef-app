@@ -56,7 +56,9 @@ export function judge(f, S) {
 
   if (f.photos === null) add('photos', 'warn', S.checkUnreadable);
   else {
-    const stuck = f.photos.filter((p) => (p.stage === 'queued' || p.stage === 'reading') && f.now - p.queuedAt > HOUR).length;
+    // A read that never came back is stuck too, though it now says so (receiptStages STALLED).
+    const stuck = f.photos.filter((p) => ((p.stage === 'queued' || p.stage === 'reading') && f.now - p.queuedAt > HOUR)
+      || (p.stage === 'failed' && p.error === 'stalled')).length;
     add('photos', stuck ? 'warn' : 'ok', stuck ? S.checkPhotosStuck(stuck) : S.checkPhotosOk(f.photos.length));
   }
 

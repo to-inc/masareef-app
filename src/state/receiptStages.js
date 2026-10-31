@@ -54,6 +54,32 @@ export function isStage(stage) {
 }
 
 /**
+ * THE READ LEASE (Tarek, 2026-10-31: «it doesn't finish uploading … there's no
+ * retry button because it hasn't really failed»). A read holds `reading` for at
+ * most this long. The transport gives up after 45 s and tries once more, so a
+ * live read is over in ~90 s; three minutes is that with room for a slow phone.
+ *
+ * Without a lease, `reading` was a stage nothing could leave on its own: close
+ * the app mid-read, or let iOS kill the tab, and the stored job stayed
+ * `reading` forever — and since `nextJob` refuses to start while anything is
+ * `reading`, every photo behind it waited forever too, with no error anywhere.
+ */
+export const READ_LEASE_MS = 3 * 60 * 1000;
+
+/**
+ * Jobs left in `reading` that THIS page is not reading — the app was closed or
+ * killed mid-read. They become `failed`/`stalled` (retryable) at once: nothing
+ * is coming back for them. One page reads at a time; if a second tab were
+ * reading, its answer would still land on the job, because `update` patches.
+ */
+export function stalledJobs(jobs, isInFlight = () => false) {
+  return (Array.isArray(jobs) ? jobs : []).filter((j) => j && j.stage === 'reading' && !isInFlight(j.id));
+}
+
+/** The stage a stall becomes: a failure he can retry, never a silent wait. */
+export const STALLED = { stage: 'failed', error: 'stalled', retryable: true };
+
+/**
  * The next job the worker should pick up.
  *
  * Oldest-first, and ONLY when nothing is already in flight — the serial rule is

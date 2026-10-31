@@ -291,7 +291,8 @@ try {
         outbox: [{ queuedAt: now - 2 * 3600e3, blocked: false }], statement: 2 });
       const down = tones({ ...good, server: { ok: false, ms: 15000 } });
       ok(Object.values(g).every((t) => t === 'ok') && bad.clock === 'bad' && bad.photos === 'warn' && bad.outbox === 'warn' && bad.statement === 'warn'
-        && down.server === 'bad' && !('clock' in down),
+        && down.server === 'bad' && !('clock' in down)
+        && tones({ ...good, photos: [{ stage: 'failed', error: 'stalled', queuedAt: now }] }).photos === 'warn',
         'C1', `«Check the app» is green on a healthy phone and flags a wrong clock, a stuck photo, an old unsent entry, statement rows and a dead server — ${JSON.stringify(bad)}`);
       ok(/<SelfCheck \/>/.test(src('src/views/SettingsSheet.jsx')), 'C2', '«Check the app» sits in Settings → Help'); }
     const mainSrc = src('src/main.jsx'); const bookSrc = src('src/views/BookView.jsx');

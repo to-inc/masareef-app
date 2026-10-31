@@ -36,3 +36,38 @@ export function revokeThumb(url) {
   if (!url) return;
   try { globalThis.URL?.revokeObjectURL?.(url); } catch { /* already gone */ }
 }
+
+/**
+ * SAVE IT BACK TO THE PHONE (Tarek, 2026-10-31): a photo the app could not read
+ * should never be trapped in it. The share sheet with the file is iOS's «Save
+ * Image»; where files cannot be shared, the browser downloads it. Answers
+ * 'shared' | 'downloaded' | 'cancelled' | 'failed' — never throws.
+ */
+export async function savePhoto(base64, mediaType = 'image/jpeg', name = 'receipt') {
+  const g = globalThis;
+  let blob;
+  try {
+    const bin = g.atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+    blob = new g.Blob([bytes], { type: mediaType || 'image/jpeg' });
+  } catch { return 'failed'; }
+  const fileName = `${name}.${mediaType === 'application/pdf' ? 'pdf' : 'jpg'}`;
+  try {
+    const file = new g.File([blob], fileName, { type: blob.type });
+    if (g.navigator?.canShare?.({ files: [file] })) {
+      await g.navigator.share({ files: [file] });
+      return 'shared';
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') return 'cancelled';   // he closed the share sheet
+  }
+  try {
+    const url = g.URL.createObjectURL(blob);
+    const a = g.document.createElement('a');
+    a.href = url; a.download = fileName;
+    g.document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => revokeThumb(url), 10000);
+    return 'downloaded';
+  } catch { return 'failed'; }
+}

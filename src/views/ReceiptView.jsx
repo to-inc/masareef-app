@@ -8,7 +8,7 @@ import { prepareReceipt, prepareDocument, fileSnapDate, ReceiptImageError } from
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
 import * as queue from '../state/receiptQueue.js';
-import { runner, onJobsChange, jobsChanged } from '../state/receiptRunner.js';
+import { runner, onJobsChange, jobsChanged, retryNow } from '../state/receiptRunner.js';
 import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
 import { debugOn } from '../state/settings.js';
@@ -17,6 +17,7 @@ import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
 import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress } from '../components/Primitives.jsx';
 import PhotoPeek from '../components/PhotoPeek.jsx';
+import PhotoActions, { UNFINISHED } from '../components/PhotoActions.jsx';
 import { expectedReadMs } from '../state/readTimes.js';
 
 /**
@@ -281,9 +282,8 @@ export default function ReceiptView({
   };
 
   const retry = async (job) => {
-    await queue.update(job.id, { stage: 'queued', error: null, retryable: false });
-    await refreshJobs(); jobsChanged();
-    workerRef.current.pump();
+    await retryNow(job, { w: workerRef.current });
+    await refreshJobs();
   };
 
   /**
@@ -910,6 +910,8 @@ const JOB_LABEL = () => ({
  * as «we could not check» rendering as «we checked and it is clean».
  */
 export function jobLabel(job, stage) {
+  // A read that never came back says so, rather than the generic «did not work».
+  if (stage === 'failed' && job && job.error === 'stalled') return S.jobStalled;
   if (stage === 'notReceipt') {
     const why = S.jobNotExpense(job && job.notExpenseReason);
     if (why) return why;
@@ -1085,6 +1087,9 @@ function JobRow({ job, onReview, onRetry, onCancel, onDebugLog, onManual = null 
         </button>
       </div>
 
+      {/* See it · save it · try now — on every photo not yet read (2026-10-31).
+          A failed row keeps its own «Try again» below, so no second one here. */}
+      {UNFINISHED.includes(stage) && <PhotoActions job={job} retry={stage !== 'failed'} />}
       {actions.length > 0 && (
         <div style={{
           display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end',

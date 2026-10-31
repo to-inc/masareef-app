@@ -196,7 +196,13 @@ import { dirname, join } from 'node:path';
  * the arity check — the same arithmetic the 24 dead-key deletion established
  * in reverse.
  */
-const EXPECTED_ASSERTIONS = 6983;
+/**
+ * 7026 on 2026-10-31. +43, each suite checked against the stashed tree, nothing
+ * vanished: +40 i18n parity for five new keys (`jobStalled`, `photoSave`,
+ * `photoSaved`, `photoSaveFailed`, `photoTryNow`); +1 names, +1 jsx-comments and
+ * +1 chunk-A3 radius, all for the one new file components/PhotoActions.jsx.
+ */
+const EXPECTED_ASSERTIONS = 7026;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

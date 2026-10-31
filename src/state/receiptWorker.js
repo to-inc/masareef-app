@@ -15,9 +15,9 @@
  * job ends at `ready` and waits for him to tap أكّد on its confirm card. A batch
  * of receipts becomes a stack of cards, never a stack of rows (D10).
  */
-import { nextJob, resultStage } from './receiptStages.js';
+import { nextJob, resultStage, stalledJobs, STALLED, READ_LEASE_MS } from './receiptStages.js';
 
-export function createWorker({ queue, extract, onChange, onRead, onOutcome }) {
+export function createWorker({ queue, extract, onChange, onRead, onOutcome, leaseMs = READ_LEASE_MS }) {
   let running = false;
   let processed = 0;
   /** id → the controller aborting THAT job's extraction, while it is in flight. */
@@ -35,6 +35,12 @@ export function createWorker({ queue, extract, onChange, onRead, onOutcome }) {
     try {
       for (;;) {
         const jobs = await queue.all();
+        // A job a closed or killed page left in `reading` would block every photo behind it.
+        const stalled = stalledJobs(jobs, (id) => inFlight.has(id));
+        let moved = 0;
+        for (const s of stalled) if (await queue.update(s.id, STALLED)) moved += 1;
+        // Only loop again when something moved — a refused write must not spin here.
+        if (moved) { onChange?.(); continue; }
         const job = nextJob(jobs);
         if (!job) break;
 
@@ -45,16 +51,28 @@ export function createWorker({ queue, extract, onChange, onRead, onOutcome }) {
 
         let res = null;
         let threw = false;
+        let overLease = false;
+        let leaseTimer = null;
         const ctrl = new AbortController();
         inFlight.set(job.id, ctrl);
         try {
-          res = await extract({
-            image: job.base64, clientHash: job.clientHash, snapDate: job.snapDate, mediaType: job.mediaType,
-            signal: ctrl.signal,
-          });
+          /**
+           * THE LEASE, held here as well as at the transport: a fetch iOS froze
+           * and never settles (seen as a photo «reading» for hours) would keep
+           * `running` true and the whole queue waiting. Past the lease the call
+           * is aborted and the job fails as `stalled`, with its retry.
+           */
+          res = await Promise.race([
+            extract({
+              image: job.base64, clientHash: job.clientHash, snapDate: job.snapDate, mediaType: job.mediaType,
+              signal: ctrl.signal,
+            }),
+            new Promise((_, reject) => { leaseTimer = setTimeout(() => { overLease = true; ctrl.abort(); reject(new Error('stalled')); }, leaseMs); }),
+          ]);
         } catch {
           threw = true;
         } finally {
+          clearTimeout(leaseTimer);
           inFlight.delete(job.id);
         }
 
@@ -78,7 +96,7 @@ export function createWorker({ queue, extract, onChange, onRead, onOutcome }) {
           continue;
         }
 
-        const outcome = resultStage(res, threw);
+        const outcome = overLease ? STALLED : resultStage(res, threw);
         // A finished read (any answer, not a failure to reach the server) teaches the estimate.
         if (!threw) onRead?.(Date.now() - readingAt);
         // The outcome, for anyone who files what went wrong (state/autoDebug.js). Never awaited.

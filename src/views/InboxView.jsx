@@ -20,6 +20,7 @@ import EditSheet from './EditSheet.jsx';
 import { jobLabel } from './ReceiptView.jsx';
 import { effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
+import PhotoActions, { UNFINISHED } from '../components/PhotoActions.jsx';
 import { cairoClock } from '../lib/dates.js';
 import { getDisplayCurrency } from '../state/display.js';
 import { outcomeForRemove } from '../state/removeOutcome.js';
@@ -662,7 +663,7 @@ export function PhotosShortcut({ jobs = [], onOpen, active = false }) {
       style={{ ...glass('chip'), position: 'relative', minHeight: TAP, minWidth: TAP, borderRadius: RADIUS.capsule,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: C.ink,
         // ON reads as a switch that is on: harbor fill, white mark (the Cash/Card chooser's grammar).
-        ...(active ? { background: C.harbor, color: C.onDark, borderColor: C.harbor } : null) }}>
+        ...(active ? { background: C.harbor, color: C.onDark, border: `1px solid ${C.harbor}` } : null) }}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
         <path d="M7 3.5h11.5A2.5 2.5 0 0 1 21 6v10" />
         <rect x="3" y="7" width="14" height="13.5" rx="2.5" />
@@ -733,6 +734,7 @@ function PhotoRow({ job, stage, onOpen }) {
   const at = Number.isFinite(job.queuedAt) ? cairoClock(job.queuedAt) : null;
   const name = jobMerchant(job) || (at ? S.jobPhotoAt(at) : S.jobPhoto);
   return (
+    <div data-photo-row style={{ padding: '0 0 6px' }}>
     <button className="catchip" onClick={onOpen ? () => onOpen(job) : undefined} disabled={!onOpen}
       style={{ width: '100%', minHeight: TAP, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0',
         background: 'transparent', textAlign: 'start', color: C.ink }}>
@@ -752,5 +754,8 @@ function PhotoRow({ job, stage, onOpen }) {
       </span>
       {onOpen && <span aria-hidden style={{ color: C.muted }}>{DIR === 'rtl' ? '‹' : '›'}</span>}
     </button>
+    {/* Not read yet, stuck or failed: see it, save it, try now (2026-10-31). */}
+    {UNFINISHED.includes(stage) && <PhotoActions job={job} />}
+    </div>
   );
 }
