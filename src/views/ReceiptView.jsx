@@ -8,7 +8,7 @@ import { prepareReceipt, prepareDocument, fileSnapDate, ReceiptImageError } from
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
 import { receiptExtract, receiptConfirm } from '../api/index.js';
 import * as queue from '../state/receiptQueue.js';
-import { runner, onJobsChange, jobsChanged, retryNow } from '../state/receiptRunner.js';
+import { runner, onJobsChange, jobsChanged, retryNow, rereadNow } from '../state/receiptRunner.js';
 import { isActionable, cappedCount, effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { isMethod, DEFAULT_METHOD } from '../state/entryPayload.js';
 import { debugOn } from '../state/settings.js';
@@ -283,6 +283,10 @@ export default function ReceiptView({
 
   const retry = async (job) => {
     await retryNow(job, { w: workerRef.current });
+    await refreshJobs();
+  };
+  const reread = async (job) => {
+    await rereadNow(job, { w: workerRef.current });
     await refreshJobs();
   };
 
@@ -809,7 +813,7 @@ export default function ReceiptView({
       <p style={{ color: C.muted, fontSize: TYPE.body, marginTop: 10, lineHeight: 1.7, maxWidth: 300 }}>
         {S.receiptIntro}
       </p>
-      <JobsList jobs={jobs} onReview={review} onRetry={retry} onCancel={cancelJob}
+      <JobsList jobs={jobs} onReview={review} onRetry={retry} onReread={reread} onCancel={cancelJob}
         onDebugLog={supportsAction(loadBuild(), 'debug_note') ? null : onDebugLog}
         onManual={onManual ? () => { reset(); onManual(); } : null} />
       <label className="bigbtn" style={{ ...primaryBtn, display: 'inline-block', cursor: 'pointer' }}>
@@ -873,7 +877,7 @@ export default function ReceiptView({
  * "waiting" would imply five failures; one line saying how many are held until
  * tomorrow is the truth, and it is a system working rather than breaking.
  */
-export function JobsList({ jobs, onReview, onRetry, onCancel, onDebugLog, onManual = null }) {
+export function JobsList({ jobs, onReview, onRetry, onReread = onRetry, onCancel, onDebugLog, onManual = null }) {
   if (!jobs.length) return null;
   const held = cappedCount(jobs);
   return (
@@ -883,7 +887,7 @@ export function JobsList({ jobs, onReview, onRetry, onCancel, onDebugLog, onManu
         {held > 0 && <span style={{ color: C.ink }}>{' · '}{S.jobsCapped(held)}</span>}
       </div>
       {jobs.map((j) => (
-        <JobRow key={j.id} job={j} onReview={onReview} onRetry={onRetry} onCancel={onCancel} onDebugLog={onDebugLog} onManual={onManual} />
+        <JobRow key={j.id} job={j} onReview={onReview} onRetry={onRetry} onReread={onReread} onCancel={onCancel} onDebugLog={onDebugLog} onManual={onManual} />
       ))}
     </div>
   );
@@ -932,7 +936,7 @@ export function jobLabel(job, stage) {
  * The STAGE comes from `effectiveStage`, never `job.stage` — that is what stops
  * a not-a-receipt from announcing itself as «جاهز — راجعه».
  */
-function JobRow({ job, onReview, onRetry, onCancel, onDebugLog, onManual = null }) {
+function JobRow({ job, onReview, onRetry, onReread = onRetry, onCancel, onDebugLog, onManual = null }) {
   const stage = effectiveStage(job);
   const [thumb, setThumb] = useState(null);
   const [logged, setLogged] = useState(false);
@@ -990,6 +994,7 @@ function JobRow({ job, onReview, onRetry, onCancel, onDebugLog, onManual = null 
   const actions = [];
   if (stage === 'ready') {
     actions.push({ key: 'review', primary: true, label: S.jobCheck, onTap: () => onReview(job) });
+    if (job.base64) actions.push({ key: 'reread', primary: false, label: S.jobReadAgain, onTap: () => onReread(job) });
   }
   /**
    * ONE WAY FORWARD on a read that did not work (design audit 2026-10-18, UX 5):
@@ -1010,7 +1015,8 @@ function JobRow({ job, onReview, onRetry, onCancel, onDebugLog, onManual = null 
      * verdict he has read is settled; this puts the tap in his hand.
      */
     if (job.base64) {
-      actions.push({ key: 'reread', primary: false, label: S.jobReadAgain, onTap: () => onRetry(job) });
+      // A FRESH read (rereadNow): the same hash would only return the kept verdict.
+      actions.push({ key: 'reread', primary: false, label: S.jobReadAgain, onTap: () => onReread(job) });
     }
   }
   if (stage === 'failed' && isActionable(job)) {

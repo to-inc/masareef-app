@@ -230,6 +230,8 @@ export const EN = {
   photoSaved: 'Saved',
   photoSaveFailed: 'Could not save',
   photoTryNow: 'Try now',
+  photoRemove: 'Remove',
+  batchReread: 'Read the photos again',
   jobRetry: 'Try again',
   debugLogSend: '⚑ Send debug log',
   debugLogSent: '⚑ Log sent ✓',
@@ -308,7 +310,7 @@ export const EN = {
   // ═══ D20 — the statement review screen ═══
   batchCount: (n, total) => `${n} of ${total} will be logged`,
   batchAll: 'Select all',
-  batchNone: 'Clear all',
+  batchNone: 'Untick all',
   batchConfirm: (n) => `✓ Log ${n} ${n === 1 ? 'expense' : 'expenses'}`,
   batchNothing: 'Choose what to log',
   sortLabel: 'Sort',

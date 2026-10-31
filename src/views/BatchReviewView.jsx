@@ -37,7 +37,7 @@ import {
  * ═══════════════════════════════════════════════════════════════════════════
  */
 export default function BatchReviewView({
-  jobs, expired, busy, results, onConfirm, onResnap, onDiscard, onLeave,
+  jobs, expired, busy, results, onConfirm, onResnap, onDiscard, onLeave, onReread = null,
   leftOut = {}, onLeaveOut = () => {},
   bookCurrency = 'EGP',   // an unread currency falls back to the BOOK's unit (audit 2026-10-10)
 }) {
@@ -60,12 +60,15 @@ export default function BatchReviewView({
   const [edits, setEdits] = useState(saved.edits);
   const [open, setOpen] = useState(null);
   const [photos, setPhotos] = useState([]);
+  // How many of this review's photos the phone still holds (PDFs too) — what «Read again» can resend.
+  const [held, setHeld] = useState(0);
   const hashes = jobs.map((j) => j.sourceHash).join('|');
   useEffect(() => {
     let live = true;
     receiptQueue.all().then((items) => {
       if (!live) return;
       const by = new Map(items.map((it) => [it.clientHash || it.id, it]));
+      setHeld(jobs.filter((j) => by.has(j.sourceHash)).length);
       setPhotos(jobs.map((j) => by.get(j.sourceHash)).filter((it) => it && it.base64 && it.mediaType !== 'application/pdf')
         .map((it) => ({ hash: it.clientHash || it.id, base64: it.base64 })));
     }).catch(() => {});
@@ -194,13 +197,24 @@ export default function BatchReviewView({
 
       {/* THE PHOTOS, to check rows against (Tarek, 2026-10-20 — the eye). Shown while the phone
           still holds them (the receipt queue); a photo it no longer holds simply has no eye. */}
-      {photos.length > 0 && (
-        <div data-batch-photos style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
-          {photos.map((p, i) => (
-            <PhotoPeek key={p.hash} base64={p.base64} label={photos.length > 1 ? `${S.receiptPhoto} ${i + 1}` : null} />
-          ))}
-        </div>
-      )}
+      {/* AND THE WAYS OUT, at the top where he looks (Tarek, 2026-10-31: «how can I discard
+          this?» — Discard sat under the last row, behind the dock). «Read again» sends the
+          photos for a fresh read and takes him to them; Discard clears the review and its photos. */}
+      <div data-batch-photos style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
+        {photos.map((p, i) => (
+          <PhotoPeek key={p.hash} base64={p.base64} label={photos.length > 1 ? `${S.receiptPhoto} ${i + 1}` : null} />
+        ))}
+        {onReread && held > 0 && (
+          <button data-batch-reread className="catchip" onClick={onReread} disabled={busy}
+            style={{ ...glass('chip'), minHeight: TAP, padding: '0 14px', color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
+            {S.batchReread}
+          </button>
+        )}
+        <button data-batch-discard-top className="catchip" onClick={onDiscard} disabled={busy}
+          style={{ ...glass('chip'), minHeight: TAP, padding: '0 14px', color: C.ink, fontSize: TYPE.label, fontWeight: 700 }}>
+          {S.batchDiscard}
+        </button>
+      </div>
 
       {!settled && (
         <div style={{ display: 'flex', gap: 7 }}>

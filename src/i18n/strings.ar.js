@@ -234,6 +234,8 @@ export const AR = {
   photoSaved: 'اتحفظت',
   photoSaveFailed: 'ماتحفظتش',
   photoTryNow: 'جرّب دلوقتي',
+  photoRemove: 'شيلها',
+  batchReread: 'اقرأ الصور تاني',
   jobRetry: 'جرّب تاني',
   debugLogSend: '⚑ ابعت سجل القراية',
   debugLogSent: '⚑ السجل اتبعت ✓',
@@ -323,7 +325,7 @@ export const AR = {
   // ═══ D20 — شاشة مراجعة كشف الحساب ═══
   batchCount: (n, total) => `${n} من ${total} هتتسجل`,
   batchAll: 'اختار الكل',
-  batchNone: 'شيل الكل',
+  batchNone: 'شيل العلامات',
   batchConfirm: (n) => `✓ سجّل ${n} ${n === 1 ? 'حاجة' : 'حاجات'}`,
   batchNothing: 'اختار اللي عايز تسجله',
   sortLabel: 'رتّب',

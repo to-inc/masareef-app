@@ -202,7 +202,11 @@ import { dirname, join } from 'node:path';
  * `photoSaved`, `photoSaveFailed`, `photoTryNow`); +1 names, +1 jsx-comments and
  * +1 chunk-A3 radius, all for the one new file components/PhotoActions.jsx.
  */
-const EXPECTED_ASSERTIONS = 7026;
+/**
+ * 7042 on 2026-10-31 (second pass). +16, all i18n, nothing vanished: the two new
+ * keys `photoRemove` and `batchReread` (the renamed `batchNone` costs nothing).
+ */
+const EXPECTED_ASSERTIONS = 7042;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

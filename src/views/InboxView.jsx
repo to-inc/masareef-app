@@ -20,7 +20,7 @@ import EditSheet from './EditSheet.jsx';
 import { jobLabel } from './ReceiptView.jsx';
 import { effectiveStage, jobMerchant } from '../state/receiptStages.js';
 import { thumbUrl, revokeThumb } from '../lib/jobThumb.js';
-import PhotoActions, { UNFINISHED } from '../components/PhotoActions.jsx';
+import PhotoActions from '../components/PhotoActions.jsx';
 import { cairoClock } from '../lib/dates.js';
 import { getDisplayCurrency } from '../state/display.js';
 import { outcomeForRemove } from '../state/removeOutcome.js';
@@ -754,8 +754,8 @@ function PhotoRow({ job, stage, onOpen }) {
       </span>
       {onOpen && <span aria-hidden style={{ color: C.muted }}>{DIR === 'rtl' ? '‹' : '›'}</span>}
     </button>
-    {/* Not read yet, stuck or failed: see it, save it, try now (2026-10-31). */}
-    {UNFINISHED.includes(stage) && <PhotoActions job={job} />}
+    {/* Every photo: see it, save it, try now / read again, remove (2026-10-31). */}
+    <PhotoActions job={job} stage={stage} />
     </div>
   );
 }

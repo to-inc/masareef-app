@@ -56,7 +56,7 @@ import BookView from './views/BookView.jsx';
 // their chunks, so offline they open the same; only the first download is lighter.
 const BatchReviewView = lazy(() => import('./views/BatchReviewView.jsx'));
 import * as receiptQueue from './state/receiptQueue.js';
-import { runner, onJobsChange, enqueueFiles, jobsChanged } from './state/receiptRunner.js';
+import { runner, onJobsChange, enqueueFiles, jobsChanged, rereadNow } from './state/receiptRunner.js';
 import { syncKept } from './state/keptLookalikes.js';
 import { setCategoryUse } from './state/catOrder.js';
 import { SettingsCog } from './views/SettingsCog.jsx';
@@ -429,6 +429,27 @@ export default function App() {
       setBatch({ jobs: [], settled: null });
       setBatchExpired(false);
       setEntryMode('keypad');
+    });
+  }, [pushDetail]);
+
+  /**
+   * READ THE STATEMENT AGAIN (Tarek, 2026-10-31). The review is cleared — a fresh
+   * reading gives fresh rows, and the old ones would sit beside them — and each of
+   * its photos the phone still holds goes back for a fresh read. He lands on his
+   * Photos list, where they show as being read and then «Ready — check it».
+   * Rows already logged stay logged; the new review marks them «Already in your book».
+   */
+  const rereadBatch = useCallback(async () => {
+    const hashes = new Set(((loadDraft() || {}).jobs || []).map((j) => j && j.sourceHash));
+    clearDraft();
+    const jobs = (await receiptQueue.all()).filter((j) => hashes.has(j.clientHash) || hashes.has(j.id));
+    for (const j of jobs) await rereadNow(j);
+    pushDetail(() => {
+      setBatch({ jobs: [], settled: null });
+      setBatchExpired(false);
+      setEntryMode('keypad');
+      setPhotosOpen(true);
+      setTab('inbox');
     });
   }, [pushDetail]);
 
@@ -1200,6 +1221,7 @@ export default function App() {
                       onConfirm={confirmBatch}
                       onResnap={resnapBatch}
                       onDiscard={discardBatch}
+                      onReread={rereadBatch}
                       onLeave={leaveBatch}
                       leftOut={batch.leftOut || {}}
                       onLeaveOut={(key, on) => setBatch((prev) => saveDraft({

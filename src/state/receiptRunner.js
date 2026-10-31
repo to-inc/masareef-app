@@ -37,6 +37,32 @@ export function jobsChanged() { listeners.forEach((fn) => fn()); }
  * and the worker starts. Within six hours the server answers a re-sent photo
  * from its cache, so this does not spend a second read.
  */
+/**
+ * READ IT AGAIN, FRESH (Tarek, 2026-10-31: «a button to reread the picture …
+ * in case there was an error»). The server keeps each photo's answer for six
+ * hours under its hash, so re-sending the same hash only returns the same answer.
+ * A re-read goes under a new hash (`<photo>~r<n>`), so the server reads the
+ * picture again — one vision call. The archive names files by the first 12
+ * characters, so the photo is still archived once.
+ */
+export async function rereadNow(job, { q = queue, w = runner() } = {}) {
+  const base = job.baseHash || job.clientHash || job.id;
+  const rereads = (job.rereads || 0) + 1;
+  w.cancel(job.id);
+  await q.update(job.id, { clientHash: `${base}~r${rereads}`, baseHash: base, rereads,
+    stage: 'queued', error: null, retryable: false, extraction: null, notExpenseReason: null, readingAt: null });
+  jobsChanged();
+  w.pump();
+}
+
+/** Take a photo off the phone's list, stopping its read if one is in flight. */
+export async function removeJob(job, { q = queue, w = runner() } = {}) {
+  w.cancel(job.id);
+  await q.remove(job.id);
+  jobsChanged();
+  w.pump();
+}
+
 export async function retryNow(job, { q = queue, w = runner() } = {}) {
   w.cancel(job.id);
   await q.update(job.id, { stage: 'queued', error: null, retryable: false, readingAt: null });

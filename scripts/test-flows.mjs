@@ -356,6 +356,58 @@ try {
     await ctx.close();
   }
 
+  // ═══ F9 — the statement review's ways out are at the TOP; a photo can be read again, fresh (2026-10-31)
+  {
+    const { ctx, page, errors } = await openApp({ theme: 'night' });
+    const seed = () => page.evaluate(async () => {
+      const q = await import('/masareef/src/state/receiptQueue.js');
+      for (const j of await q.all()) await q.remove(j.id);
+      for (let p = 0; p < 2; p++) {
+        const entries = Array.from({ length: 4 }, (_, i) => ({ date: `2026-10-${String(16 + i).padStart(2, '0')}`, amount: 4 + i + p, currency: 'EUR', merchant_display: `Shop ${p}-${i}`, row_status: 'completed', category: 'Groceries' }));
+        await q.enqueue({ id: `st${p}`, base64: 'AAAA', clientHash: `st${p}`, snapDate: '2026-10-20', stage: 'ready', queuedAt: Date.now() - 1000 * (10 - p),
+          extraction: { ok: true, extraction: { doc_type: 'transaction_list', is_receipt: false, entries }, entriesTotal: 4, defaultMethod: 'Visa' } });
+      }
+      (await import('/masareef/src/state/receiptRunner.js')).jobsChanged();
+    });
+    const openAll = async () => {
+      for (let p = 0; p < 2; p++) {
+        await page.evaluate(() => { const b = document.querySelector('[data-photos-bar] button[aria-expanded="false"]'); if (b) b.click(); });
+        await page.waitForTimeout(250);
+        await page.evaluate((k) => document.querySelectorAll('[data-photos-list] [data-photo-row] > button')[k].click(), p);
+        await page.waitForTimeout(900);
+        if (p === 0) await clickText(page, /^To review/), await page.waitForTimeout(500);
+      }
+    };
+    const jobsNow = () => page.evaluate(async () => (await (await import('/masareef/src/state/receiptQueue.js')).all()).map((j) => `${j.id}:${j.clientHash}:${j.stage}`));
+    await seed(); await page.waitForTimeout(300);
+    // ready rows on To review carry see · save · read again · remove
+    await page.evaluate(() => { const b = document.querySelector('[data-photos-bar] button[aria-expanded="false"]'); if (b) b.click(); }); await page.waitForTimeout(300);
+    const readyRow = await page.$$eval('[data-photos-list] [data-photo-row]', (rs) => rs.map((r) => ['[data-photo-peek]', '[data-photo-save]', '[data-photo-reread]', '[data-photo-remove]'].every((q) => r.querySelector(q))));
+    ok(readyRow.length === 2 && readyRow.every(Boolean), `F9.ready a photo ready to check shows see · save · read again · remove — ${JSON.stringify(readyRow)}`);
+    await openAll();
+    const top = await page.evaluate(() => { const d = document.querySelector('[data-batch-discard-top]'), r = document.querySelector('[data-batch-reread]');
+      const vis = (e) => { if (!e) return false; const b = e.getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight - 140; };
+      return { discard: vis(d), reread: vis(r), untick: [...document.querySelectorAll('button')].some((b) => b.innerText.trim() === 'Untick all') }; });
+    ok(top.discard && top.reread && top.untick, `F9.top «Discard this review» and «Read the photos again» are on screen without scrolling; «Clear all» now says «Untick all» — ${JSON.stringify(top)}`);
+    await page.click('[data-batch-reread]'); await page.waitForTimeout(400);
+    const afterReread = { draft: await page.evaluate(() => localStorage.getItem('masareef.batchDraft.v1')), jobs: await jobsNow(),
+      photosOpen: !!(await page.$('[data-photos-list]')) };
+    ok(afterReread.draft === null && afterReread.jobs.length === 2 && afterReread.jobs.every((j) => /^st\d:st\d~r1:/.test(j)) && afterReread.photosOpen,
+      `F9.reread «Read the photos again» clears the review and sends each photo under a fresh name, then shows the Photos list — ${JSON.stringify(afterReread)}`);
+    for (let i = 0; i < 30 && (await jobsNow()).some((j) => /:(queued|reading)$/.test(j)); i++) await page.waitForTimeout(200);
+    const read = await jobsNow();
+    ok(read.every((j) => !/:(queued|reading)$/.test(j)), `F9.read both photos were read again (the mock answered) — ${JSON.stringify(read)}`);
+    await page.evaluate(() => document.querySelector('[data-photos-list] [data-photo-row] [data-photo-remove]').click()); await page.waitForTimeout(400);
+    ok((await jobsNow()).length === 1, `F9.remove «Remove» takes a photo off the list — ${JSON.stringify(await jobsNow())}`);
+    // the top Discard clears a review and its photos too
+    await seed(); await page.waitForTimeout(300); await openAll();
+    await page.click('[data-batch-discard-top]'); await page.waitForTimeout(600);
+    ok(await page.evaluate(() => localStorage.getItem('masareef.batchDraft.v1')) === null && (await jobsNow()).length === 0,
+      `F9.discard the top Discard clears the review and its photos — ${JSON.stringify(await jobsNow())}`);
+    ok(errors.length === 0, `F9.clean no script errors ${errors.slice(0, 2).join(' | ')}`);
+    await ctx.close();
+  }
+
   // ═══ F6 — a failed download says so instead of a blank screen
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
