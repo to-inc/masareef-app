@@ -23,7 +23,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { readFile } from 'node:fs/promises';
 import {
-  isLogWindow, hasLog, shouldShowLog, isDismissed, dismiss, LOG_WINDOW_DAYS,
+  isLogWindow, hasLog, shouldShowLog, isDismissed, dismiss, LOG_WINDOW_DAYS, logFigures,
 } from '../src/state/logCard.js';
 import { monthByTab, categoryLabel } from '../src/i18n/strings.js';
 
@@ -130,6 +130,8 @@ try {
   const LogCard = (await vite.ssrLoadModule('/src/components/LogCard.jsx')).default;
   const render = (prevLog, todayCairo) =>
     renderToStaticMarkup(createElement(LogCard, { prevLog, todayCairo }));
+  const renderWith = (prevLog, prevForeign, prevHomeAgg, displayCurrency) =>
+    renderToStaticMarkup(createElement(LogCard, { prevLog, todayCairo: DAY1, prevForeign, prevHomeAgg, displayCurrency }));
   const text = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
   const card = render(LOG, DAY1);
@@ -244,6 +246,44 @@ try {
     ok(!/Most visited|أكتر مكان/.test(omitted), '…and simply omits the line');
   }
 
+  /**
+   * ——————————————————————— A MONTH SPENT IN EUROS (Tarek, 2026-11-01).
+   *
+   * His all-euro October closed as «0 EGP»: the card read `prevLog.total`, the
+   * POUND sum, and nothing else. The money was on the wire in the same `month`
+   * payload — `prevForeign` per currency, `prevHomeAgg` in the book's unit.
+   */
+  {
+    const home = (native, converted, unstamped) => ({
+      currency: 'EUR', total: native + converted,
+      native: { count: 1, total: native }, converted: { count: 1, total: converted },
+      unstamped: { count: 0, total: null, byCurrency: unstamped || {} },
+    });
+    const EURO_OCT = { name: 'Oct', total: 0, top: [], unpriced: 0, undated: 0 };
+    const euroOnly = text(renderWith(EURO_OCT, { count: 12, byCurrency: { EUR: 812.4 } }, home(812.4, 0), 'EUR'));
+    ok(euroOnly.includes('812.4') && euroOnly.includes('€'), 'an all-euro month leads with its euros, not «0 EGP»');
+    ok(!/جنيه|EGP/.test(euroOnly), 'and says nothing about pounds it never spent');
+    ok(!euroOnly.includes('كل عملة لوحدها'), 'one currency needs no per-currency list');
+
+    const MIXED = { ...EURO_OCT, total: 5000, top: [{ name: 'Groceries', amount: 5000 }] };
+    const mixed = text(renderWith(MIXED, { count: 9, byCurrency: { EUR: 800, SEK: 450 } },
+      home(800, 95.5, { SEK: 450 }), 'EUR'));
+    ok(mixed.includes('كل عملة لوحدها') && mixed.includes('800.00 €') && mixed.includes('5,000.00') && mixed.includes('450.00 SEK'),
+      'several currencies: each one\'s own total');
+    ok(mixed.includes('الكل بالـ€') && mixed.includes('+ 95.50 €') && mixed.includes('895.50 €'),
+      'then in euros: what was paid in euros, the rest converted, and the total');
+    ok(mixed.includes('450.00 SEK') && mixed.includes('لسه متحوّلتش'), 'money no rate covers is said beside the total, not added in');
+    ok(!mixed.includes(categoryLabel('Groceries')), 'pound-ranked top categories are hidden when pounds are not the whole month');
+
+    const f = logFigures(MIXED, { byCurrency: { EUR: 800, SEK: 450 } }, home(800, 95.5, { SEK: 450 }), 'EUR');
+    eq(f.each.map((l) => l.currency).join(','), 'EUR,EGP,SEK', 'the reading unit is listed first, then pounds, then the rest');
+    eq(f.hero.amount, 895.5, 'the hero is the all-in euro total');
+    // Reading in pounds on a euro book: no pound conversion exists, so the hero is the pound sum and the list carries the rest.
+    eq(logFigures(MIXED, { byCurrency: { EUR: 800 } }, home(800, 0), 'EGP').hero.currency, 'EGP', 'read in pounds, the hero stays in pounds');
+    // Dad's book (no home unit): unchanged — pounds lead, foreign listed.
+    eq(logFigures(LOG, { byCurrency: {} }, null, 'EGP').each.length, 0, 'a pounds-only month shows no list');
+    ok(logFigures(LOG, { byCurrency: {} }, null, 'EGP').egpOnly, 'and keeps its top categories');
+  }
 
 } finally {
   await vite.close();

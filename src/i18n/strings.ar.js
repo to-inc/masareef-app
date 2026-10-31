@@ -301,6 +301,12 @@ export const AR = {
   // A8 اتشال؛ ده اللي مكانه — حقيقة من دفتره، مرة في الشهر، مش سؤال.
   logMostOften: (name, times) => `أكتر مكان رحته: ${name} — ${times} مرات`,
   logSignoff: 'كل قرش له سطر. تمام يا فندم.',
+  // الشهر المقفول بكل عملة لوحدها، وبعدين مجموع بالعملة اللي بيقرا بيها (2026-11-01).
+  logEach: 'كل عملة لوحدها',
+  logInHome: (unit) => `الكل بالـ${unit}`,
+  logNative: (unit) => `اتدفع بالـ${unit}`,
+  logConverted: 'الباقي متحوّل ≈',
+  logTotal: 'الإجمالي',
   // Quiet, and final for this month. Not "close", not "×" — an acknowledgement.
   logDismiss: 'تمام',
 

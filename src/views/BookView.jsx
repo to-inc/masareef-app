@@ -661,7 +661,9 @@ export default function BookView({
   return (
     <div>
       {/* The closed month, handed over on the first of the next one (W-6). */}
-      <LogCard prevLog={data.month && data.month.prevLog} todayCairo={today} />
+      <LogCard prevLog={data.month && data.month.prevLog} todayCairo={today}
+        prevForeign={data.month && data.month.prevForeign} prevHomeAgg={data.month && data.month.prevHomeAgg}
+        displayCurrency={displayCurrency} />
 
       {/* READING, SAID ON THE BOOK (usage audit 2026-10-20: To review was opened and left
           within a second, to check on a photo). While one is read, a quiet line here does it. */}

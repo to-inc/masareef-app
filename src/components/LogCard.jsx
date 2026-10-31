@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass } from '../theme.js';
-import { S, monthByTab, categoryLabel, CAPTAIN_INITIALS } from '../i18n/strings.js';
-import { money } from '../lib/format.js';
+import { S, monthByTab, categoryLabel, unitFor, CAPTAIN_INITIALS } from '../i18n/strings.js';
+import { money, money2 } from '../lib/format.js';
 import { LATIN } from './Primitives.jsx';
-import { shouldShowLog, isDismissed, dismiss } from '../state/logCard.js';
+import { shouldShowLog, isDismissed, dismiss, logFigures } from '../state/logCard.js';
 
 /**
  * «سجل القبطان» — the closed month, handed up (W-6, contract 06 §2.2).
@@ -23,7 +23,7 @@ import { shouldShowLog, isDismissed, dismiss } from '../state/logCard.js';
  * fetches. The card never makes a request of its own, so it cannot slow the one
  * thing this app exists to keep under five seconds.
  */
-export default function LogCard({ prevLog, todayCairo }) {
+export default function LogCard({ prevLog, todayCairo, prevForeign, prevHomeAgg, displayCurrency = 'EGP' }) {
   /**
    * Read once, at mount. Re-reading storage on every render would let a write
    * from another tab flip the card out mid-sentence; this way the only thing
@@ -34,6 +34,10 @@ export default function LogCard({ prevLog, todayCairo }) {
   if (!shouldShowLog(prevLog, todayCairo, gone)) return null;
 
   const line = { display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 8 };
+  const fig = logFigures(prevLog, prevForeign, prevHomeAgg, displayCurrency);
+  const num = { fontFamily: FONT_DISPLAY, fontSize: TYPE.body, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS };
+  const sub = { fontSize: TYPE.label, fontWeight: 700, color: C.muted, marginTop: 14 };
+  const amt = (l) => `${money2(l.amount)} ${unitFor(l.currency)}`;
 
   return (
     <section
@@ -54,16 +58,54 @@ export default function LogCard({ prevLog, todayCairo }) {
         fontFamily: FONT_DISPLAY, fontSize: TYPE.hero, fontWeight: 650, color: C.ink,
         marginTop: 6, ...LATIN, ...NUMERALS,
       }}>
-        {money(prevLog.total)}
-        <span style={{ fontSize: 17, color: C.muted, fontWeight: 500 }}> {S.logCurrency}</span>
+        {money(fig.hero.amount)}
+        <span style={{ fontSize: 17, color: C.muted, fontWeight: 500 }}> {fig.hero.currency === 'EGP' ? S.logCurrency : unitFor(fig.hero.currency)}</span>
       </div>
+
+      {/* MORE THAN ONE CURRENCY: each on its own line, then the sum spelled out in
+          the unit he reads in — what was paid in it, the rest at the rate stamped
+          on each row, what no rate covers (beside, never added), the total. */}
+      {fig.each.length > 0 && (
+        <div data-log-each>
+          <div style={sub}>{S.logEach}</div>
+          {fig.each.map((l) => (
+            <div key={l.currency} style={line}><span style={num}>{amt(l)}</span></div>
+          ))}
+        </div>
+      )}
+      {fig.inHome && (
+        <div data-log-inhome>
+          <div style={sub}>{S.logInHome(unitFor(fig.inHome.currency))}</div>
+          <div style={line}>
+            <span style={{ fontSize: TYPE.body, color: C.ink }}>{S.logNative(unitFor(fig.inHome.currency))}</span>
+            <span style={num}>{amt({ amount: fig.inHome.native, currency: fig.inHome.currency })}</span>
+          </div>
+          {fig.inHome.converted > 0 && (
+            <div style={line}>
+              <span style={{ fontSize: TYPE.body, color: C.ink }}>{S.logConverted}</span>
+              <span style={num}>+ {amt({ amount: fig.inHome.converted, currency: fig.inHome.currency })}</span>
+            </div>
+          )}
+          <div style={{ ...line, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+            <span style={{ fontSize: TYPE.body, fontWeight: 700, color: C.ink }}>{S.logTotal}</span>
+            <span style={num}>{amt({ amount: fig.inHome.total, currency: fig.inHome.currency })}</span>
+          </div>
+        </div>
+      )}
+      {fig.unconverted.map((l) => (
+        <div key={`nc-${l.currency}`} style={{ fontSize: TYPE.label, color: C.muted, marginTop: 6 }}>
+          <b style={{ color: C.ink, ...LATIN }}>{amt(l)}</b>{' '}{S.notConverted}
+        </div>
+      ))}
 
       {/* At most three, already ranked and filtered by the server. An empty
           `top` renders nothing at all rather than an empty-state sentence — a
           month with no categorised spending has nothing to list, and saying so
-          would be filler. */}
+          would be filler. The server ranks them in POUNDS only, so in a month
+          with any other currency they are hidden rather than shown beside a
+          total they do not add up to (ranking in the home unit needs the server). */}
       <div style={{ marginTop: 14 }}>
-        {prevLog.top.map((c) => (
+        {fig.egpOnly && prevLog.top.map((c) => (
           <div key={c.name} style={line}>
             <span style={{ fontSize: TYPE.body, color: C.ink }} dir="auto">{categoryLabel(c.name)}</span>
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: TYPE.body, fontWeight: 650, color: C.ink, ...LATIN, ...NUMERALS }}>

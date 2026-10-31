@@ -284,7 +284,13 @@ export const EN = {
   // A8 was removed; this took its place — a fact from his own book, once a
   // month, asking nothing.
   logMostOften: (name, times) => `Most visited: ${name} — ${times} times`,
-  logSignoff: 'Every pound has its line. All well, Captain.',
+  logSignoff: 'Every expense has its line. All well, Captain.',
+  // The closed month in each currency, then summed in his reading unit (2026-11-01).
+  logEach: 'In each currency',
+  logInHome: (unit) => `All of it in ${unit}`,
+  logNative: (unit) => `Paid in ${unit}`,
+  logConverted: 'The rest, converted ≈',
+  logTotal: 'Total',
   logDismiss: 'Very good',
 
   // ——— summary

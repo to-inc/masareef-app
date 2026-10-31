@@ -78,3 +78,63 @@ export function dismiss(todayCairo, storage) {
 export function shouldShowLog(prevLog, todayCairo, dismissed) {
   return hasLog(prevLog) && isLogWindow(todayCairo) && !dismissed;
 }
+
+/**
+ * WHAT THE CLOSED MONTH CAME TO, IN EVERY CURRENCY IT WAS SPENT IN (Tarek,
+ * 2026-11-01: his all-euro October closed as «0 EGP»).
+ *
+ * `prevLog.total` is the POUND sum only — the server's month totals leave foreign
+ * money out by design (D8) — so a euro book's month read zero. The money is on
+ * the wire already, in the same `month` payload: `prevForeign` sums every
+ * non-pound currency, and `prevHomeAgg` is the closed month in the book's own
+ * unit (native + converted at the rate stamped on each row; `unstamped` is what
+ * no rate covers). Nothing here converts anything — it selects.
+ *
+ *   each      one line per currency, the home unit first; [] when only one
+ *             currency was used (the hero already says it).
+ *   hero      the figure the card leads with: the all-in home total when he
+ *             reads in the book's unit, else his reading unit's own sum, else pounds.
+ *   inHome    null, or { currency, native, converted, unconverted[], total } —
+ *             the sum spelled out, shown only when more than one currency was used.
+ *   unconverted  money in the month no stamped rate covers — said beside the
+ *             home hero even when it is the only other currency, never added in.
+ *   egpOnly   true when the pound sum is the whole month, so the server's
+ *             pound-ranked top categories are honest to show.
+ */
+export function logFigures(prevLog, prevForeign, prevHomeAgg, readingCurrency) {
+  const sums = {};
+  if (prevLog.total > 0) sums.EGP = prevLog.total;
+  const by = (prevForeign && prevForeign.byCurrency) || {};
+  for (const c of Object.keys(by)) {
+    const a = Number(by[c]);
+    if (isFinite(a) && a > 0) sums[c] = (sums[c] || 0) + a;
+  }
+  const home = prevHomeAgg && prevHomeAgg.currency && isFinite(Number(prevHomeAgg.total))
+    && prevHomeAgg.currency === readingCurrency ? prevHomeAgg : null;
+  const first = home ? home.currency : readingCurrency;
+  const each = Object.keys(sums)
+    .sort((a, b) => (a === first ? -1 : b === first ? 1 : a === 'EGP' ? -1 : b === 'EGP' ? 1 : a < b ? -1 : 1))
+    .map((c) => ({ currency: c, amount: sums[c] }));
+  const egpOnly = !Object.keys(sums).some((c) => c !== 'EGP');
+  const several = each.length > 1;
+
+  let hero;
+  if (home) hero = { currency: home.currency, amount: Number(home.total) };
+  else if (sums[readingCurrency] != null) hero = { currency: readingCurrency, amount: sums[readingCurrency] };
+  else hero = { currency: 'EGP', amount: prevLog.total };
+
+  const unconverted = home
+    ? Object.keys((home.unstamped && home.unstamped.byCurrency) || {})
+      .map((c) => ({ currency: c, amount: Number(home.unstamped.byCurrency[c]) }))
+      .filter((l) => isFinite(l.amount) && l.amount > 0)
+    : [];
+  const inHome = home && several ? {
+    currency: home.currency,
+    native: Number((home.native && home.native.total) || 0),
+    converted: Number((home.converted && home.converted.total) || 0),
+    unconverted,
+    total: Number(home.total),
+  } : null;
+
+  return { hero, each: several ? each : [], inHome, unconverted, egpOnly };
+}
