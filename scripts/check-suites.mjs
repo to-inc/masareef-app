@@ -222,7 +222,12 @@ import { dirname, join } from 'node:path';
  * +1 names and +1 jsx-comment for the new ActionStrip.jsx. Checked per suite against the stashed tree;
  * chips, refactor-ui and p8 re-cut to the strip without losing an assertion.
  */
-const EXPECTED_ASSERTIONS = 7156;
+/**
+ * 2026-11-01 · 7156 → 7182, PWA life audit: +9 pwa-life (new suite: storage kept, the stalled
+ * photo reported, update check on return, one statement batch id), +16 i18n (checkKeptOk/No),
+ * +1 names (storageKeep.js). Checked per suite against the stashed tree; nothing vanished.
+ */
+const EXPECTED_ASSERTIONS = 7182;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -294,7 +299,7 @@ const SUITES = [
   'test-chunk-u1.mjs',
   'test-chunk-u4.mjs',
   'test-chunk-s2.mjs',
-  'test-chunk-u3.mjs', 'test-chunk-pred.mjs', 'test-chunk-home-series.mjs', 'test-refactor-ui.mjs', 'test-usage.mjs', 'test-night.mjs',
+  'test-chunk-u3.mjs', 'test-chunk-pred.mjs', 'test-chunk-home-series.mjs', 'test-refactor-ui.mjs', 'test-usage.mjs', 'test-night.mjs', 'test-pwa-life.mjs',
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));

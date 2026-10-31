@@ -544,6 +544,8 @@ export const EN = {
   checkOfflineMissing: 'No offline copy yet — open the app once with signal',
   checkStorage: (pct) => `Phone storage used by the app: ${pct}%`,
   checkFigures: (age) => `Figures last updated ${age} ago`,
+  checkKeptOk: 'The phone has agreed to keep what is waiting here',
+  checkKeptNo: 'The phone has not agreed to keep this app\'s data — waiting photos, unsent entries and the setup could be cleared if space runs short. Open it from the home-screen icon',
   checkUnreadable: 'Could not read this part of the phone',
   dayToday: 'Today',
   dayYesterday: 'Yesterday',

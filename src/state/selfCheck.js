@@ -11,6 +11,7 @@ import * as outbox from './outbox.js';
 import { loadSnapshot } from './cache.js';
 import { loadDraft, mergeJobs, unsettledCount } from './batchDraft.js';
 import { cairoParts } from '../lib/dates.js';
+import { storageKept } from './storageKeep.js';
 
 const HOUR = 3600 * 1000;
 
@@ -23,7 +24,7 @@ export async function gatherFacts(now = Date.now()) {
   } catch (err) {
     facts.server = { ok: false, ms: Date.now() - t0, error: String(err && err.message || err) };
   }
-  try { facts.photos = (await receiptQueue.all()).map((j) => ({ stage: j.stage, queuedAt: j.queuedAt })); } catch { facts.photos = null; }
+  try { facts.photos = photoFacts(await receiptQueue.all()); } catch { facts.photos = null; }
   try { facts.outbox = outbox.all().map((i) => ({ queuedAt: i.queuedAt, blocked: !!i.blocked })); } catch { facts.outbox = null; }
   try {
     const d = loadDraft();
@@ -34,9 +35,13 @@ export async function gatherFacts(now = Date.now()) {
     const e = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
     facts.storage = e && e.quota ? { used: e.usage, quota: e.quota } : null;
   } catch { facts.storage = null; }
+  facts.kept = await storageKept();
   try { const s = loadSnapshot(); facts.figuresAt = s ? s.savedAt : null; } catch { facts.figuresAt = null; }
   return facts;
 }
+
+/** What `judge` reads of each photo. The error travels too: a stalled read is `failed` + `stalled`. */
+export const photoFacts = (jobs) => jobs.map((j) => ({ stage: j.stage, queuedAt: j.queuedAt, error: j.error || null }));
 
 const ago = (ms) => (ms < HOUR ? `${Math.max(1, Math.round(ms / 60000))} min` : ms < 48 * HOUR ? `${Math.round(ms / HOUR)} h` : `${Math.round(ms / (24 * HOUR))} d`);
 
@@ -79,6 +84,10 @@ export function judge(f, S) {
     const pct = Math.round((100 * f.storage.used) / f.storage.quota);
     add('storage', pct > 80 ? 'warn' : 'ok', S.checkStorage(pct));
   }
+
+  // Not kept: iOS may clear the phone's copy (waiting photos, unsent entries, the setup) when space runs short.
+  if (f.kept === true) add('kept', 'ok', S.checkKeptOk);
+  else if (f.kept === false) add('kept', 'warn', S.checkKeptNo);
 
   if (f.figuresAt) add('figures', f.now - f.figuresAt > 24 * HOUR ? 'warn' : 'ok', S.checkFigures(ago(f.now - f.figuresAt)));
 

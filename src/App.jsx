@@ -359,9 +359,17 @@ export default function App() {
   const confirmBatch = useCallback(async (chosen) => {
     if (!chosen || !chosen.length) return;
     setBatchBusy(true);
+    /**
+     * ONE ID PER DRAFT (PWA audit 2026-11-01). A tap after a send whose answer was
+     * lost (both attempts timed out, the rows landed) must replay as `duplicate`,
+     * not as a fresh batch that asks him about every row he already logged. The
+     * id lives in the draft; a re-read of a photo saves a new draft without it.
+     */
+    const batchClientId = batch.batchClientId || newClientId();
+    if (!batch.batchClientId) setBatch((prev) => saveDraft({ ...prev, batchClientId }));
     try {
       const res = await batchConfirm({
-        batchClientId: newClientId(),
+        batchClientId,
         clientHash: (batch.jobs && batch.jobs[0] && batch.jobs[0].sourceHash) || '',
         rows: chosen,
       });
@@ -408,7 +416,7 @@ export default function App() {
     } finally {
       setBatchBusy(false);
     }
-  }, [batch.jobs]);
+  }, [batch.jobs, batch.batchClientId]);
 
   /**
    * LEAVING IS NOT DISCARDING. The draft stays exactly as it is — including the

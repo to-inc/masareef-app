@@ -4,6 +4,10 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import './styles.css';
 import { NIGHT, C, RADIUS, themeChoice } from './theme.js';
 import { loadLocale } from './i18n/strings.js';
+import { keepStorage } from './state/storageKeep.js';
+
+// Ask iOS to keep what is only on the phone (state/storageKeep.js). Never awaited.
+keepStorage();
 
 /**
  * NIGHT (2026-10-18): the theme was decided in theme.js before anything rendered;
