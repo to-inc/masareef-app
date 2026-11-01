@@ -60,6 +60,7 @@ import { runner, onJobsChange, enqueueFiles, jobsChanged, rereadNow, onJobRemove
 import { syncKept } from './state/keptLookalikes.js';
 import { pickUpHeld } from './state/heldPhotos.js';
 import { setCategoryUse } from './state/catOrder.js';
+import { captureBack, photosShortcutTap } from './state/captureNav.js';
 import { SettingsCog } from './views/SettingsCog.jsx';
 const SettingsSheet = lazy(() => import('./views/SettingsSheet.jsx'));
 
@@ -102,6 +103,8 @@ export default function App() {
    * behind the sheet, and closing the sheet returns him to it.
    */
   const underTab = useRef('book');
+  // Which tab opened the capture screen now up, so ← returns there (captureNav.js).
+  const captureFrom = useRef(null);
   useEffect(() => { if (tab !== 'entry') underTab.current = tab; }, [tab]);
   const swipeY = useRef(null); // the sheet's swipe-down start (hooks stay above every early return)
   const update = useUpdatePrompt(); // v4 P8: a waiting build, applied only when he says
@@ -436,7 +439,13 @@ export default function App() {
    * «Done»; unwritten rows died with it.
    */
   const leaveBatch = useCallback(() => {
-    pushDetail(() => setEntryMode('keypad'));
+    const to = captureBack(captureFrom.current);
+    captureFrom.current = null;
+    pushDetail(() => {
+      setEntryMode('keypad');
+      if (to.photosOpen != null) setPhotosOpen(to.photosOpen);
+      setTab(to.tab);
+    });
   }, [pushDetail]);
 
   /**
@@ -992,6 +1001,8 @@ export default function App() {
       : tab === 'entry' ? entryMode : tab === 'book' ? bookScreen() : tab);
     if (dock) track('entry_open');
   }, [tab, entryMode, settingsOpen, needsSetup]);
+  // Any way back to the keypad ends the capture, so a later dictation's ← never inherits an old origin.
+  useEffect(() => { if (entryMode === 'keypad') captureFrom.current = null; }, [entryMode]);
   // Going to the Book folds the shortcut's list again (a receipt opened from it comes back to it open).
   useEffect(() => { if (tab === 'book') setPhotosOpen(false); }, [tab]);
   if (!booted) return null;
@@ -1007,8 +1018,8 @@ export default function App() {
   const closeEntry = () => setTab(underTab.current);
   // R9: which capture-flow screen is up (they are full screens, not the sheet).
   const captureMode = !needsSetup && tab === 'entry' && entryMode !== 'keypad' ? entryMode : null;
-  // ← keeps a statement's draft (leaveBatch); receipt and dictation return to the keypad sheet.
-  const leaveCapture = () => (captureMode === 'batch' ? leaveBatch() : pushDetail(() => setEntryMode('keypad')));
+  // ← keeps a statement's draft (leaveBatch) — and both go back to where the photo was opened (captureBack).
+  const leaveCapture = leaveBatch;
 
   // B5: the ground the header scrim dissolves into — the same condition the
   // shell's own background reads four lines below, so the strip can never
@@ -1147,7 +1158,11 @@ export default function App() {
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* R9: a capture screen's header is ← + its name only (G05–G07) — the title needs the room. */}
           {!needsSetup && !captureMode && <PhotosShortcut jobs={photoJobs} active={photosOpen && viewTab === 'inbox'}
-            onOpen={() => { setSettingsOpen(false); if (photosOpen && viewTab === 'inbox') setPhotosOpen(false); else { setPhotosOpen(true); setTab('inbox'); } }} />}
+            onOpen={() => {
+              const t = photosShortcutTap();
+              setSettingsOpen(false); setPhotosOpen(t.photosOpen); setTab(t.tab);
+              if (t.scroll) requestAnimationFrame(() => { const el = document.querySelector('[data-photos-bar]'); if (el) el.scrollIntoView({ block: 'start' }); });
+            }} />}
           {!needsSetup && !captureMode && <SettingsCog active={settingsOpen} onOpen={() => setSettingsOpen((o) => !o)} />}
           {!needsSetup && !captureMode && <RefreshButton state={reading > 0 ? 'busy' : refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
         </span>
@@ -1191,7 +1206,7 @@ export default function App() {
                   <InboxView
                     pending={data.pending} settled={settled}
                     photos={photoJobs} photosOpen={photosOpen} onPhotosToggle={() => setPhotosOpen((o) => !o)}
-                    onOpenPhoto={(job) => pushDetail(() => { setOpenJobId(job.id); setTab('entry'); setEntryMode('receipt'); })}
+                    onOpenPhoto={(job) => pushDetail(() => { captureFrom.current = 'inbox'; setOpenJobId(job.id); setTab('entry'); setEntryMode('receipt'); })}
                     onConfirm={confirmPending} onConfirmMany={confirmMany}
                     onEdited={refresh}
                   />
@@ -1285,7 +1300,7 @@ export default function App() {
                     unsettledBatch={unsettledCount({
                       rows: mergeJobs(batch.jobs), settled: batch.settled, leftOut: batch.leftOut,
                     })}
-                    onOpenBatch={() => pushDetail(() => { setEntryMode('batch'); setTab('entry'); })}
+                    onOpenBatch={() => pushDetail(() => { captureFrom.current = 'book'; setEntryMode('batch'); setTab('entry'); })}
                     onEdit={editRecent}
                     onRowRemoved={refresh}
                     onGoToInbox={() => setTab('inbox')}

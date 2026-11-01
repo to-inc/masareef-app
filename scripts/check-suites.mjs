@@ -237,11 +237,12 @@ import { dirname, join } from 'node:path';
  */
 // 7241 on 2026-11-01 (share-sheet photos): +7 test-held-photos, +1 test-names for the
 // new src/state/heldPhotos.js (80 → 81 measured against main in a stash).
-const EXPECTED_ASSERTIONS = 7331;
+const EXPECTED_ASSERTIONS = 7338;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
   'test-names.mjs',   // 2026-10-10: two crashes in one day from undefined names
+  'test-capture-nav.mjs', // 2026-11-02: ← returns where the photo came from; Photos only opens
   'test-format.mjs',
   'test-i18n.mjs',
   'test-refresh.mjs',
