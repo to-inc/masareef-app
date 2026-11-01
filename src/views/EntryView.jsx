@@ -319,7 +319,7 @@ export default function EntryView({
           «كل الأنواع» unfolds the full list below as a wrapped grid. */}
       <Rail role="group" aria-label={cat ? categoryLabel(cat) : S.entryNeedCategory} style={{ gap: 8, paddingBottom: 2, flexWrap: showAll ? 'wrap' : 'nowrap', flexShrink: 0 }}>
         {showAll && (
-          <CategoryShelves wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <CategoryShelves selected={cat} wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {(cats) => cats.map((c) => (
           <button
             key={c}

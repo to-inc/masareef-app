@@ -393,6 +393,25 @@ try {
     createElement(CategoryChips, { list: LIST.filter((c) => c !== 'Car'), selected: 'Car', onPick: () => {} })));
   ok(count(filtered) !== LIST.length,
     'negative control: a list with the selected chip removed does NOT pass the shape check');
+
+  // ——— FOLDERS (Tarek, 2026-11-01): most-used chips out, the rest in folders, one open at a time.
+  {
+    const { setCategoryUse } = await vite.ssrLoadModule('/src/state/catOrder.js');
+    const { default: Folders } = await vite.ssrLoadModule('/src/components/CategoryShelves.jsx');
+    const draw = (selected) => renderToStaticMarkup(createElement(Folders, { selected, wrap: {} },
+      (cats) => cats.map((c) => createElement('i', { key: c, 'data-c': c }))));
+    setCategoryUse({ 'Eating out': 50, Transportation: 30, Groceries: 28, 'Personal expenses': 10 });
+    const closed = draw(null);
+    const shown = (h) => (h.match(/data-c="[^"]+"/g) || []).map((m) => m.slice(8, -1));
+    eq(shown(closed).join('|'), 'Eating out|Transportation|Groceries|Personal expenses', 'FOLD.1 closed: only his four most-used show as chips');
+    ok((closed.match(/data-folder=/g) || []).length >= 6 && !/data-open/.test(closed), 'FOLD.2 …and every other group is a closed folder');
+    ok(!/\d+ categor/i.test(closed), 'FOLD.3 folders carry no category counts');
+    const withCar = draw('Car');
+    ok(/data-folder="around" data-open/.test(withCar) && shown(withCar).includes('Car') && (withCar.match(/data-open/g) || []).length === 1,
+      'FOLD.4 the folder holding the chosen category starts open, and it is the only open one');
+    setCategoryUse(null);
+    ok(!/data-folder/.test(draw(null)), 'FOLD.5 Dad\'s book: no folders, the plain list');
+  }
 } finally {
   await vite.close();
 }

@@ -38,7 +38,7 @@ export const EN = {
   inboxOldHide: 'Close',
   more: 'More categories…',
   // Shelf headings of the full category list (components/CategoryShelves.jsx).
-  shelf: (k) => ({ top: 'Most used', food: 'Food', home: 'Home & bills', around: 'Getting around', self: 'Health & self', free: 'Free time & clubs', giving: 'Giving', work: 'Work', pay: 'Payments & taxes', other: 'Other' })[k] || 'Other',
+  shelf: (k) => ({ top: 'Most used', more: 'More', food: 'Food', home: 'Home & bills', around: 'Getting around', self: 'Health & self', free: 'Free time & clubs', giving: 'Giving', work: 'Work', pay: 'Payments & taxes', other: 'Other' })[k] || 'Other',
   // The button that settles every row we already know, in one tap (M4).
   travel: '✈ travel',
 
@@ -269,6 +269,11 @@ export const EN = {
   // The date cell of some row that month cannot be read, so we cannot tell
   // whether it is this one. Said plainly; it never blocks anything.
   receiptDupUndated: 'One expense that month has no readable date — it may be this one.',
+  treatAsk: 'I paid for someone else too',
+  treatWho: 'Who?',
+  meetWith: 'Who was it with?',
+  meetFor: 'What was it for?',
+  meetForHint: 'e.g. OT Dent planning',
   receiptSaveAnyway: 'Log it anyway',
 
   receiptQueuedTitle: 'The photo is saved',

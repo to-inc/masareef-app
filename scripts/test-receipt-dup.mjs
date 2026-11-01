@@ -203,6 +203,23 @@ try {
       ok(!/data-receipt-remove/.test(typed), 'DUP.R2 a card with no twin shows no remove button');
       const noJob = dupCard(null);
       ok(!/data-receipt-remove/.test(noJob) && noJob.includes(S.receiptSaveAnyway), 'DUP.R3 with no photo to remove, the card keeps «Log it anyway» alone'); }
+    // Who a meal or a meeting was with (2026-11-01, Categories board).
+    { const { describe } = await import('../src/state/people.js');
+      eq(describe('Ravintola Villa Nepal', 'Eating out', { treated: ' Ahmed ' }), 'Ravintola Villa Nepal · treated Ahmed', 'PPL.1 a treat names who, after the shop');
+      eq(describe('Pompier Albertinkatu', 'Business meetings', { meetWith: 'Omar Abdel Aziz', meetFor: 'OT Dent planning' }),
+        'Pompier Albertinkatu · with Omar Abdel Aziz · OT Dent planning', 'PPL.2 a meeting names who and what for');
+      eq(describe('Pompier', 'Business meetings', { meetWith: 'Omar' }), 'Pompier · with Omar', 'PPL.3 «what for» is optional');
+      eq(describe('K-market', 'Groceries', { treated: 'Ahmed', meetWith: 'Omar' }), 'K-market', 'PPL.4 other categories keep the plain shop name');
+      eq(describe('', 'Eating out', {}), 'Eating out', 'PPL.5 no shop and no name: the category, as before');
+      eq(describe('A · B', 'Eating out', { treated: 'x · y' }), 'A - B · treated x - y', 'PPL.6 a typed «·» cannot fake a separator');
+      const meal = (cur) => renderToStaticMarkup(createElement(ReceiptView, { onSaved() {}, onManual() {}, onBatch() {}, bookCurrency: cur,
+        initialReview: { extraction: ex('2026-10-29'), dateStr: '29/10/2026', category: 'Eating out' } }));
+      ok(/data-treat/.test(meal('EUR')) && meal('EUR').includes(S.treatAsk), 'PPL.7 Eating out on his book offers «I paid for someone else too»');
+      ok(!/data-treat/.test(meal('EGP')), 'PPL.8 Dad\'s book does not get the switch');
+      const meet = renderToStaticMarkup(createElement(ReceiptView, { onSaved() {}, onManual() {}, onBatch() {}, bookCurrency: 'EUR',
+        initialReview: { extraction: ex('2026-09-22'), dateStr: '22/9/2026', category: 'Business meetings' } }));
+      ok(/data-meeting/.test(meet) && meet.includes(S.meetWith) && meet.includes(S.meetFor) && saveOff(meet),
+        'PPL.9 Business meetings asks who and what for, and Log it waits for «who»'); }
     const { dmyToIso, isoToDmy } = await import('../src/lib/dates.js');
     ok(dmyToIso('4/9/2026') === '2026-09-04' && isoToDmy(dmyToIso('4/9/2026')) === '4/9/2026' && dmyToIso('') === '',
       'E012.6 the picker round-trips his d/m/yyyy exactly');

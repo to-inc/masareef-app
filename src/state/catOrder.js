@@ -21,7 +21,7 @@ const SHELVES = [
   ['self', ['Medical', 'Personal expenses', 'Sports']],
   ['free', ['Leisure', 'Hobbies', 'Vacations', 'Madinety club', 'Shams club', 'Officers club']],
   ['giving', ['Gifts', 'Donations', 'fara7']],
-  ['work', ['Science Pitchers', 'HYS', 'Team']],
+  ['work', ['Business meetings', 'Science Pitchers', 'HYS', 'Team']],
   ['pay', ['InstaPay - Services', 'InstaPay - Purchases', 'Taxes and fines']],
 ];
 const KIN = SHELVES.flatMap(([, cs]) => cs);

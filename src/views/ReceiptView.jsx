@@ -19,6 +19,7 @@ import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress, CameraIco
 import PhotoPeek from '../components/PhotoPeek.jsx';
 import CategorySign from '../components/CategorySign.jsx';
 import CategoryShelves from '../components/CategoryShelves.jsx';
+import { describe, MEAL, MEETING } from '../state/people.js';
 import PhotoActions from '../components/PhotoActions.jsx';
 import ActionStrip from '../components/ActionStrip.jsx';
 import { expectedReadMs } from '../state/readTimes.js';
@@ -93,6 +94,9 @@ export default function ReceiptView({
   const [category, setCategory] = useState(initialReview ? (initialReview.category || null) : null);
   const [showAllCats, setShowAllCats] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Who a meal or meeting was with (state/people.js): written into the description.
+  const [treat, setTreat] = useState(false);
+  const [people, setPeople] = useState({ treated: '', meetWith: '', meetFor: '' });
 
   const fileRef = useRef(null);
   const slowTimer = useRef(null);
@@ -119,6 +123,7 @@ export default function ReceiptView({
     setDupUndated(false);
     setOverrideDup(false); setAmount(''); setMerchant(''); setDateStr('');
     setMethod(DEFAULT_METHOD); setPred(null); setCategory(null); setShowAllCats(false); setCurPick(null);
+    setTreat(false); setPeople({ treated: '', meetWith: '', meetFor: '' });
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -359,7 +364,7 @@ export default function ReceiptView({
       currency: currencyOf(),
       method,
       category,
-      description: merchant || category,
+      description: describe(merchant, category, treat ? people : { ...people, treated: '' }),
       merchantLatin: extraction?.merchant_latin || '',
       dateStr,
     };
@@ -537,7 +542,8 @@ export default function ReceiptView({
     const noDate = !DMY_OK(dateStr);
     const lowDate = extraction.date_confidence === 'low' || noDate;
     const anyLow = lowAmount || lowMerchant || lowDate;
-    const ready = Number(normalizeDigits(amount)) > 0 && !!category && !noDate && !saving;
+    const ready = Number(normalizeDigits(amount)) > 0 && !!category && !noDate && !saving
+      && (category !== MEETING || !!people.meetWith.trim());   // a meeting names who it was with
     const blockedByDup = isBlocked(dup, overrideDup);
 
     return (
@@ -669,7 +675,7 @@ export default function ReceiptView({
           <Field label={S.receiptDate} editable={lowDate}>
             {lowDate ? (
               <>
-                <DateField value={dateStr} onChange={setDateStr} style={inputStyle} invalid={noDate} />
+                <DateField value={dateStr} onChange={setDateStr} style={{ ...inputStyle, width: 'auto', minWidth: 190, fontSize: 18 }} invalid={noDate} />
                 {noDate && (
                   <div style={{ fontSize: TYPE.label, color: C.conflictInk, marginTop: 6 }}>{S.receiptDateNeeded}</div>
                 )}
@@ -767,7 +773,7 @@ export default function ReceiptView({
             the save button's blue it read as the save. «More» opens the full list. */}
         {showAllCats ? (
           <div style={{ marginTop: 2 }}>
-            <CategoryShelves wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <CategoryShelves selected={category} wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {(cats) => <CategoryChips list={cats} float={false} selected={category} onPick={(c) => setCategory(c)} />}
             </CategoryShelves>
           </div>
@@ -785,6 +791,32 @@ export default function ReceiptView({
             </button>
           )}
         </div>
+        )}
+
+        {/* WHO WAS IT WITH (Tarek, 2026-11-01, Categories board). Eating out gets a switch,
+            off by default, on his book only; Business meetings always asks, «who» required. */}
+        {category === MEAL && bookCurrency !== 'EGP' && (
+          <div data-treat style={{ ...glass('card'), padding: '6px 14px 10px', marginTop: 12 }}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: TAP, fontWeight: 600, fontSize: TYPE.body }}>
+              <span>{S.treatAsk}</span>
+              <input id="treat-on" type="checkbox" switch="" checked={treat} onChange={(e) => setTreat(e.target.checked)}
+                style={{ width: 22, height: 22, accentColor: C.harbor }} />
+            </label>
+            {treat && (
+              <input id="treat-who" dir="auto" value={people.treated} placeholder={S.treatWho} aria-label={S.treatWho}
+                onChange={(e) => setPeople({ ...people, treated: e.target.value })} style={{ ...inputStyle, fontSize: 17 }} />
+            )}
+          </div>
+        )}
+        {category === MEETING && (
+          <div data-meeting style={{ ...glass('card'), padding: '10px 14px 12px', marginTop: 12 }}>
+            <label htmlFor="meet-with" style={{ fontSize: TYPE.label, fontWeight: 700 }}>{S.meetWith}</label>
+            <input id="meet-with" dir="auto" value={people.meetWith}
+              onChange={(e) => setPeople({ ...people, meetWith: e.target.value })} style={{ ...inputStyle, fontSize: 17 }} />
+            <label htmlFor="meet-for" style={{ fontSize: TYPE.label, fontWeight: 700, display: 'block', marginTop: 10 }}>{S.meetFor}</label>
+            <input id="meet-for" dir="auto" value={people.meetFor} placeholder={S.meetForHint}
+              onChange={(e) => setPeople({ ...people, meetFor: e.target.value })} style={{ ...inputStyle, fontSize: 17 }} />
+          </div>
         )}
 
         {/* ALREADY IN THE BOOK → THE PHOTO CAN GO (Tarek, 2026-11-01: «it might as well make me a

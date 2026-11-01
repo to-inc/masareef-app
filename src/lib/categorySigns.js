@@ -15,7 +15,7 @@ export const SIGN = {
   Leisure: ['sun', 'out'], Sports: ['ball', 'out'], Hobbies: ['brush', 'out'],
   Medical: ['cross', 'care'], Donations: ['heart', 'care'],
   'InstaPay - Services': ['swap', 'care'], 'InstaPay - Purchases': ['swap', 'care'],
-  'Science Pitchers': ['people', 'care'], HYS: ['people', 'care'], Team: ['people', 'care'],
+  'Business meetings': ['case', 'care'], 'Science Pitchers': ['people', 'care'], HYS: ['people', 'care'], Team: ['people', 'care'],
 };
 
 /** The [picture, family] for a category, or null when none is drawn. */

@@ -845,7 +845,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
                 */}
               {/* The full list unfolds on shelves (2026-11-01); collapsed, the short list below. */}
               {catsOpen && (
-                <CategoryShelves wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <CategoryShelves selected={category} wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {(cats) => cats.map((c) => (
                 <button
                   key={c} className="catchip" onClick={() => (logged ? onFixEntry(c) : onPick(c))} disabled={logged && entryNote === 'saving'}
