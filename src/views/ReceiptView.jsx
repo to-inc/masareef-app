@@ -73,11 +73,11 @@ export default function ReceiptView({
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingCount, setPendingCount] = useState(0);
   const [jobs, setJobs] = useState([]);
-  const [reviewingId, setReviewingId] = useState(null);
+  const [reviewingId, setReviewingId] = useState(initialReview ? (initialReview.jobId ?? null) : null);
 
   const [shot, setShot] = useState(null);          // { base64, clientHash, snapDate }
   const [extraction, setExtraction] = useState(initialReview ? initialReview.extraction : null);
-  const [dup, setDup] = useState({ sms: false, photo: false, book: null });
+  const [dup, setDup] = useState(initialReview && initialReview.res ? dupState(initialReview.res) : { sms: false, photo: false, book: null });
   const [dupUndated, setDupUndated] = useState(false);
   const [overrideDup, setOverrideDup] = useState(false);
 
@@ -777,7 +777,23 @@ export default function ReceiptView({
           )}
         </div>
 
-        {blockedByDup ? (
+        {/* ALREADY IN THE BOOK → THE PHOTO CAN GO (Tarek, 2026-11-01: «it might as well make me a
+            little button saying Delete photo»). A twin is the likely case, so removing the photo is
+            the strong button and «Log it anyway» steps back to a quiet one. Remove offers Undo
+            (removeJob). Only for a photo job: there is nothing to remove otherwise. */}
+        {blockedByDup && reviewingId ? (
+          <>
+            <button data-receipt-remove className="bigbtn"
+              onClick={() => cancelJob(jobs.find((j) => j.id === reviewingId) || { id: reviewingId })}
+              style={{ ...primaryBtn, marginTop: 16, width: '100%' }}>
+              {S.jobRemoveTitle}
+            </button>
+            <button data-receipt-anyway className="catchip" onClick={() => setOverrideDup(true)}
+              style={{ width: '100%', marginTop: 4, minHeight: TAP, background: 'transparent', color: C.harborInk, fontSize: TYPE.body, fontWeight: 600 }}>
+              {S.receiptSaveAnyway}
+            </button>
+          </>
+        ) : blockedByDup ? (
           <button className="bigbtn" onClick={() => setOverrideDup(true)}
             style={{ ...primaryBtn, marginTop: 16, width: '100%' }}>
             {S.receiptSaveAnyway}

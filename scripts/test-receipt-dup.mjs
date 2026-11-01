@@ -192,6 +192,17 @@ try {
         initialReview: { extraction: { ...ex('2026-10-14'), is_pending: true }, dateStr: '14/10/2026', category: 'Eating out' } }));
       ok(/data-pending-note/.test(pendingCard) && !/data-pending-note/.test(typed) && !saveOff(pendingCard),
         'E012.7 a PENDING payment reads as a normal card with a «still pending» line — and Log it stays open'); }
+    // A photo whose twin is already in the book can be removed from the card itself (2026-11-01).
+    { const twin = { dupBook: { match: { date: '27/10/2026', description: 'K-supermarket Tripla', amount: 101.67, currency: 'EUR', method: 'Visa' }, count: 1 } };
+      const dupCard = (jobId) => renderToStaticMarkup(createElement(ReceiptView, {
+        onSaved() {}, onManual() {}, onBatch() {},
+        initialReview: { extraction: ex('2026-10-27'), dateStr: '27/10/2026', category: 'Groceries', res: twin, jobId } }));
+      const withJob = dupCard('job-1');
+      ok(withJob.includes(S.receiptDupBook) && /data-receipt-remove/.test(withJob) && withJob.includes(S.jobRemoveTitle) && /data-receipt-anyway/.test(withJob),
+        'DUP.R1 a photo already in the book offers «Remove this photo», with «Log it anyway» beside it');
+      ok(!/data-receipt-remove/.test(typed), 'DUP.R2 a card with no twin shows no remove button');
+      const noJob = dupCard(null);
+      ok(!/data-receipt-remove/.test(noJob) && noJob.includes(S.receiptSaveAnyway), 'DUP.R3 with no photo to remove, the card keeps «Log it anyway» alone'); }
     const { dmyToIso, isoToDmy } = await import('../src/lib/dates.js');
     ok(dmyToIso('4/9/2026') === '2026-09-04' && isoToDmy(dmyToIso('4/9/2026')) === '4/9/2026' && dmyToIso('') === '',
       'E012.6 the picker round-trips his d/m/yyyy exactly');
