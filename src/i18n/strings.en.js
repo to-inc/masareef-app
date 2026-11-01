@@ -116,7 +116,7 @@ export const EN = {
   currencyIn: (c) => (c === 'EGP' ? 'In E£' : 'In €'),
   // The heading when there is no shortcut row — in travel mode (A4).
   // ——— dictation (A5): tap the keyboard's own mic and say it.
-  dictateShort: '🎙 Say it',
+  dictateShort: 'Say it',
   dictateTitle: 'Say the expense',
   receiptTitle: 'Receipt', // G05 header (R9)
   batchTitle: 'Review the statement', // G06 header (R9)
@@ -128,10 +128,10 @@ export const EN = {
   dictateNeedText: 'Say or type the expense first',
 
   // ——— receipt
-  receiptStart: '📷 Photograph the receipt',
+  receiptStart: 'Photograph the receipt',
   // The short form — it sits on the New screen's own label line, costing no
   // vertical space (M1).
-  receiptShort: '📷 Receipt',
+  receiptShort: 'Receipt',
   receiptIntro: 'Photograph the receipt and we read the amount. Nothing is logged until you agree.',
   receiptReading: 'Reading the receipt…',
   photosTitle: 'Photos',
@@ -430,7 +430,7 @@ export const EN = {
   batchSettled: (w, s, e) => `${w} logged ✓${s ? ` · ${s} already there` : ''}${e ? ` · ${e} had trouble` : ''}`,
   batchBack: 'Done — back to the book',
   batchExpired: 'This photo has gone stale — take it again and we will restore your choices',
-  batchResnap: '📷 Photograph it again',
+  batchResnap: 'Photograph it again',
   batchDiscardShort: 'Discard',
   batchDiscard: 'Discard this review',
   /**

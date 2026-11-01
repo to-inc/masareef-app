@@ -515,6 +515,20 @@ try {
     await ctx.close();
   }
 
+  // ═══ F12 — design audit 2026-11-01: ruling 2 says nothing may be readable ONLY at 13 px.
+  // Two lines were, and only show in the running app: the «Older expenses» explanation and
+  // the book's row that a statement row looks like.
+  for (const lang of ['en', 'ar']) {
+    const { ctx, page } = await openApp({ lang, extra: { 'masareef.batchDraft.v1': DRAFT } });
+    const old = await page.$eval('[data-old-body]', (e) => parseFloat(getComputedStyle(e).fontSize)).catch(() => null);
+    await page.evaluate(() => [...document.querySelectorAll('nav button')][2].click()); await page.waitForTimeout(900);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /not logged yet|ما اتسجلوش/.test(x.innerText)); if (b) b.click(); }); await page.waitForTimeout(1500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-expanded]')].find((x) => /Espresso/.test(x.innerText)); if (b) b.click(); }); await page.waitForTimeout(400);
+    const dup = await page.$eval('[data-dup-evidence]', (e) => parseFloat(getComputedStyle(e).fontSize)).catch(() => null);
+    ok(old >= 15 && dup >= 15, `F12.${lang} «Older expenses» explanation and the look-alike book row are set at ≥15 px — ${old} · ${dup}`);
+    await ctx.close();
+  }
+
   // ═══ F6 — a failed download says so instead of a blank screen
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });

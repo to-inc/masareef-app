@@ -138,6 +138,8 @@ try {
   ok(card.length > 0, 'the card renders on the 1st');
   ok(text(card).includes('دفتر يوليو — مقفول'), 'it names the month it is closing, in Arabic');
   ok(text(card).includes('31,341'), 'it states the total');
+  { const u = card.match(/<span data-log-unit="[^"]*" style="([^"]*)"/);
+    ok(u && /font-size:22px/.test(u[1]), `R4 ladder: the unit beside the 40px hero is 22px — got ${u ? u[1] : 'nothing'}`); }
   for (const c of LOG.top) {
     // Listed by LABEL (finding M2) — the value is what his sheet holds and
     // what the server ranked; the card is read, never tapped.
@@ -238,6 +240,8 @@ try {
     ok(withFact.includes('Nile Star Market'), 'the log names the place he went most…');
     ok(withFact.includes('6'), '…and how many times he went');
 
+    // Design audit 2026-11-01: in RTL a Latin name pulled «6» to the colon, away from «مرات».
+    ok(withFact.includes('\u2068Nile Star Market\u2069 — 6 مرات'), 'the shop name is bidi-isolated so the count stays with «مرات»');
     const noFact = text(render({ ...LOG, mostOften: null }, DAY1));
     ok(!noFact.includes('Nile Star Market'),
       'while a month with no clear "most" says nothing rather than picking one');

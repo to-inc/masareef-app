@@ -174,7 +174,10 @@ ok(sheet !== null && !/C\.amber|amberInk|amberRim|#D9A441/i.test(sh),
   const cog = componentSlice(src('src/views/SettingsCog.jsx') || '', 'SettingsCog');  // R0 re-cut 2026-10-20: its own file
   ok(cog !== null && /minHeight: TAP/.test(cog) && /minWidth: TAP/.test(cog),
     'S1.26 the cog sits at the senior TAP floor in both dimensions');
-  ok(cog !== null && /aria-label=\{S\.settingsTitle\}/.test(cog) && /aria-hidden/.test(cog),
+  // Re-cut 2026-11-01 (design audit): the glyph is now <GearIcon />, whose own svg is aria-hidden.
+  const prim = src('src/components/Primitives.jsx') || '';
+  const gearHidden = /export function GearIcon[\s\S]{0,300}aria-hidden="true"/.test(prim);
+  ok(cog !== null && /aria-label=\{S\.settingsTitle\}/.test(cog) && (/aria-hidden/.test(cog) || (/<GearIcon/.test(cog) && gearHidden)),
     'S1.27 the cog is aria-labelled via i18n and its glyph is decoration — VoiceOver reads the word, never the gear');
   ok(cog !== null && !/amber/i.test(cog),
     'S1.28 the cog is quiet, not amber');

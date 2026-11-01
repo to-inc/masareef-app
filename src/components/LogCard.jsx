@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass } from '../theme.js';
+import { C, DIVIDER, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, unitSize } from '../theme.js';
 import { S, monthByTab, categoryLabel, unitFor, CAPTAIN_INITIALS } from '../i18n/strings.js';
 import { money, money2 } from '../lib/format.js';
 import { LATIN } from './Primitives.jsx';
@@ -59,7 +59,8 @@ export default function LogCard({ prevLog, todayCairo, prevForeign, prevHomeAgg,
         marginTop: 6, ...LATIN, ...NUMERALS,
       }}>
         {money(fig.hero.amount)}
-        <span style={{ fontSize: 17, color: C.muted, fontWeight: 500 }}> {fig.hero.currency === 'EGP' ? S.logCurrency : unitFor(fig.hero.currency)}</span>
+        {/* R4's unit ladder: 22px beside a 40px hero (was 17 — design audit 2026-11-01). */}
+        <span data-log-unit style={{ fontSize: unitSize(TYPE.hero), color: C.muted, fontWeight: 500 }}> {fig.hero.currency === 'EGP' ? S.logCurrency : unitFor(fig.hero.currency)}</span>
       </div>
 
       {/* MORE THAN ONE CURRENCY: each on its own line, then the sum spelled out in

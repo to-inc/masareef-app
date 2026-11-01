@@ -125,7 +125,7 @@ export const AR = {
   currencyIn: (c) => (c === 'EGP' ? 'بالجنيه' : 'باليورو'),
   // العنوان لما مفيش صف اختصارات — في وضع السفر (A4).
   // ——— الإملاء (A5): دوس على الميكروفون بتاع الكيبورد وقول المبلغ والحاجة.
-  dictateShort: '🎙 بالصوت',
+  dictateShort: 'بالصوت',
   dictateTitle: 'قول المصروف',
   receiptTitle: 'فاتورة', // G05 header (R9)
   batchTitle: 'راجع الكشف', // G06 header (R9)
@@ -137,9 +137,9 @@ export const AR = {
   dictateNeedText: 'اكتب أو قول المصروف الأول',
 
   // ——— receipt
-  receiptStart: '📷 صوّر الفاتورة',
+  receiptStart: 'صوّر الفاتورة',
   // النسخة القصيرة — بتقعد جنب عنوان شاشة «جديد» من غير ما تاخد سطر (M1).
-  receiptShort: '📷 فاتورة',
+  receiptShort: 'فاتورة',
   receiptIntro: 'صوّر الفاتورة وهنقرا المبلغ لوحدنا. مش هيتسجل حاجة غير لما توافق.',
   receiptReading: 'بنقرا الفاتورة…',
   photosTitle: 'الصور',
@@ -157,8 +157,9 @@ export const AR = {
   receiptPhoto: 'الصورة',
   receiptCheck: 'راجع وأكّد',
   receiptPending: 'لسه معلّقة في البنك — سجّلها لو الدفع تم.',
-  readingBehind: (n) => (n === 1 ? 'بنقرا الفاتورة — هتلاقيها في للمراجعة' : `بنقرا ${n} فواتير — هتلاقيهم في للمراجعة`),
-  photoReady: (n) => (n === 1 ? 'الفاتورة جاهزة — افتح الصور في للمراجعة' : `${n} فواتير جاهزين — افتح الصور في للمراجعة`),
+  readingBehind: (n) => (n === 1 ? 'بنقرا الفاتورة — هتلاقيها في «للمراجعة»' : `بنقرا ${n} فواتير — هتلاقيهم في «للمراجعة»`),
+  // «في للمراجعة» read as broken Arabic: the tab's name is quoted as a name (design audit 2026-11-01).
+  photoReady: (n) => (n === 1 ? 'الفاتورة جاهزة — افتح «الصور» في «للمراجعة»' : `${n} فواتير جاهزين — افتح «الصور» في «للمراجعة»`),
   receiptSaw: 'شفنا:',           // precedes raw_total_line, verbatim from the receipt
   receiptAmount: 'المبلغ',
   receiptMerchant: 'المحل',
@@ -299,7 +300,9 @@ export const AR = {
   logUndated: (n) => `${n} من غير يوم محدد`,
   logTo: (initials) => `إلى القبطان ${initials}`,
   // A8 اتشال؛ ده اللي مكانه — حقيقة من دفتره، مرة في الشهر، مش سؤال.
-  logMostOften: (name, times) => `أكتر مكان رحته: ${name} — ${times} مرات`,
+  // The name is isolated (FSI…PDI): a Latin shop name otherwise pulls the count to its
+  // side and «6» lands by the colon, away from «مرات» (design audit 2026-11-01).
+  logMostOften: (name, times) => `أكتر مكان رحته: \u2068${name}\u2069 — ${times} مرات`,
   logSignoff: 'كل قرش له سطر. تمام يا فندم.',
   // الشهر المقفول بكل عملة لوحدها، وبعدين مجموع بالعملة اللي بيقرا بيها (2026-11-01).
   logEach: 'كل عملة لوحدها',
@@ -437,7 +440,7 @@ export const AR = {
   batchBack: 'خلاص — ارجع للدفتر',
   // الصورة راحت من على السيرفر — تعبه محفوظ، القراية هي اللي بتنتهي
   batchExpired: 'الصورة عدى عليها وقت — صوّرها تاني وهنرجّع اللي اخترته',
-  batchResnap: '📷 صوّرها تاني',
+  batchResnap: 'صوّرها تاني',
   batchDiscardShort: 'امسح',
   batchDiscard: 'امسح المراجعة',
   /**

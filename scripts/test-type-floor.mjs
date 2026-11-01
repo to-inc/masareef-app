@@ -81,6 +81,13 @@ ok(found.length === 0, `text below ${FLOOR}px that is neither a token nor declar
     ok(prose && new RegExp(`font-size:${TYPE.label}px`).test(prose[1]) && prose[2].includes('200'),
       `E-008 the chart average is also said at ${TYPE.label}px outside the chart geometry — got ${prose ? prose[1] : 'nothing'}`);
     ok(!/data-geometry[^>]*data-avg-prose|data-avg-prose[^>]*data-geometry/.test(html), 'E-008 …and that line is not itself geometry');
+    // Design audit 2026-11-01 — ruling 2: «nothing may be readable ONLY at 13». Two lines that were.
+    const { UpdatePrompt } = await vite.ssrLoadModule('/src/components/Primitives.jsx');
+    const up = renderToStaticMarkup(createElement(UpdatePrompt, { onUpdate() {} })).match(/<span data-update-later="[^"]*" style="([^"]*)"/);
+    ok(up && new RegExp(`font-size:${TYPE.label}px`).test(up[1]), `DA1 the update prompt's «updates by itself next time» is set at ${TYPE.label}px — got ${up ? up[1] : 'nothing'}`);
+    const { JobsList } = await vite.ssrLoadModule('/src/views/ReceiptView.jsx');
+    const jl = renderToStaticMarkup(createElement(JobsList, { jobs: [{ id: 'j1', stage: 'queued', queuedAt: 1 }], onReview() {}, onRetry() {}, onCancel() {} })).match(/<div data-jobs-title="[^"]*" style="([^"]*)"/);
+    ok(jl && new RegExp(`font-size:${TYPE.label}px`).test(jl[1]), `DA2 the photo queue's heading («N photos in line · N waiting for tomorrow») is set at ${TYPE.label}px — got ${jl ? jl[1] : 'nothing'}`);
   } finally { await vite.close(); }
   // E-007 re-cut (v4): «Last updated» now lives in the header's sync pill.
   const prims = readFileSync('src/components/Primitives.jsx', 'utf8');

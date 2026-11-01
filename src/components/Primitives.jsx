@@ -319,7 +319,8 @@ export function UpdatePrompt({ onUpdate }) {
       </span>
       <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: TYPE.body, fontWeight: 700 }}>{S.updateReady}</span>
-        <span style={{ fontSize: TYPE.caption, color: C.muted }}>{S.updateLater}</span>
+        {/* TYPE.label, not caption (design audit 2026-11-01): ruling 2 — this line is said nowhere else. */}
+        <span data-update-later style={{ fontSize: TYPE.label, color: C.muted }}>{S.updateLater}</span>
       </span>
       <button onClick={onUpdate}
         style={{ minHeight: TAP, padding: '0 16px', borderRadius: RADIUS.capsule, background: GRADIENT.harbor, color: C.onDark, fontSize: TYPE.label, fontWeight: 700, flexShrink: 0 }}>
@@ -466,6 +467,26 @@ export function LedgerIcon({ size = ICON.nav }) {
 }
 
 /** «للمراجعة» — the tray (R16 retires the ✉ placeholder). Verbatim from v4 P3. */
+/** The camera in the app's one line-icon language (1.8 stroke) — the 📷 emoji left the
+ *  buttons for it (design audit 2026-11-01: one icon language, design audit 2026-10-18). */
+export function CameraIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" />
+    </svg>
+  );
+}
+
+/** Settings' gear, same stroke as the photos icon beside it (was the ⚙︎ text glyph). */
+export function GearIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </svg>
+  );
+}
+
 export function TrayIcon({ size = ICON.nav }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"

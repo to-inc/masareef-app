@@ -332,7 +332,8 @@ function StaleGroup({ rows, onConfirm, onOpenEdit, initialOpen = false, onDismis
       >
         <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{ fontSize: TYPE.label, fontWeight: 700 }}>{S.inboxOldTitle(remaining(rows))}</span>
-          <span style={{ fontSize: TYPE.caption, fontWeight: 500, color: C.muted }}>{open ? S.inboxOldHide : S.inboxOldBody}</span>
+          {/* TYPE.label, not caption (design audit 2026-11-01): ruling 2 — the only place this is explained. */}
+          <span data-old-body style={{ fontSize: TYPE.label, fontWeight: 500, color: C.muted }}>{open ? S.inboxOldHide : S.inboxOldBody}</span>
         </span>
         <span aria-hidden style={{ fontSize: TYPE.row, fontWeight: 700, color: C.muted }}>{open ? '⌄' : DIR === 'rtl' ? '‹' : '›'}</span>
       </button>

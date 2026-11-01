@@ -231,8 +231,11 @@ import { dirname, join } from 'node:path';
  * 2026-11-01 · 7182 → 7227, «Copy my setup» (Tarek’s Q1 · B): +5 pwa-life (S1–S5: the code
  * round-trips, junk is refused, Setup fills from it, Settings never shows it, a refused clipboard shows it), +40 i18n (five
  * strings). Checked per suite against the stashed tree; nothing vanished.
+ * 7227 → 7233 (design audit 2026-11-01): +2 type-floor (update prompt, photo queue heading at 15),
+ * +2 logcard (isolated shop name, 22px hero unit), +2 i18n (no «في للمراجعة», no 📷/🎙 beside line
+ * icons). Each failed against the stashed tree before its fix.
  */
-const EXPECTED_ASSERTIONS = 7227;
+const EXPECTED_ASSERTIONS = 7233;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [

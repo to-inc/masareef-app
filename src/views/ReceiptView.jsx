@@ -15,7 +15,7 @@ import { debugOn } from '../state/settings.js';
 import { supportsAction, loadBuild } from '../state/capabilities.js';
 import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
-import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress } from '../components/Primitives.jsx';
+import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress, CameraIcon } from '../components/Primitives.jsx';
 import PhotoPeek from '../components/PhotoPeek.jsx';
 import PhotoActions from '../components/PhotoActions.jsx';
 import ActionStrip from '../components/ActionStrip.jsx';
@@ -817,8 +817,8 @@ export default function ReceiptView({
       <JobsList jobs={jobs} onReview={review} onRetry={retry} onReread={reread} onCancel={cancelJob}
         onDebugLog={supportsAction(loadBuild(), 'debug_note') ? null : onDebugLog}
         onManual={onManual ? () => { reset(); onManual(); } : null} />
-      <label className="bigbtn" style={{ ...primaryBtn, display: 'inline-block', cursor: 'pointer' }}>
-        {S.receiptStart}
+      <label className="bigbtn" style={{ ...primaryBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}>
+        <CameraIcon />{S.receiptStart}
         {/* `capture="environment"` opens the native camera directly. Deliberately
             NOT getUserMedia, which has a long-standing standalone-mode bug on
             iOS. VERIFIED working from the installed standalone PWA 2026-08-01. */}
@@ -883,7 +883,8 @@ export function JobsList({ jobs, onReview, onRetry, onReread = onRetry, onCancel
   const held = cappedCount(jobs);
   return (
     <div style={{ width: '100%', maxWidth: 340, marginTop: 14, textAlign: 'start' }}>
-      <div style={{ fontSize: TYPE.caption, fontWeight: 700, color: C.muted, marginBottom: 6 }}>
+      {/* TYPE.label, not caption (design audit 2026-11-01): ruling 2 — «N waiting for tomorrow» is said only here. */}
+      <div data-jobs-title style={{ fontSize: TYPE.label, fontWeight: 700, color: C.muted, marginBottom: 6 }}>
         {S.jobsTitle(jobs.length)}
         {held > 0 && <span style={{ color: C.ink }}>{' · '}{S.jobsCapped(held)}</span>}
       </div>

@@ -4,7 +4,7 @@ import { S, categoryLabel, unitFor, headlineUnitFor } from '../i18n/strings.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
 import { money, money2 } from '../lib/format.js';
 import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
-import { LATIN, ISOLATE, DateField } from '../components/Primitives.jsx';
+import { LATIN, ISOLATE, DateField, CameraIcon } from '../components/Primitives.jsx';
 import PhotoPeek from '../components/PhotoPeek.jsx';
 import ActionStrip, { StripButton } from '../components/ActionStrip.jsx';
 import * as receiptQueue from '../state/receiptQueue.js';
@@ -784,9 +784,10 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
               {matchRow && (
                 <>
                   <div style={{ fontSize: TYPE.label, fontWeight: 600, color: C.conflictInk }}>{S.batchDupBookIntro}</div>
-                  <div style={{
+                  {/* TYPE.label, not caption (design audit 2026-11-01): ruling 2 — the book's row is shown only here. */}
+                  <div data-dup-evidence style={{
                     background: C.shell, border: `1px solid ${C.line}`, borderRadius: RADIUS.inset,
-                    padding: '9px 11px', fontSize: TYPE.caption, marginTop: 6, lineHeight: 1.7, ...ISOLATE,
+                    padding: '9px 11px', fontSize: TYPE.label, marginTop: 6, lineHeight: 1.6, ...ISOLATE,
                   }} dir="auto">
                     <span style={LATIN}>{matchRow.date}</span> · {matchRow.description} ·{' '}
                     <span style={LATIN}>{money(matchRow.amount)} {unitFor(matchRow.currency || 'EGP')}</span>
@@ -897,9 +898,10 @@ function Expired({ onResnap, onDiscard, busy }) {
         style={{
           width: '100%', minHeight: 56, borderRadius: RADIUS.row, background: GRADIENT.harbor,
           color: C.onDark, fontSize: 17, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
         }}
       >
-        {busy ? S.batchSending : S.batchResnap}
+        {busy ? S.batchSending : <><CameraIcon />{S.batchResnap}</>}
       </button>
       <button
         className="catchip" onClick={onDiscard}

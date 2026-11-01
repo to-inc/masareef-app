@@ -276,6 +276,24 @@ eq(otherLang('en'), 'ar', 'and Arabic from English');
   pass++;   // reaching here is the assertion: no document, no crash
 }
 
+// Design audit 2026-11-01 — a tab's name dropped into a sentence after «في» read as
+// broken Arabic («افتح الصور في للمراجعة»). A tab name inside a sentence is quoted.
+{
+  const { AR } = await import('../src/i18n/strings.ar.js');
+  const said = Object.entries(AR).flatMap(([k, v]) => (typeof v === 'function' ? [1, 2].map((n) => [k, String(v(n))]) : typeof v === 'string' ? [[k, v]] : []));
+  const bad = said.filter(([, v]) => /في للمراجعة/.test(v)).map(([k]) => k);
+  if (bad.length === 0) pass++; else failures.push(`«في للمراجعة» reads as broken Arabic — quote the tab name: ${[...new Set(bad)].join(', ')}`);
+}
+
+// Design audit 2026-11-01 — one icon language: the camera and the mic are line icons in
+// the app, so their emoji (📷 🎙) may not sit in a button label or its spoken name.
+{
+  const { AR } = await import('../src/i18n/strings.ar.js');
+  const { EN } = await import('../src/i18n/strings.en.js');
+  const bad = [['ar', AR], ['en', EN]].flatMap(([l, o]) => Object.entries(o).filter(([, v]) => /[📷🎙]/u.test(typeof v === 'function' ? String(v(1)) : String(v))).map(([k]) => `${l}.${k}`));
+  if (bad.length === 0) pass++; else failures.push(`📷/🎙 emoji in labels beside line icons: ${bad.join(', ')}`);
+}
+
 const report = failures.length
   ? `❌ ${failures.length} / ${pass + failures.length} i18n checks failed:\n  - ${failures.join('\n  - ')}`
   : `✅ all ${pass} i18n checks passed`;

@@ -10,7 +10,7 @@ import { entryDefaultMethod } from '../state/settings.js';
 import { S, categoryLabel, unitFor } from '../i18n/strings.js';
 import { normalizeDigits } from '../lib/format.js';
 import { entryReady, pressKey } from '../state/entryDock.js';
-import { SectionLabel, LATIN, ISOLATE, Rail } from '../components/Primitives.jsx';
+import { SectionLabel, LATIN, ISOLATE, Rail, CameraIcon } from '../components/Primitives.jsx';
 
 /**
  * The manual entry screen (was CashView).
@@ -385,14 +385,6 @@ function ClipIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <path d="M20 11.5l-7.6 7.6a5 5 0 01-7.1-7.1l8.1-8.1a3.3 3.3 0 014.7 4.7l-8 8a1.7 1.7 0 01-2.4-2.4l7.3-7.3" />
-    </svg>
-  );
-}
-
-function CameraIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true" focusable="false">
-      <path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" />
     </svg>
   );
 }

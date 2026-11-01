@@ -1,5 +1,6 @@
-import { C, RADIUS, TAP, ICON, glass } from '../theme.js';
+import { C, RADIUS, TAP, glass } from '../theme.js';
 import { S } from '../i18n/strings.js';
+import { GearIcon } from '../components/Primitives.jsx';
 
 /**
  * THE COG — the header's quiet door. It mirrors RefreshButton's dress exactly
@@ -20,19 +21,14 @@ export function SettingsCog({ onOpen, active = false }) {
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         // v4: header controls are ink on glass (R0 retired the harbor header).
         ...glass('chip'),
-        color: C.ink, fontSize: ICON.control, fontWeight: 700,
+        color: C.ink,
         // Lit while Settings is open; tapping it again closes it (Tarek, 2026-10-13).
         ...(active ? { background: C.harbor, color: C.onDark, borderColor: C.harbor } : null),
       }}
     >
-      {/**
-        * The glyph is a PICTURE at ICON.control (not TYPE — theme.js's
-        * positive declaration), and it is decoration: the button's name is
-        * the aria-label above, in his language. U+FE0E pins the gear to TEXT
-        * presentation — without it iOS paints the emoji cog, a grey machine
-        * part in a header that owns exactly two inks.
-        */}
-      <span aria-hidden style={{ display: 'inline-block', lineHeight: 1 }}>⚙︎</span>
+      {/* A line gear in the photos icon's stroke (design audit 2026-11-01: the ⚙︎ text
+          glyph drew thinner and smaller than its neighbour). Decoration: the name is the aria-label. */}
+      <GearIcon />
     </button>
   );
 }
