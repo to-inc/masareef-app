@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import {
   C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, SPACE, unitSize, glass, GRADIENT, SELECTED_TINT, SHEET,
 } from '../theme.js';
-import { allCategories, shortCategories } from '../state/catOrder.js';
+import { shortCategories } from '../state/catOrder.js';
+import CategorySign from '../components/CategorySign.jsx';
+import CategoryShelves from '../components/CategoryShelves.jsx';
 import { repeatChips } from '../state/repeats.js';
 import { isTravelling, toggleCurrency, HOME_CURRENCY } from '../state/travel.js';
 import { METHODS } from '../state/entryPayload.js';
@@ -316,7 +318,9 @@ export default function EntryView({
           chips made the sheet too tall for «0» to clear «سجّل» (the E-003 law).
           «كل الأنواع» unfolds the full list below as a wrapped grid. */}
       <Rail role="group" aria-label={cat ? categoryLabel(cat) : S.entryNeedCategory} style={{ gap: 8, paddingBottom: 2, flexWrap: showAll ? 'wrap' : 'nowrap', flexShrink: 0 }}>
-        {(showAll ? allCategories() : shortCategories()).concat(!showAll && cat && shortCategories().indexOf(cat) === -1 ? [cat] : []).map((c) => (
+        {showAll && (
+          <CategoryShelves wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(cats) => cats.map((c) => (
           <button
             key={c}
             className="catchip"
@@ -325,12 +329,33 @@ export default function EntryView({
             style={{
               ...glass('chip'),
               ...(cat === c ? { background: SELECTED_TINT, border: SHEET.pickedRim } : null),
-              padding: '0 16px', minHeight: TAP, fontSize: TYPE.body, fontWeight: cat === c ? 700 : 600,
+              padding: '0 16px 0 8px', gap: 8, minHeight: TAP, fontSize: TYPE.body, fontWeight: cat === c ? 700 : 600,
               color: C.ink, display: 'inline-flex', alignItems: 'center', flex: '0 0 auto', whiteSpace: 'nowrap', ...ISOLATE,
             }}
             dir="auto"
           >
-            {cat === c ? '✓ ' : ''}{categoryLabel(c)}
+            <CategorySign category={c} size={28} />
+            <span>{cat === c ? '✓ ' : ''}{categoryLabel(c)}</span>
+          </button>
+        ))}
+          </CategoryShelves>
+        )}
+        {(showAll ? [] : shortCategories()).concat(!showAll && cat && shortCategories().indexOf(cat) === -1 ? [cat] : []).map((c) => (
+          <button
+            key={c}
+            className="catchip"
+            onClick={() => setCat(cat === c ? null : c)}
+            aria-pressed={cat === c}
+            style={{
+              ...glass('chip'),
+              ...(cat === c ? { background: SELECTED_TINT, border: SHEET.pickedRim } : null),
+              padding: '0 16px 0 8px', gap: 8, minHeight: TAP, fontSize: TYPE.body, fontWeight: cat === c ? 700 : 600,
+              color: C.ink, display: 'inline-flex', alignItems: 'center', flex: '0 0 auto', whiteSpace: 'nowrap', ...ISOLATE,
+            }}
+            dir="auto"
+          >
+            <CategorySign category={c} size={28} />
+            <span>{cat === c ? '✓ ' : ''}{categoryLabel(c)}</span>
           </button>
         ))}
         {!showAll && (

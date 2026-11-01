@@ -75,7 +75,7 @@ try {
   eq(count(none), LIST.length, 'every category is offered when nothing is selected');
   eq(count(picked), LIST.length, 'and STILL every category after one is selected — none vanishes');
   for (const c of LIST) {
-    ok(picked.includes(`>${L(c)}</button>`) || picked.includes(`✓ ${L(c)}</button>`),
+    ok(picked.includes(`>${L(c)}</span></button>`) || picked.includes(`✓ ${L(c)}</span></button>`),
       `${c} is still present after selecting Car`);
   }
 
@@ -107,7 +107,7 @@ try {
   // ——— the choice must be visible to a machine, not only to a colour.
   eq((picked.match(/aria-pressed="true"/g) || []).length, 1, 'exactly one chip reports selected');
   eq((none.match(/aria-pressed="true"/g) || []).length, 0, 'and none does when nothing is chosen');
-  ok(picked.includes(`✓ ${L('Car')}</button>`), 'the selected chip is marked in TEXT, not by colour alone');
+  ok(picked.includes(`✓ ${L('Car')}</span></button>`), 'the selected chip is marked in TEXT, not by colour alone');
   ok(!picked.includes(`✓ ${L('Groceries')}`), 'and the others are not');
   /**
    * AND THE FROZEN VALUE IS NOT PAINTED AT HIM. The chip is 48px of one line;

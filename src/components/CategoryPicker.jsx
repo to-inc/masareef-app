@@ -3,6 +3,10 @@ import { C, TAP, RADIUS, TYPE, GRADIENT, alpha, glass } from '../theme.js';
 import { allCategories, shortCategories } from '../state/catOrder.js';
 import { S, categoryLabel } from '../i18n/strings.js';
 import { ISOLATE, LATIN } from './Primitives.jsx';
+import CategorySign from './CategorySign.jsx';
+import CategoryShelves from './CategoryShelves.jsx';
+
+const GRID = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 };
 
 /**
  * Choosing a category for a row that is ALREADY in his sheet, and saying what
@@ -113,6 +117,23 @@ export function CategoryActions({ guess, outcome, onPick }) {
   // simply leads. «more» unfolds the whole list in the same two columns.
   const rest = (showAll ? allCategories() : shortCategories()).filter((c) => c !== guess);
   const shown = showAll ? rest : rest.slice(0, guess ? 3 : 5);
+  const chip = (c) => (
+    <button
+      key={c}
+      className="catchip"
+      onClick={() => onPick(c)}
+      disabled={inert}
+      style={{
+        ...glass('chip'), borderRadius: RADIUS.glassWell, minHeight: 52, padding: '6px 10px 6px 8px',
+        fontSize: TYPE.body, fontWeight: 600, color: C.ink, ...ISOLATE,
+        display: 'flex', alignItems: 'center', gap: 8, textAlign: 'start',
+      }}
+      dir="auto"
+    >
+      <CategorySign category={c} size={30} />
+      <span>{categoryLabel(c)}</span>
+    </button>
+  );
   const label = (t) => <div style={{ fontSize: TYPE.label, color: C.muted, fontWeight: 600, margin: '18px 0 8px' }}>{t}</div>;
   return (
     <div style={{ opacity: inert ? 0.45 : 1 }}>
@@ -138,22 +159,13 @@ export function CategoryActions({ guess, outcome, onPick }) {
         </button>
       )}
       {label(filed ? S.recategorize : guess ? S.reviewOrElse : S.entryNeedCategory)}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        {shown.map((c) => (
-          <button
-            key={c}
-            className="catchip"
-            onClick={() => onPick(c)}
-            disabled={inert}
-            style={{
-              ...glass('chip'), borderRadius: RADIUS.glassWell, minHeight: 52, padding: '6px 10px',
-              fontSize: TYPE.body, fontWeight: 600, color: C.ink, ...ISOLATE,
-            }}
-            dir="auto"
-          >
-            {categoryLabel(c)}
-          </button>
-        ))}
+      {showAll && (
+        <CategoryShelves wrap={GRID}>
+          {(cats) => cats.filter((c) => c !== guess).map(chip)}
+        </CategoryShelves>
+      )}
+      <div style={GRID}>
+        {!showAll && shown.map(chip)}
         {!showAll && (
           <button
             className="catchip"

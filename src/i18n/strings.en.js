@@ -37,6 +37,8 @@ export const EN = {
   inboxOldBody: 'From previous months — still without a category.',
   inboxOldHide: 'Close',
   more: 'More categories…',
+  // Shelf headings of the full category list (components/CategoryShelves.jsx).
+  shelf: (k) => ({ top: 'Most used', food: 'Food', home: 'Home & bills', around: 'Getting around', self: 'Health & self', free: 'Free time & clubs', giving: 'Giving', work: 'Work', pay: 'Payments & taxes', other: 'Other' })[k] || 'Other',
   // The button that settles every row we already know, in one tap (M4).
   travel: '✈ travel',
 

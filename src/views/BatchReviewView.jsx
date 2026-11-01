@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { C, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
 import { S, categoryLabel, unitFor, headlineUnitFor } from '../i18n/strings.js';
-import { allCategories, shortCategories } from '../state/catOrder.js';
+import { shortCategories } from '../state/catOrder.js';
+import CategorySign from '../components/CategorySign.jsx';
+import CategoryShelves from '../components/CategoryShelves.jsx';
 import { money, money2 } from '../lib/format.js';
 import { isoToDmy, dmyToIso, cairoParts } from '../lib/dates.js';
 import { LATIN, ISOLATE, DateField, CameraIcon } from '../components/Primitives.jsx';
@@ -841,7 +843,10 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
                 * chip grid shipped; the pattern just never crossed files. Same
                 * expansion here, per row.
                 */}
-              {(catsOpen ? allCategories() : shortCategories()).map((c) => (
+              {/* The full list unfolds on shelves (2026-11-01); collapsed, the short list below. */}
+              {catsOpen && (
+                <CategoryShelves wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {(cats) => cats.map((c) => (
                 <button
                   key={c} className="catchip" onClick={() => (logged ? onFixEntry(c) : onPick(c))} disabled={logged && entryNote === 'saving'}
                   style={{
@@ -850,10 +855,31 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
                     ...glass('chip'), ...(category === c ? { background: SELECTED_TINT, border: SHEET.pickedRim } : null),
                     color: C.ink,
                     fontSize: TYPE.label, fontWeight: category === c ? 700 : 500,
+                    display: 'inline-flex', alignItems: 'center', gap: 7, paddingInlineStart: 6,
                   }}
                   dir="auto"
                 >
-                  {category === c ? '✓ ' : ''}{categoryLabel(c)}
+                  <CategorySign category={c} size={26} />
+                  <span>{category === c ? '✓ ' : ''}{categoryLabel(c)}</span>
+                </button>
+                  ))}
+                </CategoryShelves>
+              )}
+              {(catsOpen ? [] : shortCategories()).map((c) => (
+                <button
+                  key={c} className="catchip" onClick={() => (logged ? onFixEntry(c) : onPick(c))} disabled={logged && entryNote === 'saving'}
+                  style={{
+                    // A3: 44 -> TAP, senior touch floor.
+                    padding: '9px 13px', minHeight: TAP, borderRadius: RADIUS.capsule,
+                    ...glass('chip'), ...(category === c ? { background: SELECTED_TINT, border: SHEET.pickedRim } : null),
+                    color: C.ink,
+                    fontSize: TYPE.label, fontWeight: category === c ? 700 : 500,
+                    display: 'inline-flex', alignItems: 'center', gap: 7, paddingInlineStart: 6,
+                  }}
+                  dir="auto"
+                >
+                  <CategorySign category={c} size={26} />
+                  <span>{category === c ? '✓ ' : ''}{categoryLabel(c)}</span>
                 </button>
               ))}
               {!catsOpen && (

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { C, METHOD, FONT_DISPLAY, NUMERALS, TAP, RADIUS, TYPE, GLYPH, glass, GRADIENT, STATE_BOX, SELECTED_TINT, SHEET } from '../theme.js';
 import { S, categoryLabel, unitFor } from '../i18n/strings.js';
-import { allCategories, shortCategories } from '../state/catOrder.js';
+import { shortCategories } from '../state/catOrder.js';
 import { money, money2, normalizeDigits } from '../lib/format.js';
 import { newClientId, cairoClock, isoToDmy } from '../lib/dates.js';
 import { prepareReceipt, prepareDocument, fileSnapDate, ReceiptImageError } from '../lib/receipt-image.js';
@@ -17,6 +17,8 @@ import { startMethod, predOf } from '../state/predict.js';
 import { dupState, bookFrom, undatedHint, isBlocked, confirmOutcome } from '../state/receiptDup.js';
 import { ISOLATE, SectionLabel, LATIN, Sheet, DateField, ReadProgress, CameraIcon } from '../components/Primitives.jsx';
 import PhotoPeek from '../components/PhotoPeek.jsx';
+import CategorySign from '../components/CategorySign.jsx';
+import CategoryShelves from '../components/CategoryShelves.jsx';
 import PhotoActions from '../components/PhotoActions.jsx';
 import ActionStrip from '../components/ActionStrip.jsx';
 import { expectedReadMs } from '../state/readTimes.js';
@@ -763,9 +765,16 @@ export default function ReceiptView({
         {/* The full-width «✓ Eating out» summary is gone (Tarek, 2026-10-10: «fix this»):
             the Category line above and the ticked chip below already say it, and in
             the save button's blue it read as the save. «More» opens the full list. */}
+        {showAllCats ? (
+          <div style={{ marginTop: 2 }}>
+            <CategoryShelves wrap={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(cats) => <CategoryChips list={cats} float={false} selected={category} onPick={(c) => setCategory(c)} />}
+            </CategoryShelves>
+          </div>
+        ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
           <CategoryChips
-            list={showAllCats ? allCategories() : shortCategories()}
+            list={shortCategories()}
             selected={category}
             onPick={(c) => { setCategory(c); setShowAllCats(true); }}
           />
@@ -776,6 +785,7 @@ export default function ReceiptView({
             </button>
           )}
         </div>
+        )}
 
         {/* ALREADY IN THE BOOK → THE PHOTO CAN GO (Tarek, 2026-11-01: «it might as well make me a
             little button saying Delete photo»). A twin is the likely case, so removing the photo is
@@ -1134,9 +1144,10 @@ function Centered({ children }) {
  * Sharing one component between the two surfaces would repeat that mistake in a
  * more durable form. They look alike and mean different things.
  */
-export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride }) {
+export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride, float = true }) {
   const base = styleOverride || {
-    padding: '11px 15px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: 15,
+    padding: '6px 15px 6px 7px', minHeight: TAP, borderRadius: RADIUS.capsule, fontSize: 15,
+    display: 'inline-flex', alignItems: 'center', gap: 8,
   };
   /**
    * SELECTED FIRST (P4a). His chosen category sits at position 1 so the card can
@@ -1152,7 +1163,8 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
    *     taps. Floating one chip must not reshuffle the other twenty-three.
    * And it still never REMOVES one; that was the P1 bug.
    */
-  const ordered = (selected && list.indexOf(selected) !== -1)
+  // On a shelf the chip stays in its group (float=false): the shelf is where he looks for it.
+  const ordered = (float && selected && list.indexOf(selected) !== -1)
     ? [selected, ...list.filter((c) => c !== selected)]
     : list;
 
@@ -1176,7 +1188,8 @@ export function CategoryChips({ list, selected, onPick, chipStyle: styleOverride
         }}
         dir="auto"
       >
-        {isSelected ? '✓ ' : ''}{categoryLabel(c)}
+        {!styleOverride && <CategorySign category={c} size={30} />}
+        <span>{isSelected ? '✓ ' : ''}{categoryLabel(c)}</span>
       </button>
     );
   });

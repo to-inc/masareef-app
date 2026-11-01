@@ -665,7 +665,7 @@ try {
    * untouched by this: it forbids asserting a category we have not earned, and
    * offering a shortlist asserts nothing.
    */
-  const chipNames = (html) => CATEGORIES.filter((c) => html.includes(`>${L(c)}</button>`));
+  const chipNames = (html) => CATEGORIES.filter((c) => html.includes(`>${L(c)}</span></button>`));
 
   const unguessed = renderToStaticMarkup(createElement(InboxView, {
     pending: [row('Aug', 14)], settled: {}, onConfirm: () => {},

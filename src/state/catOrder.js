@@ -12,17 +12,19 @@ import { CATEGORIES } from '../lib/constants.js';
  * one-tap row he has learned, so the shell only hands `use` in on a book kept in
  * another unit. With no `use` the grids keep CATEGORIES exactly as before.
  */
-const KIN = [
-  'Eating out', 'Groceries',                                                   // food
-  'Villa', 'Rent', 'omara2 al behar', 'Utilities', 'Elect. Recharge',
-  'Water. Recharge', 'Gas', 'Internet', 'Telephone',                           // home & bills
-  'Car', 'Transportation',                                                     // getting around
-  'Medical', 'Personal expenses', 'Sports',                                    // health & self
-  'Leisure', 'Hobbies', 'Vacations', 'Madinety club', 'Shams club', 'Officers club', // leisure & clubs
-  'Gifts', 'Donations', 'fara7',                                               // giving
-  'InstaPay - Services', 'InstaPay - Purchases', 'Taxes and fines',            // payments
-  'Science Pitchers', 'HYS', 'Team',                                           // work
+// The shelves of the full list (Tarek, 2026-11-01, «A · Shelves» on the Categories
+// board): kin groups, each under a small heading. KIN is their concatenation.
+const SHELVES = [
+  ['food', ['Eating out', 'Groceries']],
+  ['home', ['Villa', 'Rent', 'omara2 al behar', 'Utilities', 'Elect. Recharge', 'Water. Recharge', 'Gas', 'Internet', 'Telephone']],
+  ['around', ['Car', 'Transportation']],
+  ['self', ['Medical', 'Personal expenses', 'Sports']],
+  ['free', ['Leisure', 'Hobbies', 'Vacations', 'Madinety club', 'Shams club', 'Officers club']],
+  ['giving', ['Gifts', 'Donations', 'fara7']],
+  ['work', ['Science Pitchers', 'HYS', 'Team']],
+  ['pay', ['InstaPay - Services', 'InstaPay - Purchases', 'Taxes and fines']],
 ];
+const KIN = SHELVES.flatMap(([, cs]) => cs);
 const LEAD = 6;
 
 export function orderCategories(use) {
@@ -40,9 +42,27 @@ export function orderCategories(use) {
   return lead.concat(kin.filter((c) => !lead.includes(c)));
 }
 
+/**
+ * The full list as shelves: his TOP four first, then each kin group minus those
+ * four, empty groups dropped. With no `use` (Dad's book) one unheaded shelf in
+ * CATEGORIES order, so his grid does not change.
+ */
+const TOP = 4;
+export function shelvesOf(use) {
+  const all = orderCategories(use);
+  if (!use) return [{ key: null, cats: all }];
+  const top = all.slice(0, TOP);
+  const rest = SHELVES.map(([key, cs]) => ({ key, cats: cs.filter((c) => all.includes(c) && !top.includes(c)) }));
+  const loose = all.filter((c) => !top.includes(c) && !KIN.includes(c));   // a label added later still shows
+  return [{ key: 'top', cats: top }, ...rest, ...(loose.length ? [{ key: 'other', cats: loose }] : [])]
+    .filter((g) => g.cats.length);
+}
+
 let current = CATEGORIES;
+let shelves = shelvesOf(null);
 /** Called by the shell whenever a summary arrives. */
-export function setCategoryUse(use) { current = orderCategories(use); }
+export function setCategoryUse(use) { current = orderCategories(use); shelves = shelvesOf(use); }
+export const allShelves = () => shelves;
 export const allCategories = () => current;
 export const shortCategories = () => current.slice(0, LEAD);
 

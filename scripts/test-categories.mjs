@@ -19,9 +19,10 @@
  * the near-duplicate is what `canonicalCategory_` collapses server-side.
  */
 import { CATEGORIES, SHORT_LIST, CASH_QUICK, UNKNOWN_CATEGORY } from '../src/lib/constants.js';
-import { AR_LOCALE } from '../src/i18n/strings.ar.js';
-import { EN_LOCALE } from '../src/i18n/strings.en.js';
-import { orderCategories } from '../src/state/catOrder.js';
+import { AR_LOCALE, AR } from '../src/i18n/strings.ar.js';
+import { EN_LOCALE, EN } from '../src/i18n/strings.en.js';
+import { orderCategories, shelvesOf } from '../src/state/catOrder.js';
+import { signFor } from '../src/lib/categorySigns.js';
 
 let pass = 0;
 const failures = [];
@@ -193,6 +194,25 @@ for (const q of CASH_QUICK) {
   eq(AR_L(null), '', 'a missing value is an empty label rather than a crash');
   eq(AR_L(undefined), '', 'and so is an absent one');
   eq(EN_L(null), '', 'both locales agree about nothing');
+}
+
+/* ——— 2026-11-01: the full list on shelves, each chip with its picture («A · Shelves») ——— */
+{
+  const dad = shelvesOf(null);
+  ok(dad.length === 1 && dad[0].key === null && dad[0].cats === CATEGORIES || JSON.stringify(dad[0].cats) === JSON.stringify(CATEGORIES),
+    'SHELF.1 Dad\'s book (no use counts): ONE unheaded shelf in CATEGORIES order — his grid unchanged');
+  const use = { 'Eating out': 50, Transportation: 30, Groceries: 28, 'Personal expenses': 10, Gifts: 5 };
+  const sh = shelvesOf(use);
+  eq(sh[0].key, 'top', 'SHELF.2 the first shelf is his most used');
+  eq(sh[0].cats.join('|'), 'Eating out|Transportation|Groceries|Personal expenses', 'SHELF.3 …the four he uses most, by count');
+  const flat = sh.flatMap((g) => g.cats);
+  eq(flat.length, CATEGORIES.length, 'SHELF.4 every category sits on a shelf');
+  eq(new Set(flat).size, CATEGORIES.length, 'SHELF.5 …exactly once');
+  ok(sh.every((g) => g.cats.length > 0), 'SHELF.6 no empty shelf is drawn');
+  ok(sh.every((g) => EN.shelf(g.key) && AR.shelf(g.key)), 'SHELF.7 every shelf has a heading in English and Arabic');
+  ok(sh.find((g) => g.key === 'free').cats.slice(-3).join('|') === 'Madinety club|Shams club|Officers club', 'SHELF.8 kin share a shelf (the clubs)');
+  const bare = CATEGORIES.filter((c) => !signFor(c));
+  eq(bare.join('|'), '', 'SHELF.9 every category has its picture');
 }
 
 /* ——— 2026-10-10: most-used six first, then by kin (src/state/catOrder.js) ——— */

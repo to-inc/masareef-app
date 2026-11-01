@@ -792,8 +792,8 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
  */
 {
   const src = await readFile(new URL('../src/views/BatchReviewView.jsx', import.meta.url), 'utf8');
-  ok(/catsOpen \? allCategories\(\) : shortCategories\(\)/.test(src),
-    'the batch picker expands to the FULL category list, extras included');
+  ok(/catsOpen && \(\s*<CategoryShelves/.test(src) && /catsOpen \? \[\] : shortCategories\(\)/.test(src),
+    'the batch picker expands to the FULL category list on shelves (every category: test-categories), extras included');
   ok(src.includes('setCatsOpen(true)') && src.includes('S.more'),
     'and the expansion has a visible affordance — a list nobody can open is SHORT_LIST wearing a flag');
 
