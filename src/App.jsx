@@ -58,6 +58,7 @@ const BatchReviewView = lazy(() => import('./views/BatchReviewView.jsx'));
 import * as receiptQueue from './state/receiptQueue.js';
 import { runner, onJobsChange, enqueueFiles, jobsChanged, rereadNow, onJobRemoved, restoreJob } from './state/receiptRunner.js';
 import { syncKept } from './state/keptLookalikes.js';
+import { pickUpHeld } from './state/heldPhotos.js';
 import { setCategoryUse } from './state/catOrder.js';
 import { SettingsCog } from './views/SettingsCog.jsx';
 const SettingsSheet = lazy(() => import('./views/SettingsSheet.jsx'));
@@ -232,6 +233,15 @@ export default function App() {
     try { localStorage.setItem('masareef.keptSyncedAt', String(Date.now())); } catch { /* syncs again next open */ }
     keptSynced.current = true;
     syncKept(keptList, keepLookalike).catch(() => { keptSynced.current = false; });
+  }, [build]);
+  // Photos shared through the «Masareef» Shortcut wait on the server; collect them
+  // into the photo queue on open and whenever he comes back (2026-11-01).
+  useEffect(() => {
+    if (!supportsAction(build, 'held_list')) return undefined;
+    const collect = () => { if (!document.hidden) pickUpHeld(build); };
+    collect();
+    document.addEventListener('visibilitychange', collect);
+    return () => document.removeEventListener('visibilitychange', collect);
   }, [build]);
   const [photoJobs, setPhotoJobs] = useState([]);
   // «Your receipt is ready» once per job that turns ready while he is elsewhere.

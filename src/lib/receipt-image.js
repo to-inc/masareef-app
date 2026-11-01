@@ -60,7 +60,7 @@ const toBlob = (canvas, quality) =>
     );
   });
 
-async function sha256Hex(arrayBuffer) {
+export async function sha256Hex(arrayBuffer) {
   // Requires a secure context. GitHub Pages is HTTPS and localhost counts, so
   // the only way here is an http:// deployment, which nothing else supports.
   if (!globalThis.crypto?.subtle) throw new ReceiptImageError('no-crypto');

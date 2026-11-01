@@ -235,7 +235,9 @@ import { dirname, join } from 'node:path';
  * +2 logcard (isolated shop name, 22px hero unit), +2 i18n (no «في للمراجعة», no 📷/🎙 beside line
  * icons). Each failed against the stashed tree before its fix.
  */
-const EXPECTED_ASSERTIONS = 7233;
+// 7241 on 2026-11-01 (share-sheet photos): +7 test-held-photos, +1 test-names for the
+// new src/state/heldPhotos.js (80 → 81 measured against main in a stash).
+const EXPECTED_ASSERTIONS = 7241;
 
 /** In the order they run. Adding a file here is adding it to `npm test`. */
 const SUITES = [
@@ -307,7 +309,7 @@ const SUITES = [
   'test-chunk-u1.mjs',
   'test-chunk-u4.mjs',
   'test-chunk-s2.mjs',
-  'test-chunk-u3.mjs', 'test-chunk-pred.mjs', 'test-chunk-home-series.mjs', 'test-refactor-ui.mjs', 'test-usage.mjs', 'test-night.mjs', 'test-pwa-life.mjs',
+  'test-chunk-u3.mjs', 'test-chunk-pred.mjs', 'test-chunk-home-series.mjs', 'test-refactor-ui.mjs', 'test-usage.mjs', 'test-night.mjs', 'test-pwa-life.mjs', 'test-held-photos.mjs',
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));

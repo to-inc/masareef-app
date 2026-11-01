@@ -189,6 +189,21 @@ export const usageLog = ({ events, device, batch }) =>
   (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
     : call({ action: 'usage_log', events, device, batch }, 'write'));
 
+/**
+ * Photos shared through the «Masareef» Shortcut and parked on the server
+ * (2026-11-01). Not in the mock's verb list: under the mock they answer the
+ * deployed doPost's `unknown_action`, and the pick-up is gated off by `held_list`.
+ */
+export const heldList = () =>
+  (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
+    : call({ action: 'held_list' }, 'read'));
+export const heldGet = ({ name }) =>
+  (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
+    : call({ action: 'held_get', name }, 'read'));
+export const heldDone = ({ name }) =>
+  (USING_MOCK ? Promise.resolve({ ok: false, v: 1, error: 'unknown_action' })
+    : call({ action: 'held_done', name }, 'write'));
+
 export const removeEntry = ({ tab, rowHint, match }) =>
   (USING_MOCK ? mockRemoveEntry({ tab, rowHint, match })
     : call({ action: 'remove_entry', tab, rowHint, match }, 'write'));
