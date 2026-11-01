@@ -77,6 +77,9 @@ export const CATEGORIES = [
   // E-016 (2026-10-09): rent was filed under Villa until this rode the paste
   // that put it in CONFIG.EXTRA_CATEGORIES (nine → ten) — same rule as above.
   'Rent',
+  // 2026-11-01, his ask: client meals and coffees, with who and what for in the
+  // description. Rode build 20261101-2013 into CONFIG.EXTRA_CATEGORIES (ten → eleven).
+  'Business meetings',
 ];
 
 // The six that cover most of his spending — shown before "أنواع تانية…".

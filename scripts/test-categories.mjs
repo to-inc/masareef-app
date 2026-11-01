@@ -50,10 +50,11 @@ const EXTRAS = [
   'Science Pitchers', 'HYS', 'Team',      // 2026-08-03, his ruling
   'Leisure', 'Sports', 'Hobbies',         // 2026-08-24, his ruling (docs/02 round 6)
   'Rent',                                 // 2026-10-09, his ruling (E-016)
+  'Business meetings',                    // 2026-11-01, his ask (build 20261101-2013)
 ];
 
 // ——————————————————————— the set
-eq(CATEGORIES.length, 21 + 10, 'twenty-one shared plus this install\'s ten');
+eq(CATEGORIES.length, 21 + 11, 'twenty-one shared plus this install\'s eleven');
 eq(CATEGORIES.length, BASE.length + EXTRAS.length, 'and nothing else has crept in');
 
 for (let i = 0; i < BASE.length; i++) {

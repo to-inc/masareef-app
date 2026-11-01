@@ -98,8 +98,10 @@ const at = (fn, label) => {
    * Asserted as an exact list so the remainder's contents are a known set: a
    * category silently falling out of a group would land here and say so.
    */
-  eq(CATEGORIES.filter((c) => !groupOf(c)).join(' · '), 'Personal expenses',
-    'the map places 29 of 30, and the thirtieth is unplaced on purpose');
+  // 2026-11-01: `Business meetings` joins it unplaced until he rules where it
+  // goes — Projects is «exactly these three», so it is not ours to put there.
+  eq(CATEGORIES.filter((c) => !groupOf(c)).join(' · '), 'Personal expenses · Business meetings',
+    'the map places all but two, and both are unplaced on purpose');
 
   /**
    * ——— THE TRAILING SPACE. `Elect. Recharge ` is stored in his sheet WITH one
