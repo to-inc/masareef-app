@@ -633,7 +633,7 @@ export function Sheet({ children, style, ...rest }) {
   );
 }
 
-export function Toast({ message }) {
+export function Toast({ message, onTap = null }) {
   if (!message) return null;
   return (
     /**
@@ -657,7 +657,12 @@ export function Toast({ message }) {
     >
       <Sheet
         role="status"
+        // A toast that names a place goes there when tapped (usage audit 2026-10-29:
+        // «A receipt is ready — open Photos» was tapped 16 times and caught none).
+        onClick={onTap || undefined}
+        data-toast-tap={onTap ? '' : undefined}
         style={{
+          ...(onTap ? { pointerEvents: 'auto', cursor: 'pointer' } : null),
           background: C.harbor,
           color: C.onDark,
           padding: '13px 24px',

@@ -254,7 +254,7 @@ export default function App() {
     if (readyTold.current === null) { readyTold.current = new Set(ready); return; }
     const fresh = ready.filter((id) => !readyTold.current.has(id));
     ready.forEach((id) => readyTold.current.add(id));
-    if (fresh.length && !(tab === 'entry' && entryMode === 'receipt')) { showToast(S.photoReady(fresh.length)); setPhotosOpen(true); }
+    if (fresh.length && !(tab === 'entry' && entryMode === 'receipt')) { showToast(S.photoReady(fresh.length), () => openPhotos()); setPhotosOpen(true); }
   }, [photoJobs]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const load = () => receiptQueue.all().then(setPhotoJobs).catch(() => {});
@@ -524,12 +524,22 @@ export default function App() {
     });
   }, [pushDetail]);
 
-  const showToast = useCallback((msg) => {
+  // A toast may carry where a tap on it goes (the «receipt is ready» one opens Photos).
+  const toastTap = useRef(null);
+  const showToast = useCallback((msg, onTap = null) => {
+    toastTap.current = onTap;
     setToast(msg);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   }, []);
   useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  // The header's Photos button and the «receipt is ready» toast: open the list on To review and scroll to it.
+  const openPhotos = () => {
+    const t = photosShortcutTap();
+    setSettingsOpen(false); setToast(null); setPhotosOpen(t.photosOpen); setTab(t.tab);
+    if (t.scroll) requestAnimationFrame(() => { const el = document.querySelector('[data-photos-bar]'); if (el) el.scrollIntoView({ block: 'start' }); });
+  };
 
   // v4 P8: reads in flight — the startup read and the after-save refresh too, not
   // only a press of the pill — so the pill can say «بنجيب من الشيت…» / «آخر تحديث».
@@ -1158,11 +1168,7 @@ export default function App() {
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* R9: a capture screen's header is ← + its name only (G05–G07) — the title needs the room. */}
           {!needsSetup && !captureMode && <PhotosShortcut jobs={photoJobs} active={photosOpen && viewTab === 'inbox'}
-            onOpen={() => {
-              const t = photosShortcutTap();
-              setSettingsOpen(false); setPhotosOpen(t.photosOpen); setTab(t.tab);
-              if (t.scroll) requestAnimationFrame(() => { const el = document.querySelector('[data-photos-bar]'); if (el) el.scrollIntoView({ block: 'start' }); });
-            }} />}
+            onOpen={openPhotos} />}
           {!needsSetup && !captureMode && <SettingsCog active={settingsOpen} onOpen={() => setSettingsOpen((o) => !o)} />}
           {!needsSetup && !captureMode && <RefreshButton state={reading > 0 ? 'busy' : refreshState} onPress={onRefresh} savedAt={savedAt} clock={cairoClock} waiting={phoneRows.filter((r) => !r.held).length} />}
         </span>
@@ -1340,7 +1346,7 @@ export default function App() {
         )}
       </main>
 
-      <Toast message={toast} />
+      <Toast message={toast} onTap={toastTap.current} />
       <UndoToast undo={undo} onUndo={undoEntry} />
       {!undo && <UndoToast undo={photoUndo} onUndo={() => { const j = photoUndo && photoUndo.job; setPhotoUndo(null); if (j) restoreJob(j); }} />}
       {/* v4 P2: iOS Safari only, never inside the installed app (state/installCoach.js). */}

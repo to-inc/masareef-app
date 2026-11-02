@@ -8,8 +8,14 @@
  * N4 · the header's Photos button only opens the list, and scrolls to it
  * N5 · App.jsx records where each capture was opened and leaves through captureBack
  * N6 · App.jsx's Photos button no longer folds an open list
+ * N7 · the «receipt is ready» toast can be tapped, and opens Photos (audit 2026-10-29)
+ * N8 · a plain toast still lets taps through
+ * N9 · on the receipt screen a photo's picture-and-name line takes its next step
  */
 import { readFileSync } from 'node:fs';
+import { createServer } from 'vite';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,6 +43,21 @@ ok(/onOpenPhoto=\{\(job\) => pushDetail\(\(\) => \{ captureFrom\.current = 'inbo
   'N5', 'App.jsx does not record the capture origin or does not leave through captureBack');
 ok(!/if \(photosOpen && viewTab === 'inbox'\) setPhotosOpen\(false\)/.test(app) && /photosShortcutTap\(\)/.test(app),
   'N6', 'the header Photos button can still fold an open list');
+
+const vite = await createServer({ root, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
+try {
+  const { Toast } = await vite.ssrLoadModule('/src/components/Primitives.jsx');
+  const tappable = renderToStaticMarkup(createElement(Toast, { message: 'ready', onTap() {} }));
+  const plain = renderToStaticMarkup(createElement(Toast, { message: 'saved' }));
+  ok(/data-toast-tap/.test(tappable) && /pointer-events:auto/.test(tappable), 'N7', 'a toast with somewhere to go still lets the tap fall through');
+  ok(!/data-toast-tap/.test(plain) && !/pointer-events:auto/.test(plain), 'N8', 'a plain toast now catches taps meant for the screen under it');
+} finally {
+  await vite.close();
+}
+ok(/showToast\(S\.photoReady\(fresh\.length\), \(\) => openPhotos\(\)\)/.test(app) && /<Toast message=\{toast\} onTap=\{toastTap\.current\} \/>/.test(app),
+  'N7', 'App.jsx does not route a tap on the «receipt is ready» toast to Photos');
+const rv = readFileSync(join(root, 'src/views/ReceiptView.jsx'), 'utf8');
+ok(/<div data-photo-row-hit onClick=\{primary \? primary\.onTap : undefined\}/.test(rv), 'N9', 'the photo line on the receipt screen still does nothing');
 
 if (failures.length) {
   console.log(`❌ capture-nav — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`);

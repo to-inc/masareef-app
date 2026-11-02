@@ -574,7 +574,11 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
       borderRadius: RADIUS.row, marginBottom: 7,
       opacity: settled && outcome.status !== 'written' ? 0.75 : 1,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', minHeight: 56 }}>
+      {/* The WHOLE row opens it, not only its words (usage audit 2026-10-29: 16 dead
+          taps on the blank space and the amount). The name stays the one accessible
+          control; the tick and the method chip stop their tap here. */}
+      <div data-batch-row-hit onClick={canOpen ? tap : undefined}
+        style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', minHeight: 56, cursor: canOpen ? 'pointer' : undefined }}>
         {/**
           * A NON-WRITABLE ROW HAS NO TICK AT ALL — not a disabled one. A control
           * he cannot use is a question about why; the reason is in words instead.
@@ -589,7 +593,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
           </span>
         ) : writable ? (
           <button
-            onClick={() => onTick(!ticked)}
+            onClick={(e) => { e.stopPropagation(); onTick(!ticked); }}
             role="checkbox"
             aria-checked={ticked}
             aria-label={row.merchant_display || row.description || ''}
@@ -626,7 +630,7 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
               not grow. It is the row's one keyboard / VoiceOver door to open. */}
           <TitleTag
             ref={titleRef}
-            onClick={canOpen ? tap : undefined}
+            onClick={canOpen ? (e) => { e.stopPropagation(); tap(); } : undefined}
             aria-expanded={canOpen && tap === onToggleOpen ? isOpen : undefined}
             data-batch-logged={logged ? '' : undefined}
             style={{ display: 'block', width: '100%', textAlign: 'start', background: 'transparent',
@@ -651,11 +655,9 @@ function Row({ row, ticked, outcome, edit, isOpen, overrode, left = false, onTog
               {row.merchant_display || row.description || '—'}
             </span>
           </TitleTag>
-          {/* The second line, as G06 draws it: state · category · [method]. Tapping
-              its words opens the row too (a pointer convenience — the name above
-              is the accessible control, so this is not a second button). */}
+          {/* The second line, as G06 draws it: state · category · [method]. A tap
+              on it reaches the row's own handler above. */}
           <div
-            onClick={canOpen ? tap : undefined}
             style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: TYPE.label, color: C.muted, marginTop: 2 }}
           >
             {/**

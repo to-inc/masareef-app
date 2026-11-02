@@ -547,6 +547,20 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
    * The repair is that `resnapBatch` no longer nulls it. Source-pinned, because
    * the erasure lived in a callback no render can reach.
    */
+  /**
+   * THE WHOLE ROW OPENS IT (usage audit 2026-10-29: 16 dead taps on a row's blank
+   * space and amount). The row's box carries the open handler; the tick and the
+   * method chip stop their tap, and the name stops its own so one tap is one toggle.
+   */
+  {
+    const v = await readFile(new URL('../src/views/BatchReviewView.jsx', import.meta.url), 'utf8');
+    ok(/<div data-batch-row-hit onClick=\{canOpen \? tap : undefined\}/.test(v), 'the whole row box opens the row, not only its words');
+    ok(/onClick=\{\(e\) => \{ e\.stopPropagation\(\); onTick\(!ticked\); \}\}/.test(v), 'ticking a row does not also open it');
+    ok(/onClick=\{canOpen \? \(e\) => \{ e\.stopPropagation\(\); tap\(\); \}/.test(v), 'a tap on the name toggles once, not twice');
+    ok(/e\.stopPropagation\(\); onMethod\(otherMethod\(method\)\)/.test(v), 'flipping the method does not open the row');
+    ok((v.match(/onClick=\{canOpen \? tap : undefined\}/g) || []).length === 1, 'no second open handler left inside the row to fire twice');
+  }
+
   const appSrc = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
   const resnap = appSrc.slice(appSrc.indexOf('const resnapBatch'), appSrc.indexOf('const showToast'));
   ok(resnap.length > 20, 'resnapBatch was located in App.jsx — a slice that missed it would assert nothing');

@@ -155,7 +155,7 @@ try {
     ok(r.queued === 2 && r.refused === 'too-large' && pumped === 1 && queued[1].mediaType === 'application/pdf' && /^\d{4}-\d{2}-\d{2}$/.test(queued[0].snapDate),
       'UX1', `photos and PDFs are queued and read behind him; a refusal is named (${JSON.stringify(r)})`);
     const app = src('src/App.jsx');
-    ok(/closeEntry\(\);\s*showToast\(S\.readingBehind\(n\)\);/.test(app) && /showToast\(S\.photoReady\(fresh\.length\)\)/.test(app),
+    ok(/closeEntry\(\);\s*showToast\(S\.readingBehind\(n\)\);/.test(app) && /showToast\(S\.photoReady\(fresh\.length\)[,)]/.test(app),
       'UX1b', 'choosing a receipt closes the sheet at once; a ready receipt is announced'); }
 
   { const Inbox = (await vite.ssrLoadModule('/src/views/InboxView.jsx')).default;

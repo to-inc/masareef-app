@@ -1077,7 +1077,11 @@ function JobRow({ job, onReview, onRetry, onReread = onRetry, onCancel, onDebugL
         borderRadius: RADIUS.row, padding: '10px 12px', marginBottom: 6,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* The picture, name and status take the row's next step too (usage audit
+          2026-11-02: on 1 Nov he tapped this line, then «Check» a second later, five
+          times). The strip below stays the labelled control. */}
+      <div data-photo-row-hit onClick={primary ? primary.onTap : undefined}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: primary ? 'pointer' : undefined }}>
         {/* No thumbnail is a missing picture, never a broken one — `thumbUrl`
             answers null where it cannot make one, and this simply renders the
             placeholder tile instead. */}
