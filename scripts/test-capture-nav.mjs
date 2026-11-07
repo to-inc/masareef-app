@@ -58,6 +58,10 @@ ok(/showToast\(S\.photoReady\(fresh\.length\), \(\) => openPhotos\(\)\)/.test(ap
   'N7', 'App.jsx does not route a tap on the «receipt is ready» toast to Photos');
 const rv = readFileSync(join(root, 'src/views/ReceiptView.jsx'), 'utf8');
 ok(/<div data-photo-row-hit onClick=\{primary \? primary\.onTap : undefined\}/.test(rv), 'N9', 'the photo line on the receipt screen still does nothing');
+const bv = readFileSync(join(root, 'src/views/BatchReviewView.jsx'), 'utf8');
+ok(/outstanding > 0 \? onLeave : \(\) => onDiscard\('book'\)/.test(bv)
+  && /const to = captureBack\(dest === 'book' \? 'book' : captureFrom\.current\);[\s\S]{0,400}setTab\(to\.tab\);/.test(app),
+  'N10', '«Done — back to the book» clears the statement but does not go to the Book');
 
 if (failures.length) {
   console.log(`❌ capture-nav — ${failures.length} / ${pass + failures.length} failed:\n  - ${failures.join('\n  - ')}`);

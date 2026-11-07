@@ -845,7 +845,7 @@ eq(mergeJobs([{ sourceHash: 'x' }]).length, 0, 'a job with no entries contribute
    * change exists to fix, restored silently — a button that says it keeps his
    * unwritten rows and destroys them instead.
    */
-  ok(/outstanding > 0 \? onLeave : onDiscard/.test(src),
+  ok(/outstanding > 0 \? onLeave : \(\) => onDiscard\('book'\)/.test(src),
     'while rows are outstanding the exit CALLS onLeave — the label and the act are the same promise');
   ok(/S\.batchDiscardWaiting\(outstanding\)/.test(src),
     'and the only control that destroys the draft states the count it destroys');

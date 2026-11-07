@@ -456,16 +456,24 @@ export default function App() {
    * the review can show it; clearing only the draft left every one of them there,
    * counted on the header's badge after any reload, and one tap on a photo built
    * the review again. The draft and the photos it was read from leave together.
+   *
+   * AND THE SCREEN GOES WHERE IT SAYS (usage audit 2026-11-07). It only reset the
+   * mode, so «Done — back to the book» left him on the New sheet (5 Nov diary).
+   * `dest === 'book'` is that button; Discard leaves like ← (captureBack).
    */
-  const discardBatch = useCallback(() => {
+  const discardBatch = useCallback((dest) => {
     const hashes = ((loadDraft() || {}).jobs || []).map((j) => j && j.sourceHash);
     clearDraft();
     // The diary says how many photos went with it — a clear that left photos behind shows as removed < photos.
     receiptQueue.removeMany(hashes).then((removed) => { track('batch', { act: 'discard', photos: hashes.length, removed, left: loadDraft() ? 1 : 0 }); jobsChanged(); });
+    const to = captureBack(dest === 'book' ? 'book' : captureFrom.current);
+    captureFrom.current = null;
     pushDetail(() => {
       setBatch({ jobs: [], settled: null });
       setBatchExpired(false);
       setEntryMode('keypad');
+      if (to.photosOpen != null) setPhotosOpen(to.photosOpen);
+      setTab(to.tab);
     });
   }, [pushDetail]);
 

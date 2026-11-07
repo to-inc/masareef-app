@@ -360,7 +360,7 @@ export default function BatchReviewView({
           className="bigbtn"
           onClick={settled
             ? (chosen.length ? () => onConfirm(chosen)
-              : outstanding > 0 ? onLeave : onDiscard)
+              : outstanding > 0 ? onLeave : () => onDiscard('book'))
             : () => onConfirm(chosen)}
           disabled={busy || (!chosen.length && !settled) || chosen.length > BATCH_MAX_ROWS}
           style={{
